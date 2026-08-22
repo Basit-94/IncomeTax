@@ -7,3 +7,6 @@ out
 next-env.d.ts
 .DS_Store
 .vercel
+
+# Machine-local Claude Code permissions, not project config
+.claude/settings.local.json
