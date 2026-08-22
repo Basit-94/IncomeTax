@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+/*
+  Wapsi design tokens.
+
+  Two deliberate choices worth stating, because both are product decisions:
+
+  1. No webfont. The target user is on a budget Android phone on a slow
+     connection, and may be reading Tamil or Devanagari. A Latin-only webfont
+     would cost them ~100-200KB and still fall back to a system font for their
+     own script. So: system stack everywhere, and we spend the character budget
+     on scale, weight and spacing instead.
+
+  2. Warm paper, not government blue. This product is for someone waiting on
+     money that is already theirs. Saffron/white/green or the usual civic navy
+     would also imply official status, which the brief forbids.
+*/
+
+@theme {
+  --color-paper: #faf6ef;
+  --color-paper-2: #f3ede2;
+  --color-paper-3: #ebe3d4;
+
+  --color-ink: #1a1614;
+  --color-ink-2: #55504a;
+  --color-ink-3: #8a837a;
+  --color-line: #e0d8ca;
+
+  /* The accent: money coming back. */
+  --color-money: #0e6e4e;
+  --color-money-deep: #08543b;
+  --color-money-soft: #e4f0ea;
+
+  /* A hold, a wait, something needing attention. */
+  --color-warn: #a8600c;
+  --color-warn-soft: #fbf0de;
+
+  /* Consequence. Used only where inaction costs real money. */
+  --color-alarm: #a11b3c;
+  --color-alarm-soft: #fbe9ee;
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans",
+    "Noto Sans Devanagari", "Noto Sans Tamil", sans-serif;
+
+  --text-hero: 2.125rem;
+  --text-hero--line-height: 1.12;
+  --text-hero--letter-spacing: -0.022em;
+
+  --radius-card: 14px;
+}
+
+@layer base {
+  html {
+    /* 17px base: this product is used by people in their 60s and 70s on small
+       screens, and 16px is the floor at which iOS stops zooming inputs. */
+    font-size: 17px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-wrap: pretty;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    letter-spacing: -0.018em;
+  }
+
+  /* Money figures should never wrap or shift as they update. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    outline: 2.5px solid var(--color-money);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
