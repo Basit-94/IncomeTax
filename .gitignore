@@ -10,3 +10,10 @@ next-env.d.ts
 
 # Machine-local Claude Code permissions, not project config
 .claude/settings.local.json
+
+# Vendored HyperFrames clone — third-party tool, not our source
+video/hyperframes/
+
+# Rendered video output (large binaries; sources are committed instead)
+video/**/*.mp4
+video/**/*.wav
