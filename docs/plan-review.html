@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FORM BWI-R1 — Wapsi, Round One Plan</title>
+<meta name="description" content="Internal review document for the Wapsi build plan. Independent concept prototype; not a government product.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Devanagari:wght@400;500;600&family=IBM+Plex+Sans+Tamil:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+
+<style>
+/* ==========================================================================
+   FORM BWI-R1
+   A review document built out of the vocabulary of the thing it critiques:
+   Indian government carbon-copy stationery. Pale sage form paper, blue-black
+   ballpoint, ledger rules, monospace codes, oxblood rubber stamp, sections
+   labelled PART and SCHEDULE.
+
+   Every "as it could be" panel is printed on a different, warmer paper stock
+   and physically breaks out of the form. The page performs the change it is
+   proposing rather than describing it.
+   ========================================================================== */
+
+:root{
+  --carbon:#E4E7DC;        /* government form paper */
+  --carbon-deep:#D6DBCB;   /* inset "before" blocks */
+  --ink:#23262A;           /* blue-black ballpoint */
+  --ink-2:#5A6068;
+  --ink-3:#868D93;
+  --rule:#C3C9B8;          /* ledger rules */
+  --stamp:#7A2231;         /* oxblood. consequence only. */
+  --stamp-soft:#F0DEE1;
+  --money:#0E6E4E;         /* institutional green: the after */
+  --money-soft:#DCEDE3;
+  --paper:#FAF6EF;         /* warm paper. ONLY inside "could be" panels. */
+  --paper-2:#F1EADC;
+
+  --serif:"IBM Plex Serif",Georgia,serif;
+  --sans:"IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+  --deva:"IBM Plex Sans Devanagari","IBM Plex Sans",sans-serif;
+  --tamil:"IBM Plex Sans Tamil","IBM Plex Sans",sans-serif;
+
+  /* floor is 22px, not 18: the perforation column is 13px on narrow
+     screens and text needs to clear it, not sit against it */
+  --gut:clamp(22px,4vw,44px);
+  --sheet:1080px;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+
+body{
+  margin:0;
+  background:var(--carbon);
+  color:var(--ink);
+  font:400 clamp(15.5px,0.55vw + 14px,17px)/1.62 var(--sans);
+  -webkit-font-smoothing:antialiased;
+  text-wrap:pretty;
+  /* faint ledger grid, like the ruled backdrop of a printed form */
+  background-image:repeating-linear-gradient(to bottom,transparent 0 33px,rgba(35,38,42,.028) 33px 34px);
+}
+
+/* --- continuous-stationery perforation down both edges ------------------- */
+.perf{position:fixed;top:0;bottom:0;width:24px;z-index:2;pointer-events:none;
+  background:
+    linear-gradient(var(--carbon-deep),var(--carbon-deep)),
+    radial-gradient(circle at 12px 12px,var(--carbon) 3.4px,transparent 3.6px);
+  background-size:100% 100%,24px 24px;
+  background-repeat:no-repeat,repeat-y;}
+.perf-l{left:0;border-right:1px solid var(--rule)}
+.perf-r{right:0;border-left:1px solid var(--rule)}
+@media (max-width:760px){.perf{width:12px;background-size:100% 100%,12px 16px;
+  background-image:linear-gradient(var(--carbon-deep),var(--carbon-deep)),radial-gradient(circle at 6px 8px,var(--carbon) 2.2px,transparent 2.4px)}}
+
+.sheet{max-width:var(--sheet);margin:0 auto;padding:0 var(--gut) 0}
+
+/* --- shared type ------------------------------------------------------- */
+.eyebrow{font:500 .66rem/1.4 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);margin:0}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.serif{font-family:var(--serif)}
+.tnum{font-variant-numeric:tabular-nums}
+.money-txt{color:var(--money)}
+.stamp-txt{color:var(--stamp)}
+.stack>*+*{margin-top:1.05rem}
+p{margin:0 0 0 0}
+.lede{font:400 clamp(1.02rem,.5vw + .92rem,1.3rem)/1.55 var(--sans);color:var(--ink-2);max-width:62ch}
+.note{font:400 .82rem/1.55 var(--sans);color:var(--ink-2)}
+.caption{font:400 .78rem/1.5 var(--mono);color:var(--ink-2);letter-spacing:.005em}
+a{color:var(--money);text-decoration-thickness:1px;text-underline-offset:2px}
+:focus-visible{outline:2.5px solid var(--money);outline-offset:3px;border-radius:2px}
+
+/* --- form section headers --------------------------------------------- */
+/* padding-block, not the padding shorthand: .sec and .sheet are both
+   single-class selectors, so a shorthand here wins on source order and
+   silently zeroes the sheet's side gutters. Invisible at desktop width,
+   where the auto margins fake a gutter; at 375px the text runs under the
+   perforation column. */
+.sec{padding-block:clamp(46px,7vw,86px) 0}
+.sec-head{display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap;
+  border-bottom:2px solid var(--ink);padding-bottom:.5rem;margin-bottom:.28rem}
+.sec-head::after{content:"";flex:1 1 40px}
+.sec-part{font:500 .74rem/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;
+  background:var(--ink);color:var(--carbon);padding:.4em .6em .34em}
+.sec-name{font:500 .74rem/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--ink)}
+.sec-note{font:400 .76rem/1.4 var(--sans);color:var(--ink-2);font-style:italic;margin-left:auto}
+.sec-rule2{border-bottom:1px solid var(--rule);margin-bottom:1.8rem}
+.sec h2{font:600 clamp(1.35rem,1.4vw + 1.05rem,1.95rem)/1.22 var(--serif);
+  letter-spacing:-.012em;margin:0 0 .7rem;max-width:34ch;text-wrap:balance}
+
+/* --- COVER ------------------------------------------------------------ */
+.cover{padding-block:clamp(30px,5vw,58px) clamp(40px,6vw,72px);position:relative}
+.masthead{display:flex;gap:.9rem;flex-wrap:wrap;justify-content:space-between;
+  border-top:3px solid var(--ink);border-bottom:1px solid var(--ink);
+  padding:.62rem 0;font:500 .66rem/1.4 var(--mono);letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink)}
+.masthead span+span{color:var(--ink-2)}
+.cover-body{padding-top:clamp(30px,5vw,52px);max-width:24ch}
+.thesis{font:600 clamp(2rem,4.6vw + .6rem,3.5rem)/1.06 var(--serif);
+  letter-spacing:-.026em;margin:0;max-width:20ch;text-wrap:balance}
+.thesis-2{font:400 italic clamp(1.1rem,1.4vw + .85rem,1.6rem)/1.34 var(--serif);
+  color:var(--money);margin:1rem 0 0;max-width:26ch}
+.cover-body{max-width:none}
+.cover-meta{margin-top:2.1rem;max-width:56ch}
+
+/* ledger figure boxes */
+.figs{display:grid;grid-template-columns:repeat(3,1fr);margin-top:clamp(30px,4.5vw,52px);
+  border:1px solid var(--ink);background:var(--paper-2)}
+.fig{padding:.95rem 1rem 1.05rem;border-right:1px solid var(--rule)}
+.fig:last-child{border-right:0}
+.fig-n{font:500 clamp(1.5rem,2.4vw + .7rem,2.35rem)/1 var(--mono);letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums;display:block}
+.fig-l{font:400 .68rem/1.35 var(--mono);letter-spacing:.06em;color:var(--ink-2);
+  display:block;margin-top:.5rem;text-transform:uppercase}
+.fig-owe .fig-n{color:var(--money)}
+@media (max-width:620px){.figs{grid-template-columns:1fr}
+  .fig{border-right:0;border-bottom:1px solid var(--rule)}
+  .fig:last-child{border-bottom:0}}
+
+/* --- THE SIGNATURE: rubber stamp -------------------------------------- */
+.stamp-wrap{position:absolute;right:calc(var(--gut) - 6px);top:clamp(120px,17vw,190px);
+  z-index:3;pointer-events:none}
+.stamp{
+  transform:rotate(-8deg);
+  border:2.5px solid var(--stamp);outline:1px solid var(--stamp);outline-offset:3.5px;
+  padding:.7rem .95rem .62rem;max-width:216px;
+  color:var(--stamp);background:transparent;
+  font:500 .62rem/1.42 var(--mono);letter-spacing:.19em;text-transform:uppercase;
+  text-align:center;opacity:.9;
+  filter:url(#inkbleed);
+  animation:stampdown .38s cubic-bezier(.2,1.4,.5,1) .35s both;
+}
+.stamp b{display:block;font-weight:500;font-size:.78rem;letter-spacing:.14em;margin-bottom:.2rem}
+@keyframes stampdown{
+  0%{transform:rotate(-8deg) scale(1.85);opacity:0}
+  62%{transform:rotate(-8deg) scale(.965);opacity:.94}
+  100%{transform:rotate(-8deg) scale(1);opacity:.9}
+}
+@media (max-width:900px){
+  .stamp-wrap{position:static;margin:2rem 0 0;display:flex;justify-content:flex-start;padding-left:8px}
+  .stamp{transform:rotate(-4deg)}
+  @keyframes stampdown{0%{transform:rotate(-4deg) scale(1.85);opacity:0}
+    62%{transform:rotate(-4deg) scale(.965);opacity:.94}
+    100%{transform:rotate(-4deg) scale(1);opacity:.9}}
+}
+
+/* --- before / after, the core device ---------------------------------- */
+.ba{display:grid;grid-template-columns:1fr 34px 1fr;align-items:start;
+  margin:1.9rem 0 0}
+.tear{align-self:stretch;position:relative}
+.tear::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:0;
+  border-left:1.5px dashed var(--rule)}
+.tear::after{content:"";position:absolute;left:calc(50% - 4.5px);top:calc(50% - 4.5px);
+  width:9px;height:9px;border-radius:50%;background:var(--carbon);border:1.5px solid var(--rule)}
+@media (max-width:820px){
+  .ba{grid-template-columns:1fr;gap:0}
+  .tear{height:34px}
+  .tear::before{left:0;right:0;top:50%;bottom:auto;width:auto;height:0;
+    border-left:0;border-top:1.5px dashed var(--rule)}
+}
+.ba-side{min-width:0}
+.ba-tag{font:500 .64rem/1.4 var(--mono);letter-spacing:.17em;text-transform:uppercase;
+  display:inline-block;margin-bottom:.62rem;padding:.28em .5em;border:1px solid currentColor}
+.tag-now{color:var(--ink-2)}
+.tag-could{color:var(--money)}
+
+/* the "before" world: pressed into the form paper */
+.slab{background:var(--carbon-deep);border:1px solid var(--rule);padding:1rem 1.05rem 1.1rem;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+
+/* the "after" world: a different paper stock, lifted off the form */
+.lift{background:var(--paper);border:1px solid #E2D9C8;border-radius:11px;
+  padding:1.15rem 1.15rem 1.25rem;
+  box-shadow:0 1px 0 rgba(255,255,255,.7) inset, 0 10px 22px -14px rgba(35,38,42,.4), 0 2px 5px -3px rgba(35,38,42,.22)}
+
+/* --- mock: the portal as it is ---------------------------------------- */
+.gov{font-family:var(--sans)}
+.gov-title{font:500 .74rem/1.3 var(--sans);color:#1F3B63;border-bottom:1px solid var(--rule);
+  padding-bottom:.5rem;margin-bottom:.8rem}
+.gov-lab{font:400 .655rem/1.3 var(--sans);color:#4A5058;display:block;margin-bottom:.22rem}
+.gov-sel{font:400 .74rem/1 var(--sans);background:#fff;border:1px solid #A9B0A0;
+  padding:.44rem .5rem;display:flex;justify-content:space-between;align-items:center;margin-bottom:.72rem}
+.gov-sel span{color:var(--ink-3)}
+.gov-row{display:flex;justify-content:space-between;gap:.6rem;align-items:baseline;
+  border-bottom:1px dotted var(--rule);padding:.34rem 0}
+.gov-k{font:400 .655rem/1.35 var(--sans);color:#4A5058}
+.gov-v{font:400 .74rem/1.35 var(--mono);font-variant-numeric:tabular-nums;
+  background:#fff;border:1px solid #A9B0A0;padding:.1rem .34rem;min-width:6.2em;text-align:right}
+.gov-btn{margin-top:.85rem;font:400 .7rem/1 var(--sans);background:#1F3B63;color:#fff;
+  border:0;padding:.52rem .8rem;cursor:default}
+.gov-note{font:400 .6rem/1.4 var(--sans);color:#6B7280;margin-top:.5rem}
+
+/* the error box, rendered as the portal renders it */
+.errbox{background:#F2F2F2;border:1px solid #B9B9B9;max-width:400px;
+  box-shadow:0 6px 18px -10px rgba(0,0,0,.45)}
+.errbox-bar{background:#DEDEDE;border-bottom:1px solid #B9B9B9;padding:.42rem .6rem;
+  font:400 .66rem/1 var(--sans);color:#333}
+.errbox-body{padding:1.15rem 1rem 1.25rem;text-align:center}
+.errbox-body p{font:400 .86rem/1.45 var(--sans);color:#222;margin:0 0 .95rem}
+.errbox-ok{font:400 .7rem/1 var(--sans);background:#E9E9E9;border:1px solid #9A9A9A;
+  padding:.4rem 1.5rem;cursor:default}
+
+/* --- mock: Wapsi ------------------------------------------------------ */
+.w-eyebrow{font:500 .66rem/1.4 var(--mono);letter-spacing:.1em;text-transform:uppercase;
+  color:var(--money);margin:0 0 .7rem}
+.w-label{font:400 .95rem/1.4 var(--sans);color:var(--ink-2);margin:0}
+.w-amt{font:600 clamp(1.7rem,2.6vw + .8rem,2.45rem)/1.05 var(--sans);letter-spacing:-.028em;
+  font-variant-numeric:tabular-nums;margin:.16rem 0 0}
+.w-prov{font:400 .845rem/1.5 var(--sans);color:var(--ink-2);margin:.75rem 0 0;
+  padding-top:.7rem;border-top:1px solid #E7DFCF}
+.w-id{font:400 .7rem/1.4 var(--mono);color:var(--ink-3);margin:.3rem 0 0;letter-spacing:.02em}
+.w-acts{display:flex;gap:.55rem;flex-wrap:wrap;margin-top:1.05rem}
+.btn{font:500 .85rem/1 var(--sans);padding:.72rem 1rem;border-radius:8px;cursor:pointer;
+  border:1px solid transparent;transition:background .14s,border-color .14s}
+.btn-y{background:var(--money);color:#fff}
+.btn-y:hover{background:#0B5B40}
+.btn-n{background:transparent;color:var(--ink);border-color:#CFC5B2}
+.btn-n:hover{border-color:var(--ink-2)}
+.btn-ghost{background:var(--paper-2);color:var(--ink);border-color:#DED4C1}
+.w-out{margin-top:1.05rem;padding-top:.95rem;border-top:1px solid #E7DFCF;
+  font:600 clamp(1rem,.7vw + .88rem,1.2rem)/1.4 var(--sans);letter-spacing:-.012em}
+.w-out .money-txt{display:block}
+
+/* language switch */
+.langbar{display:flex;gap:.3rem;margin-bottom:.85rem;flex-wrap:wrap}
+.langbtn{font:500 .74rem/1 var(--sans);padding:.44rem .7rem;border-radius:99px;cursor:pointer;
+  border:1px solid #D6CCB9;background:transparent;color:var(--ink-2)}
+.langbtn[aria-pressed="true"]{background:var(--money);border-color:var(--money);color:#fff}
+.langbtn.deva{font-family:var(--deva)}
+.langbtn.tam{font-family:var(--tamil)}
+.card-hi{font-family:var(--deva)}
+.card-ta{font-family:var(--tamil)}
+.card-hi .w-amt,.card-ta .w-amt,.card-hi .w-id,.card-ta .w-id{font-family:var(--mono)}
+
+/* dispute reveal */
+.dispute{margin-top:.95rem;border-top:1px dashed #DDD3C0;padding-top:.95rem;
+  display:none}
+.dispute[data-open="true"]{display:block}
+.d-h{font:600 .9rem/1.4 var(--sans);margin:0 0 .6rem}
+.d-field{display:block;margin-bottom:.6rem}
+.d-field span{font:400 .74rem/1.4 var(--sans);color:var(--ink-2);display:block;margin-bottom:.22rem}
+.d-field input{font:400 .88rem/1 var(--mono);width:100%;max-width:15em;padding:.5rem .55rem;
+  border:1px solid #D6CCB9;border-radius:6px;background:#fff;color:var(--ink)}
+.d-warn{font:400 .8rem/1.5 var(--sans);background:var(--money-soft);border-left:3px solid var(--money);
+  padding:.6rem .7rem;margin:.7rem 0 0;color:#0A4A34}
+
+/* --- ledger tables ---------------------------------------------------- */
+.ledger{width:100%;border-collapse:collapse;margin-top:1.4rem;
+  border-top:2px solid var(--ink);border-bottom:2px solid var(--ink)}
+.ledger caption{text-align:left;font:500 .68rem/1.4 var(--mono);letter-spacing:.15em;
+  text-transform:uppercase;color:var(--ink-2);padding-bottom:.5rem}
+.ledger th{font:500 .64rem/1.35 var(--mono);letter-spacing:.13em;text-transform:uppercase;
+  text-align:left;color:var(--ink-2);padding:.55rem .7rem;border-bottom:1px solid var(--ink);
+  vertical-align:bottom}
+.ledger td{font:400 .875rem/1.5 var(--sans);padding:.68rem .7rem;
+  border-bottom:1px solid var(--rule);vertical-align:top}
+.ledger tr:last-child td{border-bottom:0}
+.ledger td:first-child{width:38%}
+.ledger .cell-mono{font-family:var(--mono);font-size:.8rem;letter-spacing:-.005em}
+@media (max-width:660px){
+  .ledger,.ledger tbody,.ledger tr,.ledger td{display:block;width:100%}
+  .ledger thead{display:none}
+  /* the caption must be blocked out too. Left as table-caption inside a
+     display:block table it gets an anonymous shrink-to-fit table box and
+     collapses to its longest single word — one word per line. */
+  .ledger caption{display:block}
+  /* no side padding once stacked: cells should hang off the same left edge
+     as the caption and the body copy, not sit .7rem inside it */
+  .ledger td{padding-inline:0}
+  .ledger td:first-child{width:auto;border-bottom:0;padding-bottom:.1rem;
+    font:500 .68rem/1.4 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+  .ledger tr{border-bottom:1px solid var(--rule);padding:.5rem 0}
+  .ledger tr:last-child{border-bottom:0}
+}
+
+/* quote cards */
+.quotes{display:grid;grid-template-columns:repeat(auto-fit,minmax(228px,1fr));gap:1px;
+  background:var(--rule);border:1px solid var(--rule);margin-top:1.5rem}
+.quote{background:var(--carbon);padding:1rem}
+.quote p{font:400 italic .9rem/1.5 var(--serif);margin:0 0 .7rem}
+.quote cite{font:400 .68rem/1.4 var(--mono);color:var(--ink-2);font-style:normal;letter-spacing:.03em}
+
+.marginalia{border-left:2px solid var(--money);padding:.15rem 0 .15rem .85rem;
+  font:400 .82rem/1.55 var(--sans);color:var(--ink-2);margin-top:1.5rem;max-width:56ch}
+
+/* --- acts -------------------------------------------------------------- */
+.act{margin-top:clamp(44px,7vw,78px)}
+.act-head{display:flex;align-items:baseline;gap:.8rem;flex-wrap:wrap;margin-bottom:.5rem}
+.act-n{font:500 .64rem/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;
+  border:1px solid var(--ink);padding:.38em .55em .32em}
+.act-t{font:600 clamp(1.2rem,1.1vw + 1rem,1.62rem)/1.22 var(--serif);letter-spacing:-.016em;margin:0}
+.act-who{font:400 .73rem/1.4 var(--mono);color:var(--ink-2);letter-spacing:.02em}
+
+/* --- statutory register (the "before" for a notice) -------------------- */
+.statute{font:400 .705rem/1.66 var(--mono);color:#33373C;letter-spacing:-.004em;margin:0}
+.statute-sub{font-weight:500;display:block;margin-bottom:.55rem}
+.statute .din{display:block;margin-top:.75rem;color:var(--ink-3);word-break:break-all}
+
+/* --- decoded notice (the "after") ------------------------------------- */
+.dec-h{font:600 clamp(1rem,.85vw + .86rem,1.24rem)/1.36 var(--sans);letter-spacing:-.018em;margin:0}
+.dec-lab{font:500 .625rem/1.4 var(--mono);letter-spacing:.15em;text-transform:uppercase;
+  color:var(--ink-2);margin:1.05rem 0 .3rem}
+.dec-basis{font:400 .84rem/1.5 var(--sans);color:var(--ink-2);margin:0}
+.dec-catch{background:var(--money-soft);border-left:3px solid var(--money);padding:.72rem .82rem;
+  font:400 .87rem/1.52 var(--sans);color:#0A4A34;margin:1rem 0 0}
+.dec-conseq{background:var(--stamp-soft);border-left:3px solid var(--stamp);padding:.72rem .82rem;
+  font:500 .87rem/1.52 var(--sans);color:#5E1A29;margin:.7rem 0 0}
+.dec-din{font:400 .695rem/1.55 var(--mono);color:var(--ink-3);margin:.9rem 0 0;
+  padding-top:.72rem;border-top:1px solid #E7DFCF;word-break:break-word}
+
+/* --- refund state machine (the one orchestrated moment) ---------------- */
+.spin{background:#F2F2F2;border:1px solid #B9B9B9;padding:1.9rem 1rem 2rem;text-align:center}
+.spin-c{width:22px;height:22px;border-radius:50%;border:2.5px solid #CBCBCB;border-top-color:#767676;
+  margin:0 auto .85rem;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin p{font:400 .88rem/1.4 var(--sans);color:#2E2E2E;margin:0}
+
+.sm{list-style:none;margin:0;padding:0}
+.sm li{display:grid;grid-template-columns:20px 1fr;gap:.78rem;padding-bottom:.95rem;position:relative}
+.sm li:last-child{padding-bottom:0}
+.sm li::before{content:"";position:absolute;left:9px;top:19px;bottom:0;width:2px;background:var(--rule)}
+.sm li:last-child::before{display:none}
+.sm-dot{width:20px;height:20px;border-radius:50%;border:2px solid var(--rule);background:var(--paper);
+  display:grid;place-items:center;margin-top:1px;z-index:1}
+.sm-done .sm-dot{background:var(--money);border-color:var(--money)}
+.sm-done .sm-dot::after{content:"";width:6px;height:6px;border-radius:50%;background:#fff}
+.sm-now .sm-dot{border-color:var(--money);border-width:2.5px;box-shadow:0 0 0 4px var(--money-soft)}
+.sm-txt{font:400 .875rem/1.4 var(--sans);color:var(--ink-3)}
+.sm-done .sm-txt{color:var(--ink-2)}
+.sm-now .sm-txt{color:var(--ink);font-weight:600}
+.sm-when{font:400 .695rem/1.45 var(--mono);color:var(--ink-3);display:block;margin-top:.14rem}
+.sm.go li{animation:rise .44s cubic-bezier(.2,.7,.3,1) both;animation-delay:var(--d,0ms)}
+@keyframes rise{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+
+.hold{background:#fff;border:1px solid #E7DFCF;border-radius:9px;padding:.85rem .9rem;margin-top:.7rem}
+.hold-h{font:600 .9rem/1.42 var(--sans);margin:0}
+.hold-d{font:400 .82rem/1.52 var(--sans);color:var(--ink-2);margin:.35rem 0 0}
+.hold-f{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-top:.75rem}
+.hold-eta{font:400 .715rem/1.4 var(--mono);color:var(--ink-3)}
+.btn-sm{font-size:.79rem;padding:.5rem .78rem}
+.window{font:400 .82rem/1.52 var(--sans);color:var(--ink-2);margin:1rem 0 0;
+  padding-top:.75rem;border-top:1px solid #E7DFCF}
+
+/* --- SCHEDULE I toggles ----------------------------------------------- */
+.tg-bar{display:flex;gap:.5rem;flex-wrap:wrap;margin:1.5rem 0 1.1rem}
+.tg{font:500 .755rem/1 var(--mono);letter-spacing:.04em;padding:.58rem .82rem;cursor:pointer;
+  border:1px solid var(--rule);background:var(--carbon-deep);color:var(--ink-2);border-radius:99px}
+.tg[aria-pressed="true"]{background:var(--stamp);border-color:var(--stamp);color:#fff}
+.deg{border:1px solid var(--rule);background:var(--carbon-deep);padding:1rem}
+.deg-ok{font:400 .875rem/1.55 var(--sans);color:var(--ink-2);margin:0}
+.deg-item{background:var(--paper);border:1px solid #E2D9C8;border-radius:9px;
+  padding:.82rem .85rem;margin-bottom:.6rem}
+.deg-item:last-child{margin-bottom:0}
+.deg-k{font:500 .625rem/1.4 var(--mono);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--money);margin:0 0 .32rem}
+.deg-v{font:400 .865rem/1.52 var(--sans);margin:0}
+.deg-v b{font-weight:600}
+
+/* --- SCHEDULE P people ------------------------------------------------ */
+.people{display:grid;grid-template-columns:repeat(auto-fit,minmax(256px,1fr));gap:1rem;margin-top:1.5rem}
+.person{background:var(--paper);border:1px solid #E2D9C8;border-radius:11px;padding:1rem 1rem 1.05rem;
+  display:flex;flex-direction:column;
+  box-shadow:0 8px 18px -14px rgba(35,38,42,.35)}
+.person-act{font:500 .615rem/1.4 var(--mono);letter-spacing:.15em;text-transform:uppercase;
+  color:var(--money);margin:0}
+.person-n{font:600 1.1rem/1.28 var(--serif);margin:.42rem 0 .12rem}
+.person-w{font:400 .735rem/1.45 var(--mono);color:var(--ink-3);margin:0 0 .65rem}
+.person-s{font:400 .855rem/1.5 var(--sans);margin:0 0 .85rem}
+.person-e{font:400 .765rem/1.52 var(--sans);color:var(--ink-2);border-top:1px solid #E7DFCF;
+  padding-top:.62rem;margin:auto 0 .85rem}
+.person-pan{font:400 .735rem/1 var(--mono);letter-spacing:.06em;background:var(--money-soft);
+  color:#0A4A34;padding:.42rem .56rem;border-radius:5px;align-self:flex-start}
+
+/* --- PART D schedule strip -------------------------------------------- */
+.days{display:grid;grid-template-columns:repeat(7,1fr);border:1px solid var(--ink);
+  margin-top:1.5rem;background:var(--paper-2)}
+.day{padding:.72rem .62rem .82rem;border-right:1px solid var(--rule);min-width:0}
+.day:last-child{border-right:0}
+.day-d{font:500 .635rem/1.3 var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2)}
+.day-w{font:400 .775rem/1.44 var(--sans);margin-top:.42rem;display:block}
+.day-stop{background:var(--stamp-soft)}
+.day-stop .day-d{color:#5E1A29}
+.day-stop .day-w{color:#5E1A29;font-weight:500}
+@media (max-width:820px){
+  .days{grid-template-columns:1fr}
+  .day{border-right:0;border-bottom:1px solid var(--rule);display:flex;gap:.9rem;align-items:baseline}
+  .day:last-child{border-bottom:0}
+  .day-d{flex:0 0 5.6em}
+  .day-w{margin-top:0}
+}
+
+/* --- VERIFICATION ----------------------------------------------------- */
+.verif{background:var(--paper);border:2px solid var(--ink);padding:clamp(18px,3.2vw,32px);margin-top:1.6rem}
+.verif-i{font:400 italic .95rem/1.55 var(--serif);margin:0 0 1.1rem;max-width:60ch}
+.verif ol{margin:0;padding-left:1.35rem}
+.verif li{font:400 .875rem/1.6 var(--sans);margin-bottom:.85rem}
+.verif li:last-child{margin-bottom:0}
+.verif li strong{font-weight:600}
+.sigs{display:grid;grid-template-columns:1fr 1fr;gap:1.7rem;margin-top:2rem}
+.sig{border-top:1px solid var(--ink);padding-top:.45rem;
+  font:400 .665rem/1.4 var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--ink-2)}
+@media (max-width:560px){.sigs{grid-template-columns:1fr}}
+.colophon{border-top:1px solid var(--rule);margin-top:clamp(44px,7vw,78px);
+  padding:1.35rem 0 clamp(38px,6vw,70px);
+  font:400 .74rem/1.62 var(--sans);color:var(--ink-3);max-width:76ch}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;scroll-behavior:auto !important}
+  .stamp{opacity:.9;transform:rotate(-8deg) scale(1)}
+  .sm.go li{animation-delay:0ms !important}
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+  <filter id="inkbleed" x="-12%" y="-12%" width="124%" height="124%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.86" numOctaves="3" seed="7" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="2.1" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<div class="perf perf-l" aria-hidden="true"></div>
+<div class="perf perf-r" aria-hidden="true"></div>
+
+<!-- ====================== COVER ====================== -->
+<header class="cover sheet">
+  <div class="masthead">
+    <span>Form BWI-R1 · Round One Plan</span>
+    <span>AY 2026-27</span>
+    <span>Prepared 22 Aug 2026</span>
+  </div>
+
+  <div class="stamp-wrap">
+    <div class="stamp"><b>Prototype</b>Not a government product</div>
+  </div>
+
+  <div class="cover-body">
+    <h1 class="thesis">Two-thirds of the people using India's tax portal owe nothing at all.</h1>
+    <p class="thesis-2">They are not taxpayers. They are creditors, waiting on their own money.</p>
+  </div>
+
+  <div class="figs">
+    <div class="fig">
+      <span class="fig-n">5.58 cr</span>
+      <span class="fig-l">Filers with zero tax liability, FY 2024-25</span>
+    </div>
+    <div class="fig">
+      <span class="fig-n">66.5%</span>
+      <span class="fig-l">Of every return filed that year</span>
+    </div>
+    <div class="fig fig-owe">
+      <span class="fig-n">₹0</span>
+      <span class="fig-l">What they owe the department</span>
+    </div>
+  </div>
+
+  <div class="cover-meta stack">
+    <p class="note">This document is the build plan for <strong>Wapsi</strong> (वापसी — the return, and your money coming back): a rebuild of the income tax e-filing journey for the people who use it most and are served by it least. Round one closes <strong class="stamp-txt">28 Aug 2026, 20:00 IST</strong>. There is no grace period.</p>
+    <p class="caption">Read it top to bottom. Everything marked <em>as it could be</em> is a working demonstration, not a description.</p>
+  </div>
+</header>
+
+<!-- ====================== PART A ====================== -->
+<section class="sec sheet" id="part-a">
+  <header class="sec-head">
+    <span class="sec-part">Part A</span>
+    <span class="sec-name">General</span>
+    <span class="sec-note">the problem, shown</span>
+  </header>
+  <div class="sec-rule2"></div>
+
+  <h2>The most-read sentence on the portal says nothing.</h2>
+  <p class="lede">It appears when you file. When you verify. When you open your annual statement. When you download a receipt. In the mobile app. It is the same eight words every time, and it has never once told anybody what to do next.</p>
+
+  <div class="ba">
+    <div class="ba-side">
+      <span class="ba-tag tag-now">As it is</span>
+      <div class="errbox" role="img" aria-label="Screenshot recreation of the portal's generic error dialog">
+        <div class="errbox-bar">incometax.gov.in</div>
+        <div class="errbox-body">
+          <p>Something went wrong, please try again later.</p>
+          <span class="errbox-ok">OK</span>
+        </div>
+      </div>
+      <p class="caption" style="margin-top:.8rem">Recreated, not captured. The real one looks like this.</p>
+    </div>
+
+    <div class="tear" aria-hidden="true"></div>
+
+    <div class="ba-side">
+      <span class="ba-tag tag-could">As it could be</span>
+      <div class="lift">
+        <p class="w-eyebrow">One thing to change</p>
+        <p style="font:600 clamp(1rem,.8vw + .88rem,1.22rem)/1.42 var(--sans);letter-spacing:-.014em;margin:0">Your city name is 27 letters. This form allows 25.</p>
+        <p class="w-prov" style="border-top:0;padding-top:.55rem;margin-top:.45rem">Shorten it and carry on — everything else you've entered is saved.</p>
+        <div class="w-acts">
+          <button class="btn btn-y" type="button">Shorten it here</button>
+        </div>
+      </div>
+      <p class="caption" style="margin-top:.8rem">Same failure. The difference is that the system already knew this.</p>
+    </div>
+  </div>
+
+  <p class="marginalia"><strong>Rule 7 of the simplification contract:</strong> never a dead end. No error ships without its fix attached, and the string <span class="mono">Something went wrong</span> is banned from the codebase.</p>
+
+  <h2 style="margin-top:clamp(40px,6vw,68px)">What people actually say about it</h2>
+  <div class="quotes">
+    <blockquote class="quote">
+      <p>“Verified returns of last year shown not Verified and people are made to apply for condonation.”</p>
+      <cite>Sasikumar · TaxGuru comments</cite>
+    </blockquote>
+    <blockquote class="quote">
+      <p>“Portal is saying that Aadhar is not linked to pan… when we are trying to link, portal is saying Aadhar is already linked.”</p>
+      <cite>Sanjay Gupta · TaxGuru comments</cite>
+    </blockquote>
+    <blockquote class="quote">
+      <p>“Trying to download 26AS for 4.5 hours but unable to due to an error message.”</p>
+      <cite>Pradeep Dwivedi · Business Standard</cite>
+    </blockquote>
+  </div>
+
+  <table class="ledger">
+    <caption>A workaround is a bug that people have given a name</caption>
+    <thead>
+      <tr><th scope="col">What users tell each other to do</th><th scope="col">What it is actually reporting</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>File at three in the morning.</td>
+        <td>There is no capacity headroom at the hours people are awake.</td>
+      </tr>
+      <tr>
+        <td>Delete the bank account and add it again. Don't bother with Revalidate.</td>
+        <td>The Revalidate button does not work, and the forums found out before the department did.</td>
+      </tr>
+      <tr>
+        <td>Ask for the Aadhaar OTP twice as a matter of course.</td>
+        <td>OTP delivery is lossy, and the interface is designed as though it isn't.</td>
+      </tr>
+      <tr>
+        <td>Wait a minute or two on a blank screen before deciding the download failed.</td>
+        <td>There is no loading state anywhere, so a slow success and a silent failure look identical.</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ====================== PART B ====================== -->
+<section class="sec sheet" id="part-b">
+  <header class="sec-head">
+    <span class="sec-part">Part B</span>
+    <span class="sec-name">The journey</span>
+    <span class="sec-note">three acts, one problem</span>
+  </header>
+  <div class="sec-rule2"></div>
+
+  <h2>One journey: from “I owe nothing” to “the money is in my account.”</h2>
+  <p class="lede">The brief asks for one clearly defined problem. This is one problem with three moments in it. A journey that ends at <em>submit</em> would not be a citizen journey at all — it would stop exactly where the citizen's actual difficulty begins.</p>
+
+  <!-- ---------- ACT 1 ---------- -->
+  <div class="act" id="act-1">
+    <div class="act-head">
+      <span class="act-n">Act 1</span>
+      <h3 class="act-t">Confirm, don't compose</h3>
+      <span class="act-who">Sunita Devi · Tiruppur</span>
+    </div>
+    <p class="lede" style="font-size:1rem">The department already holds her salary, her TDS and her interest. She is asked to type all of it back in anyway — after choosing which of seven forms applies to her.</p>
+
+    <div class="ba">
+      <div class="ba-side">
+        <span class="ba-tag tag-now">As it is</span>
+        <div class="slab gov">
+          <div class="gov-title">e-Filing &gt; Income Tax Return &gt; File Return</div>
+          <label class="gov-lab" for="itr-sel">Select ITR Form <span style="color:#B4232B">*</span></label>
+          <div class="gov-sel" id="itr-sel">ITR-1 (Sahaj) <span>▾</span></div>
+          <div class="gov-row"><span class="gov-k">Gross Total Income</span><span class="gov-v">420000</span></div>
+          <div class="gov-row"><span class="gov-k">Deductions under Chapter VI-A</span><span class="gov-v">0</span></div>
+          <div class="gov-row"><span class="gov-k">Total Taxable Income</span><span class="gov-v">420000</span></div>
+          <div class="gov-row"><span class="gov-k">TDS u/s 192</span><span class="gov-v">8400</span></div>
+          <div class="gov-row"><span class="gov-k">Total Tax Liability</span><span class="gov-v">0</span></div>
+          <div class="gov-row"><span class="gov-k">Refund Due</span><span class="gov-v">8400</span></div>
+          <button class="gov-btn" type="button" tabindex="-1">Proceed to Validation</button>
+          <p class="gov-note">Note: Please ensure Schedule TDS is reconciled with Form 26AS before validation.</p>
+        </div>
+        <p class="caption" style="margin-top:.8rem">Seven forms to choose between, before a single question she can answer.</p>
+      </div>
+
+      <div class="tear" aria-hidden="true"></div>
+
+      <div class="ba-side">
+        <span class="ba-tag tag-could">As it could be</span>
+
+        <div class="langbar" role="group" data-langbar aria-label="Preview this card in another language">
+          <button class="langbtn" type="button" data-lang="en" aria-pressed="true">English</button>
+          <button class="langbtn deva" type="button" data-lang="hi" aria-pressed="false">हिन्दी</button>
+          <button class="langbtn tam" type="button" data-lang="ta" aria-pressed="false">தமிழ்</button>
+        </div>
+
+        <div class="lift" id="prov-card">
+          <p class="w-eyebrow" data-k="checkThis">Check this — you don't have to fill it in</p>
+          <p class="w-label" data-k="label">Your pay last year</p>
+          <p class="w-amt tnum" data-k="amt">₹4,20,000</p>
+          <p class="w-prov" data-k="prov">Chettinad Textiles Pvt Ltd reported this to the department on 12 May 2026</p>
+          <p class="w-id">TAN CMBC12874E</p>
+          <div class="w-acts">
+            <button class="btn btn-y" type="button" data-k="yes">Yes, that's right</button>
+            <button class="btn btn-n" type="button" data-dispute-toggle="dispute-panel" data-k="no" aria-expanded="false" aria-controls="dispute-panel">No, this is wrong</button>
+          </div>
+
+          <div class="dispute" id="dispute-panel" data-open="false">
+            <p class="d-h">What should it say?</p>
+            <label class="d-field"><span>The right amount</span><input type="text" value="₹3,96,000" inputmode="numeric" aria-label="The right amount"></label>
+            <label class="d-field"><span>Why it's wrong</span><input type="text" value="Two months' pay is missing" aria-label="Why it's wrong"></label>
+            <p class="d-warn"><strong>Only Chettinad Textiles can change this at the source.</strong> We'll send them exactly what to correct, and tell you when they've done it. You don't have to argue with the department about someone else's paperwork.</p>
+          </div>
+
+          <p class="w-out">
+            <span data-k="owes">You owe nothing.</span>
+            <span class="money-txt" data-k="refund">₹8,400 comes back to you.</span>
+          </p>
+        </div>
+
+        <p class="caption" style="margin-top:.8rem">Both buttons work. So does the language switch.</p>
+      </div>
+    </div>
+
+    <p class="marginalia">The provenance line is the invention. The real portal shows figures with no origin, so a citizen who spots an error cannot tell whose mistake they are arguing with — and a Form 26AS error can <em>only</em> be corrected by the deductor filing a correction statement. Naming the reporter is what makes “just confirm this” a fair thing to ask of someone who is frightened of getting a government form wrong.</p>
+
+    <p class="marginalia" style="border-left-color:var(--rule)">This review document loads a webfont. <strong>The shipped product deliberately loads none.</strong> A Tamil-reading user on a slow connection should not download 200 KB before she can read her refund status, so the product uses the system stack and spends the budget on scale and spacing instead. IBM Plex is here because it is the open family with the widest Devanagari and Tamil coverage, which lets this page demonstrate the trilingual claim rather than assert it.</p>
+  </div>
+
+  <!-- ---------- ACT 2 ---------- -->
+  <div class="act" id="act-2">
+    <div class="act-head">
+      <span class="act-n">Act 2</span>
+      <h3 class="act-t">When something comes back</h3>
+      <span class="act-who">Rakesh Kumar · Lucknow</span>
+    </div>
+    <p class="lede" style="font-size:1rem">His broker reported the total value of everything he sold. Prefill read it as profit. He has thirty days to notice, and silence counts as agreement.</p>
+
+    <div class="ba">
+      <div class="ba-side">
+        <span class="ba-tag tag-now">As it is</span>
+        <div class="slab">
+          <p class="statute">
+            <span class="statute-sub">Sub: Communication of proposed adjustment u/s 143(1)(a) of the Income Tax Act, 1961.</span>
+            The return for AY 2026-27 filed vide ack. no. 4718220293280726 has been processed and the following variance(s) requiring adjustment u/s 143(1)(a)(ii) has/have been identified. Inconsistency between the income/deduction disclosed in the return and the information available in Form 26AS/AIS in respect of income chargeable under the head 'Capital Gains'. Variance: Rs. 1,10,000/-. You are required to respond within 30 days from the date of issue of this communication, failing which the adjustment shall be made and the return processed accordingly.
+            <span class="din">DIN: ITBA/AST/S/143(1)(a)/2026-27/1078342219(1)</span>
+          </p>
+        </div>
+        <p class="caption" style="margin-top:.8rem">Nothing here says what he is accused of, what it costs, or what to do.</p>
+      </div>
+
+      <div class="tear" aria-hidden="true"></div>
+
+      <div class="ba-side">
+        <span class="ba-tag tag-could">As it could be</span>
+        <div class="lift">
+          <p class="dec-h">The department thinks you left out ₹1,10,000 of share profit.</p>
+
+          <p class="dec-lab">What this is based on</p>
+          <p class="dec-basis">Meridian Securities Pvt Ltd reported it on 30 June 2026 · SEBI INZ000123456 · it appears in your statement as “Sale of securities”.</p>
+
+          <p class="dec-catch"><strong>What they've got wrong:</strong> that ₹1,10,000 is the total value of everything you sold — not what you made on it. Across those trades you lost ₹4,200.</p>
+
+          <p class="dec-conseq">If you say nothing by 10 September, ₹1,10,000 is added to your income and about ₹34,300 comes out of your refund.</p>
+
+          <div class="w-acts">
+            <button class="btn btn-ghost btn-sm" type="button">That's right</button>
+            <button class="btn btn-y btn-sm" type="button">That's wrong</button>
+            <button class="btn btn-n btn-sm" type="button">I don't understand this</button>
+          </div>
+
+          <p class="dec-din"><strong>Reference number on this letter:</strong><br>ITBA/AST/S/143(1)(a)/2026-27/1078342219(1)<br><span style="color:var(--ink-2)">Every letter from the department must carry one. Without it, the letter officially does not exist — CBDT Circular 19/2019. Almost no citizen knows they hold that right, so we print it and let them check it.</span></p>
+        </div>
+        <p class="caption" style="margin-top:.8rem">Same letter. The claim, its source, the error in it, and the price of silence.</p>
+      </div>
+    </div>
+
+    <p class="marginalia">His second letter is a s.245 set-off: ₹18,740 of this year's refund held against a demand from 2019-20 that he was never served. That screen carries a one-tap <em>“I never received notice of this”</em>, and says why the button exists — CAG Report 14/2024 found 7,341 duplicate demands overstating ₹15,652 crore.</p>
+  </div>
+
+  <!-- ---------- ACT 3 ---------- -->
+  <div class="act" id="act-3">
+    <div class="act-head">
+      <span class="act-n">Act 3</span>
+      <h3 class="act-t">The wait, made legible</h3>
+      <span class="act-who">Priya Sharma · Pune</span>
+    </div>
+    <p class="lede" style="font-size:1rem">She filed on 12 June and verified the same day. Two separate things are holding her ₹28,400, and she has been told about neither.</p>
+
+    <div class="ba">
+      <div class="ba-side">
+        <span class="ba-tag tag-now">As it is</span>
+        <div class="spin" role="img" aria-label="Recreation of the portal's refund status: a spinner and the words Under processing">
+          <div class="spin-c" aria-hidden="true"></div>
+          <p>Under processing</p>
+        </div>
+        <p class="caption" style="margin-top:.8rem">Seventy-one days. This is everything she is told.</p>
+      </div>
+
+      <div class="tear" aria-hidden="true"></div>
+
+      <div class="ba-side">
+        <span class="ba-tag tag-could">As it could be</span>
+        <div class="lift" id="sm-card">
+          <p class="w-eyebrow">₹28,400 · filed 71 days ago</p>
+
+          <ol class="sm" id="sm-list">
+            <li class="sm-done" style="--d:0ms"><span class="sm-dot" aria-hidden="true"></span><span class="sm-txt">You sent your return in<span class="sm-when">12 Jun</span></span></li>
+            <li class="sm-done" style="--d:70ms"><span class="sm-dot" aria-hidden="true"></span><span class="sm-txt">You confirmed it was you<span class="sm-when">12 Jun · Aadhaar OTP, 4 minutes later</span></span></li>
+            <li class="sm-done" style="--d:140ms"><span class="sm-dot" aria-hidden="true"></span><span class="sm-txt">In the queue with everything else filed that week<span class="sm-when">19 Jun</span></span></li>
+            <li class="sm-now" style="--d:210ms"><span class="sm-dot" aria-hidden="true"></span><span class="sm-txt">Someone is looking at it<span class="sm-when">Since 3 Jul · two things are holding it</span></span></li>
+            <li style="--d:280ms"><span class="sm-dot" aria-hidden="true"></span><span class="sm-txt">Decided</span></li>
+            <li style="--d:350ms"><span class="sm-dot" aria-hidden="true"></span><span class="sm-txt">Sent to your bank</span></li>
+            <li style="--d:420ms"><span class="sm-dot" aria-hidden="true"></span><span class="sm-txt">In your account</span></li>
+          </ol>
+
+          <div class="hold">
+            <p class="hold-h">Waiting on one thing: a receipt for your rent claim.</p>
+            <p class="hold-d">You claimed ₹60,000 of rent. Nothing was attached to show it. Add a receipt, or your landlord's name and PAN.</p>
+            <div class="hold-f">
+              <button class="btn btn-y btn-sm" type="button"
+                data-release
+                data-released-title="Rent receipt received — this hold is cleared."
+                data-released-body="Attached 22 Aug. Your ₹60,000 claim now has evidence behind it, and nobody has to ask you for it again."
+                data-released-eta="cleared · about 4 days on this">Add the receipt</button>
+              <span class="hold-eta">then about 4 days</span>
+            </div>
+          </div>
+
+          <div class="hold">
+            <p class="hold-h">The account you chose can't receive the money.</p>
+            <p class="hold-d">Godavari Gramin Bank became part of Deccan Union Bank last year. Your account number is fine — the code that routes money to it is not.</p>
+            <div class="hold-f">
+              <button class="btn btn-y btn-sm" type="button"
+                data-release
+                data-released-title="Going to Deccan Union Bank •••• 6620."
+                data-released-body="That account is already validated in your name. The old one stays on record so you can see what happened, rather than vanishing."
+                data-released-eta="cleared · about 2 days on this">Send it to •••• 6620 instead</button>
+              <span class="hold-eta">then about 2 days</span>
+            </div>
+          </div>
+
+          <p class="window">Returns filed the same week as yours are being processed now. Expect <strong>10 to 14 days</strong> once both of those are cleared.</p>
+        </div>
+        <p class="caption" style="margin-top:.8rem">Every hold names the action that releases it. Clear both and the refund moves on.</p>
+      </div>
+    </div>
+
+    <p class="marginalia">Refund <em>variance</em> is what generates grievance volume, not duration — seven days for one return and three months for an identical one. So the promise is a stated range for your filing cohort, never a countdown. And a hold a citizen cannot act on is just opacity with more words, which is why every hold in the data model is required to carry a resolution path.</p>
+  </div>
+</section>
+
+<!-- ====================== SCHEDULE P ====================== -->
+<section class="sec sheet" id="schedule-p">
+  <header class="sec-head">
+    <span class="sec-part">Schedule P</span>
+    <span class="sec-name">Who tests it</span>
+    <span class="sec-note">three logins, not one demo account</span>
+  </header>
+  <div class="sec-rule2"></div>
+
+  <h2>Reviewers are busy. They must not be able to fail at login.</h2>
+  <p class="lede">Credentials are printed on the landing page and wired to one-tap buttons. Each of the three is standing mid-journey in a different act, and each embodies a failure we can cite rather than one we invented.</p>
+
+  <div class="people">
+    <article class="person">
+      <p class="person-act">Act 1 · Confirm, don't compose</p>
+      <h3 class="person-n">Sunita Devi</h3>
+      <p class="person-w">34 · Supervisor, garment unit · Tiruppur, Tamil Nadu</p>
+      <p class="person-s">₹8,400 was taken out of her pay. She owes nothing. She has not filed, and school fees are due.</p>
+      <p class="person-e">66.5% of filers had zero tax liability in FY 2024-25. The portal still makes them choose a form, then compose a return from scratch — on a desktop, in English.</p>
+      <span class="person-pan">DEMPS4417K</span>
+    </article>
+
+    <article class="person">
+      <p class="person-act">Act 2 · When something comes back</p>
+      <h3 class="person-n">Rakesh Kumar</h3>
+      <p class="person-w">41 · Operations manager, trades equity · Lucknow, Uttar Pradesh</p>
+      <p class="person-s">Two notices. One says he hid ₹1,10,000 of share profit — he actually lost ₹4,200. The other wants part of his refund for a 2019 bill he never heard about.</p>
+      <p class="person-e">Broker feeds report gross sale value, which prefill mis-tags as gains. Say nothing and silence counts as consent. CAG Report 14/2024: 7,341 duplicate demands overstating ₹15,652 crore.</p>
+      <span class="person-pan">DEMPK8823R</span>
+    </article>
+
+    <article class="person">
+      <p class="person-act">Act 3 · The wait, made legible</p>
+      <h3 class="person-n">Priya Sharma</h3>
+      <p class="person-w">28 · Junior architect, first time filing · Pune, Maharashtra</p>
+      <p class="person-s">Filed 71 days ago. The portal says “Under processing” and nothing else. Two separate things are actually holding her ₹28,400.</p>
+      <p class="person-e">Refund variance drives grievance volume — seven days for one return, three months for an identical one. Meanwhile Revalidate does not work, and forums pass around delete-and-re-add as the fix.</p>
+      <span class="person-pan">DEMPS9052M</span>
+    </article>
+  </div>
+
+  <p class="marginalia">Every PAN begins <span class="mono">DEMP</span>. That is the deliberate tell — the fourth character is <span class="mono">P</span>, which is where a real PAN encodes an individual, so the format is right and the identity is unmistakably fictional. Mobile numbers use a repeating <span class="mono">90000 000NN</span> pattern, because any realistic-looking Indian mobile number is somebody's and India has no reserved fiction range the way +1 has 555. Employers, banks, brokers and their TAN, IFSC and SEBI identifiers are invented too — so the disclaimer at the foot of every screen is literally true rather than approximately true.</p>
+</section>
+
+<!-- ====================== SCHEDULE I ====================== -->
+<section class="sec sheet" id="schedule-i">
+  <header class="sec-head">
+    <span class="sec-part">Schedule I</span>
+    <span class="sec-name">Infrastructure</span>
+    <span class="sec-note">break it on purpose</span>
+  </header>
+  <div class="sec-rule2"></div>
+
+  <h2>An architecture argument you can press, instead of one you have to read.</h2>
+  <p class="lede">A clearly-labelled demo control takes down each dependency in turn. Nothing errors. Each failure degrades into something the citizen can still act on — which is the whole claim, made checkable.</p>
+
+  <div class="tg-bar" role="group" aria-label="Simulate a dependency failure">
+    <button class="tg" type="button" data-dep="uidai" aria-pressed="false">UIDAI slow</button>
+    <button class="tg" type="button" data-dep="traces" aria-pressed="false">TRACES down</button>
+    <button class="tg" type="button" data-dep="gateway" aria-pressed="false">Payment gateway timeout</button>
+  </div>
+
+  <div class="deg" id="deg-panel" aria-live="polite">
+    <p class="deg-ok" id="deg-ok">All dependencies healthy. Press one above to take it down.</p>
+
+    <div class="deg-item" data-for="uidai" hidden>
+      <p class="deg-k">UIDAI slow · session held</p>
+      <p class="deg-v">Your code is taking longer than usual to arrive. <b>Nothing you've entered will be lost while you wait</b> — this page stays open as long as it needs to. You can ask for another code in 15 seconds.</p>
+    </div>
+
+    <div class="deg-item" data-for="traces" hidden>
+      <p class="deg-k">TRACES down · stale prefill, timestamped</p>
+      <p class="deg-v">These figures are <b>as of 18 July</b>. The system that holds your deduction records hasn't answered since this morning. You can carry on and confirm what's here, or wait and we'll tell you when it's fresh.</p>
+    </div>
+
+    <div class="deg-item" data-for="gateway" hidden>
+      <p class="deg-k">Gateway timeout · the third payment state</p>
+      <p class="deg-v"><b>Payment received · challan pending.</b> Your bank has taken the money. The receipt hasn't come back yet. Do not pay again — we're holding your reference and will attach the receipt when it arrives, usually within an hour.</p>
+    </div>
+  </div>
+
+  <p class="marginalia">That third one matters most. The real portal has no vocabulary for <em>paid but unreceipted</em>, so it shows failure and people pay twice. A payment saga with an idempotency key is not an implementation detail here — it is the difference between one debit and two.</p>
+</section>
+
+<!-- ====================== PART C ====================== -->
+<section class="sec sheet" id="scored">
+  <header class="sec-head">
+    <span class="sec-part">Part C</span>
+    <span class="sec-name">How this is scored</span>
+    <span class="sec-note">six criteria, six answers</span>
+  </header>
+  <div class="sec-rule2"></div>
+
+  <h2>Each criterion gets one thing in the build that answers it, not a paragraph that claims it.</h2>
+
+  <table class="ledger">
+    <caption>Judging criteria → the feature that answers it</caption>
+    <thead>
+      <tr><th scope="col">Criterion</th><th scope="col">What in the build answers it</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Problem</td>
+        <td>66.5% of filers owed nothing last year. The product opens on <em>“Is the department holding money that's yours?”</em> — not on “File your return.” <span class="cell-mono">5.58 cr of 8.39 cr</span></td>
+      </tr>
+      <tr>
+        <td>Working build</td>
+        <td>Three logins, three complete journeys, live URL, no access request. Not a slide deck and not a click-through prototype — real routes, real state transitions, real language switching.</td>
+      </tr>
+      <tr>
+        <td>Usability</td>
+        <td>Built at 375px first. Confirm-don't-compose, so the primary interaction is a two-button decision rather than a blank field. Full Tamil and Hindi interface, and speech input so nobody has to type.</td>
+      </tr>
+      <tr>
+        <td>Product thinking</td>
+        <td><b>Provenance.</b> Every figure names who reported it, under which identifier, and on what date. The real portal shows numbers with no origin — so a citizen who spots an error cannot tell whose mistake they are arguing with.</td>
+      </tr>
+      <tr>
+        <td>End-to-end thinking</td>
+        <td>The break-it toggle in Schedule I. Payment saga with an idempotency key, per-dependency circuit breakers, cached prefill served with its own timestamp. An infrastructure argument you can press.</td>
+      </tr>
+      <tr>
+        <td>Honesty</td>
+        <td>A route, not a footnote. <span class="cell-mono">/honesty</span> lists what is real, what is synthetic, what is stubbed, and what making it real would cost — including that the Hindi and Tamil were written by us and not reviewed by a native speaker.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="marginalia">Honesty is the criterion most submissions will not attempt, because the incentive at a hackathon runs the other way. It is also the cheapest one to win outright — and a product about a system that overstates its own state should not overstate its own.</p>
+</section>
+
+<!-- ====================== PART D ====================== -->
+<section class="sec sheet" id="time">
+  <header class="sec-head">
+    <span class="sec-part">Part D</span>
+    <span class="sec-name">Time</span>
+    <span class="sec-note">today plus six, and the deadline has no grace period</span>
+  </header>
+  <div class="sec-rule2"></div>
+
+  <h2>Deploy on day one. The public link is the deliverable most likely to fail last.</h2>
+
+  <div class="days">
+    <div class="day">
+      <span class="day-d">Sat 22</span>
+      <span class="day-w">Scaffold, design system, three languages, the three citizens. <b>First Vercel deploy today</b> — so the link exists from hour one.</span>
+    </div>
+    <div class="day">
+      <span class="day-d">Sun 23</span>
+      <span class="day-w">Act 1 whole: provenance cards, “this is wrong”, confirm &amp; file, verification as consequence.</span>
+    </div>
+    <div class="day">
+      <span class="day-d">Mon 24</span>
+      <span class="day-w">Act 3: the refund state machine, named holds, the unblock, bank revalidation that works.</span>
+    </div>
+    <div class="day">
+      <span class="day-d">Tue 25</span>
+      <span class="day-w">Act 2: notice inbox, decoding, guided disagree, the s.245 set-off screen.</span>
+    </div>
+    <div class="day">
+      <span class="day-d">Wed 26</span>
+      <span class="day-w">Voice, Tamil and Hindi pass, break-it toggle, <span class="mono">/honesty</span>, <span class="mono">/architecture</span>, mobile polish.</span>
+    </div>
+    <div class="day">
+      <span class="day-d">Thu 27</span>
+      <span class="day-w"><b>Code freeze.</b> Record the video. Write the 240 words. Walk all three personas on a clean device.</span>
+    </div>
+    <div class="day day-stop">
+      <span class="day-d">Fri 28</span>
+      <span class="day-w">Submit in the morning. <b>20:00 IST, no grace period</b> — and deadline evening is exactly when things break, which is what this whole project is about.</span>
+    </div>
+  </div>
+
+  <p class="marginalia">Act 3 is built before Act 2 on purpose. If one act has to slip, the journey still has to be complete — Acts 1 and 3 alone are a submittable end-to-end story, and Act 3 is also the strongest twenty seconds of the video.</p>
+</section>
+
+<!-- ====================== VERIFICATION ====================== -->
+<section class="sec sheet" id="verification">
+  <header class="sec-head">
+    <span class="sec-part">Verification</span>
+    <span class="sec-name">Declaration</span>
+    <span class="sec-note">the risks, stated before they're discovered</span>
+  </header>
+  <div class="sec-rule2"></div>
+
+  <div class="verif">
+    <p class="verif-i">I declare that what is written above is true to the best of my knowledge, and that the following four things are the parts most likely to go wrong. They are stated here so that neither of us can be surprised by them later.</p>
+    <ol>
+      <li><strong>The brief wants Codex or an OpenAI model involved. We are building with Claude Code and hold no OpenAI key</strong>, so as planned the submission satisfies neither branch of that requirement. The mitigation is preserved by design rather than bolted on: notice-decoding and dispute-drafting sit behind an <span class="mono">ExplanationProvider</span> interface with a deterministic template implementation, so a key makes it genuinely model-powered in one file. Whether to take that is a decision, not an oversight.</li>
+      <li><strong>Three acts in six days is the real risk.</strong> The ordering above is the mitigation: Acts 1 and 3 alone are a complete, submittable journey. If Tuesday slips, Act 2 ships as a read-only decoded inbox without the guided disagree — and <span class="mono">/honesty</span> says exactly that, rather than the demo quietly avoiding the button.</li>
+      <li><strong>The Hindi and Tamil are ours, not a native speaker's.</strong> Interface strings are typed against the English dictionary, so a missing translation fails the build rather than falling back silently to English — but correctness of shape is not correctness of language. Disclosed on <span class="mono">/honesty</span>. A reviewer's proofread on Wednesday is worth more than anything else we could spend that hour on.</li>
+      <li><strong>“Wapsi” is a Hindi word in a product that also speaks Tamil.</strong> Common and defensible, and the double meaning is the whole pitch — वापसी is both the return you file and the money coming back. Say now if you'd rather a neutral mark: it touches the language files and the metadata, and nothing else.</li>
+    </ol>
+
+    <div class="sigs">
+      <div class="sig">Prepared · 22 August 2026</div>
+      <div class="sig">Approved · ____________________</div>
+    </div>
+  </div>
+
+  <p class="colophon">Wapsi · वापसी · an independent concept prototype, not a government product and not affiliated with the Income Tax Department or any of its systems. Every PAN, employer, bank, broker, amount, notice and document number on these pages is invented. Figures cited about the real portal come from CBDT and Income Tax Department releases, CAG Report 14 of 2024, ICAI's representation of September 2025, Lok Sabha Unstarred Question 60 of 20 July 2026, and named public forum and press accounts. Set in IBM Plex Serif, Sans, Mono, Sans Devanagari and Sans Tamil.</p>
+</section>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---- Act 1: language switcher -------------------------------------
+   * These strings are lifted verbatim from lib/i18n/{en,hi,ta}.ts, and
+   * the interpolated ones are functions rather than templates for the
+   * same reason they are in the product: Hindi and Tamil put the verb
+   * and the postposition somewhere else, so "X reported this on Y" is
+   * not a slot-filling exercise.
+   *
+   * Money and dates go through Intl with the product's own options, so
+   * the lakh grouping and the month names on this page are computed —
+   * not typed out to look right.                                       */
+  var LOCALE = { en: "en-IN", hi: "hi-IN", ta: "ta-IN" };
+
+  function money(rupees, lang) {
+    return new Intl.NumberFormat(LOCALE[lang], {
+      style: "currency", currency: "INR",
+      maximumFractionDigits: 0, numberingSystem: "latn"
+    }).format(rupees);
+  }
+
+  function longDate(iso, lang) {
+    return new Intl.DateTimeFormat(LOCALE[lang], {
+      day: "numeric", month: "long", year: "numeric", numberingSystem: "latn"
+    }).format(new Date(iso + "T00:00:00"));
+  }
+
+  var EMPLOYER = "Chettinad Textiles Pvt Ltd";
+  var FILED_ON = "2026-05-12";
+  var PAY = 420000;
+  var REFUND = 8400;
+
+  var DICT = {
+    en: {
+      checkThis: "Check this — you don't have to fill it in",
+      label: "Your pay last year",
+      reportedBy: function (r, d) { return r + " reported this to the department on " + d; },
+      yes: "Yes, that's right",
+      no: "No, this is wrong",
+      owes: "You owe nothing.",
+      refund: function (a) { return a + " comes back to you."; }
+    },
+    hi: {
+      checkThis: "इसे जाँच लें — भरना नहीं है",
+      label: "पिछले साल आपका वेतन",
+      reportedBy: function (r, d) { return r + " ने " + d + " को विभाग को यह बताया"; },
+      yes: "हाँ, यह सही है",
+      no: "नहीं, यह ग़लत है",
+      owes: "आपको कुछ नहीं देना है।",
+      refund: function (a) { return a + " आपको वापस मिलेंगे।"; }
+    },
+    ta: {
+      checkThis: "இதைச் சரிபாருங்கள் — நிரப்ப வேண்டியதில்லை",
+      label: "கடந்த ஆண்டு உங்கள் ஊதியம்",
+      reportedBy: function (r, d) { return r + " இதை " + d + " அன்று துறைக்குத் தெரிவித்தது"; },
+      yes: "ஆம், இது சரி",
+      no: "இல்லை, இது தவறு",
+      owes: "நீங்கள் எதுவும் செலுத்த வேண்டியதில்லை.",
+      refund: function (a) { return a + " உங்களுக்குத் திரும்பக் கிடைக்கும்."; }
+    }
+  };
+
+  var langbar = document.querySelector("[data-langbar]");
+  var card = document.getElementById("prov-card");
+
+  function paint(lang) {
+    var t = DICT[lang];
+    var values = {
+      checkThis: t.checkThis,
+      label: t.label,
+      amt: money(PAY, lang),
+      prov: t.reportedBy(EMPLOYER, longDate(FILED_ON, lang)),
+      yes: t.yes,
+      no: t.no,
+      owes: t.owes,
+      refund: t.refund(money(REFUND, lang))
+    };
+    card.querySelectorAll("[data-k]").forEach(function (el) {
+      var v = values[el.dataset.k];
+      if (v !== undefined) el.textContent = v;
+    });
+    card.lang = lang;
+    card.classList.remove("card-hi", "card-ta");
+    if (lang === "hi") card.classList.add("card-hi");
+    if (lang === "ta") card.classList.add("card-ta");
+  }
+
+  if (langbar && card) {
+    langbar.addEventListener("click", function (e) {
+      var btn = e.target.closest(".langbtn");
+      if (!btn) return;
+      langbar.querySelectorAll(".langbtn").forEach(function (b) {
+        b.setAttribute("aria-pressed", String(b === btn));
+      });
+      paint(btn.dataset.lang);
+    });
+    /* Repaint English on load, so the figures on screen are the ones
+       Intl produced rather than the ones in the markup. If they differ,
+       that is worth knowing before it reaches a citizen. */
+    paint("en");
+  }
+
+  /* ---- Act 1: "this is wrong" reveal -------------------------------- */
+  document.querySelectorAll("[data-dispute-toggle]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var panel = document.getElementById(btn.dataset.disputeToggle);
+      var open = panel.dataset.open === "true";
+      panel.dataset.open = String(!open);
+      btn.setAttribute("aria-expanded", String(!open));
+      if (!open) {
+        var first = panel.querySelector("input");
+        if (first) first.focus();
+      }
+    });
+  });
+
+  /* ---- Act 3: run the state machine when it scrolls into view -------
+   * The point of the animation is that a refund moves through states;
+   * showing it already finished would lose that. Reduced motion is
+   * respected in CSS, which zeroes the delays.                         */
+  var sm = document.querySelector(".sm");
+  if (sm && "IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) {
+          en.target.classList.add("go");
+          io.unobserve(en.target);
+        }
+      });
+    }, { threshold: 0.28 });
+    io.observe(sm);
+  } else if (sm) {
+    sm.classList.add("go");
+  }
+
+  /* ---- Act 3: releasing a hold advances the machine ----------------- */
+  document.querySelectorAll("[data-release]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var hold = btn.closest(".hold");
+      hold.querySelector(".hold-h").textContent = btn.dataset.releasedTitle;
+      hold.querySelector(".hold-d").textContent = btn.dataset.releasedBody;
+      var foot = hold.querySelector(".hold-f");
+      foot.innerHTML = '<span class="hold-eta">' + btn.dataset.releasedEta + "</span>";
+      var remaining = document.querySelectorAll(".hold [data-release]").length;
+      if (remaining === 0) {
+        var now = document.querySelector(".sm-now");
+        if (now && now.nextElementSibling) {
+          now.classList.remove("sm-now");
+          now.classList.add("sm-done");
+          now.nextElementSibling.classList.add("sm-now");
+        }
+      }
+    });
+  });
+
+  /* ---- Schedule I: break a dependency ------------------------------- */
+  var degOk = document.getElementById("deg-ok");
+  document.querySelectorAll(".tg").forEach(function (tg) {
+    tg.addEventListener("click", function () {
+      var on = tg.getAttribute("aria-pressed") === "true";
+      tg.setAttribute("aria-pressed", String(!on));
+      var item = document.querySelector('.deg-item[data-for="' + tg.dataset.dep + '"]');
+      if (item) item.hidden = on;
+      var anyDown = document.querySelectorAll('.tg[aria-pressed="true"]').length > 0;
+      degOk.hidden = anyDown;
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
