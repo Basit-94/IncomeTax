@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
+
 
 export const metadata: Metadata = {
   title: "Wapsi — your money, coming back",
@@ -20,6 +22,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-dvh flex flex-col">
         <div className="flex-1">{children}</div>
+        <Analytics />
 
         {/*
           Required by the hackathon brief: the prototype must not present itself

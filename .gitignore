@@ -17,3 +17,6 @@ video/hyperframes/
 # Rendered video output (large binaries; sources are committed instead)
 video/**/*.mp4
 video/**/*.wav
+
+.vercel
+.env*

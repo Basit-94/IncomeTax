@@ -571,7 +571,7 @@ const priya: Persona = {
         state: "verified",
         headline: "You confirmed it was you. The return counts from here.",
         actor: "citizen",
-        detail: "Aadhaar OTP, 4 minutes after filing.",
+        detail: "OTP verified, 4 minutes after filing.",
       },
       {
         id: "priya-tl-3",

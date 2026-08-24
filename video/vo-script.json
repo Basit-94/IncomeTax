@@ -1,0 +1,35 @@
+{
+  "_comment": "Wapsi plan explainer - voiceover script. 'gapBefore' is silence (seconds) inserted before the line in the master mix; it is how pacing and the held beats are authored. Phonetic respellings are deliberate: SAPI mangles 'Wapsi', so it is written 'Wahpsee'. The rupee glyph is never spoken and no section numbers are read aloud. l12's long gapBefore is the uncomfortable spinner hold.",
+  "voice": "Microsoft Hazel Desktop",
+  "rate": -1,
+  "volume": 100,
+  "sampleRate": 48000,
+  "tailSeconds": 1.6,
+  "lines": [
+    { "id": "l01", "scene": "s1", "gapBefore": 0.80, "text": "Two thirds of the people who file India's income tax return owe nothing." },
+    { "id": "l02", "scene": "s1", "gapBefore": 0.35, "text": "They are not debtors. They are creditors, waiting on their own money." },
+
+    { "id": "l03", "scene": "s2", "gapBefore": 0.50, "text": "This is the most common thing the portal says to them." },
+    { "id": "l04", "scene": "s2", "gapBefore": 0.75, "text": "It is not an error message. It is a shrug." },
+    { "id": "l05", "scene": "s2", "gapBefore": 0.50, "text": "Here is the same failure, told truthfully." },
+
+    { "id": "l06", "scene": "s3", "gapBefore": 3.20, "text": "The department already holds her salary, and the tax taken from it." },
+    { "id": "l07", "scene": "s3", "gapBefore": 0.35, "text": "So stop asking people to compose a return." },
+    { "id": "l08", "scene": "s3", "gapBefore": 0.30, "text": "Ask them to confirm one." },
+    { "id": "l09", "scene": "s3", "gapBefore": 0.60, "text": "Every figure names who reported it, and when. She is checking someone else's work, not risking her own." },
+    { "id": "l10", "scene": "s3", "gapBefore": 0.60, "text": "In Hindi. In Tamil. The whole interface, not a chatbot bolted on." },
+
+    { "id": "l11", "scene": "s4", "gapBefore": 1.00, "text": "Then she waits." },
+    { "id": "l12", "scene": "s4", "gapBefore": 2.90, "text": "Seventy one days. This is everything she is told." },
+    { "id": "l13", "scene": "s4", "gapBefore": 0.75, "text": "So make the waiting legible. Seven steps, and you see where you are." },
+    { "id": "l14", "scene": "s4", "gapBefore": 0.60, "text": "The step holding your money names its own reason," },
+    { "id": "l15", "scene": "s4", "gapBefore": 0.20, "text": "and carries the button that releases it." },
+
+    { "id": "l16", "scene": "s5", "gapBefore": 0.85, "text": "When something comes back, it comes back written in law." },
+    { "id": "l17", "scene": "s5", "gapBefore": 0.35, "text": "Say it in money and days. If she says nothing by the fourteenth of September, it becomes final and is taken from her refund." },
+
+    { "id": "l18", "scene": "s6", "gapBefore": 0.70, "text": "Three acts, one journey. File by confirming. Understand what comes back. Watch the money move." },
+    { "id": "l19", "scene": "s6", "gapBefore": 0.45, "text": "Wahpsee. The return, and your money coming back." },
+    { "id": "l20", "scene": "s6", "gapBefore": 0.50, "text": "Round one closes on the twenty eighth of August, at eight in the evening." }
+  ]
+}

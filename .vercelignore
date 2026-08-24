@@ -1,0 +1,17 @@
+# Takes precedence over .gitignore for deployment uploads, so the standard
+# entries are repeated here deliberately rather than inherited.
+node_modules
+.next
+out
+.env*
+!.env.example
+*.tsbuildinfo
+.vercel
+.DS_Store
+
+# Not part of the deployed app.
+.claude
+video
+docs
+AGENTS.md
+CLAUDE.md

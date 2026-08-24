@@ -35,6 +35,22 @@ export const en = {
     loading: "Just a moment",
   },
 
+  /**
+   * Validation messages. Held to the same rule as everything else: an error
+   * names what is wrong and what would be right. "Invalid PAN" is banned — it
+   * tells someone they failed without telling them how to stop failing.
+   */
+  validate: {
+    panTooShort: (n: number) => `That's ${n} characters so far. A PAN has 10.`,
+    panShape:
+      "A PAN is five letters, then four digits, then one letter — like DEMPS4417K.",
+    panSandboxHint:
+      "Nothing you type here leaves your browser. Every PAN in this prototype starts with DEMP, so a real one can't be looked up by accident.",
+    ifscTooShort: (n: number) => `That's ${n} characters. A bank code has 11.`,
+    ifscShape:
+      "A bank code is four letters, then a zero, then six more — like DECU0834471.",
+  },
+
   landing: {
     question: "Is the Income Tax Department holding money that's yours?",
     subtext:
@@ -44,6 +60,43 @@ export const en = {
     check: "Check what's owed to me",
     orTryAs: "Or look around as one of three people",
     honestyLink: "What's real here and what's made up",
+  },
+
+  /**
+   * The four cards on the landing page. Numbered because these genuinely are
+   * sequential moments in one journey — filing, then a letter, then the wait —
+   * not decoration. Names are proper nouns and stay untranslated.
+   *
+   * Note what these strings do *not* say. Not "S.245 set-off", not "IFSC", not
+   * "ITR". A reviewer choosing a person to be should not need to already know
+   * the vocabulary the product exists to remove.
+   */
+  personas: {
+    sunita: {
+      phase: "Filing",
+      blurb:
+        "₹8,400 was taken out of her pay. She owes nothing, hasn't filed, and school fees are due.",
+      action: "Confirm what's already known",
+    },
+    rakesh: {
+      phase: "A letter came",
+      blurb:
+        "A letter says he hid ₹1,10,000 of share profit. His refund is being kept back against an old demand he was never told about.",
+      action: "Read it and disagree",
+    },
+    priya: {
+      phase: "The wait",
+      blurb:
+        "Filed 71 days ago. Still says under processing. Two things are actually holding it, and nobody told her which.",
+      action: "See what's holding it",
+    },
+    custom: {
+      phase: "Try your own",
+      blurbTitle: "Someone made up",
+      blurb:
+        "Build a person from scratch — their pay, what they claim, what was deducted — and watch the tax work itself out.",
+      action: "Make someone up",
+    },
   },
 
   login: {
@@ -98,6 +151,9 @@ export const en = {
     voiceListening: "Listening",
     voiceUnsupported:
       "This phone's browser can't listen yet. You can type instead — nothing is lost.",
+    /** Shown when we fall back to a canned line. Saying so is the whole point. */
+    voiceSimulated: "This browser can't listen, so this is an example, not your voice.",
+    voiceError: "That didn't come through. You can type instead — nothing is lost.",
   },
 
   refund: {
@@ -145,7 +201,41 @@ export const en = {
     dinLabel: "Reference number on this letter",
     dinExplain:
       "Every letter from the department must carry one of these. Without it, the letter officially doesn't exist.",
-    neverReceived: "I never received notice of this",
+  },
+
+  dashboard: {
+    userDashboard: "User Dashboard",
+    taxPrefills: "Tax Prefills (AIS/26AS)",
+    pendingActions: "Pending Actions",
+    returnSummary: "Return Summary AY 2026-27",
+    reviewPrefill: "Review the prefilled details in the Tax Prefills tab, then confirm to file.",
+    filingSubmitted: "Your e-filing return is submitted. Check progress on the timeline.",
+    verifiedBanks: "Verified Bank Accounts for Refund",
+    primaryRefundAccount: "Primary Refund Account",
+    backupAccount: "Backup Account",
+    refundTimeline: "Refund Timeline",
+    filingSubmittedTimeline: "Filing Submitted",
+    identityVerifiedTimeline: "Identity Verified",
+    assessmentProcessingTimeline: "Assessment Processing",
+    refundApprovedTimeline: "Refund Approved",
+    refundCreditedTimeline: "Refund Credited",
+    holdActive: "Hold active: Resolve actions in Action tab",
+    successCheckApp: "Success! Check your banking app.",
+    outstandingNotices: "Outstanding Compliance Notices",
+    noPendingActions: "No Pending Actions",
+    accountCompliant: "Your account is fully compliant with no outstanding notices or tax demands.",
+    actionableHolds: "Actionable Assessment Holds",
+    uploadRent: "Upload Rent Agreement / Receipts",
+    landlordName: "Landlord Name",
+    landlordPan: "Landlord PAN (10 Digits)",
+    selectPdfJpg: "Select PDF/JPG",
+    submitReceipt: "Submit Receipt",
+    responsePosition: "Response Position",
+    agreeDept: "I Agree with Department",
+    disagreeProof: "I Disagree (Submit Proof)",
+    responseDraft: "Response Statement (Draft)",
+    dictateStatement: "Dictate Statement",
+    sendResponse: "Send Response",
   },
 
   footer: {
