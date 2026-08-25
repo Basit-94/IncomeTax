@@ -444,6 +444,3760 @@
         "tdsCreditsPaise": 50000000,
         "refundOrDuePaise": -59980000
       }
+    },
+    {
+      "id": "matrix-01",
+      "input": {
+        "facts": [
+          {
+            "kind": "salary",
+            "amountPaise": 30000000
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 0
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-0-80c",
+            "section": "80C",
+            "amountPaise": 9000000
+          }
+        ],
+        "ageBand": "below_60",
+        "regime": "old",
+        "tdsCreditsPaise": 0
+      },
+      "expected": {
+        "grossIncomePaise": 30000000,
+        "standardDeductionPaise": 5000000,
+        "totalDeductionsPaise": 9000000,
+        "taxableIncomePaise": 16000000,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 25000000,
+            "rate": 0,
+            "taxPaise": 0
+          }
+        ],
+        "taxBeforeRebatePaise": 0,
+        "rebate87APaise": 0,
+        "cessPaise": 0,
+        "totalTaxPaise": 0,
+        "tdsCreditsPaise": 0,
+        "refundOrDuePaise": 0
+      }
+    },
+    {
+      "id": "matrix-02",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 33777700
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 123400
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-1-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 1500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 1266600
+      },
+      "expected": {
+        "grossIncomePaise": 33901100,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 1500000,
+        "taxableIncomePaise": 32401100,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          }
+        ],
+        "taxBeforeRebatePaise": 0,
+        "rebate87APaise": 0,
+        "cessPaise": 0,
+        "totalTaxPaise": 0,
+        "tdsCreditsPaise": 1266600,
+        "refundOrDuePaise": 1266600
+      }
+    },
+    {
+      "id": "matrix-03",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 37555400
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 246800
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-2-80c",
+            "section": "80C",
+            "amountPaise": 15000000
+          }
+        ],
+        "ageBand": "60_to_80",
+        "regime": "old",
+        "tdsCreditsPaise": 1298700
+      },
+      "expected": {
+        "grossIncomePaise": 37802200,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 15000000,
+        "taxableIncomePaise": 22802200,
+        "slabBreakdown": [],
+        "taxBeforeRebatePaise": 0,
+        "rebate87APaise": 0,
+        "cessPaise": 0,
+        "totalTaxPaise": 0,
+        "tdsCreditsPaise": 1298700,
+        "refundOrDuePaise": 1298700
+      }
+    },
+    {
+      "id": "matrix-04",
+      "input": {
+        "facts": [
+          {
+            "kind": "salary",
+            "amountPaise": 41333100
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 370200
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-3-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 2500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 1330800
+      },
+      "expected": {
+        "grossIncomePaise": 41703300,
+        "standardDeductionPaise": 7500000,
+        "totalDeductionsPaise": 2500000,
+        "taxableIncomePaise": 31703300,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          }
+        ],
+        "taxBeforeRebatePaise": 0,
+        "rebate87APaise": 0,
+        "cessPaise": 0,
+        "totalTaxPaise": 0,
+        "tdsCreditsPaise": 1330800,
+        "refundOrDuePaise": 1330800
+      }
+    },
+    {
+      "id": "matrix-05",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 45110800
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 493600
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-4-80c",
+            "section": "80C",
+            "amountPaise": 21000000
+          }
+        ],
+        "ageBand": "above_80",
+        "regime": "old",
+        "tdsCreditsPaise": 0
+      },
+      "expected": {
+        "grossIncomePaise": 45604400,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 15000000,
+        "taxableIncomePaise": 30604400,
+        "slabBreakdown": [],
+        "taxBeforeRebatePaise": 0,
+        "rebate87APaise": 0,
+        "cessPaise": 0,
+        "totalTaxPaise": 0,
+        "tdsCreditsPaise": 0,
+        "refundOrDuePaise": 0
+      }
+    },
+    {
+      "id": "matrix-06",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 48888500
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 617000
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-5-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 1500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 1395000
+      },
+      "expected": {
+        "grossIncomePaise": 49505500,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 1500000,
+        "taxableIncomePaise": 48005500,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 400300
+          }
+        ],
+        "taxBeforeRebatePaise": 400300,
+        "rebate87APaise": 400300,
+        "cessPaise": 0,
+        "totalTaxPaise": 0,
+        "tdsCreditsPaise": 1395000,
+        "refundOrDuePaise": 1395000
+      }
+    },
+    {
+      "id": "matrix-07",
+      "input": {
+        "facts": [
+          {
+            "kind": "salary",
+            "amountPaise": 52666200
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 740400
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-6-80c",
+            "section": "80C",
+            "amountPaise": 12000000
+          }
+        ],
+        "ageBand": "below_60",
+        "regime": "old",
+        "tdsCreditsPaise": 1427100
+      },
+      "expected": {
+        "grossIncomePaise": 53406600,
+        "standardDeductionPaise": 5000000,
+        "totalDeductionsPaise": 12000000,
+        "taxableIncomePaise": 36406600,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 25000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 25000000,
+            "toPaise": 50000000,
+            "rate": 0.05,
+            "taxPaise": 570300
+          }
+        ],
+        "taxBeforeRebatePaise": 570300,
+        "rebate87APaise": 570300,
+        "cessPaise": 0,
+        "totalTaxPaise": 0,
+        "tdsCreditsPaise": 1427100,
+        "refundOrDuePaise": 1427100
+      }
+    },
+    {
+      "id": "matrix-08",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 56443900
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 0
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-7-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 2500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 1459200
+      },
+      "expected": {
+        "grossIncomePaise": 56443900,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 2500000,
+        "taxableIncomePaise": 53943900,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 697200
+          }
+        ],
+        "taxBeforeRebatePaise": 697200,
+        "rebate87APaise": 697200,
+        "cessPaise": 0,
+        "totalTaxPaise": 0,
+        "tdsCreditsPaise": 1459200,
+        "refundOrDuePaise": 1459200
+      }
+    },
+    {
+      "id": "matrix-09",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 60221600
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 123400
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-8-80c",
+            "section": "80C",
+            "amountPaise": 18000000
+          }
+        ],
+        "ageBand": "60_to_80",
+        "regime": "old",
+        "tdsCreditsPaise": 0
+      },
+      "expected": {
+        "grossIncomePaise": 60345000,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 15000000,
+        "taxableIncomePaise": 45345000,
+        "slabBreakdown": [
+          {
+            "fromPaise": 30000000,
+            "toPaise": 50000000,
+            "rate": 0.05,
+            "taxPaise": 767300
+          }
+        ],
+        "taxBeforeRebatePaise": 767300,
+        "rebate87APaise": 767300,
+        "cessPaise": 0,
+        "totalTaxPaise": 0,
+        "tdsCreditsPaise": 0,
+        "refundOrDuePaise": 0
+      }
+    },
+    {
+      "id": "matrix-10",
+      "input": {
+        "facts": [
+          {
+            "kind": "salary",
+            "amountPaise": 63999300
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 246800
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-9-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 1500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 1523400
+      },
+      "expected": {
+        "grossIncomePaise": 64246100,
+        "standardDeductionPaise": 7500000,
+        "totalDeductionsPaise": 1500000,
+        "taxableIncomePaise": 55246100,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 762300
+          }
+        ],
+        "taxBeforeRebatePaise": 762300,
+        "rebate87APaise": 762300,
+        "cessPaise": 0,
+        "totalTaxPaise": 0,
+        "tdsCreditsPaise": 1523400,
+        "refundOrDuePaise": 1523400
+      }
+    },
+    {
+      "id": "matrix-11",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 67777000
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 370200
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-10-80c",
+            "section": "80C",
+            "amountPaise": 9000000
+          }
+        ],
+        "ageBand": "above_80",
+        "regime": "old",
+        "tdsCreditsPaise": 1555500
+      },
+      "expected": {
+        "grossIncomePaise": 68147200,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 9000000,
+        "taxableIncomePaise": 59147200,
+        "slabBreakdown": [
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 1829400
+          }
+        ],
+        "taxBeforeRebatePaise": 1829400,
+        "rebate87APaise": 0,
+        "cessPaise": 73200,
+        "totalTaxPaise": 1902600,
+        "tdsCreditsPaise": 1555500,
+        "refundOrDuePaise": -347100
+      }
+    },
+    {
+      "id": "matrix-12",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 71554700
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 493600
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-11-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 2500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 1587600
+      },
+      "expected": {
+        "grossIncomePaise": 72048300,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 2500000,
+        "taxableIncomePaise": 69548300,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 1477400
+          }
+        ],
+        "taxBeforeRebatePaise": 1477400,
+        "rebate87APaise": 1477400,
+        "cessPaise": 0,
+        "totalTaxPaise": 0,
+        "tdsCreditsPaise": 1587600,
+        "refundOrDuePaise": 1587600
+      }
+    },
+    {
+      "id": "matrix-13",
+      "input": {
+        "facts": [
+          {
+            "kind": "salary",
+            "amountPaise": 75332400
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 617000
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-12-80c",
+            "section": "80C",
+            "amountPaise": 15000000
+          }
+        ],
+        "ageBand": "below_60",
+        "regime": "old",
+        "tdsCreditsPaise": 0
+      },
+      "expected": {
+        "grossIncomePaise": 75949400,
+        "standardDeductionPaise": 5000000,
+        "totalDeductionsPaise": 15000000,
+        "taxableIncomePaise": 55949400,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 25000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 25000000,
+            "toPaise": 50000000,
+            "rate": 0.05,
+            "taxPaise": 1250000
+          },
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 1189900
+          }
+        ],
+        "taxBeforeRebatePaise": 2439900,
+        "rebate87APaise": 0,
+        "cessPaise": 97600,
+        "totalTaxPaise": 2537500,
+        "tdsCreditsPaise": 0,
+        "refundOrDuePaise": -2537500
+      }
+    },
+    {
+      "id": "matrix-14",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 79110100
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 740400
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-13-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 1500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 1651800
+      },
+      "expected": {
+        "grossIncomePaise": 79850500,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 1500000,
+        "taxableIncomePaise": 78350500,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 1917500
+          }
+        ],
+        "taxBeforeRebatePaise": 1917500,
+        "rebate87APaise": 1917500,
+        "cessPaise": 0,
+        "totalTaxPaise": 0,
+        "tdsCreditsPaise": 1651800,
+        "refundOrDuePaise": 1651800
+      }
+    },
+    {
+      "id": "matrix-15",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 82887800
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 0
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-14-80c",
+            "section": "80C",
+            "amountPaise": 21000000
+          }
+        ],
+        "ageBand": "60_to_80",
+        "regime": "old",
+        "tdsCreditsPaise": 1683900
+      },
+      "expected": {
+        "grossIncomePaise": 82887800,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 15000000,
+        "taxableIncomePaise": 67887800,
+        "slabBreakdown": [
+          {
+            "fromPaise": 30000000,
+            "toPaise": 50000000,
+            "rate": 0.05,
+            "taxPaise": 1000000
+          },
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 3577600
+          }
+        ],
+        "taxBeforeRebatePaise": 4577600,
+        "rebate87APaise": 0,
+        "cessPaise": 183100,
+        "totalTaxPaise": 4760700,
+        "tdsCreditsPaise": 1683900,
+        "refundOrDuePaise": -3076800
+      }
+    },
+    {
+      "id": "matrix-16",
+      "input": {
+        "facts": [
+          {
+            "kind": "salary",
+            "amountPaise": 86665500
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 123400
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-15-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 2500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 1716000
+      },
+      "expected": {
+        "grossIncomePaise": 86788900,
+        "standardDeductionPaise": 7500000,
+        "totalDeductionsPaise": 2500000,
+        "taxableIncomePaise": 76788900,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 1839400
+          }
+        ],
+        "taxBeforeRebatePaise": 1839400,
+        "rebate87APaise": 1839400,
+        "cessPaise": 0,
+        "totalTaxPaise": 0,
+        "tdsCreditsPaise": 1716000,
+        "refundOrDuePaise": 1716000
+      }
+    },
+    {
+      "id": "matrix-17",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 90443200
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 246800
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-16-80c",
+            "section": "80C",
+            "amountPaise": 12000000
+          }
+        ],
+        "ageBand": "above_80",
+        "regime": "old",
+        "tdsCreditsPaise": 0
+      },
+      "expected": {
+        "grossIncomePaise": 90690000,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 12000000,
+        "taxableIncomePaise": 78690000,
+        "slabBreakdown": [
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 5738000
+          }
+        ],
+        "taxBeforeRebatePaise": 5738000,
+        "rebate87APaise": 0,
+        "cessPaise": 229500,
+        "totalTaxPaise": 5967500,
+        "tdsCreditsPaise": 0,
+        "refundOrDuePaise": -5967500
+      }
+    },
+    {
+      "id": "matrix-18",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 94220900
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 370200
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-17-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 1500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 1780200
+      },
+      "expected": {
+        "grossIncomePaise": 94591100,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 1500000,
+        "taxableIncomePaise": 93091100,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 1309100
+          }
+        ],
+        "taxBeforeRebatePaise": 3309100,
+        "rebate87APaise": 3309100,
+        "cessPaise": 0,
+        "totalTaxPaise": 0,
+        "tdsCreditsPaise": 1780200,
+        "refundOrDuePaise": 1780200
+      }
+    },
+    {
+      "id": "matrix-19",
+      "input": {
+        "facts": [
+          {
+            "kind": "salary",
+            "amountPaise": 97998600
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 493600
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-18-80c",
+            "section": "80C",
+            "amountPaise": 18000000
+          }
+        ],
+        "ageBand": "below_60",
+        "regime": "old",
+        "tdsCreditsPaise": 1812300
+      },
+      "expected": {
+        "grossIncomePaise": 98492200,
+        "standardDeductionPaise": 5000000,
+        "totalDeductionsPaise": 15000000,
+        "taxableIncomePaise": 78492200,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 25000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 25000000,
+            "toPaise": 50000000,
+            "rate": 0.05,
+            "taxPaise": 1250000
+          },
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 5698400
+          }
+        ],
+        "taxBeforeRebatePaise": 6948400,
+        "rebate87APaise": 0,
+        "cessPaise": 277900,
+        "totalTaxPaise": 7226300,
+        "tdsCreditsPaise": 1812300,
+        "refundOrDuePaise": -5414000
+      }
+    },
+    {
+      "id": "matrix-20",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 101776300
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 617000
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-19-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 2500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 1844400
+      },
+      "expected": {
+        "grossIncomePaise": 102393300,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 2500000,
+        "taxableIncomePaise": 99893300,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 1989300
+          }
+        ],
+        "taxBeforeRebatePaise": 3989300,
+        "rebate87APaise": 3989300,
+        "cessPaise": 0,
+        "totalTaxPaise": 0,
+        "tdsCreditsPaise": 1844400,
+        "refundOrDuePaise": 1844400
+      }
+    },
+    {
+      "id": "matrix-21",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 105554000
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 740400
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-20-80c",
+            "section": "80C",
+            "amountPaise": 9000000
+          }
+        ],
+        "ageBand": "60_to_80",
+        "regime": "old",
+        "tdsCreditsPaise": 0
+      },
+      "expected": {
+        "grossIncomePaise": 106294400,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 9000000,
+        "taxableIncomePaise": 97294400,
+        "slabBreakdown": [
+          {
+            "fromPaise": 30000000,
+            "toPaise": 50000000,
+            "rate": 0.05,
+            "taxPaise": 1000000
+          },
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 9458900
+          }
+        ],
+        "taxBeforeRebatePaise": 10458900,
+        "rebate87APaise": 0,
+        "cessPaise": 418400,
+        "totalTaxPaise": 10877300,
+        "tdsCreditsPaise": 0,
+        "refundOrDuePaise": -10877300
+      }
+    },
+    {
+      "id": "matrix-22",
+      "input": {
+        "facts": [
+          {
+            "kind": "salary",
+            "amountPaise": 109331700
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 0
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-21-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 1500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 1908600
+      },
+      "expected": {
+        "grossIncomePaise": 109331700,
+        "standardDeductionPaise": 7500000,
+        "totalDeductionsPaise": 1500000,
+        "taxableIncomePaise": 100331700,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 2033200
+          }
+        ],
+        "taxBeforeRebatePaise": 4033200,
+        "rebate87APaise": 4033200,
+        "cessPaise": 0,
+        "totalTaxPaise": 0,
+        "tdsCreditsPaise": 1908600,
+        "refundOrDuePaise": 1908600
+      }
+    },
+    {
+      "id": "matrix-23",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 113109400
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 123400
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-22-80c",
+            "section": "80C",
+            "amountPaise": 15000000
+          }
+        ],
+        "ageBand": "above_80",
+        "regime": "old",
+        "tdsCreditsPaise": 1940700
+      },
+      "expected": {
+        "grossIncomePaise": 113232800,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 15000000,
+        "taxableIncomePaise": 98232800,
+        "slabBreakdown": [
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 9646600
+          }
+        ],
+        "taxBeforeRebatePaise": 9646600,
+        "rebate87APaise": 0,
+        "cessPaise": 385900,
+        "totalTaxPaise": 10032500,
+        "tdsCreditsPaise": 1940700,
+        "refundOrDuePaise": -8091800
+      }
+    },
+    {
+      "id": "matrix-24",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 116887100
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 246800
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-23-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 2500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 1972800
+      },
+      "expected": {
+        "grossIncomePaise": 117133900,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 2500000,
+        "taxableIncomePaise": 114633900,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 3463400
+          }
+        ],
+        "taxBeforeRebatePaise": 5463400,
+        "rebate87APaise": 5463400,
+        "cessPaise": 0,
+        "totalTaxPaise": 0,
+        "tdsCreditsPaise": 1972800,
+        "refundOrDuePaise": 1972800
+      }
+    },
+    {
+      "id": "matrix-25",
+      "input": {
+        "facts": [
+          {
+            "kind": "salary",
+            "amountPaise": 120664800
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 370200
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-24-80c",
+            "section": "80C",
+            "amountPaise": 21000000
+          }
+        ],
+        "ageBand": "below_60",
+        "regime": "old",
+        "tdsCreditsPaise": 0
+      },
+      "expected": {
+        "grossIncomePaise": 121035000,
+        "standardDeductionPaise": 5000000,
+        "totalDeductionsPaise": 15000000,
+        "taxableIncomePaise": 101035000,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 25000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 25000000,
+            "toPaise": 50000000,
+            "rate": 0.05,
+            "taxPaise": 1250000
+          },
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 100000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 310500
+          }
+        ],
+        "taxBeforeRebatePaise": 11560500,
+        "rebate87APaise": 0,
+        "cessPaise": 462400,
+        "totalTaxPaise": 12022900,
+        "tdsCreditsPaise": 0,
+        "refundOrDuePaise": -12022900
+      }
+    },
+    {
+      "id": "matrix-26",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 124442500
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 493600
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-25-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 1500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 2037000
+      },
+      "expected": {
+        "grossIncomePaise": 124936100,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 1500000,
+        "taxableIncomePaise": 123436100,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 4000000
+          },
+          {
+            "fromPaise": 120000000,
+            "toPaise": 160000000,
+            "rate": 0.15,
+            "taxPaise": 515400
+          }
+        ],
+        "taxBeforeRebatePaise": 6515400,
+        "rebate87APaise": 3079300,
+        "cessPaise": 137400,
+        "totalTaxPaise": 3573500,
+        "tdsCreditsPaise": 2037000,
+        "refundOrDuePaise": -1536500
+      }
+    },
+    {
+      "id": "matrix-27",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 128220200
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 617000
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-26-80c",
+            "section": "80C",
+            "amountPaise": 12000000
+          }
+        ],
+        "ageBand": "60_to_80",
+        "regime": "old",
+        "tdsCreditsPaise": 2069100
+      },
+      "expected": {
+        "grossIncomePaise": 128837200,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 12000000,
+        "taxableIncomePaise": 116837200,
+        "slabBreakdown": [
+          {
+            "fromPaise": 30000000,
+            "toPaise": 50000000,
+            "rate": 0.05,
+            "taxPaise": 1000000
+          },
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 100000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 5051200
+          }
+        ],
+        "taxBeforeRebatePaise": 16051200,
+        "rebate87APaise": 0,
+        "cessPaise": 642000,
+        "totalTaxPaise": 16693200,
+        "tdsCreditsPaise": 2069100,
+        "refundOrDuePaise": -14624100
+      }
+    },
+    {
+      "id": "matrix-28",
+      "input": {
+        "facts": [
+          {
+            "kind": "salary",
+            "amountPaise": 131997900
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 740400
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-27-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 2500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 2101200
+      },
+      "expected": {
+        "grossIncomePaise": 132738300,
+        "standardDeductionPaise": 7500000,
+        "totalDeductionsPaise": 2500000,
+        "taxableIncomePaise": 122738300,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 4000000
+          },
+          {
+            "fromPaise": 120000000,
+            "toPaise": 160000000,
+            "rate": 0.15,
+            "taxPaise": 410700
+          }
+        ],
+        "taxBeforeRebatePaise": 6410700,
+        "rebate87APaise": 3672400,
+        "cessPaise": 109500,
+        "totalTaxPaise": 2847800,
+        "tdsCreditsPaise": 2101200,
+        "refundOrDuePaise": -746600
+      }
+    },
+    {
+      "id": "matrix-29",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 135775600
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 0
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-28-80c",
+            "section": "80C",
+            "amountPaise": 18000000
+          }
+        ],
+        "ageBand": "above_80",
+        "regime": "old",
+        "tdsCreditsPaise": 0
+      },
+      "expected": {
+        "grossIncomePaise": 135775600,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 15000000,
+        "taxableIncomePaise": 120775600,
+        "slabBreakdown": [
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 100000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 6232700
+          }
+        ],
+        "taxBeforeRebatePaise": 16232700,
+        "rebate87APaise": 0,
+        "cessPaise": 649300,
+        "totalTaxPaise": 16882000,
+        "tdsCreditsPaise": 0,
+        "refundOrDuePaise": -16882000
+      }
+    },
+    {
+      "id": "matrix-30",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 139553300
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 123400
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-29-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 1500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 2165400
+      },
+      "expected": {
+        "grossIncomePaise": 139676700,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 1500000,
+        "taxableIncomePaise": 138176700,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 4000000
+          },
+          {
+            "fromPaise": 120000000,
+            "toPaise": 160000000,
+            "rate": 0.15,
+            "taxPaise": 2726500
+          }
+        ],
+        "taxBeforeRebatePaise": 8726500,
+        "rebate87APaise": 0,
+        "cessPaise": 349100,
+        "totalTaxPaise": 9075600,
+        "tdsCreditsPaise": 2165400,
+        "refundOrDuePaise": -6910200
+      }
+    },
+    {
+      "id": "matrix-31",
+      "input": {
+        "facts": [
+          {
+            "kind": "salary",
+            "amountPaise": 143331000
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 246800
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-30-80c",
+            "section": "80C",
+            "amountPaise": 9000000
+          }
+        ],
+        "ageBand": "below_60",
+        "regime": "old",
+        "tdsCreditsPaise": 2197500
+      },
+      "expected": {
+        "grossIncomePaise": 143577800,
+        "standardDeductionPaise": 5000000,
+        "totalDeductionsPaise": 9000000,
+        "taxableIncomePaise": 129577800,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 25000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 25000000,
+            "toPaise": 50000000,
+            "rate": 0.05,
+            "taxPaise": 1250000
+          },
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 100000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 8873300
+          }
+        ],
+        "taxBeforeRebatePaise": 20123300,
+        "rebate87APaise": 0,
+        "cessPaise": 804900,
+        "totalTaxPaise": 20928200,
+        "tdsCreditsPaise": 2197500,
+        "refundOrDuePaise": -18730700
+      }
+    },
+    {
+      "id": "matrix-32",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 147108700
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 370200
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-31-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 2500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 2229600
+      },
+      "expected": {
+        "grossIncomePaise": 147478900,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 2500000,
+        "taxableIncomePaise": 144978900,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 4000000
+          },
+          {
+            "fromPaise": 120000000,
+            "toPaise": 160000000,
+            "rate": 0.15,
+            "taxPaise": 3746800
+          }
+        ],
+        "taxBeforeRebatePaise": 9746800,
+        "rebate87APaise": 0,
+        "cessPaise": 389900,
+        "totalTaxPaise": 10136700,
+        "tdsCreditsPaise": 2229600,
+        "refundOrDuePaise": -7907100
+      }
+    },
+    {
+      "id": "matrix-33",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 150886400
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 493600
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-32-80c",
+            "section": "80C",
+            "amountPaise": 15000000
+          }
+        ],
+        "ageBand": "60_to_80",
+        "regime": "old",
+        "tdsCreditsPaise": 0
+      },
+      "expected": {
+        "grossIncomePaise": 151380000,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 15000000,
+        "taxableIncomePaise": 136380000,
+        "slabBreakdown": [
+          {
+            "fromPaise": 30000000,
+            "toPaise": 50000000,
+            "rate": 0.05,
+            "taxPaise": 1000000
+          },
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 100000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 10914000
+          }
+        ],
+        "taxBeforeRebatePaise": 21914000,
+        "rebate87APaise": 0,
+        "cessPaise": 876600,
+        "totalTaxPaise": 22790600,
+        "tdsCreditsPaise": 0,
+        "refundOrDuePaise": -22790600
+      }
+    },
+    {
+      "id": "matrix-34",
+      "input": {
+        "facts": [
+          {
+            "kind": "salary",
+            "amountPaise": 154664100
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 617000
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-33-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 1500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 2293800
+      },
+      "expected": {
+        "grossIncomePaise": 155281100,
+        "standardDeductionPaise": 7500000,
+        "totalDeductionsPaise": 1500000,
+        "taxableIncomePaise": 146281100,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 4000000
+          },
+          {
+            "fromPaise": 120000000,
+            "toPaise": 160000000,
+            "rate": 0.15,
+            "taxPaise": 3942200
+          }
+        ],
+        "taxBeforeRebatePaise": 9942200,
+        "rebate87APaise": 0,
+        "cessPaise": 397700,
+        "totalTaxPaise": 10339900,
+        "tdsCreditsPaise": 2293800,
+        "refundOrDuePaise": -8046100
+      }
+    },
+    {
+      "id": "matrix-35",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 158441800
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 740400
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-34-80c",
+            "section": "80C",
+            "amountPaise": 21000000
+          }
+        ],
+        "ageBand": "above_80",
+        "regime": "old",
+        "tdsCreditsPaise": 2325900
+      },
+      "expected": {
+        "grossIncomePaise": 159182200,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 15000000,
+        "taxableIncomePaise": 144182200,
+        "slabBreakdown": [
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 100000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 13254700
+          }
+        ],
+        "taxBeforeRebatePaise": 23254700,
+        "rebate87APaise": 0,
+        "cessPaise": 930200,
+        "totalTaxPaise": 24184900,
+        "tdsCreditsPaise": 2325900,
+        "refundOrDuePaise": -21859000
+      }
+    },
+    {
+      "id": "matrix-36",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 162219500
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 0
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-35-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 2500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 2358000
+      },
+      "expected": {
+        "grossIncomePaise": 162219500,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 2500000,
+        "taxableIncomePaise": 159719500,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 4000000
+          },
+          {
+            "fromPaise": 120000000,
+            "toPaise": 160000000,
+            "rate": 0.15,
+            "taxPaise": 5957900
+          }
+        ],
+        "taxBeforeRebatePaise": 11957900,
+        "rebate87APaise": 0,
+        "cessPaise": 478300,
+        "totalTaxPaise": 12436200,
+        "tdsCreditsPaise": 2358000,
+        "refundOrDuePaise": -10078200
+      }
+    },
+    {
+      "id": "matrix-37",
+      "input": {
+        "facts": [
+          {
+            "kind": "salary",
+            "amountPaise": 165997200
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 123400
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-36-80c",
+            "section": "80C",
+            "amountPaise": 12000000
+          }
+        ],
+        "ageBand": "below_60",
+        "regime": "old",
+        "tdsCreditsPaise": 0
+      },
+      "expected": {
+        "grossIncomePaise": 166120600,
+        "standardDeductionPaise": 5000000,
+        "totalDeductionsPaise": 12000000,
+        "taxableIncomePaise": 149120600,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 25000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 25000000,
+            "toPaise": 50000000,
+            "rate": 0.05,
+            "taxPaise": 1250000
+          },
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 100000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 14736200
+          }
+        ],
+        "taxBeforeRebatePaise": 25986200,
+        "rebate87APaise": 0,
+        "cessPaise": 1039400,
+        "totalTaxPaise": 27025600,
+        "tdsCreditsPaise": 0,
+        "refundOrDuePaise": -27025600
+      }
+    },
+    {
+      "id": "matrix-38",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 169774900
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 246800
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-37-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 1500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 2422200
+      },
+      "expected": {
+        "grossIncomePaise": 170021700,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 1500000,
+        "taxableIncomePaise": 168521700,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 4000000
+          },
+          {
+            "fromPaise": 120000000,
+            "toPaise": 160000000,
+            "rate": 0.15,
+            "taxPaise": 6000000
+          },
+          {
+            "fromPaise": 160000000,
+            "toPaise": 200000000,
+            "rate": 0.2,
+            "taxPaise": 1704300
+          }
+        ],
+        "taxBeforeRebatePaise": 13704300,
+        "rebate87APaise": 0,
+        "cessPaise": 548200,
+        "totalTaxPaise": 14252500,
+        "tdsCreditsPaise": 2422200,
+        "refundOrDuePaise": -11830300
+      }
+    },
+    {
+      "id": "matrix-39",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 173552600
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 370200
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-38-80c",
+            "section": "80C",
+            "amountPaise": 18000000
+          }
+        ],
+        "ageBand": "60_to_80",
+        "regime": "old",
+        "tdsCreditsPaise": 2454300
+      },
+      "expected": {
+        "grossIncomePaise": 173922800,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 15000000,
+        "taxableIncomePaise": 158922800,
+        "slabBreakdown": [
+          {
+            "fromPaise": 30000000,
+            "toPaise": 50000000,
+            "rate": 0.05,
+            "taxPaise": 1000000
+          },
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 100000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 17676800
+          }
+        ],
+        "taxBeforeRebatePaise": 28676800,
+        "rebate87APaise": 0,
+        "cessPaise": 1147100,
+        "totalTaxPaise": 29823900,
+        "tdsCreditsPaise": 2454300,
+        "refundOrDuePaise": -27369600
+      }
+    },
+    {
+      "id": "matrix-40",
+      "input": {
+        "facts": [
+          {
+            "kind": "salary",
+            "amountPaise": 177330300
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 493600
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-39-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 2500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 2486400
+      },
+      "expected": {
+        "grossIncomePaise": 177823900,
+        "standardDeductionPaise": 7500000,
+        "totalDeductionsPaise": 2500000,
+        "taxableIncomePaise": 167823900,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 4000000
+          },
+          {
+            "fromPaise": 120000000,
+            "toPaise": 160000000,
+            "rate": 0.15,
+            "taxPaise": 6000000
+          },
+          {
+            "fromPaise": 160000000,
+            "toPaise": 200000000,
+            "rate": 0.2,
+            "taxPaise": 1564800
+          }
+        ],
+        "taxBeforeRebatePaise": 13564800,
+        "rebate87APaise": 0,
+        "cessPaise": 542600,
+        "totalTaxPaise": 14107400,
+        "tdsCreditsPaise": 2486400,
+        "refundOrDuePaise": -11621000
+      }
+    },
+    {
+      "id": "matrix-41",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 181108000
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 617000
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-40-80c",
+            "section": "80C",
+            "amountPaise": 9000000
+          }
+        ],
+        "ageBand": "above_80",
+        "regime": "old",
+        "tdsCreditsPaise": 0
+      },
+      "expected": {
+        "grossIncomePaise": 181725000,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 9000000,
+        "taxableIncomePaise": 172725000,
+        "slabBreakdown": [
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 100000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 21817500
+          }
+        ],
+        "taxBeforeRebatePaise": 31817500,
+        "rebate87APaise": 0,
+        "cessPaise": 1272700,
+        "totalTaxPaise": 33090200,
+        "tdsCreditsPaise": 0,
+        "refundOrDuePaise": -33090200
+      }
+    },
+    {
+      "id": "matrix-42",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 184885700
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 740400
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-41-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 1500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 2550600
+      },
+      "expected": {
+        "grossIncomePaise": 185626100,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 1500000,
+        "taxableIncomePaise": 184126100,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 4000000
+          },
+          {
+            "fromPaise": 120000000,
+            "toPaise": 160000000,
+            "rate": 0.15,
+            "taxPaise": 6000000
+          },
+          {
+            "fromPaise": 160000000,
+            "toPaise": 200000000,
+            "rate": 0.2,
+            "taxPaise": 4825200
+          }
+        ],
+        "taxBeforeRebatePaise": 16825200,
+        "rebate87APaise": 0,
+        "cessPaise": 673000,
+        "totalTaxPaise": 17498200,
+        "tdsCreditsPaise": 2550600,
+        "refundOrDuePaise": -14947600
+      }
+    },
+    {
+      "id": "matrix-43",
+      "input": {
+        "facts": [
+          {
+            "kind": "salary",
+            "amountPaise": 188663400
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 0
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-42-80c",
+            "section": "80C",
+            "amountPaise": 15000000
+          }
+        ],
+        "ageBand": "below_60",
+        "regime": "old",
+        "tdsCreditsPaise": 2582700
+      },
+      "expected": {
+        "grossIncomePaise": 188663400,
+        "standardDeductionPaise": 5000000,
+        "totalDeductionsPaise": 15000000,
+        "taxableIncomePaise": 168663400,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 25000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 25000000,
+            "toPaise": 50000000,
+            "rate": 0.05,
+            "taxPaise": 1250000
+          },
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 100000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 20599000
+          }
+        ],
+        "taxBeforeRebatePaise": 31849000,
+        "rebate87APaise": 0,
+        "cessPaise": 1274000,
+        "totalTaxPaise": 33123000,
+        "tdsCreditsPaise": 2582700,
+        "refundOrDuePaise": -30540300
+      }
+    },
+    {
+      "id": "matrix-44",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 192441100
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 123400
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-43-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 2500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 2614800
+      },
+      "expected": {
+        "grossIncomePaise": 192564500,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 2500000,
+        "taxableIncomePaise": 190064500,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 4000000
+          },
+          {
+            "fromPaise": 120000000,
+            "toPaise": 160000000,
+            "rate": 0.15,
+            "taxPaise": 6000000
+          },
+          {
+            "fromPaise": 160000000,
+            "toPaise": 200000000,
+            "rate": 0.2,
+            "taxPaise": 6012900
+          }
+        ],
+        "taxBeforeRebatePaise": 18012900,
+        "rebate87APaise": 0,
+        "cessPaise": 720500,
+        "totalTaxPaise": 18733400,
+        "tdsCreditsPaise": 2614800,
+        "refundOrDuePaise": -16118600
+      }
+    },
+    {
+      "id": "matrix-45",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 196218800
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 246800
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-44-80c",
+            "section": "80C",
+            "amountPaise": 21000000
+          }
+        ],
+        "ageBand": "60_to_80",
+        "regime": "old",
+        "tdsCreditsPaise": 0
+      },
+      "expected": {
+        "grossIncomePaise": 196465600,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 15000000,
+        "taxableIncomePaise": 181465600,
+        "slabBreakdown": [
+          {
+            "fromPaise": 30000000,
+            "toPaise": 50000000,
+            "rate": 0.05,
+            "taxPaise": 1000000
+          },
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 100000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 24439700
+          }
+        ],
+        "taxBeforeRebatePaise": 35439700,
+        "rebate87APaise": 0,
+        "cessPaise": 1417600,
+        "totalTaxPaise": 36857300,
+        "tdsCreditsPaise": 0,
+        "refundOrDuePaise": -36857300
+      }
+    },
+    {
+      "id": "matrix-46",
+      "input": {
+        "facts": [
+          {
+            "kind": "salary",
+            "amountPaise": 199996500
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 370200
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-45-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 1500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 2679000
+      },
+      "expected": {
+        "grossIncomePaise": 200366700,
+        "standardDeductionPaise": 7500000,
+        "totalDeductionsPaise": 1500000,
+        "taxableIncomePaise": 191366700,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 4000000
+          },
+          {
+            "fromPaise": 120000000,
+            "toPaise": 160000000,
+            "rate": 0.15,
+            "taxPaise": 6000000
+          },
+          {
+            "fromPaise": 160000000,
+            "toPaise": 200000000,
+            "rate": 0.2,
+            "taxPaise": 6273300
+          }
+        ],
+        "taxBeforeRebatePaise": 18273300,
+        "rebate87APaise": 0,
+        "cessPaise": 730900,
+        "totalTaxPaise": 19004200,
+        "tdsCreditsPaise": 2679000,
+        "refundOrDuePaise": -16325200
+      }
+    },
+    {
+      "id": "matrix-47",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 203774200
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 493600
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-46-80c",
+            "section": "80C",
+            "amountPaise": 12000000
+          }
+        ],
+        "ageBand": "above_80",
+        "regime": "old",
+        "tdsCreditsPaise": 2711100
+      },
+      "expected": {
+        "grossIncomePaise": 204267800,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 12000000,
+        "taxableIncomePaise": 192267800,
+        "slabBreakdown": [
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 100000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 27680300
+          }
+        ],
+        "taxBeforeRebatePaise": 37680300,
+        "rebate87APaise": 0,
+        "cessPaise": 1507200,
+        "totalTaxPaise": 39187500,
+        "tdsCreditsPaise": 2711100,
+        "refundOrDuePaise": -36476400
+      }
+    },
+    {
+      "id": "matrix-48",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 207551900
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 617000
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-47-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 2500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 2743200
+      },
+      "expected": {
+        "grossIncomePaise": 208168900,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 2500000,
+        "taxableIncomePaise": 205668900,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 4000000
+          },
+          {
+            "fromPaise": 120000000,
+            "toPaise": 160000000,
+            "rate": 0.15,
+            "taxPaise": 6000000
+          },
+          {
+            "fromPaise": 160000000,
+            "toPaise": 200000000,
+            "rate": 0.2,
+            "taxPaise": 8000000
+          },
+          {
+            "fromPaise": 200000000,
+            "toPaise": 240000000,
+            "rate": 0.25,
+            "taxPaise": 1417200
+          }
+        ],
+        "taxBeforeRebatePaise": 21417200,
+        "rebate87APaise": 0,
+        "cessPaise": 856700,
+        "totalTaxPaise": 22273900,
+        "tdsCreditsPaise": 2743200,
+        "refundOrDuePaise": -19530700
+      }
+    },
+    {
+      "id": "matrix-49",
+      "input": {
+        "facts": [
+          {
+            "kind": "salary",
+            "amountPaise": 211329600
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 740400
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-48-80c",
+            "section": "80C",
+            "amountPaise": 18000000
+          }
+        ],
+        "ageBand": "below_60",
+        "regime": "old",
+        "tdsCreditsPaise": 0
+      },
+      "expected": {
+        "grossIncomePaise": 212070000,
+        "standardDeductionPaise": 5000000,
+        "totalDeductionsPaise": 15000000,
+        "taxableIncomePaise": 192070000,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 25000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 25000000,
+            "toPaise": 50000000,
+            "rate": 0.05,
+            "taxPaise": 1250000
+          },
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 100000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 27621000
+          }
+        ],
+        "taxBeforeRebatePaise": 38871000,
+        "rebate87APaise": 0,
+        "cessPaise": 1554800,
+        "totalTaxPaise": 40425800,
+        "tdsCreditsPaise": 0,
+        "refundOrDuePaise": -40425800
+      }
+    },
+    {
+      "id": "matrix-50",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 215107300
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 0
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-49-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 1500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 2807400
+      },
+      "expected": {
+        "grossIncomePaise": 215107300,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 1500000,
+        "taxableIncomePaise": 213607300,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 4000000
+          },
+          {
+            "fromPaise": 120000000,
+            "toPaise": 160000000,
+            "rate": 0.15,
+            "taxPaise": 6000000
+          },
+          {
+            "fromPaise": 160000000,
+            "toPaise": 200000000,
+            "rate": 0.2,
+            "taxPaise": 8000000
+          },
+          {
+            "fromPaise": 200000000,
+            "toPaise": 240000000,
+            "rate": 0.25,
+            "taxPaise": 3401800
+          }
+        ],
+        "taxBeforeRebatePaise": 23401800,
+        "rebate87APaise": 0,
+        "cessPaise": 936100,
+        "totalTaxPaise": 24337900,
+        "tdsCreditsPaise": 2807400,
+        "refundOrDuePaise": -21530500
+      }
+    },
+    {
+      "id": "matrix-51",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 218885000
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 123400
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-50-80c",
+            "section": "80C",
+            "amountPaise": 9000000
+          }
+        ],
+        "ageBand": "60_to_80",
+        "regime": "old",
+        "tdsCreditsPaise": 2839500
+      },
+      "expected": {
+        "grossIncomePaise": 219008400,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 9000000,
+        "taxableIncomePaise": 210008400,
+        "slabBreakdown": [
+          {
+            "fromPaise": 30000000,
+            "toPaise": 50000000,
+            "rate": 0.05,
+            "taxPaise": 1000000
+          },
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 100000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 33002500
+          }
+        ],
+        "taxBeforeRebatePaise": 44002500,
+        "rebate87APaise": 0,
+        "cessPaise": 1760100,
+        "totalTaxPaise": 45762600,
+        "tdsCreditsPaise": 2839500,
+        "refundOrDuePaise": -42923100
+      }
+    },
+    {
+      "id": "matrix-52",
+      "input": {
+        "facts": [
+          {
+            "kind": "salary",
+            "amountPaise": 222662700
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 246800
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-51-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 2500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 2871600
+      },
+      "expected": {
+        "grossIncomePaise": 222909500,
+        "standardDeductionPaise": 7500000,
+        "totalDeductionsPaise": 2500000,
+        "taxableIncomePaise": 212909500,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 4000000
+          },
+          {
+            "fromPaise": 120000000,
+            "toPaise": 160000000,
+            "rate": 0.15,
+            "taxPaise": 6000000
+          },
+          {
+            "fromPaise": 160000000,
+            "toPaise": 200000000,
+            "rate": 0.2,
+            "taxPaise": 8000000
+          },
+          {
+            "fromPaise": 200000000,
+            "toPaise": 240000000,
+            "rate": 0.25,
+            "taxPaise": 3227400
+          }
+        ],
+        "taxBeforeRebatePaise": 23227400,
+        "rebate87APaise": 0,
+        "cessPaise": 929100,
+        "totalTaxPaise": 24156500,
+        "tdsCreditsPaise": 2871600,
+        "refundOrDuePaise": -21284900
+      }
+    },
+    {
+      "id": "matrix-53",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 226440400
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 370200
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-52-80c",
+            "section": "80C",
+            "amountPaise": 15000000
+          }
+        ],
+        "ageBand": "above_80",
+        "regime": "old",
+        "tdsCreditsPaise": 0
+      },
+      "expected": {
+        "grossIncomePaise": 226810600,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 15000000,
+        "taxableIncomePaise": 211810600,
+        "slabBreakdown": [
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 100000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 33543200
+          }
+        ],
+        "taxBeforeRebatePaise": 43543200,
+        "rebate87APaise": 0,
+        "cessPaise": 1741700,
+        "totalTaxPaise": 45284900,
+        "tdsCreditsPaise": 0,
+        "refundOrDuePaise": -45284900
+      }
+    },
+    {
+      "id": "matrix-54",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 230218100
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 493600
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-53-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 1500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 2935800
+      },
+      "expected": {
+        "grossIncomePaise": 230711700,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 1500000,
+        "taxableIncomePaise": 229211700,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 4000000
+          },
+          {
+            "fromPaise": 120000000,
+            "toPaise": 160000000,
+            "rate": 0.15,
+            "taxPaise": 6000000
+          },
+          {
+            "fromPaise": 160000000,
+            "toPaise": 200000000,
+            "rate": 0.2,
+            "taxPaise": 8000000
+          },
+          {
+            "fromPaise": 200000000,
+            "toPaise": 240000000,
+            "rate": 0.25,
+            "taxPaise": 7302900
+          }
+        ],
+        "taxBeforeRebatePaise": 27302900,
+        "rebate87APaise": 0,
+        "cessPaise": 1092100,
+        "totalTaxPaise": 28395000,
+        "tdsCreditsPaise": 2935800,
+        "refundOrDuePaise": -25459200
+      }
+    },
+    {
+      "id": "matrix-55",
+      "input": {
+        "facts": [
+          {
+            "kind": "salary",
+            "amountPaise": 233995800
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 617000
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-54-80c",
+            "section": "80C",
+            "amountPaise": 21000000
+          }
+        ],
+        "ageBand": "below_60",
+        "regime": "old",
+        "tdsCreditsPaise": 2967900
+      },
+      "expected": {
+        "grossIncomePaise": 234612800,
+        "standardDeductionPaise": 5000000,
+        "totalDeductionsPaise": 15000000,
+        "taxableIncomePaise": 214612800,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 25000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 25000000,
+            "toPaise": 50000000,
+            "rate": 0.05,
+            "taxPaise": 1250000
+          },
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 100000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 34383800
+          }
+        ],
+        "taxBeforeRebatePaise": 45633800,
+        "rebate87APaise": 0,
+        "cessPaise": 1825400,
+        "totalTaxPaise": 47459200,
+        "tdsCreditsPaise": 2967900,
+        "refundOrDuePaise": -44491300
+      }
+    },
+    {
+      "id": "matrix-56",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 237773500
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 740400
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-55-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 2500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 3000000
+      },
+      "expected": {
+        "grossIncomePaise": 238513900,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 2500000,
+        "taxableIncomePaise": 236013900,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 4000000
+          },
+          {
+            "fromPaise": 120000000,
+            "toPaise": 160000000,
+            "rate": 0.15,
+            "taxPaise": 6000000
+          },
+          {
+            "fromPaise": 160000000,
+            "toPaise": 200000000,
+            "rate": 0.2,
+            "taxPaise": 8000000
+          },
+          {
+            "fromPaise": 200000000,
+            "toPaise": 240000000,
+            "rate": 0.25,
+            "taxPaise": 9003500
+          }
+        ],
+        "taxBeforeRebatePaise": 29003500,
+        "rebate87APaise": 0,
+        "cessPaise": 1160100,
+        "totalTaxPaise": 30163600,
+        "tdsCreditsPaise": 3000000,
+        "refundOrDuePaise": -27163600
+      }
+    },
+    {
+      "id": "matrix-57",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 241551200
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 0
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-56-80c",
+            "section": "80C",
+            "amountPaise": 12000000
+          }
+        ],
+        "ageBand": "60_to_80",
+        "regime": "old",
+        "tdsCreditsPaise": 0
+      },
+      "expected": {
+        "grossIncomePaise": 241551200,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 12000000,
+        "taxableIncomePaise": 229551200,
+        "slabBreakdown": [
+          {
+            "fromPaise": 30000000,
+            "toPaise": 50000000,
+            "rate": 0.05,
+            "taxPaise": 1000000
+          },
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 100000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 38865400
+          }
+        ],
+        "taxBeforeRebatePaise": 49865400,
+        "rebate87APaise": 0,
+        "cessPaise": 1994600,
+        "totalTaxPaise": 51860000,
+        "tdsCreditsPaise": 0,
+        "refundOrDuePaise": -51860000
+      }
+    },
+    {
+      "id": "matrix-58",
+      "input": {
+        "facts": [
+          {
+            "kind": "salary",
+            "amountPaise": 245328900
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 123400
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-57-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 1500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 3064200
+      },
+      "expected": {
+        "grossIncomePaise": 245452300,
+        "standardDeductionPaise": 7500000,
+        "totalDeductionsPaise": 1500000,
+        "taxableIncomePaise": 236452300,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 4000000
+          },
+          {
+            "fromPaise": 120000000,
+            "toPaise": 160000000,
+            "rate": 0.15,
+            "taxPaise": 6000000
+          },
+          {
+            "fromPaise": 160000000,
+            "toPaise": 200000000,
+            "rate": 0.2,
+            "taxPaise": 8000000
+          },
+          {
+            "fromPaise": 200000000,
+            "toPaise": 240000000,
+            "rate": 0.25,
+            "taxPaise": 9113100
+          }
+        ],
+        "taxBeforeRebatePaise": 29113100,
+        "rebate87APaise": 0,
+        "cessPaise": 1164500,
+        "totalTaxPaise": 30277600,
+        "tdsCreditsPaise": 3064200,
+        "refundOrDuePaise": -27213400
+      }
+    },
+    {
+      "id": "matrix-59",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 249106600
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 246800
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-58-80c",
+            "section": "80C",
+            "amountPaise": 18000000
+          }
+        ],
+        "ageBand": "above_80",
+        "regime": "old",
+        "tdsCreditsPaise": 3096300
+      },
+      "expected": {
+        "grossIncomePaise": 249353400,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 15000000,
+        "taxableIncomePaise": 234353400,
+        "slabBreakdown": [
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 100000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 40306000
+          }
+        ],
+        "taxBeforeRebatePaise": 50306000,
+        "rebate87APaise": 0,
+        "cessPaise": 2012200,
+        "totalTaxPaise": 52318200,
+        "tdsCreditsPaise": 3096300,
+        "refundOrDuePaise": -49221900
+      }
+    },
+    {
+      "id": "matrix-60",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 252884300
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 370200
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-59-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 2500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 3128400
+      },
+      "expected": {
+        "grossIncomePaise": 253254500,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 2500000,
+        "taxableIncomePaise": 250754500,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 4000000
+          },
+          {
+            "fromPaise": 120000000,
+            "toPaise": 160000000,
+            "rate": 0.15,
+            "taxPaise": 6000000
+          },
+          {
+            "fromPaise": 160000000,
+            "toPaise": 200000000,
+            "rate": 0.2,
+            "taxPaise": 8000000
+          },
+          {
+            "fromPaise": 200000000,
+            "toPaise": 240000000,
+            "rate": 0.25,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 240000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 3226400
+          }
+        ],
+        "taxBeforeRebatePaise": 33226400,
+        "rebate87APaise": 0,
+        "cessPaise": 1329100,
+        "totalTaxPaise": 34555500,
+        "tdsCreditsPaise": 3128400,
+        "refundOrDuePaise": -31427100
+      }
+    },
+    {
+      "id": "matrix-61",
+      "input": {
+        "facts": [
+          {
+            "kind": "salary",
+            "amountPaise": 256662000
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 493600
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-60-80c",
+            "section": "80C",
+            "amountPaise": 9000000
+          }
+        ],
+        "ageBand": "below_60",
+        "regime": "old",
+        "tdsCreditsPaise": 0
+      },
+      "expected": {
+        "grossIncomePaise": 257155600,
+        "standardDeductionPaise": 5000000,
+        "totalDeductionsPaise": 9000000,
+        "taxableIncomePaise": 243155600,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 25000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 25000000,
+            "toPaise": 50000000,
+            "rate": 0.05,
+            "taxPaise": 1250000
+          },
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 100000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 42946700
+          }
+        ],
+        "taxBeforeRebatePaise": 54196700,
+        "rebate87APaise": 0,
+        "cessPaise": 2167900,
+        "totalTaxPaise": 56364600,
+        "tdsCreditsPaise": 0,
+        "refundOrDuePaise": -56364600
+      }
+    },
+    {
+      "id": "matrix-62",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 260439700
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 617000
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-61-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 1500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 3192600
+      },
+      "expected": {
+        "grossIncomePaise": 261056700,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 1500000,
+        "taxableIncomePaise": 259556700,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 4000000
+          },
+          {
+            "fromPaise": 120000000,
+            "toPaise": 160000000,
+            "rate": 0.15,
+            "taxPaise": 6000000
+          },
+          {
+            "fromPaise": 160000000,
+            "toPaise": 200000000,
+            "rate": 0.2,
+            "taxPaise": 8000000
+          },
+          {
+            "fromPaise": 200000000,
+            "toPaise": 240000000,
+            "rate": 0.25,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 240000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 5867000
+          }
+        ],
+        "taxBeforeRebatePaise": 35867000,
+        "rebate87APaise": 0,
+        "cessPaise": 1434700,
+        "totalTaxPaise": 37301700,
+        "tdsCreditsPaise": 3192600,
+        "refundOrDuePaise": -34109100
+      }
+    },
+    {
+      "id": "matrix-63",
+      "input": {
+        "facts": [
+          {
+            "kind": "other",
+            "amountPaise": 264217400
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 740400
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-62-80c",
+            "section": "80C",
+            "amountPaise": 15000000
+          }
+        ],
+        "ageBand": "60_to_80",
+        "regime": "old",
+        "tdsCreditsPaise": 3224700
+      },
+      "expected": {
+        "grossIncomePaise": 264957800,
+        "standardDeductionPaise": 0,
+        "totalDeductionsPaise": 15000000,
+        "taxableIncomePaise": 249957800,
+        "slabBreakdown": [
+          {
+            "fromPaise": 30000000,
+            "toPaise": 50000000,
+            "rate": 0.05,
+            "taxPaise": 1000000
+          },
+          {
+            "fromPaise": 50000000,
+            "toPaise": 100000000,
+            "rate": 0.2,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 100000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 44987300
+          }
+        ],
+        "taxBeforeRebatePaise": 55987300,
+        "rebate87APaise": 0,
+        "cessPaise": 2239500,
+        "totalTaxPaise": 58226800,
+        "tdsCreditsPaise": 3224700,
+        "refundOrDuePaise": -55002100
+      }
+    },
+    {
+      "id": "matrix-64",
+      "input": {
+        "facts": [
+          {
+            "kind": "salary",
+            "amountPaise": 267995100
+          },
+          {
+            "kind": "interest",
+            "amountPaise": 0
+          }
+        ],
+        "claims": [
+          {
+            "id": "m-63-nps",
+            "section": "80CCD(2)",
+            "amountPaise": 2500000
+          }
+        ],
+        "ageBand": null,
+        "regime": "new",
+        "tdsCreditsPaise": 3256800
+      },
+      "expected": {
+        "grossIncomePaise": 267995100,
+        "standardDeductionPaise": 7500000,
+        "totalDeductionsPaise": 2500000,
+        "taxableIncomePaise": 257995100,
+        "slabBreakdown": [
+          {
+            "fromPaise": 0,
+            "toPaise": 40000000,
+            "rate": 0,
+            "taxPaise": 0
+          },
+          {
+            "fromPaise": 40000000,
+            "toPaise": 80000000,
+            "rate": 0.05,
+            "taxPaise": 2000000
+          },
+          {
+            "fromPaise": 80000000,
+            "toPaise": 120000000,
+            "rate": 0.1,
+            "taxPaise": 4000000
+          },
+          {
+            "fromPaise": 120000000,
+            "toPaise": 160000000,
+            "rate": 0.15,
+            "taxPaise": 6000000
+          },
+          {
+            "fromPaise": 160000000,
+            "toPaise": 200000000,
+            "rate": 0.2,
+            "taxPaise": 8000000
+          },
+          {
+            "fromPaise": 200000000,
+            "toPaise": 240000000,
+            "rate": 0.25,
+            "taxPaise": 10000000
+          },
+          {
+            "fromPaise": 240000000,
+            "toPaise": null,
+            "rate": 0.3,
+            "taxPaise": 5398500
+          }
+        ],
+        "taxBeforeRebatePaise": 35398500,
+        "rebate87APaise": 0,
+        "cessPaise": 1415900,
+        "totalTaxPaise": 36814400,
+        "tdsCreditsPaise": 3256800,
+        "refundOrDuePaise": -33557600
+      }
     }
   ]
 }

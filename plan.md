@@ -231,13 +231,13 @@ app/(flow)/              screens consume store + engine; no computation inline
 - **Status:** DONE · **Owner:** orchestrator
 - **Rationale:** The existing 74-case TypeScript suite is the behavioral contract for a Java engine port; divergence is a blocker, never a tuning choice.
 - **Acceptance criteria:** language-neutral JSON vectors in `fixtures/golden/`, Java runner passes them to the paise, and both engines run the same vectors in verification.
-- **Evidence:** `fixtures/golden/cases.ts`, generated `fixtures/golden/vectors.json`, `fixtures/golden/export.test.ts`, `fixtures/golden/README.md`, and `backend/src/test/java/com/wapsi/backend/engine/GoldenVectorTest.java`; 8 representative vectors pass in both engines.
+- **Evidence:** `fixtures/golden/cases.ts`, generated `fixtures/golden/vectors.json`, `fixtures/golden/export.test.ts`, `fixtures/golden/README.md`, and `backend/src/test/java/com/wapsi/backend/engine/GoldenVectorTest.java`; all 72 generated cases pass in both engines.
 
 ### P25 — Owned load-test harness
-- **Status:** TODO · **Owner:** orchestrator
+- **Status:** DONE · **Owner:** orchestrator
 - **Rationale:** The evidence must be reproducible on systems we own and must assert correctness, not just liveness.
 - **Acceptance criteria:** one-command local runner with environment definition, synthetic seed generator, end-to-end journeys, latency/error/RPS output, and correctness assertions.
-- **Evidence:** pending `loadtest/` scripts and `docs/scale/reproduce.md`.
+- **Evidence:** `loadtest/run.mjs` and `loadtest/run.ps1` start only the owned local Spring Boot jar, generate deterministic synthetic DEMP-prefixed references, exercise POST → idempotent retry → status polling, and report RPS, p50/p95/p99, errors, and correctness failures; `docs/scale/reproduce.md` records the environment and command; the 20-request smoke run passed with zero correctness failures.
 
 ### P26 — Scale evidence artifacts
 - **Status:** TODO · **Owner:** orchestrator

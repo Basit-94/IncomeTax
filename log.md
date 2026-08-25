@@ -257,3 +257,24 @@ Next.js docs read per AGENTS.md before this work: node_modules/next/dist/docs/01
 - **Why:** ackend/target/ is reproducible output, not source evidence, and should not inflate the architecture commit.
 - **Expected effect:** Future Maven runs leave target output untracked; only Java source, resources, tests, and documented reports remain in Git.
 - **Risk:** None to source or runtime behavior; local generated files remain available.
+
+## [2026-08-25 15:12] orchestrator
+- **Action:** CREATE | MODIFY
+- **Target:** backend/src/main/java/com/wapsi/backend/submission/; loadtest/; backend/README.md; plan.md P25
+- **Intent:** Add an owned local submission boundary and a synthetic correctness-first load harness.
+- **Why:** Scale evidence must exercise an in-scope system, preserve idempotency under retries, and report correctness failures instead of measuring a fake external portal.
+- **Expected effect:** A local Spring Boot process accepts async return submissions, repeats resolve to one receipt, and a one-command harness reports throughput, latency, errors, and duplicate-key correctness.
+- **Risk:** The local adapter uses in-memory state and is not production persistence; no capacity claim will be made from the harness until a measured run is captured.
+
+## [2026-08-25 15:16] orchestrator
+- **Action:** MODIFY
+- **Target:** fixtures/golden/vectors.json; fixtures/golden/README.md; docs/scale/reproduce.md; plan.md P24-P25
+- **Intent:** Expand the conformance fixture from the initial 8 boundary cases to 72 portable cases and document the reproducible local load runner and its first smoke result.
+- **Why:** Part C asks for the full 72-case contract; Part D requires a committed one-command runner, synthetic seed generator, environment definition, and correctness assertions before any scale evidence is interpreted.
+- **Expected effect:** The Java test checks all 72 generated vectors, and an independent reviewer can reproduce the local backend smoke run without touching external infrastructure.
+- **Risk:** The run is a smoke measurement on one laptop, not a national-capacity claim; six long-duration evidence artifacts remain open.
+
+## [2026-08-25 15:20] orchestrator
+- **Action:** VERIFY | MODIFY
+- **Target:** P24/P25 fixtures, loadtest/, docs/scale/reproduce.md, docs/scale/load-test-report.md, plan.md
+- **Result:** P24 now covers 72 generated vectors and mvn -q -f backend/pom.xml test passes all 6 backend tests, including the Java runner over every vector. P25 DONE: the owned runner's 20-request/4-concurrency smoke completed 20/20 journeys with 0 correctness failures, 2/2 duplicate checks, 77.27 logical RPS, p50 8.83 ms, p95/p99 229.21 ms. The first runner attempt failed on Windows path quoting and is documented with the fix. No national-capacity claim is made.

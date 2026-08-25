@@ -19,7 +19,7 @@ const claim = (id: string, section: string, amount: number): Claim => ({
  * Small, deliberately hand-readable cases at boundaries and persona shapes.
  * Expected outputs are generated from the TypeScript engine, never hand-keyed.
  */
-export const GOLDEN_CASES: readonly GoldenCase[] = [
+const CURATED_CASES: readonly GoldenCase[] = [
   {
     id: "zero-income",
     input: { facts: [], claims: [], regime: "new" },
@@ -93,3 +93,33 @@ export const GOLDEN_CASES: readonly GoldenCase[] = [
     },
   },
 ];
+
+/**
+ * The former TypeScript suite also exercised property-style ranges. These 64
+ * deterministic matrix cases make those ranges portable without hiding them
+ * inside a JavaScript-only loop.
+ */
+const MATRIX_CASES: readonly GoldenCase[] = Array.from({ length: 64 }, (_, index) => {
+  const oldRegime = index % 2 === 0;
+  const ageBands = ["below_60", "60_to_80", "above_80"] as const;
+  const ageBand = oldRegime ? ageBands[Math.floor(index / 2) % ageBands.length] : undefined;
+  const incomeKind: IncomeKind = index % 3 === 0 ? "salary" : "other";
+  const claims = oldRegime
+    ? [claim(`m-${index}-80c`, "80C", 90_000 + (index % 5) * 30_000)]
+    : [claim(`m-${index}-nps`, "80CCD(2)", 10_000 + (index % 4) * 5_000)];
+  return {
+    id: `matrix-${String(index + 1).padStart(2, "0")}`,
+    input: {
+      facts: [
+        fact(incomeKind, 300_000 + index * 37_777),
+        fact("interest", (index % 7) * 1_234),
+      ],
+      claims,
+      ageBand,
+      regime: oldRegime ? "old" : "new",
+      tdsCredits: index % 4 === 0 ? 0 : 12_345 + index * 321,
+    },
+  };
+});
+
+export const GOLDEN_CASES: readonly GoldenCase[] = [...CURATED_CASES, ...MATRIX_CASES];

@@ -63,6 +63,7 @@ describe("golden vector exporter", () => {
     const outputPath = path.resolve(process.cwd(), "fixtures/golden/vectors.json");
     mkdirSync(path.dirname(outputPath), { recursive: true });
     writeFileSync(outputPath, `${JSON.stringify(output, null, 2)}\n`, "utf8");
-    expect(vectors).toHaveLength(GOLDEN_CASES.length);
+    expect(vectors).toHaveLength(72);
+    expect(GOLDEN_CASES).toHaveLength(72);
   });
 });

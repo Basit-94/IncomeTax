@@ -15,9 +15,13 @@ mvn test
 mvn spring-boot:run
 ```
 
-The current workspace has no `java`, `mvn`, or `gradle` executable, so this foundation is not
-claimed compiled in this environment yet. The missing toolchain is recorded in `log.md` and is a
-P21 blocker, not a reason to represent the source as verified.
+The repository's verification run used Temurin 21.0.12 and an isolated Maven 3.9.11 distribution.
+The machine-wide Maven install is not required. From the repository root, the owned synthetic load
+harness is `pwsh -File loadtest/run.ps1 -Requests 100 -Concurrency 8`.
+
+`POST /api/v1/returns/submit` is an async, idempotent local boundary. Its in-memory receipt map is
+deliberately a test adapter; production needs a durable unique idempotency key and an outbox/queue.
+No controller contacts an official portal.
 
 ## Money contract
 
