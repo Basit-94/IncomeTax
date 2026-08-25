@@ -101,6 +101,13 @@ export const OLD_REGIME_CLAIM_CAPS: Readonly<Record<string, number>> = {
   "80C": 150_000,
   "80CCC": 150_000,
   "80GG": 60_000,
+  "80D": 25_000,
+  "80D_SELF": 25_000,
+  "80D_PARENTS": 50_000,
+  "24B": 200_000,
+  "24(b)": 200_000,
+  "24b": 200_000,
+  "80TTA": 10_000,
 };
 
 /* ------------------------------------------------------------------ common -- */
@@ -108,6 +115,22 @@ export const OLD_REGIME_CLAIM_CAPS: Readonly<Record<string, number>> = {
 /** Health and education cess on tax-after-rebate. */
 // Source: Income Tax Department AY 2026-27 salaried guidance and Finance Bill 2026.
 export const HEALTH_EDU_CESS_RATE = 0.04;
+
+/** Unified AY 2026-27 constants block for frontend parity */
+export const CONSTANTS_2026_27 = {
+  STD_DEDUCTION_NEW: 75_000,
+  STD_DEDUCTION_OLD: 50_000,
+  REBATE_87A_LIMIT_NEW: 1_200_000,
+  REBATE_87A_MAX_NEW: 60_000,
+  REBATE_87A_LIMIT_OLD: 500_000,
+  REBATE_87A_MAX_OLD: 12_500,
+  CESS_RATE: 0.04,
+  CAP_80C: 150_000,
+  CAP_80D_SELF: 25_000,
+  CAP_80D_PARENTS: 50_000,
+  CAP_24B: 200_000,
+  CAP_80TTA: 10_000,
+};
 
 /**
  * KNOWN GAPS deliberately not modelled in v1:

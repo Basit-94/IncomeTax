@@ -43,6 +43,7 @@ import StatementTab from "../components/dashboard/statement-tab";
 import ActionsTab from "../components/dashboard/actions-tab";
 import SandboxDrawer from "../components/dashboard/sandbox-drawer";
 import DisputeModal from "../components/dashboard/dispute-modal";
+import { EditIncomeModal } from "../components/dashboard/edit-income-modal";
 import BankIfscModal from "../components/dashboard/bank-ifsc-modal";
 import NoticeModal from "../components/dashboard/notice-modal";
 import PersonalizedDashboard from "../components/dashboard/personalized-dashboard";
@@ -53,6 +54,9 @@ import CheckScreen from "../components/flow/check-screen";
 import FilingStep from "../components/flow/filing-step";
 import { generateSeededUser } from "../components/sandbox-user";
 import Onboarding from "../components/onboarding";
+import { JudgeSandboxBar, JUDGE_VECTORS, type JudgeVector } from "../components/dashboard/judge-sandbox-bar";
+import { QuickEditModal } from "../components/dashboard/quick-edit-modal";
+import RealUserTaxWizard from "../components/flow/real-user-wizard";
 
 // --- VALIDATION (lib/validate.ts issue codes → dictionary messages) ---
 function panIssueMessage(raw: string, t: ReturnType<typeof dict>): string {
@@ -182,6 +186,12 @@ export default function WapsiPrototype() {
   const [simulatedError, setSimulatedError] = useState(false);
   const [isSpeechListening, setIsSpeechListening] = useState(false);
   const [speechText, setSpeechText] = useState("");
+
+  // Judge sandbox and Quick Facts Editor
+  const [activeVectorId, setActiveVectorId] = useState<string | null>(null);
+  const [quickEditActive, setQuickEditActive] = useState(false);
+  const [isRealMode, setIsRealMode] = useState(false);
+  const [wizardCompleted, setWizardCompleted] = useState(false);
 
   // Load saved draft (versioned ReturnState; legacy raw-Persona drafts migrate)
   useEffect(() => {
@@ -313,6 +323,8 @@ export default function WapsiPrototype() {
     const customUser = generateSeededUser(seed, lang);
 
     setActivePersonaId("custom");
+    setIsRealMode(false);
+    setWizardCompleted(true);
     setReturnState(freshState(customUser, lang));
     setUndoStack([]);
     setOtp(["9", "4", "9", "4", "9", "4"]); // prefill OTP
@@ -322,6 +334,8 @@ export default function WapsiPrototype() {
   // Select Persona
   const handleSelectPersona = (id: PersonaId) => {
     setActivePersonaId(id);
+    setIsRealMode(false);
+    setWizardCompleted(true);
     const pData: Persona = JSON.parse(JSON.stringify(PERSONAS[id])); // deep clone
     setReturnState(freshState(pData, pData.preferredLang));
     setUndoStack([]);
@@ -352,7 +366,51 @@ export default function WapsiPrototype() {
       handleSelectPersona(matched as PersonaId);
     } else {
       setCustomPan(cleanPan);
-      handleCreateCustom();
+      setIsRealMode(true);
+      setWizardCompleted(false);
+
+      const customUser: Persona = {
+        id: "custom",
+        name: "",
+        age: 29,
+        city: "",
+        state: "",
+        occupation: "",
+        pan: cleanPan,
+        mobile: "90000 00000",
+        preferredLang: lang,
+        situation: "Real User Return",
+        act: 1,
+        actLabel: "Real User",
+        embodies: "Real User",
+        assessmentYear: "2026-27",
+        facts: [],
+        taxPaid: [],
+        claims: [],
+        banks: [],
+        refund: {
+          state: "not_filed",
+          amount: 0,
+          holds: [],
+          timeline: []
+        },
+        notices: []
+      };
+
+      setActivePersonaId("custom");
+      setReturnState({
+        version: CURRENT_VERSION,
+        lang,
+        personaId: "custom",
+        baselinePersona: customUser,
+        persona: customUser,
+        corrections: [],
+        confirmedFactIds: [],
+        regime: "new"
+      });
+      setUndoStack([]);
+      setOtp(["9", "4", "9", "4", "9", "4"]); // prefill OTP
+      setStep("otp");
     }
   };
 
@@ -447,6 +505,19 @@ export default function WapsiPrototype() {
   const handleConfirmFact = (factId: string) => {
     if (!returnState) return;
     commitWithUndo(confirmFact(returnState, factId));
+
+    // Smooth auto-scroll to the next unconfirmed entry
+    setTimeout(() => {
+      const cards = document.querySelectorAll(".fact-card");
+      for (let i = 0; i < cards.length; i++) {
+        const card = cards[i] as HTMLElement;
+        const isConfirmed = card.getAttribute("data-confirmed") === "true";
+        if (!isConfirmed) {
+          card.scrollIntoView({ behavior: "smooth", block: "center" });
+          break;
+        }
+      }
+    }, 100);
   };
 
   const handleUndoCorrection = (correctionId: string) => {
@@ -454,13 +525,11 @@ export default function WapsiPrototype() {
     commitWithUndo(revertCorrection(returnState, correctionId));
   };
 
-  // Dispute modal open: prefill from the active correction, else the fact.
+  // Dispute modal open: numeric input starts empty per non-technical requirement.
   const openDispute = (fact: Pick<IncomeFact, "id" | "amount">) => {
     setActiveDisputeId(fact.id);
+    setDisputeAmount(""); // Start with empty input
     const correction = activeCorrectionByFact[fact.id];
-    setDisputeAmount(
-      (correction ? (correction.next as number) : fact.amount).toString(),
-    );
     setDisputeReason(correction?.reason || "");
   };
 
@@ -483,6 +552,13 @@ export default function WapsiPrototype() {
       at: new Date().toISOString(),
       target: fact ? "fact" : tax ? "tax" : "claim",
     };
+
+    console.log("Ledger Event [OVERRIDE_FACT]:", {
+      type: "OVERRIDE_FACT",
+      factId: activeDisputeId,
+      reported: source.amount,
+      declared: correction.next,
+    });
 
     let next = applyCorrection(returnState, correction);
 
@@ -512,6 +588,63 @@ export default function WapsiPrototype() {
       };
     }
   };
+
+  const handleSaveAndRecalculate = (factId: string, updatedAmount: number, comment?: string) => {
+    if (!persona || !returnState) return;
+
+    const fact = persona.facts.find((f) => f.id === factId);
+    const tax = persona.taxPaid.find((f) => f.id === factId);
+    const claim = persona.claims.find((f) => f.id === factId);
+    const source = fact ?? tax ?? claim;
+    if (!source) return;
+
+    const correction: Correction = {
+      id: `corr-${Date.now()}`,
+      factId,
+      field: "amount",
+      previous: source.amount,
+      next: updatedAmount,
+      reason: comment?.trim() || t.file.disputeDefaultReason,
+      at: new Date().toISOString(),
+      target: fact ? "fact" : tax ? "tax" : "claim",
+    };
+
+    console.log("Ledger Event [OVERRIDE_FACT]:", {
+      type: "OVERRIDE_FACT",
+      factId,
+      reported: source.amount,
+      declared: correction.next,
+    });
+
+    let next = applyCorrection(returnState, correction);
+
+    // Rakesh AIS-mismatch hold releases when the capital-gains figure goes to zero.
+    if (persona.id === "rakesh" && fact?.id === "rakesh-capital-gains") {
+      if (correction.next === 0) {
+        next = {
+          ...next,
+          baselinePersona: withHolds(next.baselinePersona),
+          persona: withHolds(next.persona),
+        };
+      }
+    }
+
+    commitWithUndo(next);
+    setActiveDisputeId(null);
+
+    function withHolds(p: Persona): Persona {
+      return {
+        ...p,
+        refund: {
+          ...p.refund,
+          holds: p.refund.holds.map((h) =>
+            h.kind === "ais_mismatch" ? { ...h, resolved: true } : h,
+          ),
+        },
+      };
+    }
+  };
+
   // --- INTERACTIVE FEATURES FOR PERSONAS ---
 
   // 2. Bank IFSC Correction
@@ -922,9 +1055,255 @@ export default function WapsiPrototype() {
     setPanInputError(panIssueMessage(cleanPan, t) || null);
   };
 
+  const handleSelectJudgeVector = (vector: JudgeVector | null) => {
+    if (!vector) {
+      setActiveVectorId(null);
+      setIsRealMode(true);
+      setWizardCompleted(false);
+
+      const customUser: Persona = {
+        id: "custom",
+        name: "",
+        age: 29,
+        city: "",
+        state: "",
+        occupation: "",
+        pan: "",
+        mobile: "",
+        preferredLang: lang,
+        situation: "Real User Return",
+        act: 1,
+        actLabel: "Real User",
+        embodies: "Real User",
+        assessmentYear: "2026-27",
+        facts: [],
+        taxPaid: [],
+        claims: [],
+        banks: [],
+        refund: {
+          state: "not_filed",
+          amount: 0,
+          holds: [],
+          timeline: []
+        },
+        notices: []
+      };
+
+      setActivePersonaId("custom");
+      setReturnState({
+        version: CURRENT_VERSION,
+        lang,
+        personaId: "custom",
+        baselinePersona: customUser,
+        persona: customUser,
+        corrections: [],
+        confirmedFactIds: [],
+        regime: "new"
+      });
+      setStep("dashboard");
+      return;
+    }
+
+    setActiveVectorId(vector.id);
+    setIsRealMode(false);
+    setWizardCompleted(true);
+
+    if (vector.id === "rakesh-notice") {
+      handleSelectPersona("rakesh");
+      return;
+    }
+
+    // Otherwise, create a clean custom sandbox persona with the vector parameters
+    const customUser: Persona = {
+      id: "custom",
+      name: vector.name,
+      age: 29,
+      city: "Sandbox",
+      state: "Evaluation",
+      occupation: "Judge Demo Profile",
+      pan: "DEMPJ1234F",
+      mobile: "90000 00009",
+      preferredLang: lang,
+      situation: vector.description,
+      act: 3,
+      actLabel: "Evaluation Sandbox",
+      embodies: vector.description,
+      assessmentYear: "2026-27",
+      facts: [
+        {
+          id: "sandbox-salary",
+          label: "Your primary contract income",
+          amount: vector.salary,
+          kind: "salary",
+          provenance: {
+            reporter: "Sandbox Employer Ltd",
+            reporterKind: "employer",
+            filedOn: "2026-05-18",
+            statement: "26AS",
+            onlyReporterCanFix: false
+          }
+        },
+        {
+          id: "sandbox-interest",
+          label: "Savings interest",
+          amount: vector.interest,
+          kind: "interest",
+          provenance: {
+            reporter: "Sandbox Bank",
+            reporterKind: "bank",
+            filedOn: "2026-06-05",
+            statement: "AIS",
+            onlyReporterCanFix: false
+          }
+        }
+      ],
+      taxPaid: [
+        {
+          id: "sandbox-tds-192",
+          label: "Tax withheld (TDS)",
+          amount: vector.tds,
+          section: "192",
+          provenance: {
+            reporter: "Sandbox Employer Ltd",
+            reporterKind: "employer",
+            filedOn: "2026-05-18",
+            statement: "26AS",
+            onlyReporterCanFix: false
+          }
+        }
+      ],
+      claims: (vector.claims || []).map((c, idx) => ({
+        id: `sandbox-claim-${idx}`,
+        section: c.section,
+        label: c.section === "80C" ? "Provident Fund / ELSS" : "Health cover",
+        amount: c.amount,
+        evidenceAttached: true
+      })),
+      banks: [
+        {
+          id: "sandbox-bank-1",
+          bank: "Deccan Union Bank",
+          maskedNumber: "•••• •••• 9999",
+          ifsc: "DECU0834471",
+          status: "validated",
+          nominatedForRefund: true
+        }
+      ],
+      refund: {
+        state: "under_review",
+        amount: vector.tds,
+        filedOn: "2026-07-20",
+        verifiedOn: "2026-07-20",
+        holds: [],
+        timeline: [
+          {
+            id: "sb-tl-1",
+            on: "2026-07-20",
+            state: "filed_unverified",
+            headline: "You sent your return in.",
+            actor: "citizen"
+          },
+          {
+            id: "sb-tl-2",
+            on: "2026-07-20",
+            state: "verified",
+            headline: "You confirmed it was you. The return counts from here.",
+            actor: "citizen"
+          }
+        ]
+      },
+      notices: []
+    };
+
+    setActivePersonaId("custom");
+    setReturnState({
+      version: CURRENT_VERSION,
+      lang,
+      personaId: "custom",
+      baselinePersona: customUser,
+      persona: customUser,
+      corrections: [],
+      confirmedFactIds: [],
+      regime: vector.regime
+    });
+    setStep("dashboard");
+  };
+
+  const handleQuickEditSave = (salary: number, interest: number, tds: number) => {
+    if (!persona || !returnState) return;
+
+    let updatedState = { ...returnState };
+
+    const salaryFact = persona.facts.find((f) => f.kind === "salary");
+    if (salaryFact && salaryFact.amount !== salary) {
+      updatedState = applyCorrection(updatedState, {
+        id: `corr-salary-${Date.now()}`,
+        factId: salaryFact.id,
+        field: "amount",
+        target: "fact",
+        previous: salaryFact.amount,
+        next: salary,
+        reason: "Quick Edit",
+        at: new Date().toISOString()
+      });
+    }
+
+    const interestFact = persona.facts.find((f) => f.kind === "interest");
+    if (interestFact && interestFact.amount !== interest) {
+      updatedState = applyCorrection(updatedState, {
+        id: `corr-interest-${Date.now()}`,
+        factId: interestFact.id,
+        field: "amount",
+        target: "fact",
+        previous: interestFact.amount,
+        next: interest,
+        reason: "Quick Edit",
+        at: new Date().toISOString()
+      });
+    }
+
+    const tdsItem = persona.taxPaid.find((t) => t.section === "192");
+    if (tdsItem && tdsItem.amount !== tds) {
+      updatedState = applyCorrection(updatedState, {
+        id: `corr-tds-${Date.now()}`,
+        factId: tdsItem.id,
+        field: "amount",
+        target: "tax",
+        previous: tdsItem.amount,
+        next: tds,
+        reason: "Quick Edit",
+        at: new Date().toISOString()
+      });
+    }
+
+    saveState(updatedState);
+    setQuickEditActive(false);
+  };
+
+  const activeFact = persona
+    ? [...persona.facts, ...persona.taxPaid, ...persona.claims].find((f) => f.id === activeDisputeId)
+    : null;
+  const isPreFilled = activeFact && "provenance" in activeFact && activeFact.provenance ? activeFact.provenance.reporterKind !== "self" : false;
+  const reportedAmount = activeFact ? activeFact.amount : 0;
+  const reporterName = activeFact && "provenance" in activeFact && activeFact.provenance ? activeFact.provenance.reporter : "Self";
+  const disputeTarget = activeFact
+    ? persona?.facts.some((f) => f.id === activeFact.id)
+      ? "fact"
+      : persona?.taxPaid.some((t) => t.id === activeFact.id)
+      ? "tax"
+      : "claim"
+    : undefined;
+
   return (
     <LazyMotion features={domMax} strict>
       <div className="service-shell flex-1 text-ink selection:bg-money/20 relative overflow-x-hidden min-h-dvh flex flex-col">
+
+        {/* --- JUDGE SANDBOX BAR --- */}
+        <JudgeSandboxBar
+          activeVectorId={activeVectorId}
+          onSelectVector={handleSelectJudgeVector}
+          onEditFacts={() => setQuickEditActive(true)}
+        />
 
         {/* --- PORTAL HEADER --- */}
         <PortalHeader
@@ -1023,9 +1402,9 @@ export default function WapsiPrototype() {
               >
                 
                 {/* ACTIVE PROFILE STRIP */}
-                <ProfileStrip persona={persona} lang={lang} t={t} onLogOut={handleLogOut} />
+                <ProfileStrip persona={persona} lang={lang} t={t} onLogOut={handleLogOut} isRealMode={isRealMode} />
 
-                {onboardingProfile && (
+                {onboardingProfile && (!isRealMode || wizardCompleted) && (
                   <PersonalizedDashboard
                     profile={onboardingProfile}
                     t={t}
@@ -1033,6 +1412,7 @@ export default function WapsiPrototype() {
                     destination={dashboardDestination}
                     onPrimaryAction={openPersonalizedDashboardDestination}
                     onEdit={handleEditOnboarding}
+                    isRealMode={isRealMode}
                   />
                 )}
 
@@ -1050,7 +1430,29 @@ export default function WapsiPrototype() {
                 )}
 
                 {/* UNFILED → default path (plan §B.3). FILED → tracker tabs. */}
-                {persona.refund.state === "not_filed" ? (
+                {isRealMode && !wizardCompleted ? (
+                  <RealUserTaxWizard
+                    lang={lang}
+                    t={t}
+                    onComplete={(updatedPersona, regime) => {
+                      if (returnState) {
+                        setReturnState({
+                          ...returnState,
+                          baselinePersona: updatedPersona,
+                          persona: updatedPersona,
+                          regime
+                        });
+                      }
+                      setWizardCompleted(true);
+                      setFlowStep("check"); // Take them directly to the Review & File step
+                    }}
+                    onCancel={() => {
+                      setIsRealMode(false);
+                      setWizardCompleted(true);
+                      handleLogOut();
+                    }}
+                  />
+                ) : persona.refund.state === "not_filed" ? (
                   <>
                     <FlowStepper
                       t={t}
@@ -1089,12 +1491,29 @@ export default function WapsiPrototype() {
                             handleClaimAmountChange={handleClaimAmountChange}
                             handleAddCustomIncome={handleAddCustomIncome}
                           />
-                          <button
-                            onClick={() => setFlowStep("deductions")}
-                            className="w-full rounded-xl bg-money px-6 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-money-deep"
-                          >
-                            {t.common.continue}
-                          </button>
+                          {(() => {
+                            const totalItemsCount = persona.facts.length + persona.taxPaid.length + persona.claims.length;
+                            const confirmedOrCorrectedCount = [
+                              ...persona.facts,
+                              ...persona.taxPaid,
+                              ...persona.claims
+                            ].filter(
+                              (fact) =>
+                                (returnState?.confirmedFactIds ?? []).includes(fact.id) ||
+                                activeCorrectionByFact[fact.id]
+                            ).length;
+                            const isContinueDisabled = confirmedOrCorrectedCount < totalItemsCount;
+
+                            return (
+                              <button
+                                disabled={isContinueDisabled}
+                                onClick={() => setFlowStep("deductions")}
+                                className="w-full rounded-xl bg-money px-6 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-money-deep disabled:bg-slate-200 disabled:text-ink-3 cursor-pointer disabled:cursor-not-allowed"
+                              >
+                                {t.common.continue}
+                              </button>
+                            );
+                          })()}
                         </div>
                       )}
 
@@ -1203,6 +1622,8 @@ export default function WapsiPrototype() {
                           stampFired={stampFired || isFiled}
                           refundFigure={breakdown?.refundOrDue ?? 0}
                           handleFixBank={handleFixBank}
+                          onEditFacts={() => setQuickEditActive(true)}
+                          regime={regime}
                         />
                       )}
 
@@ -1269,19 +1690,33 @@ export default function WapsiPrototype() {
         />
 
         {/* --- DYNAMIC DISPUTE MODAL (FRAMER MOTION) --- */}
-        <DisputeModal
-          active={!!activeDisputeId}
-          persona={persona}
-          t={t}
-          disputeAmount={disputeAmount}
-          disputeReason={disputeReason}
-          isSpeechListening={isSpeechListening}
-          setDisputeAmount={setDisputeAmount}
-          setDisputeReason={setDisputeReason}
-          toggleSpeechMock={toggleSpeechMock}
-          saveDispute={saveDispute}
-          onClose={() => setActiveDisputeId(null)}
-        />
+        {activeDisputeId && isPreFilled ? (
+          <DisputeModal
+            active={!!activeDisputeId}
+            persona={persona}
+            t={t}
+            disputeAmount={disputeAmount}
+            disputeReason={disputeReason}
+            isSpeechListening={isSpeechListening}
+            setDisputeAmount={setDisputeAmount}
+            setDisputeReason={setDisputeReason}
+            toggleSpeechMock={toggleSpeechMock}
+            saveDispute={saveDispute}
+            onClose={() => setActiveDisputeId(null)}
+            isPreFilled={isPreFilled}
+            reportedAmount={reportedAmount}
+            reporterName={reporterName}
+            disputeTarget={disputeTarget}
+          />
+        ) : activeDisputeId ? (
+          <EditIncomeModal
+            isOpen={!!activeDisputeId}
+            factId={activeDisputeId}
+            initialAmount={reportedAmount}
+            onClose={() => setActiveDisputeId(null)}
+            onSaveAndRecalculate={handleSaveAndRecalculate}
+          />
+        ) : null}
 
         {/* --- DYNAMIC BANK IFSC UPDATE POPUP --- */}
         <BankIfscModal
@@ -1308,6 +1743,20 @@ export default function WapsiPrototype() {
           saveNoticeResponse={saveNoticeResponse}
           onClose={() => setSelectedNoticeId(null)}
         />
+
+        {/* --- DYNAMIC QUICK EDIT FACTS MODAL --- */}
+        {persona && (
+          <QuickEditModal
+            isOpen={quickEditActive}
+            salary={persona.facts.find((f) => f.kind === "salary")?.amount ?? 0}
+            interest={persona.facts.find((f) => f.kind === "interest")?.amount ?? 0}
+            tds={persona.taxPaid.find((t) => t.section === "192")?.amount ?? 0}
+            onSave={handleQuickEditSave}
+            onClose={() => setQuickEditActive(false)}
+            lang={lang}
+            t={t}
+          />
+        )}
 
       </div>
     </LazyMotion>

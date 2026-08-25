@@ -46,8 +46,11 @@ export interface TaxBreakdown {
   taxableIncome: number;
   slabBreakdown: SlabSlice[];
   taxBeforeRebate: number;
+  rawTax: number;
   /** s.87A rebate + marginal relief combined effect, integer rupees. */
   rebate87A: number;
+  marginalReliefApplied: boolean;
+  taxAfterRebate: number;
   cess: number;
   totalTax: number;
   tdsCredits: number;

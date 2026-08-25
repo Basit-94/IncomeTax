@@ -52,16 +52,26 @@ export type IncomeKind =
   | "rent"
   | "other";
 
-export interface IncomeFact {
+export interface Fact {
   id: string;
-  /** Plain-language label, already written for a citizen rather than a form. */
-  label: string;
-  amount: number;
   kind: IncomeKind;
+  amount: number;
+  
+  // Both en/hi/ta labels and titles/sources are supported for compatibility
+  title?: string;
+  label: string;
+  source?: string;
   provenance: Provenance;
+  
+  confirmed?: boolean;
+  disputed?: boolean;
+  disputeReason?: string;
+  
   /** Citizen has flagged this as wrong, with their own figure. */
   dispute?: { citizenAmount: number; reason: string };
 }
+
+export type IncomeFact = Fact;
 
 export interface TaxAlreadyPaid {
   id: string;
@@ -72,14 +82,38 @@ export interface TaxAlreadyPaid {
   provenance: Provenance;
 }
 
+export type ClaimSection =
+  | "80C"
+  | "80D_SELF"
+  | "80D_PARENTS"
+  | "80CCD_2"
+  | "24B"
+  | "80E"
+  | "80TTA"
+  | "HRA"
+  | string;
+
 /** A deduction the citizen is claiming (80C, 80GG, 80D...). */
 export interface Claim {
   id: string;
-  section: string;
-  label: string;
+  section: ClaimSection;
   amount: number;
+  
+  // Both structures supported
+  title?: string;
+  label: string;
   /** Whether the citizen has evidence attached. Drives the NUDGE-style hold. */
   evidenceAttached: boolean;
+}
+
+export interface CorrectionEvent {
+  id: string;
+  factId: string;
+  field: "amount" | "existence";
+  oldValue: any;
+  newValue: any;
+  timestamp: string;
+  reverted?: boolean;
 }
 
 export type BankStatus = "validated" | "failed" | "under_process";

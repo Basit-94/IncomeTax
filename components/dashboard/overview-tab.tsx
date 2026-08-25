@@ -9,6 +9,9 @@ import type { Dict } from "../../lib/i18n";
 import { TODAY, daysBetween } from "../../lib/personas";
 import { formatMoney, formatDate, formatDayMonth } from "../../lib/money";
 import { localize } from "../mock-i18n";
+import { computeTax } from "../../lib/engine/tax";
+import { taxInputFor } from "../../lib/return/compute";
+import { AnimatedAmount } from "../ui/animated-amount";
 
 interface OverviewTabProps {
   persona: Persona;
@@ -16,8 +19,88 @@ interface OverviewTabProps {
   t: Dict;
   stampFired: boolean;
   /** Engine-computed refundOrDue (positive = refund). Never the narrative amount. */
-  refundFigure: number;
+  refundFigure?: number;
   handleFixBank: (bank: BankAccount) => void;
+  onEditFacts?: () => void;
+  regime: "new" | "old";
+}
+
+import type { RefundState } from "../../lib/types";
+
+function getCurrentStepId(state: RefundState): number {
+  switch (state) {
+    case "not_filed":
+      return 1;
+    case "filed_unverified":
+      return 2;
+    case "verified":
+      return 3;
+    case "in_queue":
+      return 4;
+    case "under_review":
+      return 4;
+    case "determined":
+      return 5;
+    case "sent_to_bank":
+      return 6;
+    case "credited":
+      return 7;
+    default:
+      return 2;
+  }
+}
+
+interface TimelineStep {
+  id: number;
+  title: string;
+  subtitle: string;
+  date?: string | null;
+}
+
+function getTimelineSteps(refund: Persona["refund"], lang: Lang, t: Dict): TimelineStep[] {
+  const findDateOfState = (state: RefundState) => {
+    const ev = refund.timeline.find(e => e.state === state);
+    return ev ? formatDate(ev.on, lang) : null;
+  };
+
+  return [
+    {
+      id: 1,
+      title: "Return declared & submitted",
+      subtitle: "Form received by department",
+      date: findDateOfState("filed_unverified") || (refund.filedOn ? formatDate(refund.filedOn, lang) : null)
+    },
+    {
+      id: 2,
+      title: "Waiting for verification",
+      subtitle: "Confirm your identity via OTP",
+      date: findDateOfState("verified") || (refund.verifiedOn ? formatDate(refund.verifiedOn, lang) : null)
+    },
+    {
+      id: 3,
+      title: "In the queue for processing",
+      subtitle: "System validation checks running",
+      date: findDateOfState("in_queue")
+    },
+    {
+      id: 4,
+      title: "Review & Decision",
+      subtitle: "Deductions and tax verification",
+      date: findDateOfState("under_review") || findDateOfState("determined")
+    },
+    {
+      id: 5,
+      title: "Refund sent to bank",
+      subtitle: "Direct deposit process started",
+      date: findDateOfState("sent_to_bank")
+    },
+    {
+      id: 6,
+      title: "Refund in your account",
+      subtitle: "Direct deposit credit completed",
+      date: findDateOfState("credited")
+    }
+  ];
 }
 
 /**
@@ -30,9 +113,16 @@ export default function OverviewTab({
   lang,
   t,
   stampFired,
-  refundFigure,
+  refundFigure: _refundFigure,
   handleFixBank,
+  onEditFacts,
+  regime,
 }: OverviewTabProps) {
+  const breakdown = React.useMemo(() => {
+    return computeTax(taxInputFor(persona, regime));
+  }, [persona, regime]);
+
+  const refundFigure = breakdown.refundOrDue;
   const refund = persona.refund;
   const seqIndex = REFUND_SEQUENCE.indexOf(refund.state);
   const openHolds = refund.holds.filter((h) => !h.resolved);
@@ -56,77 +146,144 @@ export default function OverviewTab({
           <span className="text-xs font-mono text-money uppercase tracking-wider font-semibold">
             {t.dashboard.returnSummary}
           </span>
-          <h2 className="text-3xl font-extrabold text-navy tracking-tight tabular">
-            {refundFigure > 0
-              ? t.file.outcomeRefund(formatMoney(refundFigure, lang))
-              : refundFigure === 0
-              ? t.file.outcomeOwesNothing
-              : t.file.outcomeOwes(formatMoney(Math.abs(refundFigure), lang))}
+          <h2 className="text-3xl font-extrabold text-navy tracking-tight tabular flex items-baseline gap-2 flex-wrap">
+            {refundFigure > 0 ? (
+              <>
+                <AnimatedAmount value={Math.abs(refundFigure)} lang={lang} />
+                <span className="text-lg font-medium text-ink-2">
+                  {t.file.outcomeRefund("").replace(/^\s*₹?\s*/, "")}
+                </span>
+              </>
+            ) : refundFigure === 0 ? (
+              <span>{t.file.outcomeOwesNothing}</span>
+            ) : (
+              <>
+                <span>−</span>
+                <AnimatedAmount value={Math.abs(refundFigure)} lang={lang} />
+                <span className="text-lg font-medium text-alarm">
+                  {t.file.outcomeOwes("").replace(/^\s*₹?\s*/, "")}
+                </span>
+              </>
+            )}
           </h2>
-          <p className="text-xs text-ink-2 flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
             <span
-              className={`inline-block px-2 py-0.5 rounded font-mono font-semibold ${
+              className={`inline-block px-2 py-0.5 rounded font-mono font-semibold text-xs ${
                 openHolds.length > 0 ? "bg-warn-soft text-warn" : "bg-money-soft text-money"
               }`}
             >
               {t.refund.states[refund.state]}
             </span>
             {openHolds.length > 0 && (
-              <span>{t.refund.holdsHeading(openHolds.length)}</span>
+              <span className="text-xs text-ink-2">{t.refund.holdsHeading(openHolds.length)}</span>
             )}
-          </p>
+            {onEditFacts && (
+              <button
+                onClick={onEditFacts}
+                className="text-xs text-money hover:text-money-deep font-bold underline cursor-pointer"
+              >
+                Edit Actual Figures
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="space-y-3">
-        <p className="disclosure text-xs text-warn leading-relaxed">
-          {t.check.calculationStatus}
-        </p>
         <details id="return-source-trail" className="disclosure text-xs text-ink-2">
           <summary className="cursor-pointer font-semibold text-ink">
             {t.check.showCalculationTrail}
           </summary>
-          <div className="pt-3 space-y-3">
-            <p>{t.check.calculationTrail(formatMoney(Math.abs(refundFigure), lang))}</p>
-            <div className="space-y-2">
-              {persona.facts.map((fact) => (
-                <div key={fact.id} className="border-t border-line pt-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="font-medium text-ink">{localize(fact.label, lang)}</span>
-                    <span className="tabular font-semibold text-ink">{formatMoney(fact.amount, lang)}</span>
-                  </div>
-                  <span className="block text-[0.68rem] text-ink-3">
-                    {t.check.sourceRecord(fact.provenance.reporter, fact.provenance.statement, formatDate(fact.provenance.filedOn, lang))}
-                  </span>
-                  <span className="block text-[0.68rem] text-ink-3">
-                    {t.check.statementMeaning(fact.provenance.statement)}
-                    {fact.provenance.identifier ? ` · ${t.check.sourceIdentifier(fact.provenance.identifier)}` : ""}
-                  </span>
+          <div className="mt-3 border border-line rounded-xl overflow-hidden bg-paper pb-0 text-left">
+            {/* Header: Show source and calculation trail */}
+            <div className="p-4 bg-paper-2 border-b border-line">
+              <span className="font-bold text-navy">Tax Calculation Trail</span>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {/* Computed Summary */}
+              <div className="space-y-2 border-b border-line pb-3">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-ink-2">{t.check.grossIncome}</span>
+                  <span className="font-mono text-ink font-semibold">{formatMoney(breakdown.grossIncome, lang)}</span>
                 </div>
-              ))}
-              {persona.taxPaid.map((tax) => (
-                <div key={tax.id} className="border-t border-line pt-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="font-medium text-ink">{localize(tax.label, lang)}</span>
-                    <span className="tabular font-semibold text-ink">{formatMoney(tax.amount, lang)}</span>
+                {breakdown.standardDeduction > 0 && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-ink-2">{t.check.standardDeduction}</span>
+                    <span className="font-mono text-money font-semibold">-{formatMoney(breakdown.standardDeduction, lang)}</span>
                   </div>
-                  <span className="block text-[0.68rem] text-ink-3">
-                    {t.check.sourceRecord(tax.provenance.reporter, tax.provenance.statement, formatDate(tax.provenance.filedOn, lang))}
-                    {tax.provenance.identifier ? ` · ${t.check.sourceIdentifier(tax.provenance.identifier)}` : ""}
-                  </span>
-                  <span className="block text-[0.68rem] text-ink-3">{t.check.statementMeaning(tax.provenance.statement)}</span>
-                </div>
-              ))}
-              {persona.claims.map((claim) => (
-                <div key={claim.id} className="border-t border-line pt-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="font-medium text-ink">{localize(claim.label, lang)}</span>
-                    <span className="tabular font-semibold text-ink">{formatMoney(claim.amount, lang)}</span>
+                )}
+                {breakdown.totalDeductions > 0 && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-ink-2">{t.check.deductionsLine}</span>
+                    <span className="font-mono text-money font-semibold">-{formatMoney(breakdown.totalDeductions, lang)}</span>
                   </div>
-                  <span className="block text-[0.68rem] text-ink-3">{t.check.sectionMeaning(claim.section)}</span>
-                  <span className="block text-[0.68rem] text-ink-3">{t.check.selfReportedSource}</span>
+                )}
+                <div className="flex items-center justify-between text-xs border-t border-dashed border-line pt-2 font-bold text-navy">
+                  <span>{t.check.taxableIncome}</span>
+                  <span>{formatMoney(breakdown.taxableIncome, lang)}</span>
                 </div>
-              ))}
+              </div>
+
+              {/* Slab Slices */}
+              <div className="space-y-2 border-b border-line pb-3">
+                <span className="block font-bold text-ink mb-1">{t.check.slabTax} ({formatMoney(breakdown.rawTax, lang)})</span>
+                <div className="space-y-1.5 pl-3">
+                  {breakdown.slabBreakdown.map((slice, i) => (
+                    <div key={i} className="flex items-center justify-between gap-3 text-xs">
+                      <span className="flex items-center gap-1 text-ink-2">
+                        <span className="tabular">
+                          {formatMoney(slice.from, lang)}
+                          {" to "}
+                          {Number.isFinite(slice.to) ? formatMoney(slice.to, lang) : "∞"}
+                        </span>
+                        <span className="font-mono text-[0.65rem] bg-paper-2 border border-line rounded px-1">
+                          {t.check.ratePct(slice.rate)}
+                        </span>
+                      </span>
+                      <span className="tabular text-ink font-semibold">{formatMoney(slice.tax, lang)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Rebates, Cess, & Credits */}
+              <div className="space-y-2 pb-1">
+                {breakdown.rebate87A > 0 && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-money font-semibold">
+                      {t.check.rebate87A}
+                      {breakdown.marginalReliefApplied && " (Marginal Relief applied)"}
+                    </span>
+                    <span className="font-mono text-money font-semibold">-{formatMoney(breakdown.rebate87A, lang)}</span>
+                  </div>
+                )}
+                {breakdown.cess > 0 && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-ink-2">{t.check.cess}</span>
+                    <span className="font-mono text-ink font-semibold">+{formatMoney(breakdown.cess, lang)}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between text-xs border-t border-dashed border-line pt-2 font-bold text-navy">
+                  <span>Total Calculated Tax</span>
+                  <span className="font-mono">{formatMoney(breakdown.totalTax, lang)}</span>
+                </div>
+                {breakdown.tdsCredits > 0 && (
+                  <div className="flex items-center justify-between text-xs pt-1 text-money font-semibold">
+                    <span>{t.check.tdsCredits}</span>
+                    <span className="font-mono">-{formatMoney(breakdown.tdsCredits, lang)}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Net Result - bottom padded row with color matching outer box */}
+            <div className="flex justify-between items-center p-4 bg-money-soft border-t border-line">
+              <span className="font-bold text-navy">Net Refund / Due</span>
+              <span className={`font-mono text-sm font-bold ${breakdown.refundOrDue >= 0 ? "text-money" : "text-alarm"}`}>
+                {breakdown.refundOrDue >= 0 ? "+" : "-"}
+                {formatMoney(Math.abs(breakdown.refundOrDue), lang)}
+              </span>
             </div>
           </div>
         </details>
@@ -237,50 +394,52 @@ export default function OverviewTab({
               )}
 
               <div className="relative pl-6 space-y-6">
-                <div className="absolute left-[7.5px] top-1 bottom-2 w-[2px] bg-line">
-                  <span className="absolute inset-x-0 top-0 h-1/2 rounded-full bg-money" aria-hidden="true" />
+                <div className="absolute left-[7.5px] top-2 bottom-2 w-[2px] bg-line">
+                  {/* Progress fill */}
+                  <span 
+                    className="absolute inset-x-0 top-0 rounded-full bg-money transition-all duration-500" 
+                    style={{ 
+                      height: `${Math.min(100, Math.max(0, ((getCurrentStepId(refund.state) - 1) / (6 - 1)) * 100))}%` 
+                    }} 
+                    aria-hidden="true" 
+                  />
                 </div>
 
-                {[...refund.timeline].reverse().map((event) => {
-                  const isCurrent = event.state === refund.state;
-                  const doneIdx = REFUND_SEQUENCE.indexOf(event.state);
-                  const curIdx = REFUND_SEQUENCE.indexOf(refund.state);
-                  const isPast = doneIdx >= 0 && doneIdx <= curIdx;
+                {getTimelineSteps(refund, lang, t).map((step, idx) => {
+                  const currentStepId = getCurrentStepId(refund.state);
+                  const isCompleted = step.id < currentStepId;
+                  const isCurrent = step.id === currentStepId;
+                  const isPending = step.id > currentStepId;
+
                   return (
-                    <div key={event.id} className="relative text-xs">
+                    <div key={step.id} className="relative text-xs flex items-start gap-3">
                       <span
-                        className={`absolute -left-[23px] w-4 h-4 rounded-full border-2 border-paper flex items-center justify-center ${
-                          isCurrent && refund.state !== "credited"
+                        className={`absolute -left-[23px] w-4 h-4 rounded-full border-2 border-paper flex items-center justify-center transition-colors duration-300 z-10 ${
+                          isCompleted
+                            ? "bg-money text-paper animate-none"
+                            : isCurrent
                             ? "bg-warn text-paper animate-pulse"
-                            : isPast
-                            ? "bg-money text-paper"
                             : "bg-line text-ink-3"
                         }`}
                       >
-                        {isPast || isCurrent ? <Check size={8} /> : null}
+                        {isCompleted && <Check size={8} />}
                       </span>
                       <div className="space-y-0.5">
-                        <span className={`font-semibold ${isCurrent ? "text-navy" : "text-ink"} leading-snug block`}>
-                          {event.headlineKey
-                            ? t.timeline[event.headlineKey]
-                            : localize(event.headline, lang)}
+                        <span className={`font-semibold leading-snug block ${
+                          isCurrent ? "text-navy font-bold" : isCompleted ? "text-ink" : "text-ink-3"
+                        }`}>
+                          {step.title}
                         </span>
-                        {event.detail && (
-                          <span className="block text-ink-3 leading-snug">{localize(event.detail, lang)}</span>
+                        <span className="block text-ink-3 leading-snug">{step.subtitle}</span>
+                        {step.date && (
+                          <span className="block text-ink-3 font-mono text-[0.65rem] mt-0.5">
+                            {step.date}
+                          </span>
                         )}
-                        <span className="block text-ink-3 font-mono text-[0.65rem]">
-                          {formatDayMonth(event.on, lang)} · {t.refund.states[event.state]}
-                        </span>
                       </div>
                     </div>
                   );
                 })}
-
-                {refund.filedOn && (
-                  <div className="text-[0.65rem] text-ink-3 font-mono pt-1">
-                    {t.refund.filedDaysAgo(daysBetween(refund.filedOn))} · {formatDate(refund.filedOn, lang)}
-                  </div>
-                )}
               </div>
             </div>
           )}

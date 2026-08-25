@@ -65,6 +65,12 @@ export function computeTax(input: TaxInput): TaxBreakdown {
 
   const rebate87A = rebateFor(input.regime, taxableIncome, taxBeforeRebate);
   const taxAfterRebate = taxBeforeRebate - rebate87A;
+  
+  const marginalReliefApplied =
+    input.regime === "new" &&
+    taxableIncome > REBATE_87A_NEW_THRESHOLD &&
+    taxBeforeRebate > (taxableIncome - REBATE_87A_NEW_THRESHOLD);
+
   // Cess rounds half-up like slab slices; applied AFTER rebate/relief.
   const cess = Math.round(taxAfterRebate * HEALTH_EDU_CESS_RATE);
   const totalTax = taxAfterRebate + cess;
@@ -80,7 +86,10 @@ export function computeTax(input: TaxInput): TaxBreakdown {
     taxableIncome,
     slabBreakdown: slices,
     taxBeforeRebate,
+    rawTax: taxBeforeRebate,
     rebate87A,
+    marginalReliefApplied,
+    taxAfterRebate,
     cess,
     totalTax,
     tdsCredits,

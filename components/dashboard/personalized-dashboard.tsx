@@ -15,6 +15,7 @@ interface PersonalizedDashboardProps {
   destination: DashboardDestination;
   onPrimaryAction: () => void;
   onEdit: () => void;
+  isRealMode?: boolean;
 }
 
 /**
@@ -29,6 +30,7 @@ export default function PersonalizedDashboard({
   destination,
   onPrimaryAction,
   onEdit,
+  isRealMode = false,
 }: PersonalizedDashboardProps) {
   const personalization = getPersonalization(profile);
   const focusLabels = profile.focuses
@@ -74,7 +76,7 @@ export default function PersonalizedDashboard({
             onClick={onPrimaryAction}
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-money px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-money-deep"
           >
-            {t.dashboard.personalized.primaryAction[destination]}
+            {isRealMode ? "Start Step-by-Step Return" : t.dashboard.personalized.primaryAction[destination]}
             <ArrowRight size={16} aria-hidden="true" />
           </button>
           <button

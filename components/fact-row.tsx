@@ -85,29 +85,52 @@ export default function FactRow({
       </div>
 
       {!readOnly && (onConfirm || onCorrect) && (
-        <div className="mt-4 flex flex-col gap-2 border-t border-line pt-3 sm:flex-row sm:items-center sm:justify-end">
-          {correction && onUndo ? (
-            <button onClick={onUndo} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-line px-4 text-sm font-semibold text-ink-2 transition hover:border-money hover:text-money">
-              <RotateCcw size={14} aria-hidden="true" />
-              {t.flow.undoOne}
-            </button>
-          ) : onCorrect ? (
-            <button onClick={onCorrect} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-line px-4 text-sm font-semibold text-ink-2 transition hover:border-warn hover:text-warn">
-              <PencilLine size={14} aria-hidden="true" />
-              {t.common.noThisIsWrong}
-            </button>
-          ) : null}
-          {onConfirm && (
-            <button
-              onClick={onConfirm}
-              disabled={confirmed || !!correction}
-              className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-full px-4 text-sm font-bold transition active:scale-[0.98] ${
-                confirmed || correction ? "bg-money-soft text-money" : "bg-money text-white hover:bg-money-deep"
-              }`}
-            >
-              <Check size={14} aria-hidden="true" />
-              {confirmed ? t.flow.allConfirmed : t.common.yesThatsRight}
-            </button>
+        <div className="mt-4 flex flex-col gap-2 border-t border-line pt-3 sm:flex-row sm:items-center sm:justify-end text-xs">
+          {confirmed ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-money font-semibold bg-money-soft border border-money/20 px-3 py-1.5 rounded-full flex items-center gap-1">
+                <Check size={12} />
+                <span>Confirmed</span>
+              </span>
+              {onCorrect && (
+                <button
+                  onClick={onCorrect}
+                  className="text-xs text-ink-2 hover:text-navy hover:underline ml-2 cursor-pointer font-semibold"
+                >
+                  Change
+                </button>
+              )}
+            </div>
+          ) : correction ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-warn font-semibold bg-warn-soft border border-warn/20 px-3 py-1.5 rounded-full flex items-center gap-1">
+                <Check size={12} />
+                <span>Modified</span>
+              </span>
+              {onUndo && (
+                <button
+                  onClick={onUndo}
+                  className="text-xs text-ink-2 hover:text-navy hover:underline ml-2 cursor-pointer font-semibold"
+                >
+                  Undo Correction
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              {onCorrect && (
+                <button onClick={onCorrect} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-line px-4 text-sm font-semibold text-ink-2 transition hover:border-warn hover:text-warn cursor-pointer">
+                  <PencilLine size={14} aria-hidden="true" />
+                  {t.common.noThisIsWrong}
+                </button>
+              )}
+              {onConfirm && (
+                <button onClick={onConfirm} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-money px-5 text-sm font-bold text-white transition hover:bg-money-deep cursor-pointer">
+                  <Check size={14} aria-hidden="true" />
+                  {t.common.yesThatsRight}
+                </button>
+              )}
+            </>
           )}
         </div>
       )}
