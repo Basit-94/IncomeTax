@@ -78,6 +78,60 @@ export default function OverviewTab({
         </div>
       </div>
 
+      <div className="space-y-3">
+        <p className="disclosure text-xs text-warn leading-relaxed">
+          {t.check.calculationStatus}
+        </p>
+        <details id="return-source-trail" className="disclosure text-xs text-ink-2">
+          <summary className="cursor-pointer font-semibold text-ink">
+            {t.check.showCalculationTrail}
+          </summary>
+          <div className="pt-3 space-y-3">
+            <p>{t.check.calculationTrail(formatMoney(Math.abs(refundFigure), lang))}</p>
+            <div className="space-y-2">
+              {persona.facts.map((fact) => (
+                <div key={fact.id} className="border-t border-line pt-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="font-medium text-ink">{localize(fact.label, lang)}</span>
+                    <span className="tabular font-semibold text-ink">{formatMoney(fact.amount, lang)}</span>
+                  </div>
+                  <span className="block text-[0.68rem] text-ink-3">
+                    {t.check.sourceRecord(fact.provenance.reporter, fact.provenance.statement, formatDate(fact.provenance.filedOn, lang))}
+                  </span>
+                  <span className="block text-[0.68rem] text-ink-3">
+                    {t.check.statementMeaning(fact.provenance.statement)}
+                    {fact.provenance.identifier ? ` · ${t.check.sourceIdentifier(fact.provenance.identifier)}` : ""}
+                  </span>
+                </div>
+              ))}
+              {persona.taxPaid.map((tax) => (
+                <div key={tax.id} className="border-t border-line pt-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="font-medium text-ink">{localize(tax.label, lang)}</span>
+                    <span className="tabular font-semibold text-ink">{formatMoney(tax.amount, lang)}</span>
+                  </div>
+                  <span className="block text-[0.68rem] text-ink-3">
+                    {t.check.sourceRecord(tax.provenance.reporter, tax.provenance.statement, formatDate(tax.provenance.filedOn, lang))}
+                    {tax.provenance.identifier ? ` · ${t.check.sourceIdentifier(tax.provenance.identifier)}` : ""}
+                  </span>
+                  <span className="block text-[0.68rem] text-ink-3">{t.check.statementMeaning(tax.provenance.statement)}</span>
+                </div>
+              ))}
+              {persona.claims.map((claim) => (
+                <div key={claim.id} className="border-t border-line pt-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="font-medium text-ink">{localize(claim.label, lang)}</span>
+                    <span className="tabular font-semibold text-ink">{formatMoney(claim.amount, lang)}</span>
+                  </div>
+                  <span className="block text-[0.68rem] text-ink-3">{t.check.sectionMeaning(claim.section)}</span>
+                  <span className="block text-[0.68rem] text-ink-3">{t.check.selfReportedSource}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </details>
+      </div>
+
       <div className="grid lg:grid-cols-5 gap-6 items-start">
         {/* LEFT: BANKS */}
         <div className="lg:col-span-3 space-y-6">
@@ -103,6 +157,7 @@ export default function OverviewTab({
                       <span className="text-xs font-mono text-ink-2">
                         {bank.maskedNumber} &bull; IFSC: <strong className="text-ink">{bank.ifsc}</strong>
                       </span>
+                      <span className="block text-[0.68rem] text-ink-3">{t.dashboard.ifscMeaning}</span>
                     </div>
 
                     <div className="text-right shrink-0">

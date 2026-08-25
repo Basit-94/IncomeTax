@@ -54,6 +54,7 @@ export default function BankIfscModal({
                 <label className="block text-xs font-mono uppercase text-ink-2 mb-1">{localize("IFSC Code", lang)}</label>
                 <input
                   type="text"
+                  aria-label={localize("IFSC Code", lang)}
                   value={ifscInput}
                   onChange={(e) => handleIfscInputChange(e.target.value)}
                   maxLength={11}

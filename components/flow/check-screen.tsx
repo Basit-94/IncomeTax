@@ -102,7 +102,7 @@ export default function CheckScreen({ persona, t, lang, regime }: CheckScreenPro
     if (rows.length === 0) return null;
     return (
       <div className="space-y-2">
-        <span className="block text-[0.65rem] font-mono uppercase tracking-wider text-ink-3 font-bold">
+              <span className="block text-[0.65rem] font-mono uppercase tracking-wider text-ink-3 font-bold">
           {t.check.fromFacts}
         </span>
         {rows.map((f) => (
@@ -110,8 +110,9 @@ export default function CheckScreen({ persona, t, lang, regime }: CheckScreenPro
             <div className="min-w-0">
               <span className="block truncate font-medium text-ink">{localize(f.label, lang)}</span>
               <span className="block text-[0.62rem] font-mono text-ink-3">
-                {f.provenance.statement} · {f.provenance.reporter}
+                {t.check.sourceRecord(f.provenance.reporter, f.provenance.statement, f.provenance.filedOn)}
               </span>
+              <span className="block text-[0.62rem] text-ink-3">{t.check.statementMeaning(f.provenance.statement)}</span>
             </div>
             <span className="tabular text-ink font-semibold">{formatMoney(f.amount, lang)}</span>
           </div>
@@ -159,10 +160,10 @@ export default function CheckScreen({ persona, t, lang, regime }: CheckScreenPro
           {persona.claims.length > 0 ? (
             <div className="space-y-2">
               {persona.claims.map((c) => (
-                <div key={c.id} className="flex items-start justify-between gap-3 text-xs">
+                  <div key={c.id} className="flex items-start justify-between gap-3 text-xs">
                   <div className="min-w-0">
                     <span className="block truncate font-medium text-ink">{localize(c.label, lang)}</span>
-                    <span className="block text-[0.62rem] font-mono text-ink-3">{c.section}</span>
+                    <span className="block text-[0.62rem] font-mono text-ink-3">{t.check.sectionMeaning(c.section)}</span>
                   </div>
                   <span className="tabular text-ink font-semibold">{formatMoney(c.amount, lang)}</span>
                 </div>
@@ -243,6 +244,7 @@ export default function CheckScreen({ persona, t, lang, regime }: CheckScreenPro
                   <span className="block text-[0.62rem] font-mono text-ink-3">
                     {tp.section} · {tp.provenance.reporter}
                   </span>
+                  <span className="block text-[0.62rem] text-ink-3">{t.check.statementMeaning(tp.provenance.statement)}</span>
                 </div>
                 <span className="tabular text-ink font-semibold">{formatMoney(tp.amount, lang)}</span>
               </div>

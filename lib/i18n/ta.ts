@@ -243,6 +243,23 @@ export const ta: Dict = {
     balanceDue: "செலுத்த வேண்டியது",
     openLine: "இது எங்கிருந்து வந்தது என்று காட்டு",
     closeLine: "மறை",
+    calculationStatus: "இது முன்மாதிரி கணக்கு — விதிகளின் முதன்மை ஆதாரச் சரிபார்ப்பு இன்னும் முடிக்கப்படவில்லை (TODO(verify)).",
+    calculationTrail: (amount: string) =>
+      `${amount} கீழே உள்ள உறுதிப்படுத்தப்பட்ட உண்மைகள் மற்றும் வரிக் கிரெடிட்களிலிருந்து கணக்கிடப்படுகிறது. இந்த முன்மாதிரியில் ஆதாரப் பதிவுகள் செயற்கையானவை.`,
+    showCalculationTrail: "ஆதாரம் மற்றும் கணக்கீட்டுப் பாதையைக் காட்டு",
+    hideCalculationTrail: "ஆதாரம் மற்றும் கணக்கீட்டுப் பாதையை மறை",
+    sourceRecord: (reporter: string, statement: string, date: string) =>
+      `${reporter} · ${statement} · ${date} அன்று அறிக்கை`,
+    sourceIdentifier: (identifier: string) => `பதிவு ${identifier}`,
+    selfReportedSource: "இந்த அறிக்கையில் நீங்கள் தெரிவித்தது",
+    statementMeaning: (statement: string): string =>
+      statement === "AIS"
+        ? "AIS: தகவல் தெரிவிக்கும் நிறுவனங்களிடமிருந்து கிடைத்த ஆண்டு விவரம்."
+        : statement === "26AS"
+        ? "Form 26AS: உங்கள் PAN-க்கு எதிராகத் தெரிவிக்கப்பட்ட வரிக் கிரெடிட் அறிக்கை."
+        : "இந்த உண்மையுடன் இணைக்கப்பட்ட ஆதாரப் பதிவு.",
+    sectionMeaning: (section: string) =>
+      `${section} ஒரு கழிவுப் பிரிவு. இந்த முறை அனுமதித்தால் மட்டுமே இது கணக்கில் சேரும்.`,
     explainGross: "நீங்கள் சரிபார்த்து உறுதிப்படுத்திய உண்மைகளைக் கூட்டி.",
     explainStd: (amount: string) =>
       `சம்பள வருமானம் உள்ள அனைவருக்கும் ${amount} கோராமலேயே விலக்கப்படும்.`,
@@ -254,7 +271,7 @@ export const ta: Dict = {
     explainRebate: (amount: string) =>
       `ஒரு வரம்புக்குக் கீழ் வரியின் பெரும்பகுதி ரத்தாகும் — இங்கு ${amount}.`,
     explainCess: "எல்லாச் சலுகைகளுக்குப் பின் மேலே சேர்க்கப்படும் சிறிய சதவீதம்.",
-    explainTds: "பணம் உங்களை அடைவதற்கு முன்பே, கொடுத்தவரே கழித்துவிட்டார்.",
+    explainTds: "TDS என்றால் மூலத்திலேயே பிடித்தம் செய்யப்பட்ட வரி: பணம் உங்களை அடையும் முன்பே கொடுத்தவர் இதைக் கழித்தார்.",
     fromFacts: "இந்த உண்மைகளிலிருந்து:",
     ratePct: (rate: number) => {
       const pct = Math.round(rate * 1000) / 10;
@@ -349,6 +366,7 @@ export const ta: Dict = {
     verifiedBanks: "ரீஃபண்டிற்கு சரிபார்க்கப்பட்ட வங்கி கணக்குகள்",
     primaryRefundAccount: "முதன்மை வங்கி கணக்கு",
     backupAccount: "துணை வங்கி கணக்கு",
+    ifscMeaning: "IFSC என்பது ரீஃபண்ட் அனுப்பப் பயன்படுத்தப்படும் 11 எழுத்து வங்கி வழித்தடக் குறியீடு.",
     refundTimeline: "ரீஃபண்ட் காலவரிசை",
     filingSubmittedTimeline: "தாக்கல் செய்யப்பட்டது",
     identityVerifiedTimeline: "அடையாளம் சரிபார்க்கப்பட்டது",

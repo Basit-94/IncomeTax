@@ -272,6 +272,23 @@ export const en = {
     balanceDue: "Left to pay",
     openLine: "Show where this came from",
     closeLine: "Hide",
+    calculationStatus: "Prototype calculation — rule inputs still need primary-source verification (TODO(verify)).",
+    calculationTrail: (amount: string) =>
+      `${amount} is calculated from the confirmed facts and tax credits below. The source records are synthetic in this prototype.`,
+    showCalculationTrail: "Show source and calculation trail",
+    hideCalculationTrail: "Hide source and calculation trail",
+    sourceRecord: (reporter: string, statement: string, date: string) =>
+      `${reporter} · ${statement} · reported ${date}`,
+    sourceIdentifier: (identifier: string) => `Record ${identifier}`,
+    selfReportedSource: "Reported by you in this return",
+    statementMeaning: (statement: string): string =>
+      statement === "AIS"
+        ? "Annual Information Statement: information received from reporting entities."
+        : statement === "26AS"
+        ? "Form 26AS: a tax-credit statement showing tax reported against your PAN."
+        : "A source record attached to this fact.",
+    sectionMeaning: (section: string) =>
+      `${section} is a deduction section. It is counted only when this regime allows it.`,
     explainGross: "Added up from the facts you reviewed and confirmed.",
     explainStd: (amount: string) =>
       `Everyone with salary income gets ${amount} off without claiming anything.`,
@@ -283,7 +300,7 @@ export const en = {
     explainRebate: (amount: string) =>
       `Below a threshold most of the tax is cancelled — ${amount} of it here.`,
     explainCess: "A small percentage added on top, after every relief.",
-    explainTds: "Taken out before money reached you, by whoever paid you.",
+    explainTds: "TDS means tax deducted at source: whoever paid you withheld this before the money reached you.",
     fromFacts: "From these facts:",
     ratePct: (rate: number) => {
       const pct = Math.round(rate * 1000) / 10;
@@ -377,6 +394,7 @@ export const en = {
     verifiedBanks: "Verified Bank Accounts for Refund",
     primaryRefundAccount: "Primary Refund Account",
     backupAccount: "Backup Account",
+    ifscMeaning: "IFSC is the 11-character bank routing code used to send a refund.",
     refundTimeline: "Refund Timeline",
     filingSubmittedTimeline: "Filing Submitted",
     identityVerifiedTimeline: "Identity Verified",

@@ -231,6 +231,7 @@ export default function WapsiPrototype() {
     setUndoStack([]);
     setLang(pData.preferredLang); // Automatically switch to persona's preferred language
     localStorage.setItem("wapsi_lang", pData.preferredLang);
+    window.dispatchEvent(new Event("wapsi_lang_change"));
     setOtp(["1", "2", "3", "4", "5", "6"]); // standard OTP mock
     setAutoFillCode(id === "sunita" ? "111111" : id === "rakesh" ? "222222" : "333333");
     setStep("otp");
@@ -325,6 +326,7 @@ export default function WapsiPrototype() {
   const changeLang = (l: Lang) => {
     setLang(l);
     localStorage.setItem("wapsi_lang", l);
+    window.dispatchEvent(new Event("wapsi_lang_change"));
     if (returnState) saveState({ ...returnState, lang: l });
   };
 

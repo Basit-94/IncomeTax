@@ -118,10 +118,12 @@ export default function HonestyPage() {
           <strong className="font-semibold">
             The single most important line on this page:
           </strong>{" "}
-          this prototype makes no network requests of any kind. Not to the Income
-          Tax Department, not to UIDAI, not to a bank, not to us. Everything you
-          see is computed in your own browser from invented data compiled into
-          the page.
+          the citizen-facing browser prototype makes no network requests of any
+          kind. Not to the Income Tax Department, not to UIDAI, not to a bank,
+          and not to us. Everything in that UI is computed in your own browser
+          from invented data compiled into the page. An additive local Spring
+          Boot service and load harness exist for owned engineering evidence;
+          the UI does not call them, and they do not contact official systems.
         </p>
       </div>
 
@@ -132,8 +134,8 @@ export default function HonestyPage() {
       >
         <Row
           state="real"
-          what="The whole interface in English, हिन्दी and தமிழ்"
-          detail="Every string, not a translated veneer over an English skeleton. The dictionary type is derived from the English file, so a missing Hindi or Tamil key fails the build rather than silently falling back to English in front of someone who can't read it. Your choice survives a reload."
+          what="The core citizen flow in English, हिन्दी and தமிழ்"
+          detail="The filing path, its facts, status messages, and the main dashboard surfaces use the typed dictionary rather than a translated veneer over an English skeleton. A missing Hindi or Tamil key fails the build; the separate engineering disclosures remain English by declared design. Your choice survives a reload."
         />
         <Row
           state="real"
@@ -163,7 +165,7 @@ export default function HonestyPage() {
         <Row
           state="real"
           what="A reproducible demo"
-          detail="Nothing here is randomly generated. Sandbox identities come from a seeded generator, so the first person you create is always the same person — a reviewer's screenshot and ours describe identical data."
+          detail="Sandbox identities come from a seeded generator, so the same seed produces the same person, figures, and bank details — a reviewer's identity screenshot can match ours. Mock dictation text and browser event IDs are intentionally interaction-local, not evidence of a live service."
         />
         <Row
           state="real"
@@ -248,8 +250,8 @@ export default function HonestyPage() {
         />
         <Row
           state="absent"
-          what="A server, a database, an account"
-          detail="There is no backend at all. This is deliberate rather than unfinished: several reviewers will open the same link against the same three demo people at the same time, and shared server state would mean one of you watching another's refund advance. Per-browser storage is the correct answer here, not the cheap one."
+          what="A connected production server, database, or account"
+          detail="The citizen UI is deliberately browser-only: its demo return state lives in per-browser storage, so reviewers cannot watch one another's refund advance. An additive local Spring Boot service and load harness now live under backend/ and loadtest/ for exact-money, asynchronous submission, idempotency, and owned-load evidence. They are not connected to this Next.js UI, do not persist production data, and do not contact official systems."
         />
         <Row
           state="absent"

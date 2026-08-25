@@ -201,7 +201,7 @@ app/(flow)/              screens consume store + engine; no computation inline
 - **Status:** IN PROGRESS · **Owner:** orchestrator
 - **Rationale:** The simplification thesis must survive first-timer, optimiser, and CA scrutiny instead of being judged only by the builder.
 - **Acceptance criteria:** each critic runs against the fixed 12-point rubric with incremental reports; all three return SATISFIED in one round or the deadlock and highest-impact remaining fix are reported honestly.
-- **Evidence:** round 1 is complete and recorded in `log.md`; all three verdicts are NOT SATISFIED, so convergence remains open.
+- **Evidence:** round 1 and round 2 are recorded in `log.md` and `critics/*-round2.md`; A is SATISFIED, while B and C are NOT SATISFIED at 9 PASS / 0 FAIL / 3 BLOCKED because their retained browser state prevented a fresh correction, regime revisit, and reload journey. Convergence remains open.
 
 ### P20 — Workstream 2 capacity model
 - **Status:** DONE · **Owner:** orchestrator

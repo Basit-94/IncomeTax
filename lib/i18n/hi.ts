@@ -243,6 +243,23 @@ export const hi: Dict = {
     balanceDue: "देना बाकी",
     openLine: "देखें यह कहाँ से आया",
     closeLine: "छिपाएँ",
+    calculationStatus: "यह प्रोटोटाइप का हिसाब है — नियमों के स्रोत की अभी प्राथमिक स्रोत से जाँच बाकी है (TODO(verify)).",
+    calculationTrail: (amount: string) =>
+      `${amount} नीचे दिए गए पक्के किए गए तथ्यों और टैक्स क्रेडिट से निकला है। इस प्रोटोटाइप में स्रोत रिकॉर्ड कृत्रिम हैं।`,
+    showCalculationTrail: "स्रोत और हिसाब की कड़ी देखें",
+    hideCalculationTrail: "स्रोत और हिसाब की कड़ी छिपाएँ",
+    sourceRecord: (reporter: string, statement: string, date: string) =>
+      `${reporter} · ${statement} · ${date} को रिपोर्ट किया गया`,
+    sourceIdentifier: (identifier: string) => `रिकॉर्ड ${identifier}`,
+    selfReportedSource: "इस रिटर्न में आपके द्वारा बताया गया",
+    statementMeaning: (statement: string): string =>
+      statement === "AIS"
+        ? "AIS: रिपोर्ट करने वाली संस्थाओं से मिली जानकारी का वार्षिक विवरण।"
+        : statement === "26AS"
+        ? "Form 26AS: आपके PAN पर रिपोर्ट किए गए टैक्स क्रेडिट का विवरण।"
+        : "इस तथ्य से जुड़ा स्रोत रिकॉर्ड।",
+    sectionMeaning: (section: string) =>
+      `${section} कटौती का एक सेक्शन है। इसे तभी गिना जाता है जब यह रेजीम इसकी अनुमति दे।`,
     explainGross: "आपके द्वारा जाँचे-पक्के किए गए तथ्यों को जोड़कर।",
     explainStd: (amount: string) =>
       `वेतनभोगी हर व्यक्ति को ${amount} बिना माँगे ही घटने मिलते हैं।`,
@@ -254,7 +271,7 @@ export const hi: Dict = {
     explainRebate: (amount: string) =>
       `एक सीमा तक ज़्यादातर टैक्स रद्द हो जाता है — यहाँ ${amount}।`,
     explainCess: "हर राहत के बाद ऊपर से लगने वाला छोटा प्रतिशत।",
-    explainTds: "पैसा आप तक पहुँचने से पहले, जिसने भी दिया, उसने काट लिया।",
+    explainTds: "TDS का मतलब है स्रोत पर काटा गया टैक्स: जिसने पैसा दिया, उसने आपके पास पहुँचने से पहले इसे रोक लिया।",
     fromFacts: "इन्हीं तथ्यों से:",
     ratePct: (rate: number) => {
       const pct = Math.round(rate * 1000) / 10;
@@ -344,6 +361,7 @@ export const hi: Dict = {
     verifiedBanks: "रिफंड के लिए सत्यापित बैंक खाते",
     primaryRefundAccount: "प्राथमिक रिफंड खाता",
     backupAccount: "बैकअप खाता",
+    ifscMeaning: "IFSC रिफंड भेजने के लिए इस्तेमाल होने वाला 11-अक्षरों का बैंक रूटिंग कोड है।",
     refundTimeline: "रिफंड की समय-सीमा",
     filingSubmittedTimeline: "रिटर्न जमा किया गया",
     identityVerifiedTimeline: "पहचान सत्यापित",

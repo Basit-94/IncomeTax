@@ -304,3 +304,78 @@ Next.js docs read per AGENTS.md before this work: node_modules/next/dist/docs/01
 - **Action:** MODIFY
 - **Target:** plan.md P21-P23
 - **Result:** DONE for plan alignment. Stack rationale is recorded; P22 now cites the passing pure Java engine/conformance runner and leaves only primary-source rule verification open. P23 still correctly leaves PostgreSQL integration open.
+
+## [2026-08-25 15:41] orchestrator
+- **Action:** MODIFY
+- **Target:** components/dashboard/overview-tab.tsx; components/flow/check-screen.tsx; components/dashboard/bank-ifsc-modal.tsx; components/mock-i18n.ts; lib/i18n/en.ts; lib/i18n/hi.ts; lib/i18n/ta.ts
+- **Intent:** Resolve the first-round critic's shared trust defects: expose a source/calculation trail from the final outcome, teach AIS/26AS/section labels in place, label the prototype's TODO(verify) status, add an accessible IFSC field label, and translate custom sandbox fact labels.
+- **Why:** All three critics failed traceability and verification-status disclosure; the CA also found jargon and residual English in the Hindi custom flow.
+- **Expected effect:** First-timer defaults remain progressive, while the outcome now exposes a local source-trail disclosure and the check view explains source statements and deduction sections in all three locales.
+- **Risk:** The disclosure is prototype evidence, not a live government link; rule citations remain TODO(verify) and no tax law claim is strengthened.
+
+## [2026-08-25 15:47] orchestrator
+- **Action:** MODIFY
+- **Target:** app/page.tsx; components/disclaimer.tsx
+- **Intent:** Keep the persistent prototype disclaimer synchronized with in-app locale changes.
+- **Why:** Critic walkthrough found Hindi content with a stale Tamil footer after switching locales; this violates the trilingual end-to-end criterion even though the main flow changed correctly.
+- **Expected effect:** Persona selection and the language switch broadcast a same-document locale event; the footer re-reads wapsi_lang immediately.
+- **Risk:** None beyond a browser-local event; no network or data change.
+
+## [2026-08-25 15:52] orchestrator
+- **Action:** MODIFY
+- **Target:** components/dashboard/overview-tab.tsx; lib/i18n/en.ts; lib/i18n/hi.ts; lib/i18n/ta.ts
+- **Intent:** Close the remaining point-of-use acronym gap for IFSC in the filed tracker.
+- **Why:** Round-two first-timer evidence still showed a raw IFSC beside the bank account without explaining its role, while the source facts now teach AIS/26AS in their disclosures.
+- **Expected effect:** The bank record says what IFSC means in all three locales without changing the synthetic identifier or claiming a live bank check.
+- **Risk:** None; explanatory copy only.
+
+## [2026-08-25 15:57] orchestrator
+- **Action:** MODIFY
+- **Target:** lib/i18n/en.ts; lib/i18n/hi.ts; lib/i18n/ta.ts; components/mock-i18n.ts
+- **Intent:** Remove the last bare TDS acronym and localize persona occupation labels visible in the Hindi/Tamil profile strip.
+- **Why:** The critic rubric treats unexplained acronyms and residual English in a non-English end-to-end flow as trust blockers.
+- **Expected effect:** TDS is expanded at its point of use; seeded and custom occupations render in the selected locale.
+- **Risk:** Copy-only change; no tax calculation or source data changes.
+
+## [2026-08-25 16:02] orchestrator
+- **Action:** CREATE
+- **Target:** critics/*-round2.md; critics/screenshots/b-round2-statement-hindi.png
+- **Intent:** Record the second bounded critic round after source-trail, verification-status, acronym, locale-sync, and translation fixes.
+- **Why:** The mission requires sequential A/B/C verdicts with exactly twelve rubric scores and an honest verdict even when a run is incomplete.
+- **Expected effect:** Round-two evidence shows which blockers moved, which remain, and where the browser run was blocked; no report will infer satisfaction from static code alone.
+- **Risk:** Critic runs are time/action bounded and may remain incomplete; unresolved failures stay visible.
+
+## [2026-08-25 16:07] orchestrator
+- **Action:** MODIFY
+- **Target:** components/mock-i18n.ts
+- **Intent:** Translate the remaining persisted Rakesh timeline headline and detail strings in Hindi/Tamil.
+- **Why:** Round-two B/C evidence found English timeline entries even though the active dashboard and statement surfaces were localized.
+- **Expected effect:** Stored English legacy timeline text falls through to localized strings in both non-English locales; English remains unchanged.
+- **Risk:** Copy-only mapping; identifiers, dates, and state transitions are untouched.
+
+## [2026-08-25 16:15] orchestrator
+- **Action:** MODIFY | VERIFY
+- **Target:** app/(docs)/honesty/page.tsx; critics/optimiser-round2.md; critics/ca-round2.md; plan.md P16
+- **Intent:** Reconcile the honesty disclosure with the additive local Spring Boot boundary and record the post-fix Hindi timeline recheck.
+- **Why:** The repository now contains an owned local backend/load harness, although the citizen UI still does not call it. Round-two B/C reports were written before persisted timeline translations landed; the current browser recheck shows the Hindi timeline localized.
+- **Expected effect:** The disclosure distinguishes the browser-only frontend from the unconnected local backend; B/C evidence no longer reports a stale translation failure; P16 records that convergence remains open for fresh correction/regime/reload journeys.
+- **Risk:** Documentation and critic evidence only; no official service, network filing, or production-capacity claim is introduced.
+## [2026-08-25 16:20] orchestrator
+- **Action:** MODIFY
+- **Target:** docs/AUDIT.md; critics/ca-round2.md
+- **Intent:** Reconcile the audit addendum and CA round-two wording with the current validated tree.
+- **Why:** The historical audit is correct, but its addendum still described the earlier four-test/incomplete-vector checkpoint; the CA report retained a translation blocker that the post-fix recheck closed.
+- **Expected effect:** The audit separates historical findings from current evidence, and the CA report names only the remaining fresh-journey blockers.
+- **Risk:** Documentation only; no code path, calculation, or external integration changes.
+## [2026-08-25 16:24] orchestrator
+- **Action:** MODIFY
+- **Target:** app/(docs)/honesty/page.tsx
+- **Intent:** Narrow the disclosure claims to what the current implementation demonstrably guarantees.
+- **Why:** The historical audit called out overbroad wording around whole-interface translation and randomness; seeded identities are reproducible, but the browser also intentionally varies mock dictation text and generates custom IDs/timestamps.
+- **Expected effect:** The honesty page describes the core citizen flow and seeded sandbox reproducibility without claiming that every route or interaction is globally deterministic.
+- **Risk:** Copy-only change; no runtime behavior or synthetic-data boundary changes.
+## [2026-08-25 16:29] orchestrator
+- **Action:** VERIFY
+- **Target:** Workstream 1 critic fixes; docs/AUDIT.md; app/(docs)/honesty/page.tsx; critics round 2
+- **Result:** Post-fix Hindi dashboard recheck shows localized persisted timeline headlines, and the rendered honesty page distinguishes the browser-only Next.js UI from the unconnected local Spring Boot/load-test boundary. Round 2: A is SATISFIED (10 PASS / 0 FAIL / 2 BLOCKED); B and C remain NOT SATISFIED (9 PASS / 0 FAIL / 3 BLOCKED each) because retained browser state prevented fresh correction, regime, and reload journeys. `npm run typecheck`, `npx vitest run` (6 files, 75 tests), `npm run build`, and `mvn -q -f backend/pom.xml test` (6 tests) pass. `git diff --check` passes with only normal CRLF conversion warnings.
+- **Risk:** Critic convergence and scale evidence remain open; no official portal was contacted and no production-capacity conclusion is made.

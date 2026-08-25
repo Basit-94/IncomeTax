@@ -20,8 +20,17 @@ export default function Disclaimer() {
       if (isLang(next)) setLang(next);
     };
 
+    const onLocaleChange = () => {
+      const next = window.localStorage.getItem("wapsi_lang");
+      if (isLang(next)) setLang(next);
+    };
+
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    window.addEventListener("wapsi_lang_change", onLocaleChange);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("wapsi_lang_change", onLocaleChange);
+    };
   }, []);
 
   return (
