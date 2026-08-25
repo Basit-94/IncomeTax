@@ -252,6 +252,12 @@ app/(flow)/              screens consume store + engine; no computation inline
 - **Acceptance criteria:** `docs/scale/architecture-case.md` follows the six required sections and links every measured artifact while separating citizen experience evidence from technical measurements.
 - **Evidence:** `docs/scale/architecture-case.md` links the source audit, exact-money/ledger foundation, 72-vector conformance, load/linearity/degradation/chaos/soak evidence, and explicit limitations. It remains an evidence-led case, not a production approval or national-capacity claim.
 
+### P28 — Intent-first onboarding
+- **Status:** DONE · **Owner:** orchestrator
+- **Rationale:** A first-time filer should not land on a generic portal-shaped starting point. A few plain-language answers can choose the right pace and first task without pretending rough onboarding data is a tax determination.
+- **Acceptance criteria:** language is the first question; intent, profession, rough combined income, filing history, and relevant income/claim signals are captured in at most four follow-up questions; progress is visible; partial answers survive reload; completed answers tailor the landing CTA and regime guidance; the final regime choice remains engine-backed and users can change answers.
+- **Evidence:** `components/onboarding.tsx`, `lib/onboarding.ts`, `lib/__tests__/onboarding.test.ts`, and the clean Hindi browser walkthrough. Onboarding is local-only and explicitly does not claim legal advice or a final scheme recommendation from rough bands.
+
 ## D. Out of scope for v1 (critics judge the product we meant to build)
 
 - Capital-gains computation (flagging and routing exist; full CG maths does not), business/professional income, presumptive schemes, NRI/foreign assets.

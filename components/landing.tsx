@@ -4,6 +4,8 @@ import Link from "next/link";
 import { m } from "motion/react";
 import { ChevronRight, Sparkles, Cpu, BookOpen } from "lucide-react";
 import type { Dict } from "../lib/i18n";
+import type { OnboardingProfile } from "../lib/onboarding";
+import { getPersonalization } from "../lib/onboarding";
 
 interface LandingProps {
   t: Dict;
@@ -13,6 +15,8 @@ interface LandingProps {
   handlePanSubmit: (e: React.FormEvent) => void;
   handleSelectPersona: (id: "sunita" | "rakesh" | "priya") => void;
   handleCreateCustom: () => void;
+  onboardingProfile: OnboardingProfile | null;
+  onEditOnboarding: () => void;
 }
 
 export default function Landing({
@@ -23,7 +27,14 @@ export default function Landing({
   handlePanSubmit,
   handleSelectPersona,
   handleCreateCustom,
+  onboardingProfile,
+  onEditOnboarding,
 }: LandingProps) {
+  const personalization = onboardingProfile ? getPersonalization(onboardingProfile) : null;
+  const primaryAction = onboardingProfile
+    ? t.onboarding.intentCta[onboardingProfile.intent]
+    : t.landing.check;
+
   return (
     <div className="grid items-start gap-10 py-5 lg:grid-cols-12 lg:items-center lg:py-10">
       {/* LEFT COLUMN: TITLE, SUBTITLE, FORM, CITIZENS LIST */}
@@ -43,6 +54,29 @@ export default function Landing({
             {t.landing.subtext}
           </p>
         </div>
+
+        {onboardingProfile && personalization && (
+          <div className="recovery-callout flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <p className="text-xs font-mono font-semibold uppercase tracking-wider text-money">
+                {t.onboarding.tailoredBadge}
+              </p>
+              <p className="text-sm font-semibold text-ink">
+                {t.onboarding.tailoredIntent(t.onboarding.intentOptions[onboardingProfile.intent].label)}
+              </p>
+              <p className="text-xs leading-relaxed text-ink-2">
+                {personalization.guided ? t.onboarding.tailoredGuided : t.onboarding.tailoredQuick}. {personalization.regimeLens === "check_claims" ? t.onboarding.tailoredRegimeClaims : t.onboarding.tailoredRegimeCompare}.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onEditOnboarding}
+              className="shrink-0 text-xs font-semibold text-money hover:underline"
+            >
+              {t.onboarding.changeAnswers}
+            </button>
+          </div>
+        )}
 
         {/* DIRECT PAN LOGIN FORM */}
         <form 
@@ -80,7 +114,7 @@ export default function Landing({
               type="submit"
             className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-money px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-money-deep"
           >
-            <span>{t.landing.check}</span>
+            <span>{primaryAction}</span>
             <ChevronRight size={16} />
           </button>
         </form>

@@ -29,6 +29,12 @@ Open `http://localhost:3000`. The app includes seeded synthetic personas,
 English, Hindi, and Tamil UI states, a reviewer sandbox, and the disclosure
 pages at `/honesty` and `/architecture`.
 
+On a new browser, Wapsi starts with a short onboarding profile. Language is
+asked first, followed by intent, work situation, rough income, filing history,
+and the tax topics that may matter. The answers are saved locally and tailor
+the starting path and amount of explanation. They narrow the journey; the
+actual regime comparison still uses confirmed facts and claims.
+
 ## Verify the frontend
 
 ```powershell

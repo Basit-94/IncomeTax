@@ -4,6 +4,8 @@ import React from "react";
 import { BadgeCheck } from "lucide-react";
 import type { Persona, Lang } from "../../lib/types";
 import type { Dict } from "../../lib/i18n";
+import type { OnboardingProfile } from "../../lib/onboarding";
+import { getPersonalization } from "../../lib/onboarding";
 import { formatMoney } from "../../lib/money";
 import { compareForPersona } from "../../lib/return/compute";
 
@@ -12,6 +14,7 @@ interface RegimeStepProps {
   t: Dict;
   lang: Lang;
   regime: "new" | "old";
+  onboardingProfile?: OnboardingProfile | null;
   onChoose: (regime: "new" | "old") => void;
 }
 
@@ -21,8 +24,9 @@ interface RegimeStepProps {
  * so the old regime saves ₹Y" — and overriding is a first-class action, not
  * a hidden escape hatch.
  */
-export default function RegimeStep({ persona, t, lang, regime, onChoose }: RegimeStepProps) {
+export default function RegimeStep({ persona, t, lang, regime, onboardingProfile, onChoose }: RegimeStepProps) {
   const both = compareForPersona(persona);
+  const personalization = onboardingProfile ? getPersonalization(onboardingProfile) : null;
   const recommended = both.new.refundOrDue >= both.old.refundOrDue ? "new" : "old";
   const savings = Math.abs(both[recommended].refundOrDue - both[recommended === "new" ? "old" : "new"].refundOrDue);
 
@@ -97,6 +101,19 @@ export default function RegimeStep({ persona, t, lang, regime, onChoose }: Regim
         <p className="recovery-callout p-4 text-sm font-medium leading-relaxed text-ink">
           {reasoning}
         </p>
+      )}
+
+      {personalization && (
+        <div className="surface-panel space-y-1 p-4">
+          <p className="text-xs font-mono font-semibold uppercase tracking-wider text-money">
+            {t.onboarding.tailoredBadge}
+          </p>
+          <p className="text-sm leading-relaxed text-ink-2">
+            {personalization.regimeLens === "check_claims"
+              ? t.onboarding.claimsRegimeValue
+              : t.onboarding.compareRegimeValue}
+          </p>
+        </div>
       )}
 
       <div className="grid sm:grid-cols-2 gap-3">

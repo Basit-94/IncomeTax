@@ -440,3 +440,7 @@ Next.js docs read per AGENTS.md before this work: node_modules/next/dist/docs/01
 [2026-08-25 18:52] Result — clean Hindi browser evidence captured: correction to ?0 with reason, reload persistence/saved-draft banner/Hindi timeline/undo, and filing-time regime cards. Added round-3 B/C critic reports at 11 PASS / 0 FAIL / 1 BLOCKED; retained round-2 reports as historical. Updated plan, audit addendum, README harness commands, architecture case, and capacity plan. 
 
 [2026-08-25 19:02] Result — final verification passed: npm typecheck, Vitest 75/75, Next production build, loadtest syntax checks, embedded-Postgres Maven suite, and diff check excluding legacy CP-1252 log whitespace. 
+
+[2026-08-25 19:20] Pre-change — add a language-first, adaptive onboarding profile with a five-screen maximum, local draft persistence, personalized landing copy, and regime guidance. Keep the tax recommendation honest: onboarding narrows the path, while the engine compares regimes only after facts and claims are confirmed. 
+
+[2026-08-25 19:35] Result — onboarding shipped as a language-first flow with four follow-up questions, local draft/profile persistence, tailored landing CTA, guided-versus-short path copy, and regime guidance that remains engine-backed. Clean browser walkthrough passed in Hindi; visual spacing tightened so the first CTA remains visible on a short viewport. Final frontend checks passed: typecheck, 79 Vitest tests, production build, and diff check excluding legacy CP-1252 log whitespace. 

@@ -24,6 +24,13 @@ import {
   CURRENT_VERSION,
 } from "../lib/return/persist";
 import { computeForPersona, DEFAULT_REGIME } from "../lib/return/compute";
+import {
+  loadOnboardingDraft,
+  loadOnboardingProfile,
+  saveOnboardingProfile,
+  type OnboardingDraft,
+  type OnboardingProfile,
+} from "../lib/onboarding";
 
 import Landing from "../components/landing";
 import OtpScreen from "../components/otp-screen";
@@ -43,6 +50,7 @@ import RegimeStep from "../components/flow/regime-step";
 import CheckScreen from "../components/flow/check-screen";
 import FilingStep from "../components/flow/filing-step";
 import { generateSeededUser } from "../components/sandbox-user";
+import Onboarding from "../components/onboarding";
 
 // --- VALIDATION (lib/validate.ts issue codes → dictionary messages) ---
 function panIssueMessage(raw: string, t: ReturnType<typeof dict>): string {
@@ -91,8 +99,11 @@ export default function WapsiPrototype() {
   // --- CORE UI STATES ---
   const [lang, setLang] = useState<Lang>("en");
   const [theme, setTheme] = useState<"dark" | "light">("light");
-  const [step, setStep] = useState<"landing" | "otp" | "dashboard">("landing");
+  const [step, setStep] = useState<"onboarding" | "landing" | "otp" | "dashboard">("onboarding");
   const [activePersonaId, setActivePersonaId] = useState<PersonaId | "custom" | null>(null);
+  const [onboardingProfile, setOnboardingProfile] = useState<OnboardingProfile | null>(null);
+  const [onboardingDraft, setOnboardingDraft] = useState<OnboardingDraft>({});
+  const [onboardingReturnStep, setOnboardingReturnStep] = useState<"landing" | "dashboard">("landing");
   /** Versioned return document — the single source the whole flow reads and writes. */
   const [returnState, setReturnState] = useState<ReturnState | null>(null);
   const [undoStack, setUndoStack] = useState<ReturnState[]>([]);
@@ -159,9 +170,16 @@ export default function WapsiPrototype() {
   useEffect(() => {
     const savedLang = localStorage.getItem("wapsi_lang");
     const savedTheme = localStorage.getItem("wapsi_theme");
+    const savedOnboarding = loadOnboardingProfile();
+    const savedOnboardingDraft = loadOnboardingDraft();
+
+    setOnboardingProfile(savedOnboarding);
+    setOnboardingDraft(savedOnboardingDraft);
 
     if (savedLang && (savedLang === "en" || savedLang === "hi" || savedLang === "ta")) {
       setLang(savedLang as Lang);
+    } else if (savedOnboarding) {
+      setLang(savedOnboarding.lang);
     }
 
     if (savedTheme === "dark" || savedTheme === "light") {
@@ -181,7 +199,14 @@ export default function WapsiPrototype() {
       }
       setActivePersonaId(result.state.personaId);
       setReturnState(result.state);
-      setStep("dashboard");
+      if (savedOnboarding) {
+        setStep("dashboard");
+      } else {
+        setOnboardingReturnStep("dashboard");
+        setStep("onboarding");
+      }
+    } else if (savedOnboarding) {
+      setStep("landing");
     }
   }, []);
 
@@ -209,6 +234,24 @@ export default function WapsiPrototype() {
     const { stack, state } = popUndo(undoStack);
     setUndoStack(stack);
     if (state) saveState(state);
+  };
+
+  const handleCompleteOnboarding = (profile: OnboardingProfile) => {
+    setOnboardingProfile(profile);
+    setOnboardingDraft({});
+    saveOnboardingProfile(profile);
+    setLang(profile.lang);
+    localStorage.setItem("wapsi_lang", profile.lang);
+    window.dispatchEvent(new Event("wapsi_lang_change"));
+    if (returnState) saveState({ ...returnState, lang: profile.lang });
+    setStep(onboardingReturnStep);
+  };
+
+  const handleEditOnboarding = () => {
+    if (!onboardingProfile) return;
+    setOnboardingReturnStep(step === "dashboard" ? "dashboard" : "landing");
+    setOnboardingDraft(onboardingProfile);
+    setStep("onboarding");
   };
 
   // Generate deterministic Sandbox User based on name / PAN seed
@@ -308,8 +351,11 @@ export default function WapsiPrototype() {
   // Log Out / Reset
   const handleLogOut = () => {
     localStorage.clear();
-    setStep("landing");
+    setStep("onboarding");
     setActivePersonaId(null);
+    setOnboardingProfile(null);
+    setOnboardingDraft({});
+    setOnboardingReturnStep("landing");
     setReturnState(null);
     setUndoStack([]);
     setRestoredFrom(null);
@@ -328,6 +374,11 @@ export default function WapsiPrototype() {
     localStorage.setItem("wapsi_lang", l);
     window.dispatchEvent(new Event("wapsi_lang_change"));
     if (returnState) saveState({ ...returnState, lang: l });
+    if (onboardingProfile) {
+      const nextProfile = { ...onboardingProfile, lang: l };
+      setOnboardingProfile(nextProfile);
+      saveOnboardingProfile(nextProfile);
+    }
   };
 
   /* ------------------------------------------- engine-backed flow actions */
@@ -841,7 +892,26 @@ export default function WapsiPrototype() {
           
           <AnimatePresence mode="wait">
             
-            {/* STEP 1: LANDING */}
+            {/* STEP 1: ONBOARDING */}
+            {step === "onboarding" && (
+              <m.div
+                key="onboarding"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.25 }}
+              >
+                <Onboarding
+                  lang={lang}
+                  t={t}
+                  initialDraft={onboardingDraft}
+                  onLanguageChange={changeLang}
+                  onComplete={handleCompleteOnboarding}
+                />
+              </m.div>
+            )}
+
+            {/* STEP 2: LANDING */}
             {step === "landing" && (
               <m.div
                 key="landing"
@@ -858,6 +928,8 @@ export default function WapsiPrototype() {
                   handlePanSubmit={handlePanSubmit}
                   handleSelectPersona={handleSelectPersona}
                   handleCreateCustom={handleCreateCustom}
+                  onboardingProfile={onboardingProfile}
+                  onEditOnboarding={handleEditOnboarding}
                 />
               </m.div>
             )}
@@ -902,6 +974,21 @@ export default function WapsiPrototype() {
                 
                 {/* ACTIVE PROFILE STRIP */}
                 <ProfileStrip persona={persona} lang={lang} t={t} onLogOut={handleLogOut} />
+
+                {onboardingProfile && (
+                  <div className="recovery-callout flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm leading-relaxed text-ink">
+                      <strong>{t.onboarding.tailoredBadge}.</strong> {t.onboarding.readyBody}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleEditOnboarding}
+                      className="shrink-0 text-xs font-semibold text-money hover:underline"
+                    >
+                      {t.onboarding.changeAnswers}
+                    </button>
+                  </div>
+                )}
 
                 {/* RESTORED DRAFT BANNER — never silently resume */}
                 {restoredFrom && (
@@ -999,6 +1086,7 @@ export default function WapsiPrototype() {
                           t={t}
                           lang={lang}
                           regime={regime}
+                          onboardingProfile={onboardingProfile}
                           onChoose={handleChooseRegime}
                         />
                       )}
