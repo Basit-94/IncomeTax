@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = { "${cors.allowed-origins:http://localhost:3000,https://wapsi-amber.vercel.app,https://wapsi-abs21.vercel.app}" })
 @RestController
 @RequestMapping("/api/v1/returns")
 public final class SubmissionController {

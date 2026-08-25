@@ -811,6 +811,7 @@ export default function WapsiPrototype() {
   const handleFileCommit = () => {
     if (!persona || !returnState) return;
 
+    localStorage.removeItem("wapsi_last_submission_id");
     setIsFiled(true);
     saveState({
       ...returnState,
@@ -890,6 +891,10 @@ export default function WapsiPrototype() {
       })
       .then((data) => {
         console.log("Filing submission accepted by backend:", data);
+        if (data && data.submissionId) {
+          localStorage.setItem("wapsi_last_submission_id", data.submissionId);
+          window.dispatchEvent(new CustomEvent("wapsi_submitted", { detail: data.submissionId }));
+        }
       })
       .catch((err) => {
         console.error("Error submitting return to backend:", err);

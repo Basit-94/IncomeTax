@@ -38,11 +38,24 @@ export default function FilingStep({
   onBack,
 }: FilingStepProps) {
   const [stage, setStage] = useState<Stage>("idle");
+  const [submissionId, setSubmissionId] = useState<string | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const b = computeForPersona(persona, regime);
 
   useEffect(() => {
-    return () => timers.current.forEach(clearTimeout);
+    const handleSubmitted = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      setSubmissionId(customEvent.detail);
+    };
+    window.addEventListener("wapsi_submitted", handleSubmitted);
+
+    const saved = localStorage.getItem("wapsi_last_submission_id");
+    if (saved) setSubmissionId(saved);
+
+    return () => {
+      timers.current.forEach(clearTimeout);
+      window.removeEventListener("wapsi_submitted", handleSubmitted);
+    };
   }, []);
 
   const unit = slowMode ? 1100 : 420;
@@ -83,6 +96,16 @@ export default function FilingStep({
           <h2 className="text-3xl font-extrabold tracking-tight text-ink">{t.filing.stepFiled}</h2>
           <p className="text-base font-bold text-ink">{t.filing.ackHeading}</p>
           <p className="text-sm text-ink-2 leading-relaxed text-left">{t.filing.ackBody}</p>
+          {submissionId && (
+            <div className="my-4 p-4 bg-teal-50 border border-teal-200 rounded-2xl text-left space-y-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
+              <span className="block text-[10px] font-bold text-teal-800 uppercase tracking-wider">
+                e-Filing Receipt ID (Spring Boot)
+              </span>
+              <code className="block text-xs font-mono font-semibold text-teal-950 break-all select-all">
+                {submissionId}
+              </code>
+            </div>
+          )}
           <p className="text-xs text-ink-3 leading-relaxed text-left">{t.filing.ackNext}</p>
         </div>
         <button
