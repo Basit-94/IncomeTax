@@ -854,6 +854,47 @@ export default function WapsiPrototype() {
     });
     setTimeout(() => setStampFired(true), 400);
 
+    // POST request to backend API
+    const facts = persona.facts.map((f) => ({
+      kind: f.kind,
+      amountPaise: f.amount * 100
+    }));
+
+    const claims = persona.claims.map((c) => ({
+      section: c.section,
+      amountPaise: c.amount * 100
+    }));
+
+    const tdsCreditsPaise = persona.taxPaid.reduce((sum, t) => sum + t.amount, 0) * 100;
+    const ruleSetVersion = regime === "old" ? "2026-27-old" : "2026-27-new";
+    const idempotencyKey = `idemp-${persona.id}-${Date.now()}`;
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+
+    fetch(`${backendUrl}/api/v1/returns/submit`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        idempotencyKey,
+        assessmentYear: "2026-27",
+        ruleSetVersion,
+        facts,
+        claims,
+        tdsCreditsPaise,
+      }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Filing submission to Spring Boot backend failed");
+        return res.json();
+      })
+      .then((data) => {
+        console.log("Filing submission accepted by backend:", data);
+      })
+      .catch((err) => {
+        console.error("Error submitting return to backend:", err);
+      });
+
     // Start automatic progression to Credited
     triggerTimelineProgress("filed_unverified");
   };
