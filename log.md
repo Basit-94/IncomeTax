@@ -379,3 +379,64 @@ Next.js docs read per AGENTS.md before this work: node_modules/next/dist/docs/01
 - **Target:** Workstream 1 critic fixes; docs/AUDIT.md; app/(docs)/honesty/page.tsx; critics round 2
 - **Result:** Post-fix Hindi dashboard recheck shows localized persisted timeline headlines, and the rendered honesty page distinguishes the browser-only Next.js UI from the unconnected local Spring Boot/load-test boundary. Round 2: A is SATISFIED (10 PASS / 0 FAIL / 2 BLOCKED); B and C remain NOT SATISFIED (9 PASS / 0 FAIL / 3 BLOCKED each) because retained browser state prevented fresh correction, regime, and reload journeys. `npm run typecheck`, `npx vitest run` (6 files, 75 tests), `npm run build`, and `mvn -q -f backend/pom.xml test` (6 tests) pass. `git diff --check` passes with only normal CRLF conversion warnings.
 - **Risk:** Critic convergence and scale evidence remain open; no official portal was contacted and no production-capacity conclusion is made.
+## [2026-08-25 17:05] orchestrator
+- **Action:** MODIFY | VERIFY
+- **Target:** backend/src/main/resources/rules/*.json; backend/src/main/java/com/wapsi/backend/ledger/PostgresFactLedger.java; backend/src/test/java/com/wapsi/backend/ledger/PostgresFactLedgerTest.java; backend/pom.xml; docs/scale/rules-audit.md; docs/scale/architecture-case.md; lib/engine/constants.ts
+- **Intent:** Close the rule-citation gap with current primary sources and replace the in-memory-only ledger boundary with a tested PostgreSQL adapter.
+- **Why:** P22 and P23 are the remaining executable foundations. Official Income Tax Department/CBDT material now supports the modeled AY 2026-27 values, while the ledger needs a real append-only SQL projection path rather than only an in-memory contract.
+- **Expected effect:** Rule artifacts carry source URLs and a field-by-field audit; Java can append, query, and project fact events from partitioned PostgreSQL; an embedded PostgreSQL test proves migrations, supersession, and duplicate-event behavior.
+- **Risk:** Legal correctness is still bounded by explicitly listed unmodeled items; embedded PostgreSQL is a test dependency, not evidence of production sizing or official-system integration.
+## [2026-08-25 17:25] orchestrator
+- **Action:** MODIFY | CREATE
+- **Target:** loadtest/run.mjs; loadtest/run-linearity.ps1; loadtest/run-degradation.ps1; docs/scale/linearity.md; docs/scale/degradation.md; docs/scale/architecture-case.md; backend/README.md
+- **Intent:** Turn the unrun scale evidence protocols into reproducible owned runners and measure bounded multi-process linearity and overload behavior.
+- **Why:** P26 is open because only a one-process smoke existed. The service is local and synthetic, so separate Spring Boot processes can measure process-count behavior without contacting an official system.
+- **Expected effect:** One command produces 1/2/4/8/16-process results and a bounded overload result with correctness assertions; docs distinguish process-only evidence from production pod/database conclusions.
+- **Risk:** These experiments do not provide a shared-database or national-capacity claim; process startup, memory, and harness limits remain explicit.
+## [2026-08-25 17:35] orchestrator
+- **Action:** CREATE
+- **Target:** README.md
+- **Intent:** Add a repository-level handoff document for the Wapsi prototype and its scale/evidence workstream.
+- **Why:** The workspace had backend-specific notes but no root entry point explaining how the frontend, exact-money backend, synthetic load harness, tests, and limitations fit together.
+- **Expected effect:** A new contributor can run the local prototype and validation commands without mistaking the additive backend for a live filing integration.
+- **Risk:** Documentation only; no runtime or data behavior changes.
+## [2026-08-25 17:50] orchestrator
+- **Action:** VERIFY | CREATE
+- **Target:** docs/scale/linearity-results.json; docs/scale/linearity.md; docs/scale/degradation.md; loadtest/run-soak.ps1; loadtest/run-chaos.ps1; loadtest/chaos.mjs; docs/scale/soak.md; docs/scale/chaos.md
+- **Intent:** Publish the measured local process-count/overload results and add bounded owned preflight runners for soak and process-restart behavior.
+- **Why:** The 1/2/4/8/16 protocol and overload protocol now have real runs; the remaining documents need raw evidence and executable bounded checks rather than “not run” placeholders.
+- **Expected effect:** Reviewers can reproduce the local measurements, observe the known in-memory failure boundary during process loss, and distinguish bounded preflight from the required 24-hour/shared-dependency experiments.
+- **Risk:** Process-only evidence can expose host contention but cannot prove database durability, queue recovery, or production pod sizing.
+## [2026-08-25 18:02] orchestrator
+- **Action:** MODIFY
+- **Target:** loadtest/run-chaos.ps1
+- **Intent:** Fix the bounded chaos runner's Windows path quoting and fail loudly when the chaos child produces no JSON.
+- **Why:** The first chaos attempt recorded a null first-run report because `Start-Process` split the workspace path at `C:\Coding\Tax`; the recovery run itself passed.
+- **Expected effect:** The next chaos run will execute `chaos.mjs`, preserve its observed failure report, and distinguish a harness launch failure from service process-loss behavior.
+- **Risk:** Harness-only change; no service or external system impact.
+## [2026-08-25 18:18] orchestrator
+- **Action:** MODIFY | VERIFY
+- **Target:** loadtest/run.mjs; docs/scale/soak-results.json; docs/scale/chaos-results.json; docs/scale/soak.md; docs/scale/chaos.md
+- **Intent:** Record the completed bounded soak/process-loss experiments and correct multi-process report metadata.
+- **Why:** The 60-second preflight completed 31,700 synthetic journeys; the chaos run observed 500 fetch failures when one in-memory process was killed and 100/100 recovery journeys after restart. Multi-process reports still exposed the single-process default URL in their legacy `baseUrl` field.
+- **Expected effect:** Scale evidence is reproducible and accurately labels observed loss/recovery boundaries; multi-process reports identify their first actual backend URL.
+- **Risk:** Documentation and harness metadata only; no durability or production-recovery claim is added.
+## [2026-08-25 18:25] orchestrator
+- **Action:** MODIFY
+- **Target:** docs/scale/reproduce.md; docs/scale/load-test-report.md
+- **Intent:** Update the reproduction guide and load-test report with the newly measured process-count, overload, short-soak, and process-loss preflights.
+- **Why:** The original guide only described the 20-request smoke, while the owned runners now have additional bounded evidence and explicit failure boundaries.
+- **Expected effect:** All measured local commands and their non-claims are discoverable from one scale reproduction document.
+- **Risk:** Documentation only; the experiments remain local synthetic runs.
+## [2026-08-25 18:32] orchestrator
+- **Action:** MODIFY
+- **Target:** plan.md P21-P23, P26-P27
+- **Intent:** Align milestone status with the completed source audit, PostgreSQL integration test, and newly measured bounded scale evidence.
+- **Why:** The living plan still called P22/P23 open and described four backend tests/incomplete conformance; those statements are stale. P26 now has bounded evidence but not shared-dependency or 24-hour evidence, while P27 now links a complete evidence-led draft.
+- **Expected effect:** The plan distinguishes completed foundations from remaining production-like experiments without promoting local measurements to capacity claims.
+- **Risk:** Plan/documentation status only; no runtime changes.
+[2026-08-25 18:45] Pre-change — update critic round-3 evidence after a clean Hindi correction/reload and fresh Hindi regime journey, reconcile audit/README pointers, then run final checks and commit. 
+
+[2026-08-25 18:52] Result — clean Hindi browser evidence captured: correction to ?0 with reason, reload persistence/saved-draft banner/Hindi timeline/undo, and filing-time regime cards. Added round-3 B/C critic reports at 11 PASS / 0 FAIL / 1 BLOCKED; retained round-2 reports as historical. Updated plan, audit addendum, README harness commands, architecture case, and capacity plan. 
+
+[2026-08-25 19:02] Result — final verification passed: npm typecheck, Vitest 75/75, Next production build, loadtest syntax checks, embedded-Postgres Maven suite, and diff check excluding legacy CP-1252 log whitespace. 

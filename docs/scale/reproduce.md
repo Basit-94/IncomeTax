@@ -31,6 +31,21 @@ The runner packages the backend, starts the generated jar on `127.0.0.1:8080`, r
 
 The request generator uses only structurally fake `DEMP-...` citizen references and fixed synthetic facts. It does not read credentials, PANs, bank data, or external URLs.
 
+## Bounded evidence runs
+
+```powershell
+pwsh -File loadtest/run-linearity.ps1 -RequestsPerBackend 16 -ConcurrencyPerBackend 2
+pwsh -File loadtest/run-degradation.ps1 -Requests 2000 -Concurrency 128
+pwsh -File loadtest/run-soak.ps1 -DurationSeconds 60 -BatchRequests 100 -Concurrency 16
+pwsh -File loadtest/run-chaos.ps1 -Requests 1000 -Concurrency 64
+```
+
+The linearity run starts 1, 2, 4, 8, and 16 independent local processes. The
+degradation run is a bounded one-process overload. The soak is a 60-second
+preflight, not the required 24-hour run. The chaos run kills one process during
+synthetic traffic and records the expected in-memory receipt loss before a
+restart recovery check. Results are summarized under `docs/scale/*-results.json`.
+
 ## Recorded smoke run
 
 Command: `pwsh -File loadtest/run.ps1 -Requests 20 -Concurrency 4`

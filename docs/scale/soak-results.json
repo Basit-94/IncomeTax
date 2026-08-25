@@ -1,0 +1,14 @@
+{
+  "experiment": "owned-local-short-soak-preflight",
+  "date": "2026-08-25",
+  "durationSeconds": 60.09,
+  "batches": 317,
+  "batchRequests": 100,
+  "concurrency": 16,
+  "totalJourneys": 31700,
+  "successfulJourneys": 31700,
+  "failedJourneys": 0,
+  "correctnessFailures": 0,
+  "sharedDatabase": false,
+  "required24HourSoak": false
+}

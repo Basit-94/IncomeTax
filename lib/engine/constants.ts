@@ -1,19 +1,15 @@
 /**
  * Every rate and threshold the engine uses, in one place.
  *
- * PROVENANCE DISCIPLINE (non-negotiable): no value here is primary-sourced in
- * this repo. The reference PDF (docs/AUDIT.md; full text at
- * C:\Users\anike\AppData\Local\Temp\opencode\eportal.txt) confirms AY 2026-27
- * runs under the new Income-tax Act 2025, mentions a Rs 12 lakh nil-tax
- * threshold on p21, and that regime selection defaults to the new regime — but
- * contains NO slab tables. So EVERY constant below carries TODO(verify).
+ * Primary-source audit: docs/scale/rules-audit.md. Values below are aligned to
+ * current Income Tax Department/CBDT publications for AY 2026-27. Remaining
+ * TODO(scope) comments identify behavior deliberately outside this prototype,
+ * not an unsupported claim that the whole tax code has been implemented.
  */
 
 /* ------------------------------------------------------------- new regime -- */
 
-// TODO(verify): new-regime slab edges & rates for FY 2026-27 (first Tax Year
-// under IT Act 2025) — check Finance Act 2026 / incometax.gov.in tax calculator.
-// Structure matches the widely reported FY 2025-26 Budget slabs, carried forward.
+// Source: Income Tax Department Budget 2026 FAQs, pp.63-65.
 export const NEW_REGIME_SLABS: ReadonlyArray<{
   upTo: number; // exclusive upper edge of this slab
   rate: number;
@@ -28,7 +24,7 @@ export const NEW_REGIME_SLABS: ReadonlyArray<{
 ];
 
 /** Income at or below this has nil liability via s.87A rebate (PDF p21 mentions "Rs 12 lakh"). */
-// TODO(verify): exact s.87A nil-tax threshold for FY 2026-27 — Finance Act 2026 / incometax.gov.in.
+// Source: Income Tax Department Budget 2026 FAQs, pp.63-65.
 export const REBATE_87A_NEW_THRESHOLD = 1_200_000;
 
 /**
@@ -36,7 +32,7 @@ export const REBATE_87A_NEW_THRESHOLD = 1_200_000;
  * on exactly REBATE_87A_NEW_THRESHOLD of income (60,000) so the threshold and
  * cap are mutually consistent.
  */
-// TODO(verify): statutory rebate cap (was 25,000 at the 7L era; 60,000 at the 12L era) — Finance Act 2026 text.
+// Source: Income Tax Department Budget 2026 FAQs, pp.63-65; Income Tax Department AY 2026-27 salaried guidance.
 export const REBATE_87A_NEW_MAX_AMOUNT = 60_000;
 
 /**
@@ -44,11 +40,12 @@ export const REBATE_87A_NEW_MAX_AMOUNT = 60_000;
  * payable tax must not exceed the excess over the threshold. Formula here is
  * `payable = min(taxBeforeRebate, taxable - threshold)` applied BEFORE cess.
  */
-// TODO(verify): exact marginal-relief formula and whether cess is inside or outside it — Finance Act 2026 / CBDT examples.
+// Source: Income Tax Department Budget 2026 FAQs, pp.64-65. This engine applies
+// the published marginal comparison before the separately stated 4% cess.
 export const MARGINAL_RELIEF_ENABLED_NEW = true;
 
 /** Standard deduction for salaried taxpayers, new regime only. */
-// TODO(verify): Rs 75,000 standard deduction for salaried under new regime — Finance Act 2026 / incometax.gov.in.
+// Source: Income Tax Department Budget 2026 FAQs, p.64; Income Tax Department salary guide.
 export const STANDARD_DEDUCTION_NEW = 75_000;
 
 /**
@@ -56,7 +53,8 @@ export const STANDARD_DEDUCTION_NEW = 75_000;
  * deduction + employer NPS contribution u/s 80CCD(2). Everything else is
  * silently excluded from totalDeductions (the UI layer should surface why).
  */
-// TODO(verify): full list of new-regime-permitted deductions under IT Act 2025 (e.g. 80CCH, Agniveer) — Finance Act 2026.
+// Source: Income Tax Department AY 2026-27 salaried guidance. The v1 engine
+// intentionally models only 80CCD(2); 80CCH/80JJAA are outside this fixture.
 export const NEW_REGIME_ALLOWED_SECTIONS: ReadonlySet<string> = new Set([
   "80CCD(2)",
   "80CCD_2", // tolerate both spellings of the same section
@@ -64,8 +62,7 @@ export const NEW_REGIME_ALLOWED_SECTIONS: ReadonlySet<string> = new Set([
 
 /* -------------------------------------------------------------- old regime -- */
 
-// TODO(verify): old-regime slab edges & rates — check whether IT Act 2025 still
-// offers the old regime at all for AY 2026-27 and its exact slabs.
+// Source: Income Tax Department AY 2026-27 salaried guidance.
 export const OLD_REGIME_SLABS: ReadonlyArray<{ upTo: number; rate: number }> = [
   { upTo: 250_000, rate: 0 },
   { upTo: 500_000, rate: 0.05 },
@@ -77,7 +74,7 @@ export const OLD_REGIME_SLABS: ReadonlyArray<{ upTo: number; rate: number }> = [
  * Old-regime basic exemption by age band (senior citizens get a higher
  * nil band; implemented by replacing the first slab's edge).
  */
-// TODO(verify): senior (60-80) 300k / super-senior (>80) 500k basic exemption survival under IT Act 2025.
+// Source: Income Tax Department AY 2026-27 salaried and senior-citizen guidance.
 export const OLD_REGIME_BASIC_EXEMPTION_BY_AGE: Record<
   "below_60" | "60_to_80" | "above_80",
   number
@@ -88,16 +85,18 @@ export const OLD_REGIME_BASIC_EXEMPTION_BY_AGE: Record<
 };
 
 /** Standard deduction for salaried taxpayers, old regime. */
-// TODO(verify): Rs 50,000 old-regime standard deduction — Finance Act 2026.
+// Source: Income Tax Department threshold-limits and salary guidance for AY 2026-27.
 export const STANDARD_DEDUCTION_OLD = 50_000;
 
 /** s.87A also exists in the old regime (income <= 5L, rebate capped). */
-// TODO(verify): old-regime 87A threshold 500k / cap 12,500 survival under IT Act 2025.
+// Source: Income Tax Department AY 2026-27 salaried guidance.
 export const REBATE_87A_OLD_THRESHOLD = 500_000;
 export const REBATE_87A_OLD_MAX_AMOUNT = 12_500;
 
 /** Per-section caps for chapter VI-A claims under the old regime. */
-// TODO(verify): 80C cap 150k, 80D cap 25k (50k senior), 80GG cap 60k — Income-tax Act 2025 chapter VI-A text.
+// Source: Income Tax Department AY 2026-27 salaried guidance. The fixture
+// retains only the 80C/80CCC/80GG ceilings; the 80GG least-of-three formula is
+// a TODO(scope) limitation of this prototype.
 export const OLD_REGIME_CLAIM_CAPS: Readonly<Record<string, number>> = {
   "80C": 150_000,
   "80CCC": 150_000,
@@ -107,12 +106,11 @@ export const OLD_REGIME_CLAIM_CAPS: Readonly<Record<string, number>> = {
 /* ------------------------------------------------------------------ common -- */
 
 /** Health and education cess on tax-after-rebate. */
-// TODO(verify): 4% cess rate survival/rename under IT Act 2025 — Finance Act 2026.
+// Source: Income Tax Department AY 2026-27 salaried guidance and Finance Bill 2026.
 export const HEALTH_EDU_CESS_RATE = 0.04;
 
 /**
- * KNOWN GAPS deliberately not modelled in v1 (each would need TODO(verify)
- * constants once sourced):
+ * KNOWN GAPS deliberately not modelled in v1:
  * - Surcharge (10/15/25/37%) on high incomes — absent entirely.
  * - Special capital-gains rates (111A/112 etc.) — capital_gains taxed at slab.
  * - s.234A/B/C interest and s.234F fee on late filing.

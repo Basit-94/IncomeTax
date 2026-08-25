@@ -201,7 +201,7 @@ app/(flow)/              screens consume store + engine; no computation inline
 - **Status:** IN PROGRESS · **Owner:** orchestrator
 - **Rationale:** The simplification thesis must survive first-timer, optimiser, and CA scrutiny instead of being judged only by the builder.
 - **Acceptance criteria:** each critic runs against the fixed 12-point rubric with incremental reports; all three return SATISFIED in one round or the deadlock and highest-impact remaining fix are reported honestly.
-- **Evidence:** round 1 and round 2 are recorded in `log.md` and `critics/*-round2.md`; A is SATISFIED, while B and C are NOT SATISFIED at 9 PASS / 0 FAIL / 3 BLOCKED because their retained browser state prevented a fresh correction, regime revisit, and reload journey. Convergence remains open.
+- **Evidence:** round 1 and round 2 are recorded in `log.md` and `critics/*-round2.md`; round 3 is recorded in `critics/optimiser-round3.md` and `critics/ca-round3.md` with fresh Hindi correction/reload and regime-path evidence. A is SATISFIED; B/C are NOT SATISFIED at 11 PASS / 0 FAIL / 1 BLOCKED because participant-based reuse/adoption evidence was not collected. Convergence remains open.
 
 ### P20 — Workstream 2 capacity model
 - **Status:** DONE · **Owner:** orchestrator
@@ -214,19 +214,19 @@ app/(flow)/              screens consume store + engine; no computation inline
 - **Rationale:** The backend must make exact money and stateless, asynchronous processing executable rather than aspirational; the Next.js frontend remains the product surface.
 - **Stack rationale:** Spring Boot on Java 21 keeps exact `BigDecimal`/paise arithmetic and virtual-thread I/O available without reactive complexity; Spring Batch is a natural fit for seasonal batch-shaped work; the JVM is familiar to government/financial adopters; Next.js remains the citizen-facing frontend.
 - **Acceptance criteria:** Java 21+ Spring Boot service with a single `Money` value object using integer paise or scaled `BigDecimal`; no currency `double` or `float`; explicit rounding tests; local run instructions.
-- **Evidence:** `backend/pom.xml`, `backend/src/main/java/com/wapsi/backend/money/Money.java`, `backend/src/test/.../MoneyTest.java`, and `docs/scale/money-audit.md`; isolated Maven 3.9.11 with Temurin 21.0.12 ran `mvn -f backend/pom.xml test` successfully (4 tests, 0 failures).
+- **Evidence:** `backend/pom.xml`, `backend/src/main/java/com/wapsi/backend/money/Money.java`, `backend/src/test/.../MoneyTest.java`, and `docs/scale/money-audit.md`; isolated Maven 3.9.11 with Temurin 21.0.12 ran `mvn -f backend/pom.xml test` successfully (6 tests, 0 failures), including embedded PostgreSQL integration.
 
 ### P22 — Rules as versioned, cited data
-- **Status:** IN PROGRESS · **Owner:** orchestrator
+- **Status:** DONE · **Owner:** orchestrator
 - **Rationale:** Assessment-year changes must be data revisions that preserve old-return reproducibility, not silent code edits.
 - **Acceptance criteria:** versioned rule-set schema with assessment year, regime, effective window, source citation, and supersession; pure engine signature includes rule-set version; uncited values remain `TODO(verify)`.
-- **Evidence:** `backend/src/main/java/com/wapsi/backend/rules/`, `backend/src/main/resources/rules/2026-27-new.json`, `2026-27-old.json`; the loader/model and pure engine now pass the 72-vector Java runner, while primary-source citation verification remains open.
+- **Evidence:** `backend/src/main/java/com/wapsi/backend/rules/`, `backend/src/main/resources/rules/2026-27-new.json`, `2026-27-old.json`, and `docs/scale/rules-audit.md`; modeled slab, rebate, standard-deduction, age-band, claim-ceiling, and cess values now carry current Income Tax Department/CBDT source citations. Scope gaps remain explicitly documented.
 
 ### P23 — Append-only fact ledger and projections
-- **Status:** IN PROGRESS · **Owner:** orchestrator
+- **Status:** DONE · **Owner:** orchestrator
 - **Rationale:** Provenance, correction reasons, undo, and rebuildable returns should be storage properties of the fact primitive.
 - **Acceptance criteria:** append-only fact events with supersession, confirmation metadata, assessment-year partition key, projection rebuild, and idempotent correction tests.
-- **Evidence:** `backend/src/main/java/com/wapsi/backend/ledger/`, `backend/src/main/resources/db/migration/V1__fact_ledger.sql`, and contract tests; the in-memory ledger test passes under Maven, while PostgreSQL integration remains pending.
+- **Evidence:** `backend/src/main/java/com/wapsi/backend/ledger/PostgresFactLedger.java`, `backend/src/main/resources/db/migration/V1__fact_ledger.sql`, `InMemoryFactLedgerTest`, and `PostgresFactLedgerTest`; embedded PostgreSQL proves migration, append-only history, supersession projection, and duplicate-event rejection. Production datasource/outbox wiring remains out of scope.
 
 ### P24 — TypeScript-to-Java conformance vectors
 - **Status:** DONE · **Owner:** orchestrator
@@ -241,16 +241,16 @@ app/(flow)/              screens consume store + engine; no computation inline
 - **Evidence:** `loadtest/run.mjs` and `loadtest/run.ps1` start only the owned local Spring Boot jar, generate deterministic synthetic DEMP-prefixed references, exercise POST → idempotent retry → status polling, and report RPS, p50/p95/p99, errors, and correctness failures; `docs/scale/reproduce.md` records the environment and command; the 20-request smoke run passed with zero correctness failures.
 
 ### P26 — Scale evidence artifacts
-- **Status:** TODO · **Owner:** orchestrator
+- **Status:** IN PROGRESS · **Owner:** orchestrator
 - **Rationale:** Successes and failures need to be measured together: linearity, degradation, chaos, and soak matter as much as peak throughput.
 - **Acceptance criteria:** six evidence documents under `docs/scale/`, including at least one documented failure and fix; no run targets an external system.
-- **Evidence:** `docs/scale/load-test-report.md`, `linearity.md`, `capacity-plan.md`, `degradation.md`, `chaos.md`, and `soak.md` now exist; only the single-process smoke is measured, so P26 remains open.
+- **Evidence:** `docs/scale/load-test-report.md`, `linearity.md`, `capacity-plan.md`, `degradation.md`, `chaos.md`, and `soak.md` now include bounded local measurements and raw summaries. Shared Postgres/queue failure tests, modeled-peak testing, and the required 24-hour soak remain open, so P26 remains in progress.
 
 ### P27 — Architecture case for adoption
-- **Status:** IN PROGRESS · **Owner:** orchestrator
+- **Status:** DONE · **Owner:** orchestrator
 - **Rationale:** A government reviewer needs a portable, evidence-led case with incremental adoption options and limitations stated before discovery.
 - **Acceptance criteria:** `docs/scale/architecture-case.md` follows the six required sections and links every measured artifact while separating citizen experience evidence from technical measurements.
-- **Evidence:** `docs/scale/architecture-case.md` links the evidence set and states measured results, non-claims, transfer options, and limitations; it remains a draft while P26 experiments are unrun.
+- **Evidence:** `docs/scale/architecture-case.md` links the source audit, exact-money/ledger foundation, 72-vector conformance, load/linearity/degradation/chaos/soak evidence, and explicit limitations. It remains an evidence-led case, not a production approval or national-capacity claim.
 
 ## D. Out of scope for v1 (critics judge the product we meant to build)
 

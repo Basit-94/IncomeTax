@@ -9,6 +9,6 @@ The sourced workload model in [capacity-model.md](capacity-model.md) derives a d
 | N pods sustain X submissions/sec | Not measured |
 | p99 at that point | Not measured |
 | Pods required for the modeled peak | Cannot claim before linearity and failure tests |
-| Current evidence | One-process smoke: 20 journeys, 77.27 logical RPS, p99 229.21 ms, 0 correctness failures |
+| Current evidence | One-process smoke: 20 journeys, 77.27 logical RPS, p99 229.21 ms, 0 correctness failures; bounded 1/2/4/8/16-process and overload runs are reported separately |
 
-The first production sizing experiment must use the same container image, database tier, connection pool, queue, and cache configuration that the result is intended to represent. No extrapolation from the smoke run is permitted.
+The bounded local experiments do not replace production sizing. The first production sizing experiment must use the same container image, database tier, connection pool, queue, and cache configuration that the result is intended to represent. No extrapolation from any local run is permitted.

@@ -4,7 +4,7 @@
   "regime": "new",
   "effectiveFrom": "2026-04-01",
   "effectiveTo": null,
-  "sourceCitation": "TODO(verify): Finance Act 2026 and Income Tax Department AY 2026-27 rule publication",
+  "sourceCitation": "Income Tax Department, Special Regimes for Taxation of Individuals (AY 2026-27): https://www.incometaxindia.gov.in/w/special-regimes-for-taxation-of-individuals-huf-aop-boi-ajp-companies-and-co-operative-societies",
   "supersededBy": null,
   "standardDeductionPaise": 7500000,
   "nilTaxThresholdPaise": 120000000,
@@ -16,12 +16,12 @@
   "basicExemptionByAgePaise": {},
   "marginalReliefEnabled": true,
   "slabs": [
-    { "upToPaise": 40000000, "rate": 0.00, "sourceCitation": "TODO(verify): Finance Act 2026 new-regime slab" },
-    { "upToPaise": 80000000, "rate": 0.05, "sourceCitation": "TODO(verify): Finance Act 2026 new-regime slab" },
-    { "upToPaise": 120000000, "rate": 0.10, "sourceCitation": "TODO(verify): Finance Act 2026 new-regime slab" },
-    { "upToPaise": 160000000, "rate": 0.15, "sourceCitation": "TODO(verify): Finance Act 2026 new-regime slab" },
-    { "upToPaise": 200000000, "rate": 0.20, "sourceCitation": "TODO(verify): Finance Act 2026 new-regime slab" },
-    { "upToPaise": 240000000, "rate": 0.25, "sourceCitation": "TODO(verify): Finance Act 2026 new-regime slab" },
-    { "upToPaise": null, "rate": 0.30, "sourceCitation": "TODO(verify): Finance Act 2026 new-regime slab" }
+    { "upToPaise": 40000000, "rate": 0.00, "sourceCitation": "Income Tax Department, Budget 2026 FAQs, pp.63-65: https://www.incometaxindia.gov.in/documents/20117/15766092/FAQs-Budget-2026.pdf" },
+    { "upToPaise": 80000000, "rate": 0.05, "sourceCitation": "Income Tax Department, Budget 2026 FAQs, pp.63-65: https://www.incometaxindia.gov.in/documents/20117/15766092/FAQs-Budget-2026.pdf" },
+    { "upToPaise": 120000000, "rate": 0.10, "sourceCitation": "Income Tax Department, Budget 2026 FAQs, pp.63-65: https://www.incometaxindia.gov.in/documents/20117/15766092/FAQs-Budget-2026.pdf" },
+    { "upToPaise": 160000000, "rate": 0.15, "sourceCitation": "Income Tax Department, Budget 2026 FAQs, pp.63-65: https://www.incometaxindia.gov.in/documents/20117/15766092/FAQs-Budget-2026.pdf" },
+    { "upToPaise": 200000000, "rate": 0.20, "sourceCitation": "Income Tax Department, Budget 2026 FAQs, pp.63-65: https://www.incometaxindia.gov.in/documents/20117/15766092/FAQs-Budget-2026.pdf" },
+    { "upToPaise": 240000000, "rate": 0.25, "sourceCitation": "Income Tax Department, Budget 2026 FAQs, pp.63-65: https://www.incometaxindia.gov.in/documents/20117/15766092/FAQs-Budget-2026.pdf" },
+    { "upToPaise": null, "rate": 0.30, "sourceCitation": "Income Tax Department, Budget 2026 FAQs, pp.63-65: https://www.incometaxindia.gov.in/documents/20117/15766092/FAQs-Budget-2026.pdf" }
   ]
 }

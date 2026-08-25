@@ -1,7 +1,24 @@
-# Chaos and recovery — not run
+# Chaos and recovery — bounded process-loss preflight
 
-Status: **NOT RUN**.
+Status: **BOUNDED PROCESS-LOSS PREFLIGHT COMPLETE; DATABASE/QUEUE CHAOS NOT RUN**.
 
-Pod termination, database failover, and Redis loss have not been tested. The current smoke harness has one local JVM, no Postgres, no Redis, and no multi-pod deployment to fail.
+The owned runner started two local Spring Boot processes, killed port 8501
+during 1,000 synthetic journeys, then restarted it. The first run recorded
+500 successes and 500 `fetch failed` journeys; the surviving process continued
+serving its half of the sticky workload. A 100-journey recovery run against the
+restarted process completed 100/100 with zero correctness failures. The summary
+is in [chaos-results.json](chaos-results.json).
 
-The planned owned experiment will kill one API process during synthetic submissions, interrupt the durable queue/database dependency in a controlled environment, and verify that idempotency records and accepted work survive or enter an explicit recoverable state. No zero-loss claim is made until those observations exist.
+Reproduce with:
+
+```powershell
+pwsh -File loadtest/run-chaos.ps1 -Requests 1000 -Concurrency 64
+```
+
+This is an honest failure, not a recovery success: the killed process lost its
+in-memory receipts and accepted work. Restart accepts new work, but no durable
+idempotency or outbox record was recovered.
+
+Database failover, Redis loss, durable queue interruption, and zero-loss
+recovery remain untested. No zero-loss claim is made until those observations
+exist.

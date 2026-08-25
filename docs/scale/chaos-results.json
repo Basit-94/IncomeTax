@@ -1,0 +1,22 @@
+{
+  "experiment": "owned-local-process-loss-preflight",
+  "date": "2026-08-25",
+  "killedPort": 8501,
+  "firstRun": {
+    "requests": 1000,
+    "concurrency": 64,
+    "successfulJourneys": 500,
+    "failedJourneys": 500,
+    "correctnessFailures": 500,
+    "failure": "fetch failed after the second in-memory process was terminated"
+  },
+  "recoveryRun": {
+    "requests": 100,
+    "successfulJourneys": 100,
+    "failedJourneys": 0,
+    "correctnessFailures": 0
+  },
+  "interpretation": "Restart accepts new work, but accepted work and idempotency receipts held only by the killed process are not durably recovered.",
+  "sharedDatabase": false,
+  "durableOutbox": false
+}

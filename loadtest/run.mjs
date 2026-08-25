@@ -6,6 +6,10 @@ function option(name, fallback) {
 }
 
 const baseUrl = option("--base-url", "http://127.0.0.1:8080").replace(/\/$/, "");
+const baseUrls = (option("--base-urls", "") || baseUrl)
+  .split(",")
+  .map((url) => url.trim().replace(/\/$/, ""))
+  .filter(Boolean);
 const requestCount = Number(option("--requests", "100"));
 const concurrency = Number(option("--concurrency", "8"));
 const seed = option("--seed", "20260825");
@@ -43,9 +47,9 @@ async function jsonRequest(url, init) {
   return { response, body };
 }
 
-async function poll(submissionId) {
+async function poll(submissionId, journeyBaseUrl) {
   for (let attempt = 0; attempt < 40; attempt += 1) {
-    const result = await jsonRequest(`${baseUrl}/api/v1/returns/submissions/${submissionId}`);
+    const result = await jsonRequest(`${journeyBaseUrl}/api/v1/returns/submissions/${submissionId}`);
     if (!result.response.ok) throw new Error(`status ${result.response.status}`);
     if (result.body.status !== "accepted") return result.body;
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -55,8 +59,9 @@ async function poll(submissionId) {
 
 async function runJourney(index) {
   const payload = payloadFor(index);
+  const journeyBaseUrl = baseUrls[index % baseUrls.length];
   const started = performance.now();
-  const first = await jsonRequest(`${baseUrl}/api/v1/returns/submit`, {
+  const first = await jsonRequest(`${journeyBaseUrl}/api/v1/returns/submit`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
@@ -65,7 +70,7 @@ async function runJourney(index) {
 
   let duplicateMatch = true;
   if (index % 10 === 0) {
-    const retry = await jsonRequest(`${baseUrl}/api/v1/returns/submit`, {
+    const retry = await jsonRequest(`${journeyBaseUrl}/api/v1/returns/submit`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),
@@ -74,7 +79,7 @@ async function runJourney(index) {
     if (!duplicateMatch) throw new Error("idempotency retry returned a different receipt");
   }
 
-  const completed = await poll(first.body.submissionId);
+  const completed = await poll(first.body.submissionId, journeyBaseUrl);
   if (completed.status !== "completed" || typeof completed.totalTaxPaise !== "number") {
     throw new Error(`unexpected completion ${JSON.stringify(completed)}`);
   }
@@ -105,7 +110,9 @@ const percentile = (fraction) => sortedLatencies.length === 0
   ? null
   : sortedLatencies[Math.min(sortedLatencies.length - 1, Math.floor(sortedLatencies.length * fraction))];
 const report = {
-  baseUrl,
+  baseUrl: baseUrls[0],
+  baseUrls,
+  backendCount: baseUrls.length,
   syntheticOnly: true,
   requestCount,
   concurrency,

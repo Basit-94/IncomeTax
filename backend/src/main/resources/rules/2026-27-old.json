@@ -4,7 +4,7 @@
   "regime": "old",
   "effectiveFrom": "2026-04-01",
   "effectiveTo": null,
-  "sourceCitation": "TODO(verify): Finance Act 2026 and Income Tax Department AY 2026-27 rule publication",
+  "sourceCitation": "Income Tax Department, Salaried Individuals for AY 2026-27: https://www.incometax.gov.in/iec/foportal/help/individual/return-applicable-1",
   "supersededBy": null,
   "standardDeductionPaise": 5000000,
   "nilTaxThresholdPaise": 50000000,
@@ -24,9 +24,9 @@
   },
   "marginalReliefEnabled": false,
   "slabs": [
-    { "upToPaise": 25000000, "rate": 0.00, "sourceCitation": "TODO(verify): Finance Act 2026 old-regime slab" },
-    { "upToPaise": 50000000, "rate": 0.05, "sourceCitation": "TODO(verify): Finance Act 2026 old-regime slab" },
-    { "upToPaise": 100000000, "rate": 0.20, "sourceCitation": "TODO(verify): Finance Act 2026 old-regime slab" },
-    { "upToPaise": null, "rate": 0.30, "sourceCitation": "TODO(verify): Finance Act 2026 old-regime slab" }
+    { "upToPaise": 25000000, "rate": 0.00, "sourceCitation": "Income Tax Department, Salaried Individuals for AY 2026-27: https://www.incometax.gov.in/iec/foportal/help/individual/return-applicable-1" },
+    { "upToPaise": 50000000, "rate": 0.05, "sourceCitation": "Income Tax Department, Salaried Individuals for AY 2026-27: https://www.incometax.gov.in/iec/foportal/help/individual/return-applicable-1" },
+    { "upToPaise": 100000000, "rate": 0.20, "sourceCitation": "Income Tax Department, Salaried Individuals for AY 2026-27: https://www.incometax.gov.in/iec/foportal/help/individual/return-applicable-1" },
+    { "upToPaise": null, "rate": 0.30, "sourceCitation": "Income Tax Department, Salaried Individuals for AY 2026-27: https://www.incometax.gov.in/iec/foportal/help/individual/return-applicable-1" }
   ]
 }

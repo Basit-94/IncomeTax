@@ -17,11 +17,15 @@ mvn spring-boot:run
 
 The repository's verification run used Temurin 21.0.12 and an isolated Maven 3.9.11 distribution.
 The machine-wide Maven install is not required. From the repository root, the owned synthetic load
-harness is `pwsh -File loadtest/run.ps1 -Requests 100 -Concurrency 8`.
+harness is `pwsh -File loadtest/run.ps1 -Requests 100 -Concurrency 8`. The bounded process-count
+experiment is `pwsh -File loadtest/run-linearity.ps1`; the bounded overload experiment is
+`pwsh -File loadtest/run-degradation.ps1`.
 
 `POST /api/v1/returns/submit` is an async, idempotent local boundary. Its in-memory receipt map is
 deliberately a test adapter; production needs a durable unique idempotency key and an outbox/queue.
-No controller contacts an official portal.
+`PostgresFactLedger` is the tested JDBC adapter for append-only fact history and supersession
+projection; wiring it into a production service still requires datasource, migration, outbox, and
+operational configuration. No controller contacts an official portal.
 
 ## Money contract
 
