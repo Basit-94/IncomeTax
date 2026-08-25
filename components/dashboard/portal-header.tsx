@@ -12,6 +12,7 @@ interface PortalHeaderProps {
   changeLang: (l: Lang) => void;
   toggleTheme: () => void;
   setShowConsole: (v: boolean) => void;
+  onLogoClick?: () => void;
 }
 
 export default function PortalHeader({
@@ -22,6 +23,7 @@ export default function PortalHeader({
   changeLang,
   toggleTheme,
   setShowConsole,
+  onLogoClick,
 }: PortalHeaderProps) {
   return (
     <header className="border-b border-line bg-paper text-ink z-10 relative">
@@ -36,12 +38,15 @@ export default function PortalHeader({
       
       <div className="px-4 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 max-w-6xl mx-auto w-full">
         <div className="flex items-center space-x-3">
-          <div className="flex items-center gap-2">
+          <button
+            onClick={onLogoClick}
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left bg-transparent border-0 p-0 cursor-pointer"
+          >
             <span className="font-extrabold text-money text-2xl tracking-tight font-sans">
               {t.shell.productName}
             </span>
             <span className="text-sm text-ink-2">{t.shell.productNativeName}</span>
-          </div>
+          </button>
           <div className="h-6 w-[1px] bg-line hidden md:block" />
           <div className="space-y-0.5">
             <h1 className="font-bold text-sm tracking-wide text-ink">{t.shell.subtitle}</h1>

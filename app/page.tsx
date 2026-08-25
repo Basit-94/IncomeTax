@@ -251,6 +251,35 @@ export default function WapsiPrototype() {
     document.documentElement.classList.toggle("dark-mode", theme === "dark");
   }, [theme]);
 
+  // Handle browser back button: goes to onboarding (home) if in dashboard/landing
+  useEffect(() => {
+    // Initial history state
+    window.history.replaceState({ page: "home" }, "");
+
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state && event.state.page === "home") {
+        setStep("onboarding");
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
+
+  // Whenever step advances to dashboard/landing/otp, push a new state to browser history
+  useEffect(() => {
+    if (step !== "onboarding") {
+      window.history.pushState({ page: "wizard" }, "");
+    }
+  }, [step]);
+
+  const goHome = () => {
+    setStep("onboarding");
+    window.history.replaceState({ page: "home" }, "");
+  };
+
   /* ------------------------------------------------------- state plumbing */
 
   /** Persist + set. No undo snapshot (used for non-destructive updates). */
@@ -1360,6 +1389,7 @@ export default function WapsiPrototype() {
           changeLang={changeLang}
           toggleTheme={toggleTheme}
           setShowConsole={setShowConsole}
+          onLogoClick={goHome}
         />
 
         {/* --- MAIN BODY --- */}
@@ -1551,13 +1581,21 @@ export default function WapsiPrototype() {
                             const isContinueDisabled = confirmedOrCorrectedCount < totalItemsCount;
 
                             return (
-                              <button
-                                disabled={isContinueDisabled}
-                                onClick={() => setFlowStep("deductions")}
-                                className="w-full rounded-xl bg-money px-6 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-money-deep disabled:bg-slate-200 disabled:text-ink-3 cursor-pointer disabled:cursor-not-allowed"
-                              >
-                                {t.common.continue}
-                              </button>
+                              <div className="flex gap-3">
+                                <button
+                                  onClick={goHome}
+                                  className="flex-1 border border-line text-ink-2 py-3 px-4 rounded-lg hover:bg-paper-2 transition-colors text-sm font-semibold"
+                                >
+                                  {t.common.back}
+                                </button>
+                                <button
+                                  disabled={isContinueDisabled}
+                                  onClick={() => setFlowStep("deductions")}
+                                  className="flex-[2] rounded-xl bg-money px-6 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-money-deep disabled:bg-slate-200 disabled:text-ink-3 cursor-pointer disabled:cursor-not-allowed"
+                                >
+                                  {t.common.continue}
+                                </button>
+                              </div>
                             );
                           })()}
                         </div>
