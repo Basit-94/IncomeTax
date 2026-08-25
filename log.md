@@ -249,3 +249,11 @@ Next.js docs read per AGENTS.md before this work: node_modules/next/dist/docs/01
 - **Why:** Audit evidence must match the command that was actually run.
 - **Expected effect:** The addendum reports 75 Vitest tests across 6 files while preserving the historical baseline boundary.
 - **Risk:** None to product behavior; documentation only.
+
+## [2026-08-25 15:08] orchestrator
+- **Action:** MODIFY
+- **Target:** .gitignore; backend/target/
+- **Intent:** Remove generated Maven build output from version control while retaining the local verification artifacts for inspection.
+- **Why:** ackend/target/ is reproducible output, not source evidence, and should not inflate the architecture commit.
+- **Expected effect:** Future Maven runs leave target output untracked; only Java source, resources, tests, and documented reports remain in Git.
+- **Risk:** None to source or runtime behavior; local generated files remain available.
