@@ -1,10 +1,8 @@
 services:
   - type: web
     name: wapsi-backend
-    env: java
+    env: docker
     rootDir: backend
-    buildCommand: mvn clean package -DskipTests
-    startCommand: java -jar target/wapsi-backend-0.1.0-SNAPSHOT.jar
     plan: free
     envVars:
       - key: PORT
