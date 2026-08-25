@@ -391,6 +391,31 @@ export const hi: Dict = {
     bankFailed: "असफल",
     staleIfscHold: "यह बैंक कोड अब कहीं नहीं जाता।",
     switchToNewIfsc: (ifsc: string) => `नए कोड पर बदलें (${ifsc})`,
+    personalized: {
+      eyebrow: "आपका डैशबोर्ड",
+      heading: {
+        file_return: "आइए आपका रिटर्न तैयार करते हैं",
+        check_refund: "आइए देखें क्या पैसा वापस आ सकता है",
+        understand_notice: "आइए ज़रूरी कार्रवाई समझते हैं",
+        correct_prefill: "आइए बताई गई जानकारी जाँचते हैं",
+      },
+      guidedBody: "हर संख्या की पुष्टि से पहले हम उसका मतलब समझाएंगे।",
+      quickBody: "रास्ता छोटा रहेगा और अगला ज़रूरी फैसला पहले दिखेगा।",
+      unfiledBody: "पहले आपके बारे में पहले से दर्ज जानकारी की पुष्टि करें।",
+      filedBody: "आपके आने के कारण के मुताबिक हमने सही हिस्सा पहले खोला है।",
+      primaryAction: {
+        facts: "दर्ज जानकारी देखें",
+        overview: "रिफंड ट्रैकर देखें",
+        statement: "बताई गई जानकारी जाँचें",
+        actions: "ज़रूरी कार्रवाई देखें",
+      },
+      focusLabel: "हम इन बातों पर ध्यान देंगे",
+      profileLabels: {
+        work: "काम",
+        income: "कुल अनुमानित आय",
+        history: "फाइलिंग का अनुभव",
+      },
+    },
   },
 
   onboarding: {

@@ -59,6 +59,8 @@ export interface Personalization {
   regimeLens: "check_claims" | "compare_both";
 }
 
+export type DashboardDestination = "facts" | "overview" | "statement" | "actions";
+
 const INTENTS: OnboardingIntent[] = [
   "file_return",
   "check_refund",
@@ -139,6 +141,30 @@ export function getPersonalization(profile: OnboardingProfile): Personalization 
     guided,
     regimeLens: hasDeductionSignals ? "check_claims" : "compare_both",
   };
+}
+
+/**
+ * Choose the first useful dashboard surface from the user's stated intent.
+ * An unfiled return always starts with facts because every later calculation
+ * depends on information the user confirms, even when their stated goal is a
+ * refund check or a notice explanation.
+ */
+export function getDashboardDestination(
+  profile: OnboardingProfile,
+  hasFiled: boolean,
+): DashboardDestination {
+  if (!hasFiled) return "facts";
+
+  switch (profile.intent) {
+    case "understand_notice":
+      return "actions";
+    case "correct_prefill":
+      return "statement";
+    case "check_refund":
+    case "file_return":
+    default:
+      return "overview";
+  }
 }
 
 export function loadOnboardingProfile(): OnboardingProfile | null {

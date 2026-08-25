@@ -424,6 +424,31 @@ export const en = {
     bankFailed: "Failed",
     staleIfscHold: "This bank code stopped routing.",
     switchToNewIfsc: (ifsc: string) => `Switch to the new code (${ifsc})`,
+    personalized: {
+      eyebrow: "Your dashboard",
+      heading: {
+        file_return: "Let us get your return ready",
+        check_refund: "Let us check what may come back",
+        understand_notice: "Let us handle what needs attention",
+        correct_prefill: "Let us review what was reported",
+      },
+      guidedBody: "We will explain each number before you confirm it.",
+      quickBody: "We will keep the route short and put the next decision first.",
+      unfiledBody: "First, confirm the information already reported about you.",
+      filedBody: "We opened the view that best matches what you came here to do.",
+      primaryAction: {
+        facts: "Review my reported details",
+        overview: "Show my refund tracker",
+        statement: "Review reported details",
+        actions: "Show what needs attention",
+      },
+      focusLabel: "We will watch for",
+      profileLabels: {
+        work: "Work",
+        income: "Rough total income",
+        history: "Filing history",
+      },
+    },
   },
 
   onboarding: {

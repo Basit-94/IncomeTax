@@ -258,6 +258,12 @@ app/(flow)/              screens consume store + engine; no computation inline
 - **Acceptance criteria:** language is the first question; intent, profession, rough combined income, filing history, and relevant income/claim signals are captured in at most four follow-up questions; progress is visible; partial answers survive reload; completed answers tailor the landing CTA and regime guidance; the final regime choice remains engine-backed and users can change answers.
 - **Evidence:** `components/onboarding.tsx`, `lib/onboarding.ts`, `lib/__tests__/onboarding.test.ts`, and the clean Hindi browser walkthrough. Onboarding is local-only and explicitly does not claim legal advice or a final scheme recommendation from rough bands.
 
+### P29 — Dashboard personalization follow-through
+- **Status:** DONE · **Owner:** orchestrator
+- **Rationale:** Onboarding should change the first useful dashboard state, not stop at a profile banner. The profile must shape the user's next action and the explanation surface while confirmed facts remain the source of tax outcomes.
+- **Acceptance criteria:** filed users open on an intent-matched dashboard surface; unfiled users remain facts-first; the dashboard shows the selected pace, work/income/history context, focus topics, regime lens, and one clear next action in all three supported languages; changing answers updates the dashboard destination.
+- **Evidence:** `components/dashboard/personalized-dashboard.tsx`, `lib/onboarding.ts`, `app/page.tsx`, localized dashboard dictionaries, and the browser walkthrough with a Hindi notice-intent profile. Typecheck, 80 Vitest tests, and production build pass; reload preserves the intent-matched dashboard destination.
+
 ## D. Out of scope for v1 (critics judge the product we meant to build)
 
 - Capital-gains computation (flagging and routing exist; full CG maths does not), business/professional income, presumptive schemes, NRI/foreign assets.

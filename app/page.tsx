@@ -28,6 +28,7 @@ import {
   loadOnboardingDraft,
   loadOnboardingProfile,
   saveOnboardingProfile,
+  getDashboardDestination,
   type OnboardingDraft,
   type OnboardingProfile,
 } from "../lib/onboarding";
@@ -44,6 +45,7 @@ import SandboxDrawer from "../components/dashboard/sandbox-drawer";
 import DisputeModal from "../components/dashboard/dispute-modal";
 import BankIfscModal from "../components/dashboard/bank-ifsc-modal";
 import NoticeModal from "../components/dashboard/notice-modal";
+import PersonalizedDashboard from "../components/dashboard/personalized-dashboard";
 import FlowStepper, { FLOW_STEPS, type FlowStepName } from "../components/flow/flow-stepper";
 import DeductionsStep from "../components/flow/deductions-step";
 import RegimeStep from "../components/flow/regime-step";
@@ -121,6 +123,21 @@ export default function WapsiPrototype() {
     () => (persona ? computeForPersona(persona, regime) : null),
     [persona, regime],
   );
+  const dashboardDestination =
+    onboardingProfile && persona
+      ? getDashboardDestination(
+          onboardingProfile,
+          persona.refund.state !== "not_filed",
+        )
+      : "facts";
+
+  const openPersonalizedDashboardDestination = () => {
+    if (dashboardDestination === "facts") {
+      setFlowStep("facts");
+    } else {
+      setActiveTab(dashboardDestination);
+    }
+  };
 
   const toggleTheme = () => {
     const nextTheme = theme === "dark" ? "light" : "dark";
@@ -200,6 +217,15 @@ export default function WapsiPrototype() {
       setActivePersonaId(result.state.personaId);
       setReturnState(result.state);
       if (savedOnboarding) {
+        const destination = getDashboardDestination(
+          savedOnboarding,
+          result.state.persona.refund.state !== "not_filed",
+        );
+        if (destination === "facts") {
+          setFlowStep("facts");
+        } else {
+          setActiveTab(destination);
+        }
         setStep("dashboard");
       } else {
         setOnboardingReturnStep("dashboard");
@@ -236,6 +262,27 @@ export default function WapsiPrototype() {
     if (state) saveState(state);
   };
 
+  const setPersonalizedDashboardDestination = (
+    profile: OnboardingProfile | null,
+    state: ReturnState | null,
+  ) => {
+    if (!profile || !state) {
+      setActiveTab("overview");
+      setFlowStep("facts");
+      return;
+    }
+
+    const destination = getDashboardDestination(
+      profile,
+      state.persona.refund.state !== "not_filed",
+    );
+    if (destination === "facts") {
+      setFlowStep("facts");
+    } else {
+      setActiveTab(destination);
+    }
+  };
+
   const handleCompleteOnboarding = (profile: OnboardingProfile) => {
     setOnboardingProfile(profile);
     setOnboardingDraft({});
@@ -243,7 +290,13 @@ export default function WapsiPrototype() {
     setLang(profile.lang);
     localStorage.setItem("wapsi_lang", profile.lang);
     window.dispatchEvent(new Event("wapsi_lang_change"));
-    if (returnState) saveState({ ...returnState, lang: profile.lang });
+    if (returnState) {
+      const nextState = { ...returnState, lang: profile.lang };
+      saveState(nextState);
+      if (onboardingReturnStep === "dashboard") {
+        setPersonalizedDashboardDestination(profile, nextState);
+      }
+    }
     setStep(onboardingReturnStep);
   };
 
@@ -330,12 +383,8 @@ export default function WapsiPrototype() {
       setOtpError(false);
       saveState({ ...returnState, lang });
       // Unfiled citizens enter the default path; already-filed ones land on the tracker.
-      const unfiled = returnState.persona.refund.state === "not_filed";
       const enter = () => {
-        if (unfiled) {
-          setFlowStep("facts");
-        }
-        setActiveTab("overview");
+        setPersonalizedDashboardDestination(onboardingProfile, returnState);
         setStep("dashboard");
       };
       if (simulatedDelay) {
@@ -366,6 +415,7 @@ export default function WapsiPrototype() {
     setIsFiled(false);
     setStampFired(false);
     setFlowStep("facts");
+    setActiveTab("overview");
   };
 
   // Change Language
@@ -976,18 +1026,14 @@ export default function WapsiPrototype() {
                 <ProfileStrip persona={persona} lang={lang} t={t} onLogOut={handleLogOut} />
 
                 {onboardingProfile && (
-                  <div className="recovery-callout flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-sm leading-relaxed text-ink">
-                      <strong>{t.onboarding.tailoredBadge}.</strong> {t.onboarding.readyBody}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={handleEditOnboarding}
-                      className="shrink-0 text-xs font-semibold text-money hover:underline"
-                    >
-                      {t.onboarding.changeAnswers}
-                    </button>
-                  </div>
+                  <PersonalizedDashboard
+                    profile={onboardingProfile}
+                    t={t}
+                    hasFiled={persona.refund.state !== "not_filed"}
+                    destination={dashboardDestination}
+                    onPrimaryAction={openPersonalizedDashboardDestination}
+                    onEdit={handleEditOnboarding}
+                  />
                 )}
 
                 {/* RESTORED DRAFT BANNER — never silently resume */}

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createOnboardingProfile,
+  getDashboardDestination,
   getPersonalization,
   loadOnboardingProfile,
   saveOnboardingProfile,
@@ -60,6 +61,21 @@ describe("onboarding profile", () => {
       guided: false,
       regimeLens: "compare_both",
     });
+  });
+
+  it("opens the filed dashboard on the surface that matches the stated intent", () => {
+    const noticeProfile = createOnboardingProfile(
+      { ...completeDraft, intent: "understand_notice", filingHistory: "every_year" },
+      "en",
+    );
+    const correctionProfile = createOnboardingProfile(
+      { ...completeDraft, intent: "correct_prefill", filingHistory: "every_year" },
+      "en",
+    );
+
+    expect(getDashboardDestination(noticeProfile!, true)).toBe("actions");
+    expect(getDashboardDestination(correctionProfile!, true)).toBe("statement");
+    expect(getDashboardDestination(noticeProfile!, false)).toBe("facts");
   });
 
   it("round-trips a completed profile in local storage", () => {

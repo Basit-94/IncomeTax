@@ -32,8 +32,11 @@ pages at `/honesty` and `/architecture`.
 On a new browser, Wapsi starts with a short onboarding profile. Language is
 asked first, followed by intent, work situation, rough income, filing history,
 and the tax topics that may matter. The answers are saved locally and tailor
-the starting path and amount of explanation. They narrow the journey; the
-actual regime comparison still uses confirmed facts and claims.
+the starting path, dashboard destination, next action, and amount of
+explanation. Unfiled returns remain facts-first; filed users open on the
+refund tracker, reported facts, or pending actions that match their intent.
+The answers narrow the journey; the actual regime comparison still uses
+confirmed facts and claims.
 
 ## Verify the frontend
 
