@@ -272,7 +272,7 @@ const rakesh: Persona = {
 
   refund: {
     state: "under_review",
-    amount: 41300,
+    amount: 94118,
     filedOn: "2026-07-14",
     verifiedOn: "2026-07-14",
     cohortWeekOf: "2026-07-13",
@@ -424,7 +424,7 @@ const priya: Persona = {
   mobile: "90000 00003",
   preferredLang: "en",
   situation:
-    "Filed 71 days ago. The portal says 'Under processing' and nothing else. Two separate things are actually holding her ₹28,400.",
+    "Filed 71 days ago. The portal says 'Under processing' and nothing else. Two separate things are actually holding her ₹34,800.",
   act: 3,
   actLabel: "The wait, made legible",
   embodies:
@@ -530,7 +530,7 @@ const priya: Persona = {
 
   refund: {
     state: "under_review",
-    amount: 28400,
+    amount: 34800,
     filedOn: "2026-06-12",
     verifiedOn: "2026-06-12",
     cohortWeekOf: "2026-06-08",
@@ -610,7 +610,7 @@ const priya: Persona = {
       respondBy: "2026-09-30",
       headline: "The department is asking you to look again at your rent claim.",
       consequence:
-        "This is not an accusation and there is no penalty yet. But your ₹28,400 stays where it is until you either back the claim up or withdraw it.",
+        "This is not an accusation and there is no penalty yet. But your ₹34,800 stays where it is until you either back the claim up or withdraw it.",
       amountAtStake: 18600,
       status: "open",
       items: [

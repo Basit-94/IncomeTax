@@ -14,10 +14,10 @@ interface ProfileStripProps {
 
 export default function ProfileStrip({ persona, lang, t, onLogOut }: ProfileStripProps) {
   return (
-    <div className="bg-white border border-line rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+    <div className="surface-panel flex flex-col justify-between gap-4 p-4 md:flex-row md:items-center">
       <div className="space-y-1 flex-1">
         <div className="flex items-center space-x-2">
-          <span className="text-xs font-mono bg-slate-100 border border-line text-ink-2 px-2.5 py-0.5 rounded-full font-semibold">
+          <span className="rounded-full border border-line bg-slate-100 px-2.5 py-0.5 text-xs font-mono font-semibold text-ink-2">
             PAN: {persona.pan}
           </span>
           <span className="text-xs font-bold text-ink leading-none">

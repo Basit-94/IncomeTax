@@ -45,8 +45,8 @@ export default function RegimeStep({ persona, t, lang, regime, onChoose }: Regim
         aria-pressed={isSelected}
         className={`text-left w-full rounded-2xl border-2 p-5 space-y-3 transition-colors ${
           isSelected
-            ? "border-navy bg-navy/[0.03]"
-            : "border-line bg-white hover:border-navy/40"
+            ? "border-money bg-money-soft"
+            : "border-line bg-paper-2 hover:border-money/50"
         }`}
       >
         <div className="flex items-center justify-between gap-2">
@@ -88,13 +88,13 @@ export default function RegimeStep({ persona, t, lang, regime, onChoose }: Regim
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h2 className="text-xl font-bold text-navy tracking-tight leading-snug">
+        <h2 className="text-3xl font-extrabold leading-tight tracking-tight text-ink sm:text-4xl">
           {t.regime.heading}
         </h2>
       </div>
 
       {savings > 0 && (
-        <p className="bg-money-soft/60 border border-money/20 text-money-deep text-sm font-medium rounded-xl p-4 leading-relaxed">
+        <p className="recovery-callout p-4 text-sm font-medium leading-relaxed text-ink">
           {reasoning}
         </p>
       )}
@@ -107,7 +107,7 @@ export default function RegimeStep({ persona, t, lang, regime, onChoose }: Regim
       <div className="space-y-3">
         <button
           onClick={() => onChoose(recommended)}
-          className="w-full bg-navy hover:bg-navy-light text-paper font-semibold py-3.5 px-6 rounded-xl transition-colors shadow-sm text-sm"
+          className="w-full rounded-xl bg-money px-6 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-money-deep"
         >
           {t.regime.acceptRecommendation}
         </button>

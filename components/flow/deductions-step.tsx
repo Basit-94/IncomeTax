@@ -6,6 +6,7 @@ import type { Persona, Lang } from "../../lib/types";
 import type { Dict } from "../../lib/i18n";
 import { formatMoney } from "../../lib/money";
 import { claimWorth, capFor } from "../../lib/return/compute";
+import { localize } from "../mock-i18n";
 
 interface DeductionsStepProps {
   persona: Persona;
@@ -86,7 +87,7 @@ export default function DeductionsStep({
         {questions.map((question) => (
           <div
             key={question.section}
-            className="bg-white border border-line rounded-xl p-4 space-y-3"
+            className="fact-card space-y-3 p-4 sm:p-5"
           >
             <div className="flex items-start gap-2">
               <HelpCircle size={16} className="text-money mt-0.5 shrink-0" />
@@ -121,7 +122,7 @@ export default function DeductionsStep({
 
       {/* ALREADY-CLAIMED LIST */}
       {persona.claims.length > 0 && (
-        <div className="bg-white border border-line rounded-xl p-5 space-y-4 shadow-sm">
+        <div className="surface-panel space-y-4 p-5">
           <h3 className="text-xs font-mono uppercase tracking-wider text-ink-2 border-b border-line pb-2 font-bold">
             {t.deductions.claimedHeading}
           </h3>
@@ -131,11 +132,11 @@ export default function DeductionsStep({
               const worth = claimWorth(persona, regime, claim.id);
               const doesNothing = worth === 0;
               return (
-                <div key={claim.id} className="bg-slate-50 border border-line rounded-xl p-4 space-y-2">
+                <div key={claim.id} className="fact-card space-y-2 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1 min-w-0">
                       <span className="text-sm font-semibold text-ink block leading-tight">
-                        {claim.label}
+                        {localize(claim.label, lang)}
                       </span>
                       <div className="flex items-center gap-2 pt-0.5 flex-wrap">
                         <span className="text-[0.65rem] font-mono bg-white border border-line text-ink-3 px-1.5 py-0.5 rounded">

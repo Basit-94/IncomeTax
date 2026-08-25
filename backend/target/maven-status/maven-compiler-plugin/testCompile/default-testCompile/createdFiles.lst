@@ -1,0 +1,3 @@
+com\wapsi\backend\ledger\InMemoryFactLedgerTest.class
+com\wapsi\backend\money\MoneyTest.class
+com\wapsi\backend\engine\GoldenVectorTest.class

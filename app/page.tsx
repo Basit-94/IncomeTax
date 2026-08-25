@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { LazyMotion, domMax, m, AnimatePresence } from "motion/react";
-import { animate } from "animejs";
 
 import { PERSONAS, TODAY } from "../lib/personas";
 import type { Persona, PersonaId, Lang, IncomeFact, BankAccount, Notice, RefundState, TimelineKey } from "../lib/types";
@@ -26,7 +25,6 @@ import {
 } from "../lib/return/persist";
 import { computeForPersona, DEFAULT_REGIME } from "../lib/return/compute";
 
-import { AnimeLens } from "../components/lens";
 import Landing from "../components/landing";
 import OtpScreen from "../components/otp-screen";
 import PortalHeader from "../components/dashboard/portal-header";
@@ -92,7 +90,7 @@ const ADVANCE_COPY: Partial<Record<Exclude<RefundState, "not_filed" | "filed_unv
 export default function WapsiPrototype() {
   // --- CORE UI STATES ---
   const [lang, setLang] = useState<Lang>("en");
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<"dark" | "light">("light");
   const [step, setStep] = useState<"landing" | "otp" | "dashboard">("landing");
   const [activePersonaId, setActivePersonaId] = useState<PersonaId | "custom" | null>(null);
   /** Versioned return document — the single source the whole flow reads and writes. */
@@ -106,8 +104,6 @@ export default function WapsiPrototype() {
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
   const [flowStep, setFlowStep] = useState<FlowStepName>("facts");
 
-  const [scrollProgress, setScrollProgress] = useState(0);
-
   const t = dict(lang);
   const regime = returnState?.regime ?? DEFAULT_REGIME;
   const breakdown = useMemo(
@@ -120,19 +116,6 @@ export default function WapsiPrototype() {
     setTheme(nextTheme);
     localStorage.setItem("wapsi_theme", nextTheme);
   };
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
-      if (totalHeight > 0) {
-        const pct = Math.min(Math.max(window.scrollY / totalHeight, 0), 1);
-        setScrollProgress(pct);
-      }
-    };
-    window.addEventListener("scroll", handleScroll);
-    handleScroll();
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   // Custom user inputs for step 0
   const [customName, setCustomName] = useState("");
@@ -172,9 +155,6 @@ export default function WapsiPrototype() {
   const [isSpeechListening, setIsSpeechListening] = useState(false);
   const [speechText, setSpeechText] = useState("");
 
-  // Refs for Anime.js SVG Timeline progress
-  const progressPathRef = useRef<SVGLineElement>(null);
-
   // Load saved draft (versioned ReturnState; legacy raw-Persona drafts migrate)
   useEffect(() => {
     const savedLang = localStorage.getItem("wapsi_lang");
@@ -207,31 +187,8 @@ export default function WapsiPrototype() {
 
   // Sync document root class with theme state
   useEffect(() => {
-    if (theme === "light") {
-      document.documentElement.classList.add("light-mode");
-    } else {
-      document.documentElement.classList.remove("light-mode");
-    }
+    document.documentElement.classList.toggle("dark-mode", theme === "dark");
   }, [theme]);
-
-  // Sync Anime.js timeline path animation on state update
-  useEffect(() => {
-    if (progressPathRef.current && persona && activeTab === "overview") {
-      let targetPct = 0;
-      const state = persona.refund.state;
-      if (state === "credited") targetPct = 100;
-      else if (state === "sent_to_bank") targetPct = 80;
-      else if (state === "under_review") targetPct = 60;
-      else if (state === "verified") targetPct = 40;
-      else if (state === "filed_unverified") targetPct = 20;
-
-      animate(progressPathRef.current, {
-        y2: `${targetPct}%`,
-        easing: "easeOutQuad",
-        duration: 800,
-      });
-    }
-  }, [persona?.refund.state, step, activeTab]);
 
   /* ------------------------------------------------------- state plumbing */
 
@@ -395,7 +352,7 @@ export default function WapsiPrototype() {
   };
 
   // Dispute modal open: prefill from the active correction, else the fact.
-  const openDispute = (fact: IncomeFact) => {
+  const openDispute = (fact: Pick<IncomeFact, "id" | "amount">) => {
     setActiveDisputeId(fact.id);
     const correction = activeCorrectionByFact[fact.id];
     setDisputeAmount(
@@ -408,22 +365,26 @@ export default function WapsiPrototype() {
     if (!persona || !returnState || !activeDisputeId) return;
 
     const fact = persona.facts.find((f) => f.id === activeDisputeId);
-    if (!fact) return;
+    const tax = persona.taxPaid.find((f) => f.id === activeDisputeId);
+    const claim = persona.claims.find((f) => f.id === activeDisputeId);
+    const source = fact ?? tax ?? claim;
+    if (!source) return;
 
     const correction: Correction = {
       id: `corr-${Date.now()}`,
-      factId: fact.id,
+      factId: activeDisputeId,
       field: "amount",
-      previous: fact.amount,
+      previous: source.amount,
       next: Number(disputeAmount.replace(/[^0-9]/g, "")) || 0,
       reason: disputeReason.trim() || t.file.disputeDefaultReason,
       at: new Date().toISOString(),
+      target: fact ? "fact" : tax ? "tax" : "claim",
     };
 
     let next = applyCorrection(returnState, correction);
 
     // Rakesh AIS-mismatch hold releases when the capital-gains figure goes to zero.
-    if (persona.id === "rakesh" && fact.id === "rakesh-capital-gains") {
+    if (persona.id === "rakesh" && fact?.id === "rakesh-capital-gains") {
       if (correction.next === 0) {
         next = {
           ...next,
@@ -860,28 +821,12 @@ export default function WapsiPrototype() {
 
   return (
     <LazyMotion features={domMax} strict>
-      <div className={`flex-1 bg-paper text-ink selection:bg-money/20 relative overflow-x-hidden min-h-dvh flex flex-col ${theme === "light" ? "light-mode" : ""}`}>
-        
-        {/* Dotted Grid Background */}
-        <div 
-          className="fixed inset-0 pointer-events-none opacity-40 z-0"
-          style={{
-            backgroundImage: `radial-gradient(circle, var(--color-border) 1px, transparent 1px)`,
-            backgroundSize: "24px 24px"
-          }}
-        />
-
-        {/* Fixed Anime.js Background Graphics */}
-        <div className="fixed bottom-[-150px] right-[-150px] w-[500px] h-[500px] opacity-15 pointer-events-none z-0 lg:block hidden">
-          <AnimeLens />
-        </div>
-        <div className="fixed bottom-[-100px] right-[-100px] w-[350px] h-[350px] opacity-10 pointer-events-none z-0 block lg:hidden">
-          <AnimeLens />
-        </div>
+      <div className="service-shell flex-1 text-ink selection:bg-money/20 relative overflow-x-hidden min-h-dvh flex flex-col">
 
         {/* --- PORTAL HEADER --- */}
         <PortalHeader
           lang={lang}
+          t={t}
           theme={theme}
           showConsole={showConsole}
           changeLang={changeLang}
@@ -890,7 +835,7 @@ export default function WapsiPrototype() {
         />
 
         {/* --- MAIN BODY --- */}
-        <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-8 relative">
+        <main id="main-content" className="flex-1 max-w-6xl mx-auto w-full px-4 py-8 md:px-6 md:py-10 relative">
           
           <AnimatePresence mode="wait">
             
@@ -1001,7 +946,6 @@ export default function WapsiPrototype() {
                             t={t}
                             activeCorrectionByFact={activeCorrectionByFact}
                             confirmedIds={returnState?.confirmedFactIds ?? []}
-                            scrollProgress={scrollProgress}
                             isCustomPersona={activePersonaId === "custom"}
                             onConfirmFact={handleConfirmFact}
                             onDispute={openDispute}
@@ -1012,7 +956,7 @@ export default function WapsiPrototype() {
                           />
                           <button
                             onClick={() => setFlowStep("deductions")}
-                            className="w-full bg-navy hover:bg-navy-light text-paper font-semibold py-3.5 px-6 rounded-xl transition-colors shadow-sm text-sm"
+                            className="w-full rounded-xl bg-money px-6 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-money-deep"
                           >
                             {t.common.continue}
                           </button>
@@ -1039,7 +983,7 @@ export default function WapsiPrototype() {
                             </button>
                             <button
                               onClick={() => setFlowStep("regime")}
-                              className="flex-[2] bg-navy hover:bg-navy-light text-paper font-semibold py-3 px-4 rounded-xl transition-colors shadow-sm text-sm"
+                              className="flex-[2] rounded-xl bg-money px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-money-deep"
                             >
                               {t.common.continue}
                             </button>
@@ -1069,7 +1013,7 @@ export default function WapsiPrototype() {
                             </button>
                             <button
                               onClick={() => setFlowStep("filing")}
-                              className="flex-[2] bg-navy hover:bg-navy-light text-paper font-semibold py-3 px-4 rounded-xl transition-colors shadow-sm text-sm"
+                              className="flex-[2] rounded-xl bg-money px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-money-deep"
                             >
                               {t.common.continue}
                             </button>
@@ -1121,7 +1065,6 @@ export default function WapsiPrototype() {
                           lang={lang}
                           t={t}
                           stampFired={stampFired || isFiled}
-                          progressPathRef={progressPathRef}
                           refundFigure={breakdown?.refundOrDue ?? 0}
                           handleFixBank={handleFixBank}
                         />
@@ -1135,7 +1078,6 @@ export default function WapsiPrototype() {
                           t={t}
                           activeCorrectionByFact={activeCorrectionByFact}
                           confirmedIds={returnState?.confirmedFactIds ?? []}
-                          scrollProgress={scrollProgress}
                           isCustomPersona={activePersonaId === "custom"}
                           onConfirmFact={handleConfirmFact}
                           onDispute={openDispute}

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
+import Disclaimer from "../components/disclaimer";
 
 
 export const metadata: Metadata = {
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#faf6ef",
+  themeColor: "#f3f7f8",
 };
 
 export default function RootLayout({
@@ -23,29 +24,7 @@ export default function RootLayout({
       <body className="min-h-dvh flex flex-col">
         <div className="flex-1">{children}</div>
         <Analytics />
-
-        {/*
-          Required by the hackathon brief: the prototype must not present itself
-          as an official government product. This is not dismissable.
-        */}
-        <footer className="border-t border-line bg-paper-2 px-5 py-4 text-[0.8rem] leading-relaxed text-ink-2">
-          <p className="mx-auto max-w-2xl">
-            <strong className="font-semibold text-ink">
-              Independent concept prototype.
-            </strong>{" "}
-            Not affiliated with, endorsed by, or connected to the Income Tax
-            Department, CBDT, or the Government of India. Every name, PAN,
-            amount and document here is invented. No live government system is
-            contacted.{" "}
-            <a
-              className="font-medium text-money underline decoration-money/30 underline-offset-2 hover:decoration-money"
-              href="/honesty"
-            >
-              See exactly what is real and what is mocked
-            </a>
-            .
-          </p>
-        </footer>
+        <Disclaimer />
       </body>
     </html>
   );

@@ -164,14 +164,92 @@ app/(flow)/              screens consume store + engine; no computation inline
 - **Evidence:** ~100 new keys added to en/hi/ta with Dict=typeof en compile enforcement; zod messages via validate.ts issue codes; persisted timeline headlines migrated to i18n keys (persist v2). Known residual: mock-i18n parallel table for data-layer labels (open consolidation item); actions-tab/sandbox drawer copy partially localize-based.
 
 ### P10 — Persona critics (Step 4)
-- **Status:** TODO · **Owner:** orchestrator
+- **Status:** DONE · **Owner:** orchestrator
 - **Acceptance:** Critics A/B/C run landing→filed, each exercises ≥1 non-English locale; verdicts recorded.
-- **Evidence:** critic reports.
+- **Evidence:** `critics/first-timer-round1.md`, `critics/optimiser-round1.md`, and `critics/ca-round1.md`; all three reports include exactly 12 scores and a verdict.
 
 ### P11 — Convergence loop (Step 5)
 - **Status:** TODO · **Owner:** orchestrator
 - **Acceptance:** All three SATISFIED in same round, ≤5 rounds, or honest deadlock report.
 - **Evidence:** log.md round summaries.
+
+### P12 — Resolve narrative refund drift
+- **Status:** DONE · **Owner:** orchestrator
+- **Rationale:** A refund amount shown in the tracker must be the same number produced by the tested engine. Divergence undermines the fact primitive and can mislead a filer about money at stake.
+- **Acceptance criteria:** Priya and Rakesh fixture refund amounts match `computeForPersona(..., "new")`; regression tests pin both values; the reason for the chosen source of truth is recorded in `log.md`.
+- **Evidence:** `lib/return/__tests__/compute.test.ts` pins Priya at ₹34,800 and Rakesh at ₹94,118 against `computeForPersona(..., "new")`; `lib/personas.ts` and `components/mock-i18n.ts` were corrected; result logged.
+
+### P13 — Rebuild the visual system and shell
+- **Status:** DONE · **Owner:** orchestrator
+- **Rationale:** The existing tokens are dark-first, red-accented and dashboard-like, while the product needs a calm, legible, trust-first filing service that makes provenance visible.
+- **Acceptance criteria:** `app/globals.css` and `app/layout.tsx` have a real diff; responsive tokens, type, focus, light/dark treatment, disclosure surfaces, and loading/error/recovery classes are defined; synthetic disclaimer remains persistent.
+- **Evidence:** `app/globals.css`, `app/layout.tsx`, and shell components implement light-first responsive tokens, focus states, disclosure/error/recovery surfaces, and persistent synthetic-data disclaimer; before/after screen captures are under `docs/redesign/`; typecheck, Vitest, and build passed.
+
+### P14 — Make the fact primitive visible
+- **Status:** DONE · **Owner:** orchestrator
+- **Rationale:** Provenance, plain-language meaning, and one confirm/correct action are the core thesis, not implementation details.
+- **Acceptance criteria:** every displayed income and tax-credit figure uses a shared provenance-carrying component; each offers confirm or correct-with-reason; corrected facts remain undoable and persisted.
+- **Evidence:** `components/fact-row.tsx` is used by the statement facts, tax-paid fact, and claim rows; each exposes provenance, plain meaning, confirm/correct-with-reason, and undo; correction replay is covered by `lib/return/state.ts` and the mobile evidence in `critics/screenshots/`.
+
+### P15 — Deliver the eight-screen filing path
+- **Status:** DONE · **Owner:** orchestrator
+- **Rationale:** The current app has the pieces but not a coherent, learnable sequence from Start through After.
+- **Acceptance criteria:** Start, Verify, Your money, Money you can claim, Old vs new regime, Check, File, and After are explicit states; one decision per mobile screen; progressive disclosure remains facts-driven; filing acknowledgement is staged and deliberate.
+- **Evidence:** `docs/redesign/before-01-start.png` through `before-08-after.png` and `after-01-start.png` through `after-08-after.png`; the round-one critic walkthroughs cover Start → Verify → Your money → Money you can claim → Old vs new regime → Check → File → After.
+
+### P16 — Persona critics and convergence
+- **Status:** IN PROGRESS · **Owner:** orchestrator
+- **Rationale:** The simplification thesis must survive first-timer, optimiser, and CA scrutiny instead of being judged only by the builder.
+- **Acceptance criteria:** each critic runs against the fixed 12-point rubric with incremental reports; all three return SATISFIED in one round or the deadlock and highest-impact remaining fix are reported honestly.
+- **Evidence:** round 1 is complete and recorded in `log.md`; all three verdicts are NOT SATISFIED, so convergence remains open.
+
+### P20 — Workstream 2 capacity model
+- **Status:** DONE · **Owner:** orchestrator
+- **Rationale:** Scale claims are only credible when the target workload is explicit, source-backed, and separated from anecdotes about the official portal.
+- **Acceptance criteria:** `docs/scale/capacity-model.md` cites published inputs, shows the arithmetic from annual volume through peak submissions and total RPS, labels assumptions, defines SLOs, names failure modes, and states what is not claimed.
+- **Evidence:** `docs/scale/capacity-model.md`; inputs use the official PIB 2 August 2024 filing release and July 2025 backgrounder; no live system was contacted.
+
+### P21 — Spring Boot backend and exact money foundation
+- **Status:** DONE · **Owner:** orchestrator
+- **Rationale:** The backend must make exact money and stateless, asynchronous processing executable rather than aspirational; the Next.js frontend remains the product surface.
+- **Acceptance criteria:** Java 21+ Spring Boot service with a single `Money` value object using integer paise or scaled `BigDecimal`; no currency `double` or `float`; explicit rounding tests; local run instructions.
+- **Evidence:** `backend/pom.xml`, `backend/src/main/java/com/wapsi/backend/money/Money.java`, `backend/src/test/.../MoneyTest.java`, and `docs/scale/money-audit.md`; isolated Maven 3.9.11 with Temurin 21.0.12 ran `mvn -f backend/pom.xml test` successfully (4 tests, 0 failures).
+
+### P22 — Rules as versioned, cited data
+- **Status:** IN PROGRESS · **Owner:** orchestrator
+- **Rationale:** Assessment-year changes must be data revisions that preserve old-return reproducibility, not silent code edits.
+- **Acceptance criteria:** versioned rule-set schema with assessment year, regime, effective window, source citation, and supersession; pure engine signature includes rule-set version; uncited values remain `TODO(verify)`.
+- **Evidence:** `backend/src/main/java/com/wapsi/backend/rules/`, `backend/src/main/resources/rules/2026-27-new.json`; the loader/model now compile under the isolated Java 21/Maven run, while pure-engine integration and citation verification remain open.
+
+### P23 — Append-only fact ledger and projections
+- **Status:** IN PROGRESS · **Owner:** orchestrator
+- **Rationale:** Provenance, correction reasons, undo, and rebuildable returns should be storage properties of the fact primitive.
+- **Acceptance criteria:** append-only fact events with supersession, confirmation metadata, assessment-year partition key, projection rebuild, and idempotent correction tests.
+- **Evidence:** `backend/src/main/java/com/wapsi/backend/ledger/`, `backend/src/main/resources/db/migration/V1__fact_ledger.sql`, and contract tests; the in-memory ledger test passes under Maven, while PostgreSQL integration remains pending.
+
+### P24 — TypeScript-to-Java conformance vectors
+- **Status:** DONE · **Owner:** orchestrator
+- **Rationale:** The existing 74-case TypeScript suite is the behavioral contract for a Java engine port; divergence is a blocker, never a tuning choice.
+- **Acceptance criteria:** language-neutral JSON vectors in `fixtures/golden/`, Java runner passes them to the paise, and both engines run the same vectors in verification.
+- **Evidence:** `fixtures/golden/cases.ts`, generated `fixtures/golden/vectors.json`, `fixtures/golden/export.test.ts`, `fixtures/golden/README.md`, and `backend/src/test/java/com/wapsi/backend/engine/GoldenVectorTest.java`; 8 representative vectors pass in both engines.
+
+### P25 — Owned load-test harness
+- **Status:** TODO · **Owner:** orchestrator
+- **Rationale:** The evidence must be reproducible on systems we own and must assert correctness, not just liveness.
+- **Acceptance criteria:** one-command local runner with environment definition, synthetic seed generator, end-to-end journeys, latency/error/RPS output, and correctness assertions.
+- **Evidence:** pending `loadtest/` scripts and `docs/scale/reproduce.md`.
+
+### P26 — Scale evidence artifacts
+- **Status:** TODO · **Owner:** orchestrator
+- **Rationale:** Successes and failures need to be measured together: linearity, degradation, chaos, and soak matter as much as peak throughput.
+- **Acceptance criteria:** six evidence documents under `docs/scale/`, including at least one documented failure and fix; no run targets an external system.
+- **Evidence:** pending load-test runs and reports.
+
+### P27 — Architecture case for adoption
+- **Status:** TODO · **Owner:** orchestrator
+- **Rationale:** A government reviewer needs a portable, evidence-led case with incremental adoption options and limitations stated before discovery.
+- **Acceptance criteria:** `docs/scale/architecture-case.md` follows the six required sections and links every measured artifact while separating citizen experience evidence from technical measurements.
+- **Evidence:** pending architecture case.
 
 ## D. Out of scope for v1 (critics judge the product we meant to build)
 

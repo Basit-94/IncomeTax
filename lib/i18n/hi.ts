@@ -33,6 +33,18 @@ export const hi: Dict = {
     undo: "वापस लें",
   },
 
+  shell: {
+    productName: "Wapsi",
+    productNativeName: "वापसी",
+    subtitle: "जाँच और फाइलिंग का आसान तरीका",
+    independent: "स्वतंत्र प्रोटोटाइप",
+    taxYear: "कर वर्ष 2026-27",
+    language: "भाषा",
+    light: "लाइट",
+    dark: "डार्क",
+    sandbox: "रिव्यू टूल",
+  },
+
   validate: {
     panTooShort: (n: number) => `अभी ${n} अक्षर हैं। PAN में 10 होते हैं।`,
     panShape:
@@ -50,6 +62,7 @@ export const hi: Dict = {
       "यहाँ आने वाले ज़्यादातर लोगों को कुछ देना नहीं होता — उन्हें मिलना होता है। अपना PAN डालें, हम बता देंगे कि क्या रुका है।",
     panLabel: "आपका PAN",
     panHelp: "दस अक्षर, आपके PAN कार्ड से",
+    panPlaceholder: "जैसे, DEMPS4417K",
     check: "देखें मेरा कितना बाकी है",
     orTryAs: "या तीन लोगों में से किसी एक की तरह देखें",
     honestyLink: "यहाँ क्या असली है और क्या बनाया हुआ",
@@ -111,6 +124,7 @@ export const hi: Dict = {
       "नीचे लिखी लगभग हर बात आपके बारे में पहले ही बता दी गई है। इसे पढ़ें, और कुछ ग़लत हो तो हमें बताएँ।",
 
     checkThis: "इसे जाँच लें — भरना नहीं है",
+    factMeaning: "यह पहले से बताई गई बात है, टैक्स का नियम नहीं। इसी से नीचे का हिसाब बनेगा।",
     reportedBy: (reporter: string, date: string) =>
       `${reporter} ने ${date} को विभाग को यह बताया`,
     underIdentifier: (identifier: string) => `पंजीकरण ${identifier}`,
@@ -126,6 +140,8 @@ export const hi: Dict = {
     disputeAmountLabel: "सही रकम",
     disputeReasonLabel: "यह ग़लत क्यों है",
     disputeSave: "इसे ग़लत बताएँ",
+    selfReported: "आप",
+    returnLabel: "आपका रिटर्न",
 
     outcomeOwesNothing: "आपको कुछ नहीं देना है।",
     outcomeRefund: (amount: string) => `${amount} आपको वापस मिलेंगे।`,

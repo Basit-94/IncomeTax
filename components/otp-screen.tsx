@@ -28,15 +28,17 @@ export default function OtpScreen({
   onVerify,
 }: OtpScreenProps) {
   return (
-    <div className="max-w-md mx-auto space-y-8 mt-12 text-center">
+    <div className="surface-panel mx-auto mt-6 max-w-md space-y-8 p-6 text-center sm:mt-12 sm:p-8">
       <div className="space-y-3">
         <div className="w-12 h-12 bg-money-soft text-money rounded-full flex items-center justify-center mx-auto mb-2">
           <UserCheck size={24} />
         </div>
-        <h2 className="text-xl font-bold text-ink">{t.login.portalHeading}</h2>
+        <p className="text-sm font-semibold text-money">{t.shell.productName}</p>
+        <h2 className="text-3xl font-extrabold tracking-tight text-ink">{t.login.portalHeading}</h2>
         <p className="text-xs text-ink-2 leading-relaxed">
-          {t.login.otpSentTo(persona?.mobile || "90000 00000")}
+          {t.login.otpSentTo(persona?.mobile ?? "")}
         </p>
+        <p className="text-xs leading-relaxed text-ink-2">{t.login.weWillWait}</p>
       </div>
 
       {/* Passcode Boxes */}

@@ -37,6 +37,18 @@ export const en = {
     undo: "Undo",
   },
 
+  shell: {
+    productName: "Wapsi",
+    productNativeName: "वापसी",
+    subtitle: "A clearer way to check and file",
+    independent: "Independent prototype",
+    taxYear: "Tax year 2026-27",
+    language: "Language",
+    light: "Light",
+    dark: "Dark",
+    sandbox: "Review tools",
+  },
+
   /**
    * Validation messages. Held to the same rule as everything else: an error
    * names what is wrong and what would be right. "Invalid PAN" is banned — it
@@ -59,6 +71,7 @@ export const en = {
       "Most people who use this have nothing to pay. They are owed. Put in your PAN and we'll tell you what's there.",
     panLabel: "Your PAN",
     panHelp: "Ten characters, from your PAN card",
+    panPlaceholder: "For example, DEMPS4417K",
     check: "Check what's owed to me",
     orTryAs: "Or look around as one of three people",
     honestyLink: "What's real here and what's made up",
@@ -132,6 +145,7 @@ export const en = {
       "Almost everything below was already reported about you. Read it, and tell us if anything is wrong.",
 
     checkThis: "Check this — you don't have to fill it in",
+    factMeaning: "This is a reported fact, not a tax rule. It feeds the calculation below.",
     /** Rule 3: provenance is what makes "just confirm" psychologically possible. */
     reportedBy: (reporter: string, date: string) =>
       `${reporter} reported this to the department on ${date}`,
@@ -148,6 +162,8 @@ export const en = {
     disputeAmountLabel: "The right amount",
     disputeReasonLabel: "Why it's wrong",
     disputeSave: "Flag this as wrong",
+    selfReported: "You",
+    returnLabel: "Your return",
 
     /** Rule 10: one number at the end. */
     outcomeOwesNothing: "You owe nothing.",

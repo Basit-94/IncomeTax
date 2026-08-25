@@ -15,7 +15,6 @@ interface OverviewTabProps {
   lang: Lang;
   t: Dict;
   stampFired: boolean;
-  progressPathRef: React.RefObject<SVGLineElement | null>;
   /** Engine-computed refundOrDue (positive = refund). Never the narrative amount. */
   refundFigure: number;
   handleFixBank: (bank: BankAccount) => void;
@@ -31,19 +30,11 @@ export default function OverviewTab({
   lang,
   t,
   stampFired,
-  progressPathRef,
   refundFigure,
   handleFixBank,
 }: OverviewTabProps) {
   const refund = persona.refund;
   const seqIndex = REFUND_SEQUENCE.indexOf(refund.state);
-  const targetPct =
-    refund.state === "credited"
-      ? 100
-      : seqIndex > 0
-      ? Math.round((seqIndex / (REFUND_SEQUENCE.length - 1)) * 100)
-      : 20;
-
   const openHolds = refund.holds.filter((h) => !h.resolved);
 
   return (
@@ -90,7 +81,7 @@ export default function OverviewTab({
       <div className="grid lg:grid-cols-5 gap-6 items-start">
         {/* LEFT: BANKS */}
         <div className="lg:col-span-3 space-y-6">
-          <div className="bg-white border border-line rounded-xl p-5 space-y-4">
+          <div className="surface-panel space-y-4 p-5">
             <h3 className="text-xs font-mono uppercase tracking-wider text-ink-2 border-b border-line pb-2 font-bold">
               {t.dashboard.verifiedBanks}
             </h3>
@@ -179,7 +170,7 @@ export default function OverviewTab({
         {/* RIGHT: TIMELINE from stored keyed events over REFUND_SEQUENCE */}
         <div className="lg:col-span-2 space-y-6">
           {refund.state !== "not_filed" && (
-            <div className="bg-white border border-line rounded-xl p-5 space-y-6 shadow-sm">
+            <div className="surface-panel space-y-6 p-5">
               <h3 className="text-xs font-mono uppercase tracking-wider text-ink-2 border-b border-line pb-2 font-bold">
                 {t.dashboard.refundTimeline}
               </h3>
@@ -192,18 +183,7 @@ export default function OverviewTab({
 
               <div className="relative pl-6 space-y-6">
                 <div className="absolute left-[7.5px] top-1 bottom-2 w-[2px] bg-line">
-                  <svg className="absolute left-[-0.5px] top-0 bottom-0 w-[3px] h-full overflow-visible pointer-events-none">
-                    <line
-                      ref={progressPathRef}
-                      x1="1.5"
-                      y1="0"
-                      x2="1.5"
-                      y2={`${targetPct}%`}
-                      stroke="var(--color-money)"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                    />
-                  </svg>
+                  <span className="absolute inset-x-0 top-0 h-1/2 rounded-full bg-money" aria-hidden="true" />
                 </div>
 
                 {[...refund.timeline].reverse().map((event) => {

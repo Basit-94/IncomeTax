@@ -7,6 +7,7 @@ import type { Dict } from "../../lib/i18n";
 import { formatMoney } from "../../lib/money";
 import { computeForPersona } from "../../lib/return/compute";
 import type { TaxBreakdown } from "../../lib/engine/types";
+import { localize } from "../mock-i18n";
 
 interface CheckScreenProps {
   persona: Persona;
@@ -107,7 +108,7 @@ export default function CheckScreen({ persona, t, lang, regime }: CheckScreenPro
         {rows.map((f) => (
           <div key={f.id} className="flex items-start justify-between gap-3 text-xs">
             <div className="min-w-0">
-              <span className="block font-medium text-ink truncate">{f.label}</span>
+              <span className="block truncate font-medium text-ink">{localize(f.label, lang)}</span>
               <span className="block text-[0.62rem] font-mono text-ink-3">
                 {f.provenance.statement} · {f.provenance.reporter}
               </span>
@@ -124,11 +125,11 @@ export default function CheckScreen({ persona, t, lang, regime }: CheckScreenPro
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h2 className="text-xl font-bold text-navy tracking-tight">{t.check.heading}</h2>
+        <h2 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">{t.check.heading}</h2>
         <p className="text-sm text-ink-2 leading-relaxed">{t.check.sub}</p>
       </div>
 
-      <div className="bg-white border border-line rounded-xl px-4 divide-y divide-line shadow-sm">
+      <div className="surface-panel divide-y divide-line px-4">
         <Row
           id="gross"
           label={t.check.grossIncome}
@@ -160,7 +161,7 @@ export default function CheckScreen({ persona, t, lang, regime }: CheckScreenPro
               {persona.claims.map((c) => (
                 <div key={c.id} className="flex items-start justify-between gap-3 text-xs">
                   <div className="min-w-0">
-                    <span className="block font-medium text-ink truncate">{c.label}</span>
+                    <span className="block truncate font-medium text-ink">{localize(c.label, lang)}</span>
                     <span className="block text-[0.62rem] font-mono text-ink-3">{c.section}</span>
                   </div>
                   <span className="tabular text-ink font-semibold">{formatMoney(c.amount, lang)}</span>
@@ -190,7 +191,7 @@ export default function CheckScreen({ persona, t, lang, regime }: CheckScreenPro
                   <FileText size={11} className="text-ink-3" />
                   <span className="tabular">
                     {formatMoney(slice.from, lang)}
-                    {" – "}
+                    {" to "}
                     {Number.isFinite(slice.to) ? formatMoney(slice.to, lang) : "∞"}
                   </span>
                   <span className="font-mono text-[0.65rem] bg-paper-2 border border-line rounded px-1">
@@ -238,7 +239,7 @@ export default function CheckScreen({ persona, t, lang, regime }: CheckScreenPro
             {persona.taxPaid.map((tp) => (
               <div key={tp.id} className="flex items-start justify-between gap-3 text-xs">
                 <div className="min-w-0">
-                  <span className="block font-medium text-ink truncate">{tp.label}</span>
+                  <span className="block truncate font-medium text-ink">{localize(tp.label, lang)}</span>
                   <span className="block text-[0.62rem] font-mono text-ink-3">
                     {tp.section} · {tp.provenance.reporter}
                   </span>

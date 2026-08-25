@@ -4,7 +4,6 @@ import Link from "next/link";
 import { m } from "motion/react";
 import { ChevronRight, Sparkles, Cpu, BookOpen } from "lucide-react";
 import type { Dict } from "../lib/i18n";
-import { AnimeLens } from "./lens";
 
 interface LandingProps {
   t: Dict;
@@ -26,18 +25,18 @@ export default function Landing({
   handleCreateCustom,
 }: LandingProps) {
   return (
-    <div className="grid lg:grid-cols-12 gap-8 items-center min-h-[75vh]">
+    <div className="grid items-start gap-10 py-5 lg:grid-cols-12 lg:items-center lg:py-10">
       {/* LEFT COLUMN: TITLE, SUBTITLE, FORM, CITIZENS LIST */}
-      <div className="lg:col-span-7 space-y-8 text-left z-10">
+      <div className="z-10 space-y-8 text-left lg:col-span-7">
         {/* HERO BLOCK */}
         <div className="space-y-4">
           <span className="text-[11px] font-mono text-money bg-money-soft border border-money/20 px-2.5 py-0.5 rounded uppercase tracking-[0.12em] font-semibold">
             {t.landing.badge}
           </span>
-          <h1 className="text-[3.2rem] lg:text-[4rem] font-bold tracking-tight text-ink leading-none font-sans lowercase">
+          <h1 className="font-sans text-5xl font-extrabold leading-none tracking-tight text-ink sm:text-6xl">
             {t.landing.brandTitle}
           </h1>
-          <h2 className="text-[1.6rem] lg:text-[2rem] font-bold tracking-tight text-ink leading-tight font-sans">
+          <h2 className="max-w-2xl font-sans text-2xl font-bold leading-tight tracking-tight text-ink sm:text-3xl">
             {t.landing.question}
           </h2>
           <p className="text-base text-ink-2 leading-relaxed max-w-xl">
@@ -48,10 +47,10 @@ export default function Landing({
         {/* DIRECT PAN LOGIN FORM */}
         <form 
           onSubmit={handlePanSubmit}
-          className="bg-paper-2 border border-line rounded-[12px] p-6 max-w-md shadow-sm hover:shadow-md transition-shadow space-y-4"
+          className="surface-panel max-w-md space-y-5 p-5 sm:p-6"
         >
           <div>
-            <label className="block text-xs font-mono text-ink-2 uppercase tracking-wider mb-2">
+            <label className="mb-2 block text-xs font-mono font-semibold uppercase tracking-wider text-ink-2">
               {t.landing.panLabel}
             </label>
             <div className="relative">
@@ -60,10 +59,10 @@ export default function Landing({
                 value={panInput}
                 onChange={(e) => handlePanInputChange(e.target.value)}
                 maxLength={10}
-                placeholder="e.g. DEMPS4417K"
+                placeholder={t.landing.panPlaceholder}
                 className={`w-full bg-paper-3 border ${
-                  panInputError ? "border-alarm animate-shake" : "border-line focus:border-money"
-                } text-lg font-mono tracking-widest px-4 py-3 rounded-[4px] focus:outline-none transition-colors text-center uppercase text-ink`}
+                  panInputError ? "border-alarm" : "border-line focus:border-money"
+                } rounded-xl px-4 py-3 text-center font-mono text-lg uppercase tracking-widest text-ink transition-colors focus:outline-none`}
               />
             </div>
             {panInputError ? (
@@ -77,9 +76,9 @@ export default function Landing({
             )}
           </div>
 
-          <button
-            type="submit"
-            className="w-full bg-money-soft hover:translate-y-[1px] hover:translate-x-[1px] text-money text-sm font-semibold py-3 px-4 rounded-[4px] border border-line transition-transform flex items-center justify-center space-x-2 cursor-pointer"
+            <button
+              type="submit"
+            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-money px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-money-deep"
           >
             <span>{t.landing.check}</span>
             <ChevronRight size={16} />
@@ -92,12 +91,13 @@ export default function Landing({
             {t.landing.orTryAs}
           </span>
 
-          <div className="grid md:grid-cols-2 gap-4 max-w-2xl">
+          <div className="grid max-w-2xl gap-4 md:grid-cols-2">
             {/* Sunita Devi */}
-            <m.div
+            <m.button
+              type="button"
               whileHover={{ y: 2, x: 2 }}
               onClick={() => handleSelectPersona("sunita")}
-              className="bg-paper-2 border border-line rounded-[12px] p-5 hover:border-money/50 cursor-pointer transition-all flex flex-col justify-between space-y-4 group hover:shadow-sm"
+              className="group flex flex-col justify-between space-y-4 rounded-card border border-line bg-paper-2 p-5 text-left transition-all hover:border-money/50 hover:shadow-sm"
             >
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -114,13 +114,14 @@ export default function Landing({
                 <span>{t.personas.sunita.action}</span>
                 <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </div>
-            </m.div>
+            </m.button>
 
             {/* Rakesh Kumar */}
-            <m.div
+            <m.button
+              type="button"
               whileHover={{ y: 2, x: 2 }}
               onClick={() => handleSelectPersona("rakesh")}
-              className="bg-paper-2 border border-line rounded-[12px] p-5 hover:border-money/50 cursor-pointer transition-all flex flex-col justify-between space-y-4 group hover:shadow-sm"
+              className="group flex flex-col justify-between space-y-4 rounded-card border border-line bg-paper-2 p-5 text-left transition-all hover:border-money/50 hover:shadow-sm"
             >
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -137,13 +138,14 @@ export default function Landing({
                 <span>{t.personas.rakesh.action}</span>
                 <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </div>
-            </m.div>
+            </m.button>
 
             {/* Priya Sharma */}
-            <m.div
+            <m.button
+              type="button"
               whileHover={{ y: 2, x: 2 }}
               onClick={() => handleSelectPersona("priya")}
-              className="bg-paper-2 border border-line rounded-[12px] p-5 hover:border-money/50 cursor-pointer transition-all flex flex-col justify-between space-y-4 group hover:shadow-sm"
+              className="group flex flex-col justify-between space-y-4 rounded-card border border-line bg-paper-2 p-5 text-left transition-all hover:border-money/50 hover:shadow-sm"
             >
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -160,13 +162,14 @@ export default function Landing({
                 <span>{t.personas.priya.action}</span>
                 <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </div>
-            </m.div>
+            </m.button>
 
             {/* Seeded Custom Sandbox Mode Card */}
-            <m.div
+            <m.button
+              type="button"
               whileHover={{ y: 2, x: 2 }}
               onClick={handleCreateCustom}
-              className="bg-paper-2 border border-line rounded-[12px] p-5 hover:border-money hover:bg-paper-2/40 cursor-pointer transition-all flex flex-col justify-between space-y-4 group hover:shadow-sm"
+              className="group flex flex-col justify-between space-y-4 rounded-card border border-line bg-paper-2 p-5 text-left transition-all hover:border-money hover:shadow-sm"
             >
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -186,29 +189,55 @@ export default function Landing({
                 <span>{t.personas.custom.action}</span>
                 <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </div>
-            </m.div>
+            </m.button>
           </div>
         </div>
 
         {/* Subfooter route links */}
         <div className="flex items-center space-x-6 pt-6 border-t border-line/60 max-w-md">
-          <Link href="/architecture" className="text-xs text-ink-2 hover:text-[#FF4B4B] hover:underline flex items-center gap-1 font-mono">
+          <Link href="/architecture" className="flex items-center gap-1 text-xs font-mono text-ink-2 hover:text-money hover:underline">
             <Cpu size={12} />
             <span>{t.landing.architectureLink}</span>
           </Link>
-          <Link href="/honesty" className="text-xs text-ink-2 hover:text-[#FF4B4B] hover:underline flex items-center gap-1 font-mono">
+          <Link href="/honesty" className="flex items-center gap-1 text-xs font-mono text-ink-2 hover:text-money hover:underline">
             <BookOpen size={12} />
             <span>{t.landing.honestyLink}</span>
           </Link>
         </div>
       </div>
 
-      {/* RIGHT COLUMN: ANIMATED 3D CAMERA LENS GRAPHIC */}
-      <div className="lg:col-span-5 hidden lg:flex items-center justify-center relative">
-        <div className="relative">
-          <AnimeLens />
-          <div className="absolute bottom-[-20px] right-4 text-[10px] font-mono text-ink-3">
-            {t.landing.lensCaption}
+      {/* RIGHT COLUMN: a quiet preview of the evidence-led flow */}
+      <div className="hidden lg:col-span-5 lg:block">
+        <div className="surface-panel relative overflow-hidden p-7">
+          <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-money-soft blur-3xl" aria-hidden="true" />
+          <div className="relative space-y-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-money">{t.shell.productName}</p>
+                <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-ink">{t.file.checkThis}</h2>
+              </div>
+              <span className="rounded-full border border-money/25 bg-money-soft px-3 py-1 text-xs font-semibold text-money">{t.flow.facts}</span>
+            </div>
+
+            <div className="space-y-3">
+              {[t.groups.moneyIn, t.groups.taxPaid, t.groups.deductionsClaimed].map((label, index) => (
+                <div key={label} className="fact-card flex items-center justify-between gap-4 p-4">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className={`h-3 w-3 shrink-0 rounded-full ${index === 2 ? "bg-warn" : "bg-money"}`} aria-hidden="true" />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-ink">{label}</p>
+                      <p className="mt-1 text-xs text-ink-2">{t.groups.fromWhere}</p>
+                    </div>
+                  </div>
+                  <span className="skeleton h-4 w-20 shrink-0 rounded-full" aria-hidden="true" />
+                </div>
+              ))}
+            </div>
+
+            <div className="recovery-callout p-4 text-sm leading-relaxed text-ink-2">
+              <span className="font-bold text-ink">{t.flow.confirmedCount(2, 3)}</span>
+              <span className="ml-1">{t.file.subheading}</span>
+            </div>
           </div>
         </div>
       </div>

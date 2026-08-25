@@ -26,6 +26,9 @@ export interface Correction {
   id: string;
   factId: string;
   field: CorrectionField;
+  /** Which reported money collection this correction belongs to. Old saved
+   * corrections omit this and remain income facts by default. */
+  target?: "fact" | "tax" | "claim";
   previous: number | boolean;
   next: number | boolean;
   /** The citizen's own words for why the prefill is wrong. */
@@ -86,10 +89,26 @@ function replayFacts(baselineFacts: IncomeFact[], corrections: Correction[]): In
   return facts;
 }
 
+function replayAmounts<T extends { id: string; amount: number }>(
+  baseline: T[],
+  corrections: Correction[],
+  target: "tax" | "claim",
+): T[] {
+  let values = baseline.map((value) => ({ ...value }));
+  for (const c of corrections) {
+    if (c.reverted || c.target !== target || c.field !== "amount") continue;
+    const index = values.findIndex((value) => value.id === c.factId);
+    if (index !== -1) values[index] = { ...values[index], amount: c.next as number };
+  }
+  return values;
+}
+
 export function effectivePersona(state: ReturnState): Persona {
   return {
     ...state.baselinePersona,
     facts: replayFacts(state.baselinePersona.facts, state.corrections),
+    taxPaid: replayAmounts(state.baselinePersona.taxPaid, state.corrections, "tax"),
+    claims: replayAmounts(state.baselinePersona.claims, state.corrections, "claim"),
   };
 }
 
@@ -100,10 +119,7 @@ export function applyCorrection(state: ReturnState, correction: Correction): Ret
   return {
     ...state,
     corrections,
-    persona: {
-      ...state.baselinePersona,
-      facts: replayFacts(state.baselinePersona.facts, corrections),
-    },
+    persona: effectivePersona({ ...state, corrections }),
   };
 }
 
@@ -120,10 +136,7 @@ export function revertCorrection(state: ReturnState, correctionId: string): Retu
   return {
     ...state,
     corrections,
-    persona: {
-      ...state.baselinePersona,
-      facts: replayFacts(state.baselinePersona.facts, corrections),
-    },
+    persona: effectivePersona({ ...state, corrections }),
   };
 }
 

@@ -30,6 +30,18 @@ export const ta: Dict = {
     undo: "மீட்டமை",
   },
 
+  shell: {
+    productName: "Wapsi",
+    productNativeName: "வாப்சி",
+    subtitle: "சரிபார்த்து தாக்கல் செய்ய தெளிவான வழி",
+    independent: "சுயாதீன முன்மாதிரி",
+    taxYear: "வரி ஆண்டு 2026-27",
+    language: "மொழி",
+    light: "வெளிச்சம்",
+    dark: "இருள்",
+    sandbox: "மதிப்பாய்வு கருவிகள்",
+  },
+
   validate: {
     panTooShort: (n: number) => `இப்போது ${n} எழுத்துகள். PAN-இல் 10 இருக்கும்.`,
     panShape:
@@ -48,6 +60,7 @@ export const ta: Dict = {
       "இங்கு வருபவர்களில் பெரும்பாலானோர் எதுவும் செலுத்த வேண்டியதில்லை — அவர்களுக்குத்தான் திரும்பக் கிடைக்க வேண்டும். உங்கள் PAN-ஐ உள்ளிடுங்கள், என்ன நிற்கிறது என்று சொல்கிறோம்.",
     panLabel: "உங்கள் PAN",
     panHelp: "உங்கள் PAN அட்டையில் உள்ள பத்து எழுத்துகள்",
+    panPlaceholder: "எடுத்துக்காட்டு, DEMPS4417K",
     check: "எனக்கு எவ்வளவு வர வேண்டும் என்று பாருங்கள்",
     orTryAs: "அல்லது மூன்று நபர்களில் ஒருவராகப் பார்க்கலாம்",
     honestyLink: "இதில் எது உண்மை, எது கற்பனை",
@@ -110,6 +123,7 @@ export const ta: Dict = {
       "கீழே உள்ள கிட்டத்தட்ட எல்லாமே உங்களைப் பற்றி ஏற்கனவே தெரிவிக்கப்பட்டவை. படித்துப் பாருங்கள், தவறு இருந்தால் சொல்லுங்கள்.",
 
     checkThis: "இதைச் சரிபாருங்கள் — நிரப்ப வேண்டியதில்லை",
+    factMeaning: "இது ஏற்கனவே தெரிவிக்கப்பட்ட உண்மை, வரி விதி அல்ல. கீழே உள்ள கணக்கு இதைப் பயன்படுத்தும்.",
     reportedBy: (reporter: string, date: string) =>
       `${reporter} இதை ${date} அன்று துறைக்குத் தெரிவித்தது`,
     underIdentifier: (identifier: string) => `பதிவு ${identifier}`,
@@ -125,6 +139,8 @@ export const ta: Dict = {
     disputeAmountLabel: "சரியான தொகை",
     disputeReasonLabel: "இது ஏன் தவறு",
     disputeSave: "இதைத் தவறு என்று குறியிடு",
+    selfReported: "நீங்கள்",
+    returnLabel: "உங்கள் அறிக்கை",
 
     outcomeOwesNothing: "நீங்கள் எதுவும் செலுத்த வேண்டியதில்லை.",
     outcomeRefund: (amount: string) =>

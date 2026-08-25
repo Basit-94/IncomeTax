@@ -3,19 +3,16 @@
 @font-face {
   font-family: DIN;
   src: url(../fonts/DINish[slnt,wdth,wght].woff2) format("woff2");
-  font-variation-settings: "wdth" 125;
+  font-variation-settings: "wdth" 112;
   font-weight: 100 900;
   font-stretch: 50% 125%;
   font-style: oblique 0deg 12deg;
   font-display: swap;
 }
 
-/*
-  Wapsi design tokens.
-*/
-
+/* Wapsi service tokens. Light is the default because a financial review needs
+   high contrast, paper-like surfaces and less visual noise than the old portal. */
 @theme {
-  /* Anime.js & Design.md theme tokens */
   --color-accent: var(--primary-accent);
   --color-accent-soft: var(--primary-accent-soft);
   --color-background: var(--bg-color);
@@ -24,38 +21,6 @@
   --color-text: var(--text-color);
   --color-muted: var(--muted-color);
   --color-border: var(--border-color);
-
-  /* Black hex values */
-  --hex-black-1: #252423;
-  --hex-black-2: #252423;
-  --hex-black-3: #252423;
-  --hex-black-4: #262422;
-  --hex-black-5: #262422;
-  --hex-black-6: #262422;
-  --hex-black-7: #262422;
-  --hex-black-8: #262422;
-
-  /* White hex values */
-  --hex-white-1: #f6f4f2;
-  --hex-white-2: #cccac8;
-  --hex-white-3: #85827e;
-  --hex-white-4: #706d6a;
-  --hex-white-5: #5b5855;
-  --hex-white-6: #4a4745;
-  --hex-white-7: #3b3936;
-  --hex-white-8: #2c2a28;
-
-  /* Red hex values */
-  --hex-red-1: #ff4b4b;
-  --hex-red-2: #d44343;
-  --hex-red-3: #883534;
-  --hex-red-4: #723130;
-  --hex-red-5: #5c2d2c;
-  --hex-red-6: #4b2a29;
-  --hex-red-7: #3c2726;
-  --hex-red-8: #2c2523;
-
-  /* Semantic overrides for app layout */
   --color-paper: var(--bg-color);
   --color-paper-2: var(--surface-color);
   --color-paper-3: var(--input-color);
@@ -63,101 +28,82 @@
   --color-ink-2: var(--muted-color);
   --color-ink-3: var(--subtle-color);
   --color-line: var(--border-color);
-
-  /* Overrides for Tailwind built-in colors to support dark mode layout directly */
+  --color-money: var(--primary-accent);
+  --color-money-deep: var(--primary-accent-deep);
+  --color-money-soft: var(--accent-soft-bg);
+  --color-warn: #9a5a00;
+  --color-warn-deep: #754300;
+  --color-warn-soft: #fff3d8;
+  --color-alarm: #b42318;
+  --color-alarm-soft: #fde9e7;
+  --color-navy: var(--text-color);
+  --color-navy-light: var(--primary-accent);
+  --color-navy-dark: var(--navy-dark-override);
   --color-white: var(--white-override);
   --color-slate-50: var(--slate-50-override);
   --color-slate-100: var(--slate-100-override);
   --color-slate-200: var(--slate-200-override);
   --color-slate-300: var(--slate-300-override);
   --color-slate-700: var(--slate-700-override);
-
-  /* Re-mapping green money colors to Red Anime.js accent colors */
-  --color-money: var(--color-accent);
-  --color-money-deep: var(--hex-red-2);
-  --color-money-soft: var(--accent-soft-bg);
-
-  /* Re-mapping alarm/warning colors to align with palette */
-  --color-warn: #e0833b;
-  --color-warn-deep: #b35d25;
-  --color-warn-soft: var(--accent-soft-bg);
-  
-  --color-alarm: var(--color-accent);
-  --color-alarm-soft: var(--hex-red-8);
-
-  /* Navy branding */
-  --color-navy: var(--primary-accent);
-  --color-navy-light: var(--primary-accent-deep);
-  --color-navy-dark: var(--navy-dark-override);
-
-  --font-sans: DIN, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-
-  --text-hero: 4rem;
-  --text-hero--line-height: 1.1;
-  --text-hero--letter-spacing: -0.022em;
-
+  --font-sans: DIN, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Devanagari", "Noto Sans Tamil", sans-serif;
+  --text-hero: 3.8rem;
+  --text-hero--line-height: 1.04;
+  --text-hero--letter-spacing: -0.03em;
   --radius-card: var(--card-radius);
 }
 
 @layer base {
   :root {
-    /* Default: Dark Theme */
-    --bg-color: #252423;
-    --surface-color: #302E2D;
-    --input-color: #353432;
-    --text-color: #F6F4F2;
-    --muted-color: #B4B1AF;
-    --subtle-color: #706d6a;
-    --border-color: #615E5B;
-    --accent-soft-bg: #4b2a29;
-    
-    --white-override: #302E2D;
-    --slate-50-override: #252423;
-    --slate-100-override: #353432;
-    --slate-200-override: #3b3936;
-    --slate-300-override: #5b5855;
-    --slate-700-override: #f6f4f2;
-    
-    --navy-dark-override: #1e1d1c;
-    --card-radius: 12px;
-    --primary-accent: #FF4B4B;
-    --primary-accent-deep: #d44343;
-    --primary-accent-soft: #4b2a29;
+    --bg-color: #f3f7f8;
+    --surface-color: #ffffff;
+    --input-color: #fbfdfd;
+    --text-color: #163047;
+    --muted-color: #536d7b;
+    --subtle-color: #78909c;
+    --border-color: #d3e1e4;
+    --accent-soft-bg: #e2f2ef;
+    --white-override: #ffffff;
+    --slate-50-override: #f7fafb;
+    --slate-100-override: #eef4f5;
+    --slate-200-override: #dce8ea;
+    --slate-300-override: #9eb2b9;
+    --slate-700-override: #163047;
+    --navy-dark-override: #10283c;
+    --card-radius: 16px;
+    --primary-accent: #0f766e;
+    --primary-accent-deep: #0b5f59;
+    --primary-accent-soft: #e2f2ef;
   }
 
-  .light-mode {
-    /* Light Theme Overrides (Inspired by Design.md & Ice-cool theme) */
-    --bg-color: #F3F7FA;          /* Ice-cool page background */
-    --surface-color: #FFFFFF;     /* White card overlays */
-    --input-color: #FFFFFF;       /* White input fields */
-    --text-color: #061B31;        /* Cool navy-black text */
-    --muted-color: #5B697A;       /* Muted slate text */
-    --subtle-color: #8FA0B5;      /* Subtle slate text */
-    --border-color: #D6D9FC;      /* Crisp light indigo borders */
-    --accent-soft-bg: #E2E4FF;    /* Light indigo-soft bg for buttons/accents */
-    
-    --white-override: #FFFFFF;    /* White card background */
-    --slate-50-override: #F3F7FA; /* Match background color */
-    --slate-100-override: #FFFFFF;
-    --slate-200-override: #D6D9FC;
-    --slate-300-override: #5B697A;
-    --slate-700-override: #061B31;
-    
-    --navy-dark-override: #061B31;
-    --card-radius: 6px;
-    --primary-accent: #533AFD;
-    --primary-accent-deep: #061B31;
-    --primary-accent-soft: #E2E4FF;
+  .dark-mode {
+    --bg-color: #12232e;
+    --surface-color: #1b313d;
+    --input-color: #203a47;
+    --text-color: #edf7f6;
+    --muted-color: #b0c9ca;
+    --subtle-color: #86a3a7;
+    --border-color: #3a5962;
+    --accent-soft-bg: #214a48;
+    --white-override: #1b313d;
+    --slate-50-override: #18303c;
+    --slate-100-override: #203a47;
+    --slate-200-override: #2d4a54;
+    --slate-300-override: #66828a;
+    --slate-700-override: #edf7f6;
+    --navy-dark-override: #0d1b24;
+    --primary-accent: #61c7b9;
+    --primary-accent-deep: #8ae0d3;
+    --primary-accent-soft: #214a48;
   }
 
   html {
-    /* 17px base: this product is used by people in their 60s and 70s on small
-       screens, and 16px is the floor at which iOS stops zooming inputs. */
     font-size: 17px;
     -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
   }
 
   body {
+    min-width: 320px;
     background-color: var(--color-paper);
     color: var(--color-ink);
     font-family: var(--font-sans);
@@ -165,39 +111,134 @@
     text-wrap: pretty;
   }
 
-  h1,
-  h2,
-  h3 {
-    text-wrap: balance;
-    letter-spacing: -0.018em;
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
   }
 
-  /* Money figures should never wrap or shift as they update. */
+  button {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+    letter-spacing: -0.02em;
+  }
+
   .tabular {
     font-variant-numeric: tabular-nums;
   }
 
   :focus-visible {
-    outline: 2.5px solid var(--color-money);
-    outline-offset: 2px;
-    border-radius: 3px;
+    outline: 3px solid var(--color-money);
+    outline-offset: 3px;
+    border-radius: 5px;
+  }
+}
+
+@layer components {
+  .service-shell {
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.6), transparent 22rem),
+      var(--color-paper);
   }
 
-  /* Interaction states — hover translate(0.125rem) */
-  .anime-hover {
-    transition: transform 0.1s ease-out, opacity 0.1s ease-out;
-  }
-  .anime-hover:hover {
-    transform: translate(0.125rem, 0.125rem);
-    opacity: 1;
+  .surface-panel {
+    background: var(--color-paper-2);
+    border: 1px solid var(--color-line);
+    border-radius: var(--card-radius);
+    box-shadow: 0 14px 35px rgb(22 48 71 / 0.06);
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.01ms !important;
-      transition-duration: 0.01ms !important;
-    }
+  .fact-card {
+    background: var(--color-paper-2);
+    border: 1px solid var(--color-line);
+    border-radius: var(--card-radius);
+    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  }
+
+  .fact-card:hover {
+    border-color: color-mix(in srgb, var(--color-money) 45%, var(--color-line));
+    box-shadow: 0 10px 24px rgb(22 48 71 / 0.07);
+  }
+
+  .fact-card[data-confirmed="true"] {
+    border-color: color-mix(in srgb, var(--color-money) 58%, var(--color-line));
+  }
+
+  .provenance-badge {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid color-mix(in srgb, var(--color-money) 24%, var(--color-line));
+    border-radius: 999px;
+    background: var(--color-money-soft);
+    color: var(--color-ink-2);
+    padding: 0.3rem 0.6rem;
+    font-size: 0.72rem;
+    line-height: 1.2;
+  }
+
+  .skeleton {
+    background: linear-gradient(100deg, var(--color-slate-100) 20%, var(--color-slate-200) 40%, var(--color-slate-100) 60%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.8s ease-in-out infinite;
+  }
+
+  .error-callout {
+    border: 1px solid color-mix(in srgb, var(--color-alarm) 30%, var(--color-line));
+    background: var(--color-alarm-soft);
+    border-radius: var(--card-radius);
+  }
+
+  .recovery-callout {
+    border: 1px solid color-mix(in srgb, var(--color-money) 28%, var(--color-line));
+    background: var(--color-money-soft);
+    border-radius: var(--card-radius);
+  }
+
+  .disclosure {
+    border: 1px solid var(--color-line);
+    border-radius: 12px;
+    background: var(--color-slate-50);
+  }
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (max-width: 767px) {
+  html {
+    font-size: 16px;
+  }
+
+  .service-shell {
+    background: var(--color-paper);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

@@ -133,3 +133,119 @@ Next.js docs read per AGENTS.md before this work: node_modules/next/dist/docs/01
 - **Expected effect:** Step 4 critics may begin against a running product.
 - **Risk:** none identified
 - **Result:** DONE
+
+## [2026-08-25 06:40] orchestrator
+- **Action:** MODIFY | CREATE
+- **Target:** lib/personas.ts, lib/engine/__tests__/tax.test.ts
+- **Intent:** Resolve the known engine-vs-narrative refund drift for Priya and Rakesh by making the engine-backed breakdown the canonical amount and pinning both fixture values with regression tests.
+- **Why:** P12. A displayed refund must not disagree with the arithmetic source used by the filing flow; correctness outranks narrative convenience.
+- **Expected effect:** Priya's tracker amount becomes 34800 and Rakesh's becomes 94118 under the current explicitly TODO(verify)-flagged engine; no legal constants are changed.
+- **Risk:** Existing narrative copy and hold amounts may still contain intentionally separate amounts at stake; those need a consistency pass after the fixture update.
+- **Result:** IN PROGRESS
+## [2026-08-25 06:52] orchestrator
+- **Action:** MODIFY | CREATE
+- **Target:** app/globals.css, app/layout.tsx, components/disclaimer.tsx, plan.md
+- **Intent:** Replace the dark red dashboard token set with a calm light-first trust palette, responsive type and spacing, resilient focus states, disclosure surfaces, and a localized prototype disclaimer shell.
+- **Why:** P13. The current shell makes the product feel like a hostile portal and keeps the visual thesis invisible; the design system must land before screen work composes on it.
+- **Expected effect:** Light mode is the default, dark mode remains available, one teal action accent is shared across the product, cards and controls share a deliberate radius rule, and the persistent disclaimer is sourced from the locale dictionary.
+- **Risk:** Existing Tailwind semantic utilities and docs routes depend on the old variables; preserve variable names and verify every route with typecheck and build.
+- **Result:** IN PROGRESS## [2026-08-25 12:25] orchestrator
+- **Action:** REVIEW
+- **Target:** running Wapsi prototype at localhost:3100; critics/round-1-*.md
+- **Intent:** Run the bounded first persona-critic round required by Workstream 1 before beginning Workstream 2.
+- **Why:** The additive brief says scale work must not interrupt the UX differentiator; the eight-screen path needs independent first-timer, optimiser, and CA scrutiny first.
+- **Expected effect:** Three read-only critics exercise the full path, each in at least one non-English locale, with fixed 12-point verdicts and evidence.
+- **Risk:** Critics may expose blockers that require returning to Workstream 1 before scale artifacts can be claimed.## [2026-08-25 12:42] orchestrator
+- **Action:** REVIEW
+- **Target:** critics/{first-timer,optimiser,ca}-round1.md; localhost:3100
+- **Intent:** Complete the first bounded persona-critic round against the redesigned path.
+- **Why:** P16 and the Workstream 1 convergence guard require three sequential read-only critics with exactly 12 scored items each.
+- **Expected effect:** Each critic leaves a reproducible report and a verdict even when an item is not exercised.
+- **Risk:** Residual source-traceability, jargon, and verification-status gaps may block convergence.
+- **Result:** DONE — all three critics completed within the bounded run; all returned NOT SATISFIED. A: 7 PASS / 3 FAIL / 2 BLOCKED. B: 7 PASS / 3 FAIL / 2 BLOCKED. C: 6 PASS / 4 FAIL / 2 BLOCKED. Highest shared fix: add an expandable source/calculation trail and visible TODO(verify) status without collapsing the progressive-disclosure path. C also found English custom-fact labels in Hindi.## [2026-08-25 13:05] orchestrator
+- **Action:** CREATE | MODIFY
+- **Target:** docs/scale/capacity-model.md; plan.md (P20-P27)
+- **Intent:** Start Workstream 2 after the required first critic round by recording a reproducible, source-backed capacity target and the staged architecture/evidence plan.
+- **Why:** The additive brief requires capacity modeling before tuning or benchmarking, and forbids unsourced official-portal performance claims.
+- **Expected effect:** A skeptical reviewer can reproduce the peak derivation, see which inputs are assumptions, and distinguish the Wapsi design target from any claim about government infrastructure.
+- **Risk:** Published figures may describe different scopes or years; keep the 2024 deadline dataset separate from annual FY totals and label all extrapolations.## [2026-08-25 13:12] orchestrator
+- **Action:** CREATE | MODIFY
+- **Target:** docs/scale/capacity-model.md; plan.md
+- **Intent:** Record Workstream 2's first capacity target and add P20-P27 as additive plan items without deleting Workstream 1.
+- **Why:** The source-backed workload must exist before backend tuning or benchmark claims.
+- **Expected effect:** The design target is reproducible: 1,834 submissions/s and 55,020 total requests/s under explicitly labeled assumptions, with SLOs and failure modes.
+- **Risk:** The final-week share and read:write ratio are assumptions; they must not be presented as observations in later reports.
+- **Result:** DONE — capacity model created with official PIB sources, arithmetic, sensitivity table, SLOs, failure modes, and explicit non-claims; P20 marked DONE and P21-P27 staged as TODO.## [2026-08-25 13:25] orchestrator
+- **Action:** CREATE
+- **Target:** backend/; docs/scale/money-audit.md
+- **Intent:** Establish the Spring Boot/Java 21 backend boundary and exact integer-paise Money foundation, while auditing the existing TypeScript money path before porting any arithmetic.
+- **Why:** Workstream 2 B.1 makes money representation the first backend dependency; the frontend remains Next.js and the current TS path must be documented rather than silently treated as exact.
+- **Expected effect:** Java code has one currency value object and explicit rounding policy; the audit records that the current formatter has no float APIs but the app/engine still use whole-rupee numbers and decimal rate numbers.
+- **Risk:** Java and Maven are not installed in this workspace, so source-level verification may be possible while compile/test verification remains blocked and must be reported honestly.## [2026-08-25 13:42] orchestrator
+- **Action:** CREATE
+- **Target:** backend/src/main/java/com/wapsi/backend/rules/; backend/src/main/resources/rules/2026-27-new.json; plan.md P22
+- **Intent:** Move the first rule set out of compiled constants into a versioned, citation-carrying data document and define the Java model that will load it.
+- **Why:** Workstream 2 B.2 requires old returns to remain reproducible and amendments to be data changes rather than deploy-time constants.
+- **Expected effect:** A rule-set version names its assessment year, regime, effective window, supersession, source citation, slabs, deductions, and rounding policy; every current rule row carries TODO(verify) until checked against primary law.
+- **Risk:** The resource values mirror the existing prototype engine only as a transition fixture; no equivalence or legal correctness is claimed before the Java loader and golden vectors are verified.## [2026-08-25 13:58] orchestrator
+- **Action:** CREATE | MODIFY
+- **Target:** backend/src/main/java/com/wapsi/backend/rules/; backend/src/main/resources/rules/2026-27-new.json; plan.md
+- **Intent:** Add the versioned rule-set model, JSON resource, paise conversion, and classpath loader.
+- **Why:** P22 / Workstream 2 B.2: rule changes must be data revisions with citations and a versioned pure-engine input.
+- **Expected effect:** A rule set carries assessment year, regime, effective dates, supersession, rounding policy, slabs, and source citations; all current rows remain TODO(verify).
+- **Risk:** The resource mirrors prototype constants and is not a legal validation; Java compilation is still blocked by the missing local toolchain.
+- **Result:** DONE for source scaffolding — data model, loader, and one 2026-27 new-regime resource created; P22 remains IN PROGRESS pending build and engine integration.## [2026-08-25 14:10] orchestrator
+- **Action:** CREATE
+- **Target:** backend/src/main/java/com/wapsi/backend/ledger/; backend/src/main/resources/db/migration/V1__fact_ledger.sql; plan.md P23
+- **Intent:** Implement the append-only fact-ledger shape and a rebuildable in-memory projection contract, with assessment-year partitioning in the SQL migration.
+- **Why:** Workstream 2 B.3 makes provenance, confirmation, correction reasons, undo, and source-of-truth projections properties of storage rather than UI-only behavior.
+- **Expected effect:** A correction appends a new event that supersedes an earlier fact; no event update is needed to rebuild current facts; the schema is partition-ready by assessment year.
+- **Risk:** The in-memory adapter is a contract/test double, not production persistence; PostgreSQL and transaction integration remain pending.## [2026-08-25 14:22] orchestrator
+- **Action:** CREATE | MODIFY
+- **Target:** backend/src/main/java/com/wapsi/backend/ledger/; backend/src/main/resources/db/migration/V1__fact_ledger.sql; plan.md
+- **Intent:** Add the append-only fact event model, projection contract, in-memory adapter, and PostgreSQL assessment-year partition migration.
+- **Why:** P23 / Workstream 2 B.3: a correction must append a superseding fact and a return projection must be rebuildable from ledger history.
+- **Expected effect:** History preserves original reporter/value/reason/confirmation metadata; currentProjection removes only superseded events; schema has a partition key and indexes.
+- **Risk:** No PostgreSQL or Java runtime is installed here, so tests are source-level artifacts until the backend toolchain is available.
+- **Result:** DONE for model and contract scaffolding; P23 remains IN PROGRESS pending database integration and executable verification.
+## [2026-08-25 14:44] orchestrator
+- **Action:** MODIFY
+- **Target:** critics/ca-round1.md; plan.md P12-P15/P21-P23; docs/AUDIT.md
+- **Intent:** Reconcile critic counts, close already-delivered Workstream 1 evidence, and add a current-state audit addendum after backend verification became available.
+- **Why:** Append-only evidence must agree with the reports and the plan must not leave completed work marked TODO. The historical audit needs a dated boundary so its pre-rebuild findings are not mistaken for the current tree.
+- **Expected effect:** Critic C counts match its twelve rows; P12-P15 close with file-backed evidence; P21-P23 record executable Maven/JDK verification where available; the audit separates historical findings from the current implementation.
+- **Risk:** The critic findings remain unresolved; closing implementation milestones does not imply critic convergence or legal correctness.
+
+## [2026-08-25 14:47] orchestrator
+- **Action:** VERIFY | MODIFY
+- **Target:** backend/pom.xml; plan.md; docs/AUDIT.md; critics/ca-round1.md evidence accounting
+- **Result:** DONE for reconciliation. Java 21 + isolated Maven 3.9.11 ran mvn -f backend/pom.xml test: 4 tests, 0 failures. P12-P15 are now marked DONE with file-backed evidence. P21 is DONE; P22 and P23 remain IN PROGRESS for engine/vector and database integration. Critic C round 1 has 5 PASS, 5 FAIL, 2 BLOCKED across its twelve rows; the earlier 6/4/2 log summary was a counting error. No critic verdict changed: A/B/C remain NOT SATISFIED.
+
+## [2026-08-25 14:52] orchestrator
+- **Action:** CREATE
+- **Target:** fixtures/golden/; backend/src/main/java/com/wapsi/backend/engine/; backend/src/main/resources/rules/2026-27-old.json; rule metadata records
+- **Intent:** Establish the language-neutral TypeScript vector contract and a Java 21 exact-paise engine that consumes a selected versioned rule set.
+- **Why:** P24 requires behavioral equivalence before throughput work; the Java engine must not acquire copied constants or an independent rounding policy.
+- **Expected effect:** Representative boundary, regime, age-band, deduction, credit, and top-slab cases can be generated from TypeScript and checked by Java.
+- **Risk:** Vectors preserve the prototype's explicitly labelled TODO(verify) behavior; passing them is conformance, not legal validation. Any mismatch will be reported and fixed before claiming equivalence.
+
+## [2026-08-25 14:59] orchestrator
+- **Action:** MODIFY
+- **Target:** fixtures/golden/README.md; plan.md P24
+- **Intent:** Record the conformance contract and close P24 only after the Java runner passes the generated vectors.
+- **Why:** A reproducible vector command and a precise boundary around what passed are required before any load evidence is credible.
+- **Expected effect:** Reviewers can regenerate the JSON and run the Java comparison from the repository root; the plan distinguishes behavioral equivalence from legal validation.
+- **Risk:** The vector set is representative, not exhaustive; the prototype's TODO(verify) tax semantics remain intentionally preserved.
+
+## [2026-08-25 15:02] orchestrator
+- **Action:** VERIFY | MODIFY
+- **Target:** fixtures/golden/; backend/src/main/java/com/wapsi/backend/engine/; backend/src/test/java/com/wapsi/backend/engine/GoldenVectorTest.java; plan.md P24
+- **Result:** DONE. The focused exporter generated 8 vectors; mvn -q -f backend/pom.xml test passed all 5 backend tests (Money, ledger, and 8-vector conformance runner in one test). P24 is closed for this representative set. This is prototype behavioral conformance only; legal rule verification remains open.
+
+## [2026-08-25 15:05] orchestrator
+- **Action:** MODIFY
+- **Target:** docs/AUDIT.md; log.md
+- **Intent:** Refresh the current-state verification count after adding the golden-vector exporter test.
+- **Why:** Audit evidence must match the command that was actually run.
+- **Expected effect:** The addendum reports 75 Vitest tests across 6 files while preserving the historical baseline boundary.
+- **Risk:** None to product behavior; documentation only.

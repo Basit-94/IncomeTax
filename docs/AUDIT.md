@@ -1,8 +1,13 @@
-# Wapsi — Codebase Audit (Step 1)
+# Wapsi — Codebase Audit (Step 1, historical baseline)
 
 **Audited:** 25 August 2026 · orchestrator · against working tree at commit state before rebuild.
 **Stack:** Next.js 16.3.2 / React 19.2.8 / TypeScript 7.0.2 / Tailwind 4.3.3; `zod` 4.4.3, `motion` 13.1.1, `animejs` 4.5.0, `lucide-react` installed.
 **Verification run:** `npm run typecheck` ✅ exit 0 · `npm run build` ✅ static build of `/`, `/architecture`, `/honesty` succeeds.
+
+> This audit records the pre-rebuild state at commit `ffa6edb`. The current
+> working tree has since added the pure engine, versioned return state, shared
+> provenance cards, and the eight-screen visual redesign. See the addendum at
+> the end for current verification evidence.
 
 ---
 
@@ -96,3 +101,15 @@ No test framework in `package.json`; none of the three "Deliberately not used" e
 ## Bottom line
 
 The repo contains a strong *story* (types, personas, i18n discipline, honesty doctrine, synthetic safety) wrapped around a weak *engine* (one wrong formula in a 2,900-line component) and an untestable architecture. Priority order: (1) extract a real, tested, pure tax engine; (2) decompose page.tsx so anything can change safely; (3) restore i18n integrity; (4) then redesign the flow around the simplification thesis.
+
+## Addendum — current working tree (25 August 2026)
+
+This addendum is intentionally separate from the historical audit above. The rebuild has since added:
+
+- a tested pure return engine and versioned return-state helpers; `npm run typecheck`, `npx vitest run` (6 files, 75 tests), and `npm run build` pass;
+- a light-first service shell, shared `FactRow` provenance primitive, confirm/correct/undo replay, and all eight before/after screenshots in `docs/redesign/`;
+- first-round critic reports in `critics/`, with all three verdicts honestly recorded as **NOT SATISFIED** because source trails, rule-status disclosure, acronym teaching, and residual custom-flow translations remain open;
+- a source-backed workload model in `docs/scale/capacity-model.md` using official PIB publications plus explicitly labelled assumptions, without contacting the official portal;
+- a Spring Boot/Java 21 backend foundation with integer-paise `Money`, versioned rules resource scaffolding, and append-only fact-ledger contracts. The isolated Maven run passed 4 backend tests; production database integration and TypeScript-to-Java conformance vectors are not yet complete.
+
+The current tree therefore addresses the historical engine/testing and presentation defects, but it is not yet a legally verified tax engine, production backend, or critic-converged product.

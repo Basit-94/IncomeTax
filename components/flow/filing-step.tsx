@@ -80,7 +80,7 @@ export default function FilingStep({
           <CheckCircle2 size={48} className="text-money mx-auto" />
         </m.div>
         <div className="space-y-2">
-          <h2 className="text-2xl font-extrabold text-navy tracking-tight">{t.filing.stepFiled}</h2>
+          <h2 className="text-3xl font-extrabold tracking-tight text-ink">{t.filing.stepFiled}</h2>
           <p className="text-base font-bold text-ink">{t.filing.ackHeading}</p>
           <p className="text-sm text-ink-2 leading-relaxed text-left">{t.filing.ackBody}</p>
           <p className="text-xs text-ink-3 leading-relaxed text-left">{t.filing.ackNext}</p>
@@ -98,12 +98,13 @@ export default function FilingStep({
   return (
     <div className="space-y-6 max-w-md mx-auto">
       <div className="space-y-1">
-        <h2 className="text-xl font-bold text-navy tracking-tight">{t.filing.heading}</h2>
+        <p className="text-sm font-semibold text-money">{t.flow.file}</p>
+        <h2 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">{t.filing.heading}</h2>
         <p className="text-sm text-ink-2 leading-relaxed">{t.filing.sub}</p>
       </div>
 
       {/* FINAL FIGURE — one number, engine-computed */}
-      <div className="bg-money-soft border border-money/20 rounded-xl p-5 space-y-1">
+      <div className="recovery-callout space-y-1 p-5">
         <span className="block text-xs font-mono uppercase tracking-wider text-money font-semibold">
           {b.refundOrDue >= 0 ? t.check.refundDue : t.check.balanceDue}
         </span>
@@ -114,7 +115,7 @@ export default function FilingStep({
 
       {/* NAMED-STAGE PROGRESSION */}
       {stage !== "idle" && (
-        <div className="bg-white border border-line rounded-xl p-4 space-y-2">
+        <div className="surface-panel space-y-3 p-4">
           {(
             [
               ["checking", t.filing.stepChecking],
@@ -154,7 +155,7 @@ export default function FilingStep({
 
       {/* ERROR LADDER: cause + next action, nothing generic */}
       {stage === "error" && (
-        <div className="bg-alarm-soft/40 border border-alarm/30 rounded-xl p-4 space-y-2">
+        <div className="error-callout space-y-2 p-4">
           <p className="text-sm font-semibold text-alarm">{t.filing.errorCause}</p>
           <p className="text-xs text-ink-2 leading-relaxed">{t.filing.errorAction}</p>
           <button
@@ -176,7 +177,7 @@ export default function FilingStep({
           </button>
           <button
             onClick={beginFiling}
-            className="flex-[2] bg-navy hover:bg-navy-light text-paper font-semibold py-3 px-4 rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2 text-sm"
+            className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-money px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-money-deep"
           >
             <FileCheck size={16} />
             <span>{t.file.confirmAndFile}</span>

@@ -1,0 +1,16 @@
+C:\Coding\Tax Filing\IncomeTax\backend\src\main\java\com\wapsi\backend\engine\TaxClaim.java
+C:\Coding\Tax Filing\IncomeTax\backend\src\main\java\com\wapsi\backend\engine\TaxEngine.java
+C:\Coding\Tax Filing\IncomeTax\backend\src\main\java\com\wapsi\backend\engine\TaxFact.java
+C:\Coding\Tax Filing\IncomeTax\backend\src\main\java\com\wapsi\backend\engine\TaxInput.java
+C:\Coding\Tax Filing\IncomeTax\backend\src\main\java\com\wapsi\backend\engine\TaxResult.java
+C:\Coding\Tax Filing\IncomeTax\backend\src\main\java\com\wapsi\backend\engine\TaxSlab.java
+C:\Coding\Tax Filing\IncomeTax\backend\src\main\java\com\wapsi\backend\ledger\FactLedger.java
+C:\Coding\Tax Filing\IncomeTax\backend\src\main\java\com\wapsi\backend\ledger\FactLedgerEvent.java
+C:\Coding\Tax Filing\IncomeTax\backend\src\main\java\com\wapsi\backend\ledger\InMemoryFactLedger.java
+C:\Coding\Tax Filing\IncomeTax\backend\src\main\java\com\wapsi\backend\money\Money.java
+C:\Coding\Tax Filing\IncomeTax\backend\src\main\java\com\wapsi\backend\rules\RuleSetDefinition.java
+C:\Coding\Tax Filing\IncomeTax\backend\src\main\java\com\wapsi\backend\rules\RuleSetDocument.java
+C:\Coding\Tax Filing\IncomeTax\backend\src\main\java\com\wapsi\backend\rules\RuleSetLoader.java
+C:\Coding\Tax Filing\IncomeTax\backend\src\main\java\com\wapsi\backend\rules\RuleSlab.java
+C:\Coding\Tax Filing\IncomeTax\backend\src\main\java\com\wapsi\backend\rules\RuleSlabDocument.java
+C:\Coding\Tax Filing\IncomeTax\backend\src\main\java\com\wapsi\backend\WapsiApplication.java
