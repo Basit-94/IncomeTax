@@ -212,6 +212,7 @@ app/(flow)/              screens consume store + engine; no computation inline
 ### P21 — Spring Boot backend and exact money foundation
 - **Status:** DONE · **Owner:** orchestrator
 - **Rationale:** The backend must make exact money and stateless, asynchronous processing executable rather than aspirational; the Next.js frontend remains the product surface.
+- **Stack rationale:** Spring Boot on Java 21 keeps exact `BigDecimal`/paise arithmetic and virtual-thread I/O available without reactive complexity; Spring Batch is a natural fit for seasonal batch-shaped work; the JVM is familiar to government/financial adopters; Next.js remains the citizen-facing frontend.
 - **Acceptance criteria:** Java 21+ Spring Boot service with a single `Money` value object using integer paise or scaled `BigDecimal`; no currency `double` or `float`; explicit rounding tests; local run instructions.
 - **Evidence:** `backend/pom.xml`, `backend/src/main/java/com/wapsi/backend/money/Money.java`, `backend/src/test/.../MoneyTest.java`, and `docs/scale/money-audit.md`; isolated Maven 3.9.11 with Temurin 21.0.12 ran `mvn -f backend/pom.xml test` successfully (4 tests, 0 failures).
 
@@ -219,7 +220,7 @@ app/(flow)/              screens consume store + engine; no computation inline
 - **Status:** IN PROGRESS · **Owner:** orchestrator
 - **Rationale:** Assessment-year changes must be data revisions that preserve old-return reproducibility, not silent code edits.
 - **Acceptance criteria:** versioned rule-set schema with assessment year, regime, effective window, source citation, and supersession; pure engine signature includes rule-set version; uncited values remain `TODO(verify)`.
-- **Evidence:** `backend/src/main/java/com/wapsi/backend/rules/`, `backend/src/main/resources/rules/2026-27-new.json`; the loader/model now compile under the isolated Java 21/Maven run, while pure-engine integration and citation verification remain open.
+- **Evidence:** `backend/src/main/java/com/wapsi/backend/rules/`, `backend/src/main/resources/rules/2026-27-new.json`, `2026-27-old.json`; the loader/model and pure engine now pass the 72-vector Java runner, while primary-source citation verification remains open.
 
 ### P23 — Append-only fact ledger and projections
 - **Status:** IN PROGRESS · **Owner:** orchestrator
@@ -243,13 +244,13 @@ app/(flow)/              screens consume store + engine; no computation inline
 - **Status:** TODO · **Owner:** orchestrator
 - **Rationale:** Successes and failures need to be measured together: linearity, degradation, chaos, and soak matter as much as peak throughput.
 - **Acceptance criteria:** six evidence documents under `docs/scale/`, including at least one documented failure and fix; no run targets an external system.
-- **Evidence:** pending load-test runs and reports.
+- **Evidence:** `docs/scale/load-test-report.md`, `linearity.md`, `capacity-plan.md`, `degradation.md`, `chaos.md`, and `soak.md` now exist; only the single-process smoke is measured, so P26 remains open.
 
 ### P27 — Architecture case for adoption
-- **Status:** TODO · **Owner:** orchestrator
+- **Status:** IN PROGRESS · **Owner:** orchestrator
 - **Rationale:** A government reviewer needs a portable, evidence-led case with incremental adoption options and limitations stated before discovery.
 - **Acceptance criteria:** `docs/scale/architecture-case.md` follows the six required sections and links every measured artifact while separating citizen experience evidence from technical measurements.
-- **Evidence:** pending architecture case.
+- **Evidence:** `docs/scale/architecture-case.md` links the evidence set and states measured results, non-claims, transfer options, and limitations; it remains a draft while P26 experiments are unrun.
 
 ## D. Out of scope for v1 (critics judge the product we meant to build)
 

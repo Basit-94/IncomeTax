@@ -278,3 +278,29 @@ Next.js docs read per AGENTS.md before this work: node_modules/next/dist/docs/01
 - **Action:** VERIFY | MODIFY
 - **Target:** P24/P25 fixtures, loadtest/, docs/scale/reproduce.md, docs/scale/load-test-report.md, plan.md
 - **Result:** P24 now covers 72 generated vectors and mvn -q -f backend/pom.xml test passes all 6 backend tests, including the Java runner over every vector. P25 DONE: the owned runner's 20-request/4-concurrency smoke completed 20/20 journeys with 0 correctness failures, 2/2 duplicate checks, 77.27 logical RPS, p50 8.83 ms, p95/p99 229.21 ms. The first runner attempt failed on Windows path quoting and is documented with the fix. No national-capacity claim is made.
+
+## [2026-08-25 15:24] orchestrator
+- **Action:** CREATE | MODIFY
+- **Target:** docs/scale/linearity.md; docs/scale/capacity-plan.md; docs/scale/degradation.md; docs/scale/chaos.md; docs/scale/soak.md; docs/scale/architecture-case.md; plan.md P26-P27
+- **Intent:** Deliver the complete evidence-document set with measured results separated from experiments that have not been run.
+- **Why:** Part D and Part E require six named artifacts, a reproducible report, and an adoption case; credibility depends on publishing gaps instead of filling them with estimates.
+- **Expected effect:** Reviewers see the smoke measurement, the known harness failure/fix, the exact unrun experiments, and the portable architecture decisions in one linked set.
+- **Risk:** P26/P27 remain IN PROGRESS because the local single-process smoke run cannot establish multi-pod, database, chaos, or soak conclusions.
+
+## [2026-08-25 15:29] orchestrator
+- **Action:** CREATE | MODIFY
+- **Target:** docs/scale/linearity.md; capacity-plan.md; degradation.md; chaos.md; soak.md; architecture-case.md; plan.md P26-P27
+- **Result:** DONE for the evidence-package draft. All six named Part D artifacts and the Part E case now exist with the local smoke result and the known harness failure/fix linked; unrun multi-pod, overload, chaos, and 24-hour experiments are explicitly marked NOT RUN. P26 remains TODO and P27 remains IN PROGRESS; no scale or adoption conclusion is overstated.
+
+## [2026-08-25 15:33] orchestrator
+- **Action:** MODIFY
+- **Target:** plan.md P21-P23
+- **Intent:** Align plan rationale and evidence with the completed Java conformance and explicitly record the selected Spring/JVM architecture.
+- **Why:** The brief requires the stack rationale in the plan; P22 evidence must no longer say engine integration is pending after the 72-vector runner passed.
+- **Expected effect:** Plan records BigDecimal/paise exactness, Java 21 virtual-thread suitability, Spring Batch seasonal fit, JVM adoption context, and Next.js retention; open citation/database work remains visible.
+- **Risk:** Documentation only; does not promote the prototype to legal or production status.
+
+## [2026-08-25 15:35] orchestrator
+- **Action:** MODIFY
+- **Target:** plan.md P21-P23
+- **Result:** DONE for plan alignment. Stack rationale is recorded; P22 now cites the passing pure Java engine/conformance runner and leaves only primary-source rule verification open. P23 still correctly leaves PostgreSQL integration open.
