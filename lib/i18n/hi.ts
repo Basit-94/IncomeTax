@@ -29,6 +29,8 @@ export const hi: Dict = {
     close: "बंद करें",
     saveAndGoOn: "सहेजें और आगे बढ़ें",
     loading: "एक पल",
+    logOut: "लॉग आउट",
+    undo: "वापस लें",
   },
 
   validate: {
@@ -51,6 +53,10 @@ export const hi: Dict = {
     check: "देखें मेरा कितना बाकी है",
     orTryAs: "या तीन लोगों में से किसी एक की तरह देखें",
     honestyLink: "यहाँ क्या असली है और क्या बनाया हुआ",
+    architectureLink: "तकनीकी बनावट",
+    badge: "सरल रिटर्न, प्रमाणित",
+    brandTitle: "refund engine.",
+    lensCaption: "LENS / WAVEFORM SIMULATION v4.5.0",
   },
 
   personas: {
@@ -90,6 +96,13 @@ export const hi: Dict = {
     resendIn: (seconds: number) => `${seconds} सेकंड बाद दोबारा माँग सकते हैं`,
     mockNotice:
       "यह एक प्रोटोटाइप है, इसलिए कोड स्क्रीन पर ही दिखाया गया है। कोई असली संदेश नहीं भेजा जाता।",
+    portalHeading: "ई-फाइलिंग सत्यापन",
+    incorrectCode: "यह कोड मेल नहीं खाता। छह अंक फिर जाँचें और दोबारा कोशिश करें।",
+    prototypeBox: "प्रोटोटाइप OTP सत्यापन",
+    mockCodeLabel: "मॉक कोड",
+    autoFill: "मेरे लिए भर दें",
+    verifyEnter: "सत्यापित करें और अंदर जाएँ",
+    draftRestored: (time: string) => `आपका पूर्व-सहेजा ड्राफ़्ट ${time} बजे का लौटा दिया गया। कुछ नहीं गया।`,
   },
 
   file: {
@@ -131,6 +144,133 @@ export const hi: Dict = {
     voiceSimulated:
       "यह ब्राउज़र सुन नहीं सकता, इसलिए यह एक उदाहरण है, आपकी आवाज़ नहीं।",
     voiceError: "यह सुनाई नहीं दिया। आप लिखकर बता सकते हैं — कुछ नहीं जाएगा।",
+    dictate: "बोलकर बताएँ",
+    disputePlaceholder: "यह आंकड़ा ग़लत क्यों है — लिखें या बोलें।",
+    disputeDefaultReason: "बताया गया आंकड़ा ग़लत है",
+  },
+
+  flow: {
+    facts: "आपका पैसा",
+    deductions: "वो पैसा जो आप माँग सकते हैं",
+    regime: "पुराना या नया",
+    check: "जाँच लें",
+    file: "भेज दें",
+    stepOf: (n: number, total: number) => `कदम ${n}, कुल ${total}`,
+    confirmedCount: (done: number, total: number) => `${total} में से ${done} पक्के`,
+    allConfirmed: "सब ठीक-ठाक है।",
+    undoOne: "यह सुधार वापस लें",
+    correctedTo: (amount: string) => `आप कहते हैं यह ${amount} होना चाहिए`,
+  },
+
+  groups: {
+    moneyIn: "आने वाला पैसा",
+    taxPaid: "आपके लिए पहले ही कटा टैक्स",
+    deductionsClaimed: "आपके दावे",
+    fromWhere: "यह कहाँ से आया",
+    addIncome: "आय जोड़ें",
+  },
+
+  deductions: {
+    heading: "वो पैसा जो आप माँग सकते हैं",
+    sub: "ये अपने आप नहीं होते। आपको हाँ कहनी पड़ती है — पर तभी, जब सच हो।",
+    claimedHeading: "आपके रिटर्न में पहले से",
+    worthUpTo: (amount: string) => `आपकी कर-योग्य आय में से ${amount} तक कम हो सकता है`,
+    worthWhatYouPaid: "उतना ही जितना आपने असल में दिया — सही रकम भरें",
+    askRentQ: "क्या आप रहने का किराया देते हैं?",
+    askRentWhy:
+      "अगर आप किराया देते हैं और आपके नियोक्ता से मकान किराया भत्ता नहीं मिलता, तो उसका कुछ हिस्सा आपकी कर-योग्य आय में से घट सकता है।",
+    askHealthQ: "क्या आप परिवार का स्वास्थ्य बीमा ख़ुद चुकाते हैं?",
+    askHealthWhy:
+      "परिवार का बीमा रखने के लिए आप जो चुकाते हैं, वह आपकी कर-योग्य आय में से घट सकता है।",
+    ask80cQ: "क्या आप भविष्य निधि, जीवन बीमा या स्कूल की फीस में पैसा लगाते हैं?",
+    ask80cWhy:
+      "ऐसी दीर्घकालिक बचत एक संयुक्त सीमा में गिनी जाती है, और जितना आप डालते हैं उतना कर-योग्य आय में से घटता है।",
+    claimIt: "हाँ — यह माँगूँगा/माँगूँगी",
+    skipIt: "नहीं — छोड़ दें",
+    amountLabel: "कितना",
+    evidenceAttached: "साक्ष्य संलग्न",
+    evidenceMissing: "साक्ष्य ग़ायब",
+    newRegimeNoEffect:
+      "नए रेजीम में इस दावे से कुछ नहीं बदलता — वहाँ यह मान्य नहीं है।",
+    oldRegimeSaves: (amount: string) =>
+      `पुराने रेजीम में यह आपका टैक्स करीब ${amount} घटा देता।`,
+  },
+
+  regime: {
+    heading: "टैक्स दो तरह से लग सकता है। एक आपके लिए बेहतर है।",
+    newRegimeName: "नया रेजीम",
+    oldRegimeName: "पुराना रेजीम",
+    refundLabel: "आपको वापस मिलेगा",
+    dueLabel: "देना बाकी",
+    recommendedBadge: "आपके लिए बेहतर",
+    reasoningOldDeductions: (x: string, y: string) =>
+      `आपके दावे कुल ${x} के हैं, इसलिए पुराना रेजीम आपको करीब ${y} बचा देता है।`,
+    reasoningNewDefault: (y: string) =>
+      `आपके दावे यहाँ ज़्यादा फ़र्क़ नहीं लाते, इसलिए नए रेजीम की कम दरें आपको करीब ${y} बचा देती हैं।`,
+    acceptRecommendation: "मेरे लिए जो बेहतर है, वही चुनें",
+    overrideNote: "आप कोई भी चुन सकते हैं। यहाँ कुछ छिपा या बंद नहीं है।",
+  },
+
+  check: {
+    heading: "पूरा रिटर्न, एक ही पन्ने पर",
+    sub: "हर आंकड़ा कहीं से आया है। कोई भी पंक्ति खोलें और ठीक-ठीक देखें कि कहाँ से।",
+    grossIncome: "जो कुछ आया",
+    standardDeduction: "मानक कटौती",
+    deductionsLine: "आपके दावे",
+    taxableIncome: "जिस पर टैक्स असल में लगता है",
+    slabTax: "किसी राहत से पहले का टैक्स",
+    rebate87A: "छूट जो इसका कुछ हिस्सा रद्द करती है",
+    cess: "स्वास्थ्य और शिक्षा उपकर",
+    totalTax: "साल का कुल टैक्स",
+    tdsCredits: "पहले ही आपसे कट चुका",
+    refundDue: "आपको वापस मिलेगा",
+    balanceDue: "देना बाकी",
+    openLine: "देखें यह कहाँ से आया",
+    closeLine: "छिपाएँ",
+    explainGross: "आपके द्वारा जाँचे-पक्के किए गए तथ्यों को जोड़कर।",
+    explainStd: (amount: string) =>
+      `वेतनभोगी हर व्यक्ति को ${amount} बिना माँगे ही घटने मिलते हैं।`,
+    explainDeductions: "सिर्फ़ वही दावे गिने जाते हैं जो इस रेजीम में मान्य हैं।",
+    explainDisallowed: (section: string) =>
+      `${section} इस रेजीम में मान्य नहीं है, इसलिए यहाँ इसका कुछ असर नहीं।`,
+    explainTaxable: "जो आया, उसमें से मानक कटौती और आपके दावे घटाकर।",
+    explainSlab: "टैक्स फालियों में लगता है — हर फाल पर अपनी दर।",
+    explainRebate: (amount: string) =>
+      `एक सीमा तक ज़्यादातर टैक्स रद्द हो जाता है — यहाँ ${amount}।`,
+    explainCess: "हर राहत के बाद ऊपर से लगने वाला छोटा प्रतिशत।",
+    explainTds: "पैसा आप तक पहुँचने से पहले, जिसने भी दिया, उसने काट लिया।",
+    fromFacts: "इन्हीं तथ्यों से:",
+    ratePct: (rate: number) => {
+      const pct = Math.round(rate * 1000) / 10;
+      return `${pct}%`;
+    },
+  },
+
+  filing: {
+    heading: "भेजने के लिए तैयार?",
+    sub: "एक बार चला गया तो बदलने का रास्ता है दोबारा फाइल करना। एक बार और देख लें, फिर भेजें।",
+    stepChecking: "हिसाब जाँच रहे हैं…",
+    stepSealing: "आंकड़े सील कर रहे हैं…",
+    stepFiled: "दाखिल हो गया।",
+    ackHeading: "जमा हो गया।",
+    ackBody:
+      "आपका रिटर्न आज से गिना जाएगा। एक कदम बाकी है: पुष्टि करना कि यह आप ही हैं। तब तक यह भेजा हुआ नहीं गिना जाएगा।",
+    ackNext:
+      "उसके बाद ट्रैकर ठीक-ठीक दिखाएगा कि आपका पैसा कहाँ है और क्या उसे रोक सकता है।",
+    errorCause: "जाँच का कदम इसलिए रुका क्योंकि सैंडबॉक्स का fault स्विच चालू है।",
+    errorAction:
+      "रिव्यूअर ड्रॉअर में 'Trigger API Gateway Timeout' बंद करें, फिर दोबारा भेजें। कुछ नहीं गया।",
+    retry: "फिर भेजने की कोशिश करें",
+  },
+
+  timeline: {
+    filed: "आपने अपना रिटर्न भेज दिया।",
+    verified: "आपने पुष्टि की कि यह आप ही हैं। रिटर्न यहीं से गिना जाएगा।",
+    in_queue: "उस सप्ताह दाखिल हुई बाकी सब चीज़ों के साथ कतार में।",
+    under_review: "अभी कोई इसे देख रहा है।",
+    determined: "तय हो गया — इतना आपको वापस मिलेगा।",
+    sent_to_bank: "आपके बैंक को भेज दिया।",
+    credited: "आपके खाते में।",
   },
 
   refund: {
@@ -160,6 +300,8 @@ export const hi: Dict = {
     bankFailedHeading: "आपने जो खाता चुना है, उसमें पैसा नहीं जा सकता।",
     bankMergedInto: (bank: string) => `वह शाखा अब ${bank} का हिस्सा है`,
     useThisAccount: "इसके बजाय यहाँ भेजें",
+    resolvedHold: "निपट गया — अब कुछ नहीं रोकता।",
+    stampFiled: "दाखिल",
   },
 
   notices: {
@@ -209,6 +351,12 @@ export const hi: Dict = {
     responseDraft: "जवाब का बयान (प्रारूप)",
     dictateStatement: "बोलकर दर्ज करें",
     sendResponse: "जवाब भेजें",
+    filingStatusLabel: "फाइलिंग स्थिति",
+    bankValidated: "सत्यापित",
+    bankUnderProcess: "जाँच चल रही है",
+    bankFailed: "असफल",
+    staleIfscHold: "यह बैंक कोड अब कहीं नहीं जाता।",
+    switchToNewIfsc: (ifsc: string) => `नए कोड पर बदलें (${ifsc})`,
   },
 
   footer: {

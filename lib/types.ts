@@ -16,6 +16,9 @@ export type Lang = "en" | "hi" | "ta";
 
 export type PersonaId = "sunita" | "rakesh" | "priya";
 
+/** Sandbox-generated citizens are not one of the seeded personas. */
+export type CustomPersonaId = "custom";
+
 export type ReporterKind =
   | "employer"
   | "bank"
@@ -151,11 +154,28 @@ export interface RefundHold {
   resolved: boolean;
 }
 
+/**
+ * Canonical timeline headlines, stored as KEYS in persisted data so a saved
+ * history renders in the reader's language. Narrative events seeded with the
+ * personas carry their own prose and omit this key.
+ */
+export type TimelineKey =
+  | "filed"
+  | "verified"
+  | "in_queue"
+  | "under_review"
+  | "determined"
+  | "sent_to_bank"
+  | "credited";
+
 export interface TimelineEvent {
   id: string;
   on: string;
   state: RefundState;
-  headline: string;
+  /** i18n dictionary key — preferred over `headline` when present. */
+  headlineKey?: TimelineKey;
+  /** Literal narrative prose (seeded events); rendered via localize fallback. */
+  headline?: string;
   /** Who moved it — the department, a bank, or the citizen. */
   actor: "department" | "bank" | "citizen" | "reporter";
   detail?: string;
@@ -223,7 +243,8 @@ export interface Notice {
 /* ----------------------------------------------------------------- personas */
 
 export interface Persona {
-  id: PersonaId;
+  /** A seeded persona id, or "custom" for sandbox-generated citizens. */
+  id: PersonaId | CustomPersonaId;
   name: string;
   age: number;
   city: string;

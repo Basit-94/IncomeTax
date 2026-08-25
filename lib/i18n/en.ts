@@ -33,6 +33,8 @@ export const en = {
     /** Never "Submit". The button says what happens. */
     saveAndGoOn: "Save and go on",
     loading: "Just a moment",
+    logOut: "Log out",
+    undo: "Undo",
   },
 
   /**
@@ -60,6 +62,10 @@ export const en = {
     check: "Check what's owed to me",
     orTryAs: "Or look around as one of three people",
     honestyLink: "What's real here and what's made up",
+    architectureLink: "Technical architecture",
+    badge: "Simplified tax return, proven live",
+    brandTitle: "refund engine.",
+    lensCaption: "LENS / WAVEFORM SIMULATION v4.5.0",
   },
 
   /**
@@ -109,6 +115,14 @@ export const en = {
     resendIn: (seconds: number) => `You can ask for another in ${seconds}s`,
     mockNotice:
       "This is a prototype, so the code is shown on screen. No real message is sent.",
+    portalHeading: "e-Filing verification",
+    incorrectCode: "That code doesn't match. Check the six digits and try again.",
+    prototypeBox: "Prototype OTP validation",
+    mockCodeLabel: "Mock code",
+    autoFill: "Fill it in for me",
+    verifyEnter: "Verify and go in",
+    /** Shown when a saved draft was found and reopened. */
+    draftRestored: (time: string) => `Your draft was restored from ${time}. Nothing was lost.`,
   },
 
   file: {
@@ -154,6 +168,138 @@ export const en = {
     /** Shown when we fall back to a canned line. Saying so is the whole point. */
     voiceSimulated: "This browser can't listen, so this is an example, not your voice.",
     voiceError: "That didn't come through. You can type instead — nothing is lost.",
+    dictate: "Dictate (voice)",
+    disputePlaceholder: "Say or type why this figure is wrong.",
+    disputeDefaultReason: "The reported figure is wrong",
+  },
+
+  /**
+   * The filing flow's step names and review-screen furniture. Steps are named
+   * for the citizen's intent ("Your money"), never the portal's structure
+   * ("PART A/B/C", schedule numbers).
+   */
+  flow: {
+    facts: "Your money",
+    deductions: "Money you can claim",
+    regime: "Old or new",
+    check: "Check it",
+    file: "Send it in",
+    stepOf: (n: number, total: number) => `Step ${n} of ${total}`,
+    confirmedCount: (done: number, total: number) => `${done} of ${total} confirmed`,
+    allConfirmed: "Everything checks out.",
+    undoOne: "Take this correction back",
+    correctedTo: (amount: string) => `You say it should be ${amount}`,
+  },
+
+  groups: {
+    moneyIn: "Money coming in",
+    taxPaid: "Tax already paid for you",
+    deductionsClaimed: "Deductions you claim",
+    fromWhere: "Where this came from",
+    addIncome: "Add income",
+  },
+
+  deductions: {
+    heading: "Money you can claim",
+    sub: "These don't happen by themselves. You say yes — but only if they're true.",
+    claimedHeading: "Already in your return",
+    worthUpTo: (amount: string) => `Worth up to ${amount} off your taxable income`,
+    worthWhatYouPaid: "Worth what you actually paid — claim the real figure",
+    askRentQ: "Did you pay rent for where you live?",
+    askRentWhy:
+      "If you pay rent and your employer doesn't give you a house-rent allowance, part of it can come off your taxable income.",
+    askHealthQ: "Do you pay for health insurance that covers your family?",
+    askHealthWhy:
+      "What you pay to keep your family insured can come off your taxable income.",
+    ask80cQ: "Do you put money into provident fund, life insurance, or school tuition?",
+    ask80cWhy:
+      "Long-term savings like these count towards one combined limit, and whatever you put in comes off your taxable income.",
+    claimIt: "Yes — claim this",
+    skipIt: "No — skip this one",
+    amountLabel: "How much",
+    evidenceAttached: "Evidence attached",
+    evidenceMissing: "Evidence missing",
+    newRegimeNoEffect:
+      "Under the new regime this claim changes nothing — it isn't allowed there.",
+    oldRegimeSaves: (amount: string) =>
+      `Under the old regime it would cut your tax by about ${amount}.`,
+  },
+
+  regime: {
+    heading: "There are two ways to be taxed. One is better for you.",
+    newRegimeName: "New regime",
+    oldRegimeName: "Old regime",
+    refundLabel: "Comes back to you",
+    dueLabel: "Left to pay",
+    recommendedBadge: "Better for you",
+    reasoningOldDeductions: (x: string, y: string) =>
+      `Your deductions come to ${x}, so the old regime saves you about ${y}.`,
+    reasoningNewDefault: (y: string) =>
+      `Your deductions wouldn't help much either way, so the new regime's lower rates save you about ${y}.`,
+    acceptRecommendation: "Go with what's better for me",
+    overrideNote: "You can pick either one. Nothing here is hidden or locked.",
+  },
+
+  check: {
+    heading: "The whole return, on one page",
+    sub: "Every number came from somewhere. Open any line to see exactly where.",
+    grossIncome: "Everything that came in",
+    standardDeduction: "Standard deduction",
+    deductionsLine: "Claims you made",
+    taxableIncome: "Income tax actually applies to",
+    slabTax: "Tax before any relief",
+    rebate87A: "Rebate cancelling some of it",
+    cess: "Health-and-education addition",
+    totalTax: "Total tax for the year",
+    tdsCredits: "Already taken from you",
+    refundDue: "Comes back to you",
+    balanceDue: "Left to pay",
+    openLine: "Show where this came from",
+    closeLine: "Hide",
+    explainGross: "Added up from the facts you reviewed and confirmed.",
+    explainStd: (amount: string) =>
+      `Everyone with salary income gets ${amount} off without claiming anything.`,
+    explainDeductions: "Only claims this regime allows are counted.",
+    explainDisallowed: (section: string) =>
+      `${section} isn't allowed under this regime, so it does nothing here.`,
+    explainTaxable: "What came in, minus the standard deduction and your claims.",
+    explainSlab: "Tax works in slices — each slice of income at its own rate.",
+    explainRebate: (amount: string) =>
+      `Below a threshold most of the tax is cancelled — ${amount} of it here.`,
+    explainCess: "A small percentage added on top, after every relief.",
+    explainTds: "Taken out before money reached you, by whoever paid you.",
+    fromFacts: "From these facts:",
+    ratePct: (rate: number) => {
+      const pct = Math.round(rate * 1000) / 10;
+      return `${pct}%`;
+    },
+  },
+
+  filing: {
+    heading: "Ready to send this in?",
+    sub: "Once it's gone, a change means filing again. Look once more, then send.",
+    stepChecking: "Checking arithmetic…",
+    stepSealing: "Sealing figures…",
+    stepFiled: "Filed.",
+    ackHeading: "It's in.",
+    ackBody:
+      "Your return counts from today. One step remains: confirming it's really you when asked. Until then it counts as unsent.",
+    ackNext:
+      "After that, the tracker shows exactly where your money is and what could hold it up.",
+    errorCause: "The checking step failed because the sandbox fault switch is on.",
+    errorAction:
+      "Turn off 'Trigger API Gateway Timeout' in the reviewer drawer, then send again. Nothing was lost.",
+    retry: "Try sending again",
+  },
+
+  timeline: {
+    filed: "You sent your return in.",
+    verified: "You confirmed it was you. The return counts from here.",
+    in_queue: "In the queue with everything else filed that week.",
+    under_review: "Someone is looking at it now.",
+    determined: "Decided — this is what comes back.",
+    sent_to_bank: "Sent to your bank.",
+    credited: "In your account.",
   },
 
   refund: {
@@ -185,6 +331,8 @@ export const en = {
     bankFailedHeading: "The account you chose can't receive the money.",
     bankMergedInto: (bank: string) => `That branch is now part of ${bank}`,
     useThisAccount: "Send it here instead",
+    resolvedHold: "Sorted — this no longer holds anything up.",
+    stampFiled: "FILED",
   },
 
   notices: {
@@ -236,6 +384,12 @@ export const en = {
     responseDraft: "Response Statement (Draft)",
     dictateStatement: "Dictate Statement",
     sendResponse: "Send Response",
+    filingStatusLabel: "Filing status",
+    bankValidated: "Validated",
+    bankUnderProcess: "Under process",
+    bankFailed: "Failed",
+    staleIfscHold: "This bank code stopped routing.",
+    switchToNewIfsc: (ifsc: string) => `Switch to the new code (${ifsc})`,
   },
 
   footer: {
