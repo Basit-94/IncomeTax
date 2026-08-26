@@ -81,12 +81,16 @@ interface JudgeSandboxBarProps {
   activeVectorId: string | null;
   onSelectVector: (vector: JudgeVector | null) => void;
   onEditFacts: () => void;
+  antigravityUi: boolean;
+  onToggleAntigravityUi: () => void;
 }
 
 export function JudgeSandboxBar({
   activeVectorId,
   onSelectVector,
   onEditFacts,
+  antigravityUi,
+  onToggleAntigravityUi,
 }: JudgeSandboxBarProps) {
   return (
     <div className="bg-navy border-b border-money/20 text-white px-4 py-3 shadow-md z-30 print:hidden">
@@ -133,6 +137,17 @@ export function JudgeSandboxBar({
             }`}
           >
             Real User Mode
+          </button>
+
+          <button
+            onClick={onToggleAntigravityUi}
+            className={`text-xs px-3 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1.5 ${
+              antigravityUi
+                ? "bg-emerald-500 text-slate-950 border border-emerald-450 shadow-md"
+                : "bg-teal-900 text-emerald-300 border border-teal-800 hover:border-teal-705"
+            }`}
+          >
+            <span>✦ Antigravity UI</span>
           </button>
 
           <button

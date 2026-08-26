@@ -58,6 +58,7 @@ import { JudgeSandboxBar, JUDGE_VECTORS, type JudgeVector } from "../components/
 import { QuickEditModal } from "../components/dashboard/quick-edit-modal";
 import RealUserTaxWizard from "../components/flow/real-user-wizard";
 import { useTax } from "../context/TaxReturnContext";
+import InteractiveTaxDashboard from "../components/InteractiveTaxDashboard";
 
 // --- VALIDATION (lib/validate.ts issue codes → dictionary messages) ---
 function panIssueMessage(raw: string, t: ReturnType<typeof dict>): string {
@@ -108,6 +109,7 @@ export default function WapsiPrototype() {
   // --- CORE UI STATES ---
   const [lang, setLang] = useState<Lang>("en");
   const [theme, setTheme] = useState<"dark" | "light">("light");
+  const [antigravityUi, setAntigravityUi] = useState(false);
   const [step, setStep] = useState<"onboarding" | "landing" | "otp" | "dashboard">("onboarding");
   const [activePersonaId, setActivePersonaId] = useState<PersonaId | "custom" | null>(null);
   const [onboardingProfile, setOnboardingProfile] = useState<OnboardingProfile | null>(null);
@@ -1420,9 +1422,15 @@ export default function WapsiPrototype() {
           activeVectorId={activeVectorId}
           onSelectVector={handleSelectJudgeVector}
           onEditFacts={() => setQuickEditActive(true)}
+          antigravityUi={antigravityUi}
+          onToggleAntigravityUi={() => setAntigravityUi(!antigravityUi)}
         />
 
-        {/* --- PORTAL HEADER --- */}
+        {antigravityUi ? (
+          <InteractiveTaxDashboard onLogOut={handleLogOut} />
+        ) : (
+          <>
+            {/* --- PORTAL HEADER --- */}
         <PortalHeader
           lang={lang}
           t={t}
@@ -1884,6 +1892,8 @@ export default function WapsiPrototype() {
             lang={lang}
             t={t}
           />
+        )}
+          </>
         )}
 
       </div>

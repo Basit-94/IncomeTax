@@ -19,7 +19,11 @@ import {
 import { useTax, TaxFact } from '../context/TaxReturnContext';
 import { ItrVReceipt } from './ItrVReceipt';
 
-export default function InteractiveTaxDashboard() {
+interface InteractiveTaxDashboardProps {
+  onLogOut?: () => void;
+}
+
+export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDashboardProps) {
   const { state, dispatch, computation } = useTax();
   const [editingFactId, setEditingFactId] = useState<string | null>(null);
   const [disputeReason, setDisputeReason] = useState<string>('');
@@ -219,6 +223,16 @@ export default function InteractiveTaxDashboard() {
                 )}
               </button>
             </div>
+
+            {/* Log Out button */}
+            {onLogOut && (
+              <button
+                onClick={onLogOut}
+                className="px-3.5 py-1.5 bg-rose-50 border border-rose-200 text-rose-800 hover:bg-rose-100 text-xs font-bold rounded-lg transition cursor-pointer"
+              >
+                Log Out
+              </button>
+            )}
           </div>
         </div>
       </header>
