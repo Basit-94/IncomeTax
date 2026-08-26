@@ -465,3 +465,6 @@ Next.js docs read per AGENTS.md before this work: node_modules/next/dist/docs/01
 
 
 [2026-08-26 16:51] Result - Modified app/page.tsx and components/dashboard/judge-sandbox-bar.tsx to add a new '? Antigravity UI' toggle button in the sandbox bar. When clicked, it renders the newly created InteractiveTaxDashboard component as a full-page replacement, allowing instant before-and-after UI comparisons on the live website. Typecheck, tests, and build all successfully pass.
+
+
+[2026-08-26 17:02] Result - Fixed browser crash when toggling Antigravity UI by replacing all motion.div, motion.h2, and motion.span occurrences inside InteractiveTaxDashboard.tsx with strict m elements. This satisfies LazyMotion strict mode wrapper requirements in app/page.tsx. Typecheck, tests, and build all successfully pass.

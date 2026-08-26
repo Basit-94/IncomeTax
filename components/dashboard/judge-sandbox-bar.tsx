@@ -147,7 +147,7 @@ export function JudgeSandboxBar({
                 : "bg-teal-900 text-emerald-300 border border-teal-800 hover:border-teal-705"
             }`}
           >
-            <span>✦ Antigravity UI</span>
+            <span>✦ Redesigned Dashboard</span>
           </button>
 
           <button
