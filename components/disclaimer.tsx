@@ -34,7 +34,7 @@ export default function Disclaimer() {
   }, []);
 
   return (
-    <footer className="border-t border-line bg-paper-2 px-5 py-5 text-[0.78rem] leading-relaxed text-ink-2">
+    <footer className="border-t border-line bg-paper-2 px-5 py-5 text-[0.78rem] leading-relaxed text-ink-2 print:hidden">
       <div className="mx-auto flex max-w-6xl flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
         <p className="max-w-3xl">
           <strong className="font-semibold text-ink">{t.footer.prototype}</strong>{" "}

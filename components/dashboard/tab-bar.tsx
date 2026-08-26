@@ -14,7 +14,7 @@ interface TabBarProps {
 
 export default function TabBar({ t, activeTab, setActiveTab, noticeCount }: TabBarProps) {
   return (
-    <div className="border-b border-line flex space-x-6 text-sm font-semibold text-ink-2">
+    <div className="border-b border-line flex space-x-6 text-sm font-semibold text-ink-2 print:hidden">
       <button 
         onClick={() => setActiveTab("overview")}
         className={`pb-2.5 border-b-2 transition-colors flex items-center gap-1.5 ${

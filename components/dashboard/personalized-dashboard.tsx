@@ -45,7 +45,7 @@ export default function PersonalizedDashboard({
   return (
     <section
       aria-labelledby="personalized-dashboard-heading"
-      className="surface-panel overflow-hidden p-5 sm:p-6"
+      className="surface-panel overflow-hidden p-5 sm:p-6 print:hidden"
     >
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-2xl space-y-2">

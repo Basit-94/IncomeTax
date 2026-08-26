@@ -26,7 +26,7 @@ export default function PortalHeader({
   onLogoClick,
 }: PortalHeaderProps) {
   return (
-    <header className="border-b border-line bg-paper text-ink z-10 relative">
+    <header className="border-b border-line bg-paper text-ink z-10 relative print:hidden">
       {/* Top small banner */}
       <div className="bg-navy-dark px-4 py-2 text-[0.68rem] flex items-center justify-between font-mono text-paper/70">
         <span className="flex items-center gap-2">

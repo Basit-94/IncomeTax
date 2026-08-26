@@ -57,6 +57,7 @@ import Onboarding from "../components/onboarding";
 import { JudgeSandboxBar, JUDGE_VECTORS, type JudgeVector } from "../components/dashboard/judge-sandbox-bar";
 import { QuickEditModal } from "../components/dashboard/quick-edit-modal";
 import RealUserTaxWizard from "../components/flow/real-user-wizard";
+import { useTax } from "../context/TaxReturnContext";
 
 // --- VALIDATION (lib/validate.ts issue codes → dictionary messages) ---
 function panIssueMessage(raw: string, t: ReturnType<typeof dict>): string {
@@ -102,6 +103,8 @@ const ADVANCE_COPY: Partial<Record<Exclude<RefundState, "not_filed" | "filed_unv
 };
 
 export default function WapsiPrototype() {
+  const { dispatch: taxDispatch } = useTax();
+
   // --- CORE UI STATES ---
   const [lang, setLang] = useState<Lang>("en");
   const [theme, setTheme] = useState<"dark" | "light">("light");
@@ -112,17 +115,50 @@ export default function WapsiPrototype() {
   const [onboardingReturnStep, setOnboardingReturnStep] = useState<"landing" | "dashboard">("landing");
   /** Versioned return document — the single source the whole flow reads and writes. */
   const [returnState, setReturnState] = useState<ReturnState | null>(null);
-  const [undoStack, setUndoStack] = useState<ReturnState[]>([]);
-  const [restoredFrom, setRestoredFrom] = useState<string | null>(null);
 
   const persona = returnState?.persona ?? null;
+  const regime = returnState?.regime ?? DEFAULT_REGIME;
+
+  // Sync with central TaxReturnContext
+  useEffect(() => {
+    if (!persona || !taxDispatch) return;
+
+    const salaryVal = persona.facts.find(f => f.kind === 'salary')?.amount ?? 0;
+    const interestVal = persona.facts.find(f => f.kind === 'interest')?.amount ?? 0;
+    const consultingVal = persona.facts.find(f => f.kind === 'other' || f.kind === 'rent')?.amount ?? 0;
+    const otherVal = persona.facts.find(f => f.kind === 'dividend' || f.kind === 'capital_gains')?.amount ?? 0;
+    const tdsVal = persona.taxPaid.reduce((sum, t) => sum + t.amount, 0);
+    const ded80cVal = persona.claims.find(c => c.section === '80C')?.amount ?? 0;
+    const ded80dVal = persona.claims.find(c => c.section === '80D' || c.section === '80D_SELF')?.amount ?? 0;
+
+    taxDispatch({
+      type: 'SYNC_STATE',
+      payload: {
+        fullName: persona.name || "Taxpayer Name",
+        pan: persona.pan || "ABCDE1234F",
+        isSalaried: persona.facts.some(f => f.kind === 'salary'),
+        regime: regime === 'old' ? 'OLD' : 'NEW',
+        facts: {
+          salary: salaryVal,
+          consulting: consultingVal,
+          interest: interestVal,
+          other: otherVal,
+          tds: tdsVal,
+          ded80c: ded80cVal,
+          ded80d: ded80dVal,
+        },
+        confirmedIds: returnState?.confirmedFactIds ?? [],
+      }
+    });
+  }, [persona, regime, returnState?.confirmedFactIds, taxDispatch]);
+  const [undoStack, setUndoStack] = useState<ReturnState[]>([]);
+  const [restoredFrom, setRestoredFrom] = useState<string | null>(null);
 
   // Tab control inside dashboard (filed view) + default-path flow control
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
   const [flowStep, setFlowStep] = useState<FlowStepName>("facts");
 
   const t = dict(lang);
-  const regime = returnState?.regime ?? DEFAULT_REGIME;
   const breakdown = useMemo(
     () => (persona ? computeForPersona(persona, regime) : null),
     [persona, regime],
@@ -140,6 +176,12 @@ export default function WapsiPrototype() {
       setFlowStep("facts");
     } else {
       setActiveTab(dashboardDestination);
+      setTimeout(() => {
+        const el = document.getElementById("dashboard-tabs");
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 100);
     }
   };
 
@@ -1494,7 +1536,7 @@ export default function WapsiPrototype() {
 
                 {/* RESTORED DRAFT BANNER — never silently resume */}
                 {restoredFrom && (
-                  <div className="bg-paper-2 border border-line rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+                  <div className="bg-paper-2 border border-line rounded-xl px-4 py-3 flex items-center justify-between gap-3 print:hidden">
                     <span className="text-xs text-ink-2">{t.login.draftRestored(restoredFrom)}</span>
                     <button
                       onClick={() => setRestoredFrom(null)}
@@ -1680,12 +1722,14 @@ export default function WapsiPrototype() {
                 ) : (
                   <>
                     {/* THE PORTAL TAB CONTROL PANEL (filed view) */}
-                    <TabBar
-                      t={t}
-                      activeTab={activeTab}
-                      setActiveTab={setActiveTab}
-                      noticeCount={persona.notices.length}
-                    />
+                    <div id="dashboard-tabs">
+                      <TabBar
+                        t={t}
+                        activeTab={activeTab}
+                        setActiveTab={setActiveTab}
+                        noticeCount={persona.notices.length}
+                      />
+                    </div>
 
                     {/* TAB WINDOW ROUTER */}
                     <m.div 

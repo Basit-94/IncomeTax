@@ -12,6 +12,7 @@ import { localize } from "../mock-i18n";
 import { computeTax } from "../../lib/engine/tax";
 import { taxInputFor } from "../../lib/return/compute";
 import { AnimatedAmount } from "../ui/animated-amount";
+import { ItrVReceipt } from "../ItrVReceipt";
 
 interface OverviewTabProps {
   persona: Persona;
@@ -130,7 +131,7 @@ export default function OverviewTab({
   return (
     <div className="space-y-6">
       {/* REFUND TICKET */}
-      <div className="bg-money-soft border border-money/20 rounded-2xl p-6 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
+      <div className="bg-money-soft border border-money/20 rounded-2xl p-6 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm print:hidden">
         {refund.state !== "not_filed" && stampFired && (
           <m.div
             initial={{ scale: 2.5, opacity: 0, rotate: -20 }}
@@ -189,7 +190,7 @@ export default function OverviewTab({
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-3 print:hidden">
         <details id="return-source-trail" className="disclosure text-xs text-ink-2">
           <summary className="cursor-pointer font-semibold text-ink">
             {t.check.showCalculationTrail}
@@ -289,7 +290,7 @@ export default function OverviewTab({
         </details>
       </div>
 
-      <div className="grid lg:grid-cols-5 gap-6 items-start">
+      <div className="grid lg:grid-cols-5 gap-6 items-start print:hidden">
         {/* LEFT: BANKS */}
         <div className="lg:col-span-3 space-y-6">
           <div className="surface-panel space-y-4 p-5">
@@ -445,6 +446,12 @@ export default function OverviewTab({
           )}
         </div>
       </div>
+
+      {refund.state !== "not_filed" && (
+        <div className="pt-4 border-t border-line">
+          <ItrVReceipt />
+        </div>
+      )}
     </div>
   );
 }

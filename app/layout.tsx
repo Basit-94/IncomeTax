@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import Disclaimer from "../components/disclaimer";
+import { TaxProvider } from "../context/TaxReturnContext";
 
 
 export const metadata: Metadata = {
@@ -20,9 +21,11 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body className="min-h-dvh flex flex-col">
-        <div className="flex-1">{children}</div>
+        <TaxProvider>
+          <div className="flex-1">{children}</div>
+        </TaxProvider>
         <Analytics />
         <Disclaimer />
       </body>

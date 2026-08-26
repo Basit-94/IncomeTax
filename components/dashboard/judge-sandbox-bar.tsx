@@ -89,7 +89,7 @@ export function JudgeSandboxBar({
   onEditFacts,
 }: JudgeSandboxBarProps) {
   return (
-    <div className="bg-navy border-b border-money/20 text-white px-4 py-3 shadow-md z-30">
+    <div className="bg-navy border-b border-money/20 text-white px-4 py-3 shadow-md z-30 print:hidden">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <ShieldCheck size={18} className="text-money shrink-0" />

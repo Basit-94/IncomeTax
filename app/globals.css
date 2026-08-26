@@ -242,3 +242,27 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+@media print {
+  body, html, main, .service-shell, #__next {
+    background-color: white !important;
+    background: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+  .printable-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+    display: block !important;
+  }
+}

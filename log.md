@@ -447,3 +447,18 @@ Next.js docs read per AGENTS.md before this work: node_modules/next/dist/docs/01
 
 [2026-08-25 20:05] Pre-change — make the completed onboarding profile materially personalize the dashboard: choose the initial destination by intent, surface one profile-led next action, and expose focus-specific guidance without using rough income as a tax determination.
 [2026-08-25 20:20] Result — dashboard personalization completed. The profile now selects facts-first for unfiled returns and intent-matched overview, reported facts, or pending actions for filed returns; the dashboard shows pace, profile context, focus topics, regime lens, and one next action in English, Hindi, and Tamil. Hindi browser verification confirmed a notice-intent profile opens Pending Actions and remains there after reload. Typecheck, 80 Vitest tests, production build, and non-log diff check passed.
+
+
+[2026-08-26 15:35] Result - Unified State Engine context, taxEngineAY2026 adapter, and downloadable/printable ITR-V proof component integrated. Wrapped app/layout.tsx in TaxProvider, created components/ItrVReceipt.tsx, synced state dynamically from Wapsi's core ReturnState to TaxReturnContext via SYNC_STATE action, and rendered the printable receipt on the overview tab once returns are filed. Next.js typecheck, 81 Vitest tests, and production build successfully passed.
+
+
+[2026-08-26 15:39] Result - Added print media styles to globals.css and attached printable-sheet class to ItrVReceipt container. This isolates the acknowledgment sheet from all other page components during PDF download and printing. Typecheck, tests, and build all pass.
+
+
+[2026-08-26 15:46] Result - Fixed Next.js smooth-scroll warning in layout.tsx by adding data-scroll-behavior. Resolved 3 blank page print-overflow issue by removing visibility:hidden styles from globals.css, and instead applying print:hidden class to sibling layout components (headers, sandbox bars, disclaimer footers, timeline, and banks widgets). Typecheck, tests, and build all successfully pass.
+
+
+[2026-08-26 15:51] Result - Modified app/page.tsx to append print:hidden to the restored draft banner, preventing the draft restoration time from showing up during print. Resolved the form disappearing issue by overriding html, body, main, .service-shell, #__next, and .printable-sheet to have overflow:visible !important and height:auto !important in media print. Build and tests passed successfully.
+
+
+[2026-08-26 15:55] Result - Wrapped TabBar in a div with id dashboard-tabs. Modified openPersonalizedDashboardDestination in app/page.tsx to automatically trigger a smooth scroll down to the tab area when switching or selecting a destination, preventing the button click from doing nothing when the tab was already active. Typecheck, tests, and build all successfully pass.

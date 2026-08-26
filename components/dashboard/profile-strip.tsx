@@ -21,7 +21,7 @@ export default function ProfileStrip({
   isRealMode = false,
 }: ProfileStripProps) {
   return (
-    <div className="surface-panel flex flex-col justify-between gap-4 p-4 md:flex-row md:items-center">
+    <div className="surface-panel flex flex-col justify-between gap-4 p-4 md:flex-row md:items-center print:hidden">
       <div className="space-y-1 flex-1">
         <div className="flex items-center space-x-2 flex-wrap">
           <span className="rounded-full border border-line bg-slate-100 px-2.5 py-0.5 text-xs font-mono font-semibold text-ink-2">
