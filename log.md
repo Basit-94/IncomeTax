@@ -462,3 +462,6 @@ Next.js docs read per AGENTS.md before this work: node_modules/next/dist/docs/01
 
 
 [2026-08-26 15:55] Result - Wrapped TabBar in a div with id dashboard-tabs. Modified openPersonalizedDashboardDestination in app/page.tsx to automatically trigger a smooth scroll down to the tab area when switching or selecting a destination, preventing the button click from doing nothing when the tab was already active. Typecheck, tests, and build all successfully pass.
+
+
+[2026-08-26 16:51] Result - Modified app/page.tsx and components/dashboard/judge-sandbox-bar.tsx to add a new '? Antigravity UI' toggle button in the sandbox bar. When clicked, it renders the newly created InteractiveTaxDashboard component as a full-page replacement, allowing instant before-and-after UI comparisons on the live website. Typecheck, tests, and build all successfully pass.

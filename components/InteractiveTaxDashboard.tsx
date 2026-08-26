@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { m, AnimatePresence } from 'motion/react';
 import { 
   Check, 
   AlertTriangle, 
@@ -128,7 +128,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
       netRefund: "நிகர பணத்தைத் திரும்பப்பெறுதல்",
       netPayable: "நிகர வரி செலுத்த வேண்டியது",
       disputeInputLabel: "சரியான தொகையைக் குறிப்பிடவும் (₹)",
-      disputeReasonLabel: "முரண்பாட்டிற்கான காரணத்தை சுருக்கமாக விளக்குங்கள்",
+      disputeReasonLabel: "முரண்பாட்டுக்கான காரணத்தை சுருக்கமாக விளக்குங்கள்",
       disputeReasonPlaceholder: "उदा., இறுதி விலைப்பட்டியல் திருத்தப்பட்டது / வங்கி லெட்ஜர் புதுப்பிக்கப்பட்டது",
       officialProofBtn: "அதிகாரப்பூர்வ ஒப்புதல் முன்னோட்டத்தை மாற்றவும் (ITR-V)",
     }
@@ -178,7 +178,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
             <p className="text-xs text-slate-500">{t.sub}</p>
           </div>
 
-          {/* Language Selector */}
+          {/* Language & Actions Selector */}
           <div className="flex items-center gap-3">
             <div className="bg-slate-100 p-0.5 rounded-lg flex border border-slate-200">
               {(['EN', 'HI', 'TA'] as const).map((l) => (
@@ -247,7 +247,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
               AY 2026-27 NET OUTFLOW STATUS
             </span>
             <div className="flex items-baseline gap-2">
-              <motion.h2 
+              <m.h2 
                 key={absoluteRefundOrPayable}
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -255,7 +255,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                 className={`text-4xl font-extrabold tracking-tight font-mono tabular-nums ${isRefund ? 'text-emerald-700' : 'text-amber-700'}`}
               >
                 {formatINR(absoluteRefundOrPayable)}
-              </motion.h2>
+              </m.h2>
               <span className="text-sm font-semibold text-slate-500">
                 {isRefund ? t.netRefund : t.netPayable}
               </span>
@@ -279,7 +279,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
         {/* View Switch for ITR-V Preview */}
         <AnimatePresence mode="wait">
           {showItrV ? (
-            <motion.div
+            <m.div
               key="itr-v-preview"
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -296,9 +296,9 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                 </button>
               </div>
               <ItrVReceipt />
-            </motion.div>
+            </m.div>
           ) : (
-            <motion.div
+            <m.div
               key="reconciliation-matrix"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -323,7 +323,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                   const localizedLabel = t[labelKey] || fact.label;
 
                   return (
-                    <motion.div
+                    <m.div
                       layout
                       key={fact.id}
                       transition={springTransition}
@@ -429,7 +429,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                       {/* Expandable Adjuster Drawer */}
                       <AnimatePresence initial={false}>
                         {isEditing && (
-                          <motion.div
+                          <m.div
                             initial={{ height: 0 }}
                             animate={{ height: "auto" }}
                             exit={{ height: 0 }}
@@ -483,14 +483,14 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                                 </button>
                               </div>
                             </div>
-                          </motion.div>
+                          </m.div>
                         )}
                       </AnimatePresence>
-                    </motion.div>
+                    </m.div>
                   );
                 })}
               </div>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
       </main>
@@ -507,14 +507,14 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                 {isRefund ? t.netRefund : t.netPayable}
               </span>
               <div className="flex items-baseline gap-1.5">
-                <motion.span 
+                <m.span 
                   key={absoluteRefundOrPayable}
                   initial={{ scale: 0.95, opacity: 0.8 }}
                   animate={{ scale: 1, opacity: 1 }}
                   className="text-xl font-bold font-mono tracking-tight tabular-nums"
                 >
                   {formatINR(absoluteRefundOrPayable)}
-                </motion.span>
+                </m.span>
                 <span className="text-xs text-slate-400 font-mono">
                   {isRefund ? 'Credited to Kaveri Bank' : 'Tax Liability u/s 115BAC'}
                 </span>
