@@ -43,6 +43,7 @@ export const BLANK_USER_PROFILE: UserTaxProfile = {
 interface RealUserTaxWizardProps {
   lang: Lang;
   t: Dict;
+  pan?: string;
   onComplete: (persona: Persona, regime: "new" | "old") => void;
   onCancel: () => void;
 }
@@ -50,11 +51,41 @@ interface RealUserTaxWizardProps {
 export default function RealUserTaxWizard({
   lang,
   t,
+  pan,
   onComplete,
   onCancel,
 }: RealUserTaxWizardProps) {
   const [wizardStep, setWizardStep] = useState<number>(1);
-  const [formData, setFormData] = useState<UserTaxProfile>(BLANK_USER_PROFILE);
+
+  const initialProfile = useMemo(() => {
+    if (pan === "DEMPS1111F") {
+      return {
+        ...BLANK_USER_PROFILE,
+        fullName: "Sunita Devi",
+        pan: "DEMPS1111F",
+      };
+    }
+    if (pan === "DEMPR2222F") {
+      return {
+        ...BLANK_USER_PROFILE,
+        fullName: "Rakesh Kumar",
+        pan: "DEMPR2222F",
+      };
+    }
+    if (pan === "DEMPP3333F") {
+      return {
+        ...BLANK_USER_PROFILE,
+        fullName: "Priya Sharma",
+        pan: "DEMPP3333F",
+      };
+    }
+    return {
+      ...BLANK_USER_PROFILE,
+      pan: pan || "",
+    };
+  }, [pan]);
+
+  const [formData, setFormData] = useState<UserTaxProfile>(initialProfile);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [selectedRegime, setSelectedRegime] = useState<"new" | "old">("new");
 

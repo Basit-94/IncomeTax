@@ -468,3 +468,6 @@ Next.js docs read per AGENTS.md before this work: node_modules/next/dist/docs/01
 
 
 [2026-08-26 17:02] Result - Fixed browser crash when toggling Antigravity UI by replacing all motion.div, motion.h2, and motion.span occurrences inside InteractiveTaxDashboard.tsx with strict m elements. This satisfies LazyMotion strict mode wrapper requirements in app/page.tsx. Typecheck, tests, and build all successfully pass.
+
+
+[2026-08-26 17:12] Result - Renamed the user-facing label of the Antigravity UI switcher button to '? Redesigned Dashboard' inside components/dashboard/judge-sandbox-bar.tsx to provide a citizen-friendly product presentation name. Typecheck, tests, and build all successfully pass.

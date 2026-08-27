@@ -13,10 +13,8 @@ interface SandboxDrawerProps {
   simulatedError: boolean;
   setSimulatedDelay: (v: boolean) => void;
   setSimulatedError: (v: boolean) => void;
-  activePersonaId: PersonaId | "custom" | null;
   persona: Persona | null;
   lang: Lang;
-  handleSelectPersona: (id: PersonaId) => void;
   handleLogOut: () => void;
   handleFactAmountChange: (factId: string, val: string) => void;
 }
@@ -28,10 +26,8 @@ export default function SandboxDrawer({
   simulatedError,
   setSimulatedDelay,
   setSimulatedError,
-  activePersonaId,
   persona,
   lang,
-  handleSelectPersona,
   handleLogOut,
   handleFactAmountChange,
 }: SandboxDrawerProps) {
@@ -59,36 +55,7 @@ export default function SandboxDrawer({
               </button>
             </div>
 
-            {/* Role Switcher */}
-            <div className="space-y-3">
-              <span className="block text-[0.7rem] font-mono uppercase tracking-wider text-ink-2">
-                Quick Switch Persona
-              </span>
-              
-              <div className="space-y-2">
-                <button
-                  onClick={() => { handleSelectPersona("sunita"); setShowConsole(false); }}
-                  className="w-full text-left text-xs bg-paper border border-line rounded p-2.5 hover:border-money transition-colors animate-fade"
-                >
-                  <div className="font-semibold text-ink">Sunita Devi (Act 1)</div>
-                  <span className="text-[0.65rem] text-ink-3 block">Salary Prefill / Zero Tax</span>
-                </button>
-                <button
-                  onClick={() => { handleSelectPersona("rakesh"); setShowConsole(false); }}
-                  className="w-full text-left text-xs bg-paper border border-line rounded p-2.5 hover:border-money transition-colors"
-                >
-                  <div className="font-semibold text-ink">Rakesh Kumar (Act 2)</div>
-                  <span className="text-[0.65rem] text-ink-3 block">Tax Notices &amp; Capital Gains Mismatch</span>
-                </button>
-                <button
-                  onClick={() => { handleSelectPersona("priya"); setShowConsole(false); }}
-                  className="w-full text-left text-xs bg-paper border border-line rounded p-2.5 hover:border-money transition-colors"
-                >
-                  <div className="font-semibold text-ink">Priya Sharma (Act 3)</div>
-                  <span className="text-[0.65rem] text-ink-3 block">Bank IFSC Stale / Rent Document Hold</span>
-                </button>
-              </div>
-            </div>
+
 
             {/* Simulated Latency / Failures */}
             <div className="space-y-4 pt-4 border-t border-line/60">
@@ -120,7 +87,7 @@ export default function SandboxDrawer({
             </div>
 
             {/* Custom sandbox configuration adjustments */}
-            {activePersonaId === "custom" && persona && (
+            {persona && persona.id === "custom" && (
               <div className="space-y-4 pt-4 border-t border-line/60">
                 <span className="block text-[0.7rem] font-mono uppercase tracking-wider text-ink-2">
                   Custom Sandbox Editor

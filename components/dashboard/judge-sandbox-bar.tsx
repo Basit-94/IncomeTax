@@ -78,16 +78,12 @@ export const JUDGE_VECTORS: JudgeVector[] = [
 ];
 
 interface JudgeSandboxBarProps {
-  activeVectorId: string | null;
-  onSelectVector: (vector: JudgeVector | null) => void;
   onEditFacts: () => void;
   antigravityUi: boolean;
   onToggleAntigravityUi: () => void;
 }
 
 export function JudgeSandboxBar({
-  activeVectorId,
-  onSelectVector,
   onEditFacts,
   antigravityUi,
   onToggleAntigravityUi,
@@ -108,37 +104,6 @@ export function JudgeSandboxBar({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {JUDGE_VECTORS.map((vector) => {
-            const isActive = activeVectorId === vector.id;
-            return (
-              <button
-                key={vector.id}
-                onClick={() => onSelectVector(vector)}
-                title={vector.description}
-                className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer ${
-                  isActive
-                    ? "bg-money text-navy border border-money"
-                    : "bg-navy-light text-slate-200 border border-slate-700 hover:border-slate-500"
-                }`}
-              >
-                {vector.name}
-              </button>
-            );
-          })}
-
-          <div className="h-6 w-[1px] bg-slate-700 mx-1 hidden md:block" />
-
-          <button
-            onClick={() => onSelectVector(null)}
-            className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer ${
-              !activeVectorId
-                ? "bg-money text-navy border border-money"
-                : "bg-navy-light text-slate-200 border border-slate-700 hover:border-slate-500"
-            }`}
-          >
-            Real User Mode
-          </button>
-
           <button
             onClick={onToggleAntigravityUi}
             className={`text-xs px-3 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1.5 ${

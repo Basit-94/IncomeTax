@@ -13,8 +13,6 @@ interface LandingProps {
   panInputError: string | null;
   handlePanInputChange: (val: string) => void;
   handlePanSubmit: (e: React.FormEvent) => void;
-  handleSelectPersona: (id: "sunita" | "rakesh" | "priya") => void;
-  handleCreateCustom: () => void;
   onboardingProfile: OnboardingProfile | null;
   onEditOnboarding: () => void;
 }
@@ -25,8 +23,6 @@ export default function Landing({
   panInputError,
   handlePanInputChange,
   handlePanSubmit,
-  handleSelectPersona,
-  handleCreateCustom,
   onboardingProfile,
   onEditOnboarding,
 }: LandingProps) {
@@ -117,115 +113,48 @@ export default function Landing({
             <span>{primaryAction}</span>
             <ChevronRight size={16} />
           </button>
+
+          {/* Quick Mock Login Options for Judge */}
+          <div className="border-t border-line/60 pt-4 mt-2 text-left space-y-2">
+            <span className="block text-[0.7rem] font-mono text-ink-3 uppercase tracking-wider">
+              Reviewer Quick Mock Logins (Click to autofill):
+            </span>
+            <div className="space-y-1.5">
+              <button
+                type="button"
+                onClick={() => handlePanInputChange("DEMPS1111F")}
+                className="w-full text-left text-xs bg-paper border border-line rounded px-3 py-2 hover:border-money hover:bg-paper-2 transition flex justify-between items-center cursor-pointer"
+              >
+                <div>
+                  <span className="font-bold text-ink">Sunita Devi</span>
+                </div>
+                <span className="font-mono text-[11px] text-money font-semibold">DEMPS1111F</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePanInputChange("DEMPR2222F")}
+                className="w-full text-left text-xs bg-paper border border-line rounded px-3 py-2 hover:border-money hover:bg-paper-2 transition flex justify-between items-center cursor-pointer"
+              >
+                <div>
+                  <span className="font-bold text-ink">Rakesh Kumar</span>
+                </div>
+                <span className="font-mono text-[11px] text-money font-semibold">DEMPR2222F</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePanInputChange("DEMPP3333F")}
+                className="w-full text-left text-xs bg-paper border border-line rounded px-3 py-2 hover:border-money hover:bg-paper-2 transition flex justify-between items-center cursor-pointer"
+              >
+                <div>
+                  <span className="font-bold text-ink">Priya Sharma</span>
+                </div>
+                <span className="font-mono text-[11px] text-money font-semibold">DEMPP3333F</span>
+              </button>
+            </div>
+          </div>
         </form>
 
-        {/* PRE-LOADED MOCK CITIZENS GRID */}
-        <div className="space-y-4">
-          <span className="block text-xs font-mono text-ink-2 uppercase tracking-wider">
-            {t.landing.orTryAs}
-          </span>
 
-          <div className="grid max-w-2xl gap-4 md:grid-cols-2">
-            {/* Sunita Devi */}
-            <m.button
-              type="button"
-              whileHover={{ y: 2, x: 2 }}
-              onClick={() => handleSelectPersona("sunita")}
-              className="group flex flex-col justify-between space-y-4 rounded-card border border-line bg-paper-2 p-5 text-left transition-all hover:border-money/50 hover:shadow-sm"
-            >
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-ink group-hover:text-money transition-colors">Sunita Devi</h3>
-                  <span className="text-[0.7rem] font-mono bg-paper border border-line text-ink-3 px-2 py-0.5 rounded uppercase">
-                    {t.personas.sunita.phase}
-                  </span>
-                </div>
-                <p className="text-xs text-ink-2 leading-relaxed">
-                  {t.personas.sunita.blurb}
-                </p>
-              </div>
-              <div className="border-t border-line/60 pt-3 flex items-center justify-between text-xs font-mono text-money">
-                <span>{t.personas.sunita.action}</span>
-                <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </div>
-            </m.button>
-
-            {/* Rakesh Kumar */}
-            <m.button
-              type="button"
-              whileHover={{ y: 2, x: 2 }}
-              onClick={() => handleSelectPersona("rakesh")}
-              className="group flex flex-col justify-between space-y-4 rounded-card border border-line bg-paper-2 p-5 text-left transition-all hover:border-money/50 hover:shadow-sm"
-            >
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-ink group-hover:text-money transition-colors">Rakesh Kumar</h3>
-                  <span className="text-[0.7rem] font-mono bg-paper border border-line text-ink-3 px-2 py-0.5 rounded uppercase">
-                    {t.personas.rakesh.phase}
-                  </span>
-                </div>
-                <p className="text-xs text-ink-2 leading-relaxed">
-                  {t.personas.rakesh.blurb}
-                </p>
-              </div>
-              <div className="border-t border-line/60 pt-3 flex items-center justify-between text-xs font-mono text-money">
-                <span>{t.personas.rakesh.action}</span>
-                <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </div>
-            </m.button>
-
-            {/* Priya Sharma */}
-            <m.button
-              type="button"
-              whileHover={{ y: 2, x: 2 }}
-              onClick={() => handleSelectPersona("priya")}
-              className="group flex flex-col justify-between space-y-4 rounded-card border border-line bg-paper-2 p-5 text-left transition-all hover:border-money/50 hover:shadow-sm"
-            >
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-ink group-hover:text-money transition-colors">Priya Sharma</h3>
-                  <span className="text-[0.7rem] font-mono bg-paper border border-line text-ink-3 px-2 py-0.5 rounded uppercase">
-                    {t.personas.priya.phase}
-                  </span>
-                </div>
-                <p className="text-xs text-ink-2 leading-relaxed">
-                  {t.personas.priya.blurb}
-                </p>
-              </div>
-              <div className="border-t border-line/60 pt-3 flex items-center justify-between text-xs font-mono text-money">
-                <span>{t.personas.priya.action}</span>
-                <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </div>
-            </m.button>
-
-            {/* Seeded Custom Sandbox Mode Card */}
-            <m.button
-              type="button"
-              whileHover={{ y: 2, x: 2 }}
-              onClick={handleCreateCustom}
-              className="group flex flex-col justify-between space-y-4 rounded-card border border-line bg-paper-2 p-5 text-left transition-all hover:border-money hover:shadow-sm"
-            >
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-ink group-hover:text-money transition-colors flex items-center gap-1.5">
-                    <Sparkles size={14} className="text-money animate-pulse" />
-                    <span>{t.personas.custom.blurbTitle}</span>
-                  </h3>
-                  <span className="text-[0.65rem] font-mono bg-money-soft border border-money/20 text-money px-1.5 py-0.5 rounded uppercase">
-                    {t.personas.custom.phase}
-                  </span>
-                </div>
-                <p className="text-xs text-ink-2 leading-relaxed">
-                  {t.personas.custom.blurb}
-                </p>
-              </div>
-              <div className="border-t border-line/60 pt-3 flex items-center justify-between text-xs font-mono text-money">
-                <span>{t.personas.custom.action}</span>
-                <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </div>
-            </m.button>
-          </div>
-        </div>
 
         {/* Subfooter route links */}
         <div className="flex items-center space-x-6 pt-6 border-t border-line/60 max-w-md">

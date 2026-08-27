@@ -232,9 +232,8 @@ export default function WapsiPrototype() {
   const [speechText, setSpeechText] = useState("");
 
   // Judge sandbox and Quick Facts Editor
-  const [activeVectorId, setActiveVectorId] = useState<string | null>(null);
   const [quickEditActive, setQuickEditActive] = useState(false);
-  const [isRealMode, setIsRealMode] = useState(false);
+  const [isRealMode, setIsRealMode] = useState(true);
   const [wizardCompleted, setWizardCompleted] = useState(false);
 
   // Load saved draft (versioned ReturnState; legacy raw-Persona drafts migrate)
@@ -270,6 +269,8 @@ export default function WapsiPrototype() {
       }
       setActivePersonaId(result.state.personaId);
       setReturnState(result.state);
+      setIsRealMode(true);
+      setWizardCompleted(true);
       if (savedOnboarding) {
         const destination = getDashboardDestination(
           savedOnboarding,
@@ -390,36 +391,6 @@ export default function WapsiPrototype() {
     setStep("onboarding");
   };
 
-  // Generate deterministic Sandbox User based on name / PAN seed
-  const handleCreateCustom = () => {
-    const seed = customName || customPan || "DefaultSeed";
-    const customUser = generateSeededUser(seed, lang);
-
-    setActivePersonaId("custom");
-    setIsRealMode(false);
-    setWizardCompleted(true);
-    setReturnState(freshState(customUser, lang));
-    setUndoStack([]);
-    setOtp(["9", "4", "9", "4", "9", "4"]); // prefill OTP
-    setStep("otp");
-  };
-
-  // Select Persona
-  const handleSelectPersona = (id: PersonaId) => {
-    setActivePersonaId(id);
-    setIsRealMode(false);
-    setWizardCompleted(true);
-    const pData: Persona = JSON.parse(JSON.stringify(PERSONAS[id])); // deep clone
-    setReturnState(freshState(pData, pData.preferredLang));
-    setUndoStack([]);
-    setLang(pData.preferredLang); // Automatically switch to persona's preferred language
-    localStorage.setItem("wapsi_lang", pData.preferredLang);
-    window.dispatchEvent(new Event("wapsi_lang_change"));
-    setOtp(["1", "2", "3", "4", "5", "6"]); // standard OTP mock
-    setAutoFillCode(id === "sunita" ? "111111" : id === "rakesh" ? "222222" : "333333");
-    setStep("otp");
-  };
-
   // Submit PAN directly
   const handlePanSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -432,59 +403,52 @@ export default function WapsiPrototype() {
     }
 
     setPanInputError(null);
-    
-    // Check if matches preseeded personas
-    const matched = Object.keys(PERSONAS).find(k => PERSONAS[k as PersonaId].pan.toUpperCase() === cleanPan);
-    if (matched) {
-      handleSelectPersona(matched as PersonaId);
-    } else {
-      setCustomPan(cleanPan);
-      setIsRealMode(true);
-      setWizardCompleted(false);
+    setCustomPan(cleanPan);
+    setIsRealMode(true);
+    setWizardCompleted(false);
 
-      const customUser: Persona = {
-        id: "custom",
-        name: "",
-        age: 29,
-        city: "",
-        state: "",
-        occupation: "",
-        pan: cleanPan,
-        mobile: "90000 00000",
-        preferredLang: lang,
-        situation: "Real User Return",
-        act: 1,
-        actLabel: "Real User",
-        embodies: "Real User",
-        assessmentYear: "2026-27",
-        facts: [],
-        taxPaid: [],
-        claims: [],
-        banks: [],
-        refund: {
-          state: "not_filed",
-          amount: 0,
-          holds: [],
-          timeline: []
-        },
-        notices: []
-      };
+    const customUser: Persona = {
+      id: "custom",
+      name: "",
+      age: 29,
+      city: "",
+      state: "",
+      occupation: "",
+      pan: cleanPan,
+      mobile: "90000 00000",
+      preferredLang: lang,
+      situation: "Real User Return",
+      act: 1,
+      actLabel: "Real User",
+      embodies: "Real User",
+      assessmentYear: "2026-27",
+      facts: [],
+      taxPaid: [],
+      claims: [],
+      banks: [],
+      refund: {
+        state: "not_filed",
+        amount: 0,
+        holds: [],
+        timeline: []
+      },
+      notices: []
+    };
 
-      setActivePersonaId("custom");
-      setReturnState({
-        version: CURRENT_VERSION,
-        lang,
-        personaId: "custom",
-        baselinePersona: customUser,
-        persona: customUser,
-        corrections: [],
-        confirmedFactIds: [],
-        regime: "new"
-      });
-      setUndoStack([]);
-      setOtp(["9", "4", "9", "4", "9", "4"]); // prefill OTP
-      setStep("otp");
-    }
+    setActivePersonaId("custom");
+    setReturnState({
+      version: CURRENT_VERSION,
+      lang,
+      personaId: "custom",
+      baselinePersona: customUser,
+      persona: customUser,
+      corrections: [],
+      confirmedFactIds: [],
+      regime: "new"
+    });
+    setUndoStack([]);
+    setOtp(["9", "4", "9", "4", "9", "4"]); // prefill OTP
+    setStep("otp");
   };
 
   // Handle OTP digit inputs
@@ -508,9 +472,9 @@ export default function WapsiPrototype() {
     }
 
     const typedCode = otp.join("");
-    const correctCode = activePersonaId === "custom" ? "949494" : autoFillCode;
+    const correctCode = "949494";
 
-    if ((typedCode === correctCode || typedCode === "949494" || activePersonaId === "custom") && returnState) {
+    if ((typedCode === correctCode || activePersonaId === "custom") && returnState) {
       setOtpError(false);
       saveState({ ...returnState, lang });
       // Unfiled citizens enter the default path; already-filed ones land on the tracker.
@@ -547,6 +511,8 @@ export default function WapsiPrototype() {
     setStampFired(false);
     setFlowStep("facts");
     setActiveTab("overview");
+    setIsRealMode(true);
+    setWizardCompleted(false);
   };
 
   // Change Language
@@ -1174,179 +1140,7 @@ export default function WapsiPrototype() {
     setPanInputError(panIssueMessage(cleanPan, t) || null);
   };
 
-  const handleSelectJudgeVector = (vector: JudgeVector | null) => {
-    if (!vector) {
-      setActiveVectorId(null);
-      setIsRealMode(true);
-      setWizardCompleted(false);
 
-      const customUser: Persona = {
-        id: "custom",
-        name: "",
-        age: 29,
-        city: "",
-        state: "",
-        occupation: "",
-        pan: "",
-        mobile: "",
-        preferredLang: lang,
-        situation: "Real User Return",
-        act: 1,
-        actLabel: "Real User",
-        embodies: "Real User",
-        assessmentYear: "2026-27",
-        facts: [],
-        taxPaid: [],
-        claims: [],
-        banks: [],
-        refund: {
-          state: "not_filed",
-          amount: 0,
-          holds: [],
-          timeline: []
-        },
-        notices: []
-      };
-
-      setActivePersonaId("custom");
-      setReturnState({
-        version: CURRENT_VERSION,
-        lang,
-        personaId: "custom",
-        baselinePersona: customUser,
-        persona: customUser,
-        corrections: [],
-        confirmedFactIds: [],
-        regime: "new"
-      });
-      setStep("dashboard");
-      return;
-    }
-
-    setActiveVectorId(vector.id);
-    setIsRealMode(false);
-    setWizardCompleted(true);
-
-    if (vector.id === "rakesh-notice") {
-      handleSelectPersona("rakesh");
-      return;
-    }
-
-    // Otherwise, create a clean custom sandbox persona with the vector parameters
-    const customUser: Persona = {
-      id: "custom",
-      name: vector.name,
-      age: 29,
-      city: "Sandbox",
-      state: "Evaluation",
-      occupation: "Judge Demo Profile",
-      pan: "DEMPJ1234F",
-      mobile: "90000 00009",
-      preferredLang: lang,
-      situation: vector.description,
-      act: 3,
-      actLabel: "Evaluation Sandbox",
-      embodies: vector.description,
-      assessmentYear: "2026-27",
-      facts: [
-        {
-          id: "sandbox-salary",
-          label: "Your primary contract income",
-          amount: vector.salary,
-          kind: "salary",
-          provenance: {
-            reporter: "Sandbox Employer Ltd",
-            reporterKind: "employer",
-            filedOn: "2026-05-18",
-            statement: "26AS",
-            onlyReporterCanFix: false
-          }
-        },
-        {
-          id: "sandbox-interest",
-          label: "Savings interest",
-          amount: vector.interest,
-          kind: "interest",
-          provenance: {
-            reporter: "Sandbox Bank",
-            reporterKind: "bank",
-            filedOn: "2026-06-05",
-            statement: "AIS",
-            onlyReporterCanFix: false
-          }
-        }
-      ],
-      taxPaid: [
-        {
-          id: "sandbox-tds-192",
-          label: "Tax withheld (TDS)",
-          amount: vector.tds,
-          section: "192",
-          provenance: {
-            reporter: "Sandbox Employer Ltd",
-            reporterKind: "employer",
-            filedOn: "2026-05-18",
-            statement: "26AS",
-            onlyReporterCanFix: false
-          }
-        }
-      ],
-      claims: (vector.claims || []).map((c, idx) => ({
-        id: `sandbox-claim-${idx}`,
-        section: c.section,
-        label: c.section === "80C" ? "Provident Fund / ELSS" : "Health cover",
-        amount: c.amount,
-        evidenceAttached: true
-      })),
-      banks: [
-        {
-          id: "sandbox-bank-1",
-          bank: "Deccan Union Bank",
-          maskedNumber: "•••• •••• 9999",
-          ifsc: "DECU0834471",
-          status: "validated",
-          nominatedForRefund: true
-        }
-      ],
-      refund: {
-        state: "under_review",
-        amount: vector.tds,
-        filedOn: "2026-07-20",
-        verifiedOn: "2026-07-20",
-        holds: [],
-        timeline: [
-          {
-            id: "sb-tl-1",
-            on: "2026-07-20",
-            state: "filed_unverified",
-            headline: "You sent your return in.",
-            actor: "citizen"
-          },
-          {
-            id: "sb-tl-2",
-            on: "2026-07-20",
-            state: "verified",
-            headline: "You confirmed it was you. The return counts from here.",
-            actor: "citizen"
-          }
-        ]
-      },
-      notices: []
-    };
-
-    setActivePersonaId("custom");
-    setReturnState({
-      version: CURRENT_VERSION,
-      lang,
-      personaId: "custom",
-      baselinePersona: customUser,
-      persona: customUser,
-      corrections: [],
-      confirmedFactIds: [],
-      regime: vector.regime
-    });
-    setStep("dashboard");
-  };
 
   const handleQuickEditSave = (salary: number, interest: number, tds: number) => {
     if (!persona || !returnState) return;
@@ -1419,8 +1213,6 @@ export default function WapsiPrototype() {
 
         {/* --- JUDGE SANDBOX BAR --- */}
         <JudgeSandboxBar
-          activeVectorId={activeVectorId}
-          onSelectVector={handleSelectJudgeVector}
           onEditFacts={() => setQuickEditActive(true)}
           antigravityUi={antigravityUi}
           onToggleAntigravityUi={() => setAntigravityUi(!antigravityUi)}
@@ -1481,8 +1273,6 @@ export default function WapsiPrototype() {
                   panInputError={panInputError}
                   handlePanInputChange={handlePanInputChange}
                   handlePanSubmit={handlePanSubmit}
-                  handleSelectPersona={handleSelectPersona}
-                  handleCreateCustom={handleCreateCustom}
                   onboardingProfile={onboardingProfile}
                   onEditOnboarding={handleEditOnboarding}
                 />
@@ -1503,11 +1293,10 @@ export default function WapsiPrototype() {
                   t={t}
                   otp={otp}
                   otpError={otpError}
-                  mockCode={activePersonaId === "custom" ? "949494" : autoFillCode}
+                  mockCode="949494"
                   handleOtpChange={handleOtpChange}
                   onAutoFill={() => {
-                    const code = activePersonaId === "custom" ? "949494" : autoFillCode;
-                    setOtp(code.split(""));
+                    setOtp("949494".split(""));
                     setOtpError(false);
                   }}
                   onBack={() => setStep("landing")}
@@ -1560,6 +1349,7 @@ export default function WapsiPrototype() {
                   <RealUserTaxWizard
                     lang={lang}
                     t={t}
+                    pan={persona.pan}
                     onComplete={(updatedPersona, regime) => {
                       if (returnState) {
                         setReturnState({
@@ -1573,7 +1363,6 @@ export default function WapsiPrototype() {
                       setFlowStep("check"); // Take them directly to the Review & File step
                     }}
                     onCancel={() => {
-                      setIsRealMode(false);
                       setWizardCompleted(true);
                       handleLogOut();
                     }}
@@ -1817,10 +1606,8 @@ export default function WapsiPrototype() {
           simulatedError={simulatedError}
           setSimulatedDelay={setSimulatedDelay}
           setSimulatedError={setSimulatedError}
-          activePersonaId={activePersonaId}
           persona={persona}
           lang={lang}
-          handleSelectPersona={(id) => handleSelectPersona(id)}
           handleLogOut={handleLogOut}
           handleFactAmountChange={handleFactAmountChange}
         />
