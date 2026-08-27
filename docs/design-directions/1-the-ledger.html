@@ -110,7 +110,7 @@ tr.struck td.n{text-decoration:line-through;opacity:.55}
 
   <div class="head">
     <div>
-      <div class="mark">Assessment year 2026&ndash;27 &middot; Form ITR-1</div>
+      <div class="mark">Tax year 2026&ndash;27 &middot; the return for salaried people</div>
       <h1>Statement of account</h1>
       <p class="sub">Priya Sharma &middot; salaried &middot; one employer</p>
     </div>
@@ -123,10 +123,10 @@ tr.struck td.n{text-decoration:line-through;opacity:.55}
       <span class="prov">Meridian Systems Pvt Ltd &middot; Form 16 &middot; 14 Jun 2026</span></td>
       <td class="n">12,40,000</td></tr>
     <tr class="e"><td><span class="lbl">Tax already deducted</span>
-      <span class="prov">Meridian Systems Pvt Ltd &middot; TDS &middot; 14 Jun 2026</span></td>
+      <span class="prov">Meridian Systems Pvt Ltd &middot; paid for you, quarterly &middot; 14 Jun 2026</span></td>
       <td class="n">97,920</td></tr>
     <tr class="e" id="interest"><td><span class="lbl">Interest from savings</span>
-      <span class="prov">State Bank &middot; AIS &middot; 02 Jun 2026<button class="act" id="fix">this is wrong</button></span></td>
+      <span class="prov">State Bank &middot; yearly statement &middot; 02 Jun 2026<button class="act" id="fix">this looks wrong</button></span></td>
       <td class="n">3,480</td></tr>
   </table>
 
@@ -143,7 +143,7 @@ tr.struck td.n{text-decoration:line-through;opacity:.55}
     <tr class="e"><td>Less deductions</td><td class="n neg">&minus;2,25,000</td></tr>
     <tr class="e sum"><td>Income you are taxed on</td><td class="n">10,18,480</td></tr>
     <tr class="e"><td>Tax at slab rates</td><td class="n">88,000</td></tr>
-    <tr class="e"><td>Health &amp; education cess, 4%</td><td class="n">3,520</td></tr>
+    <tr class="e"><td>Health &amp; education surcharge, 4% of the tax</td><td class="n">3,520</td></tr>
     <tr class="e sum"><td>Total tax owed</td><td class="n">91,520</td></tr>
     <tr class="e"><td>Already paid on your behalf</td><td class="n neg">&minus;97,920</td></tr>
     <tr class="e grand"><td>Due back to you</td><td class="n pos" id="grand">0</td></tr>
@@ -153,7 +153,7 @@ tr.struck td.n{text-decoration:line-through;opacity:.55}
     <div>
       <div class="k">Refund due</div>
       <div class="v" id="amt">&#8377;0</div>
-      <p>You paid more than you owed. Every figure above opens to the document it came from.</p>
+      <p>You paid more than you owed, so the difference comes back. Every figure opens to the document it came from.</p>
     </div>
     <button class="btn" id="file">Sign &amp; file<span class="pg"></span></button>
   </div>
@@ -211,7 +211,7 @@ btn.addEventListener('click', () => {
   const t0 = performance.now(), d = 1800;
   const step = t => { const k = Math.min(1,(t-t0)/d); pg.style.width = k*100+'%';
     if (k<1) requestAnimationFrame(step);
-    else btn.firstChild.nodeValue = 'Filed ✓ WPS-2026-4471'; };
+    else btn.firstChild.nodeValue = 'Filed — refund in 2–5 weeks'; };
   requestAnimationFrame(step);
 });
 </script>

@@ -179,7 +179,7 @@ footer{max-width:1000px;margin:0 auto;padding:22px 24px 40px;color:var(--ink-3);
 </div></nav>
 
 <header class="hero" id="top">
-  <span class="stamp">CASE 4471 · AY 2026&ndash;27 · ITR-1</span>
+  <span class="stamp">CASE 4471 · TAX YEAR 2026&ndash;27 · SALARIED</span>
   <h1 class="title">Priya Sharma &mdash; salaried, one employer</h1>
   <p class="sub">Five facts on the board. Each one names who reported it and when. Read them, pin the
   ones you agree with, and the return writes itself.</p>
@@ -202,7 +202,7 @@ footer{max-width:1000px;margin:0 auto;padding:22px 24px 40px;color:var(--ink-3);
     <div class="no">CARD 01 &middot; REPORTED 14 JUN 2026</div>
     <h3>Salary received</h3>
     <div class="who">Meridian Systems Pvt Ltd &middot; Form 16, Part B &middot; TAN BLRM09321F</div>
-    <div class="badges"><span class="badge rep">Reported by employer</span><span class="badge sys">Matches AIS</span></div>
+    <div class="badges"><span class="badge rep">Reported by employer</span><span class="badge sys">Matches your bank&rsquo;s statement</span></div>
     <div class="amt">&#8377;12,40,000</div>
     <div class="margin"><span class="hand">what this is</span>
       Everything your employer paid you this year before anything was taken out &mdash; not what
@@ -214,7 +214,7 @@ footer{max-width:1000px;margin:0 auto;padding:22px 24px 40px;color:var(--ink-3);
     <div class="pin"></div>
     <div class="no">CARD 02 &middot; REPORTED 14 JUN 2026</div>
     <h3>Tax already deducted</h3>
-    <div class="who">Meridian Systems Pvt Ltd &middot; quarterly TDS return</div>
+    <div class="who">Meridian Systems Pvt Ltd &middot; the quarterly tax return your employer files</div>
     <div class="badges"><span class="badge rep">Reported by employer</span></div>
     <div class="amt">&#8377;97,920</div>
     <div class="margin"><span class="hand">why it matters</span>
@@ -227,7 +227,7 @@ footer{max-width:1000px;margin:0 auto;padding:22px 24px 40px;color:var(--ink-3);
     <div class="pin"></div>
     <div class="no">CARD 03 &middot; REPORTED 02 JUN 2026</div>
     <h3>Interest on savings</h3>
-    <div class="who">State Bank &middot; annual information statement &middot; a/c xxxx-4417</div>
+    <div class="who">State Bank &middot; the yearly statement your bank files &middot; a/c xxxx-4417</div>
     <div class="badges"><span class="badge rep">Reported by bank</span><span class="badge dis">You can dispute this</span></div>
     <div class="amt">&#8377;3,480</div>
     <div class="margin"><span class="hand">plain words</span>
@@ -253,7 +253,7 @@ footer{max-width:1000px;margin:0 auto;padding:22px 24px 40px;color:var(--ink-3);
     <div class="pin"></div>
     <div class="no">CARD 05 &middot; ENTERED BY YOU, 21 JUN 2026</div>
     <h3>Life insurance &amp; provident fund</h3>
-    <div class="who">Section 80C &middot; self-declared &middot; proof not attached</div>
+    <div class="who">Section 80C &mdash; insurance &amp; provident fund &middot; you told us this &middot; no proof attached</div>
     <div class="badges"><span class="badge you">You entered this</span><span class="badge dis">Proof missing</span></div>
     <div class="amt">&#8377;1,50,000</div>
     <div class="margin"><span class="hand">keep the receipts</span>
@@ -281,11 +281,10 @@ footer{max-width:1000px;margin:0 auto;padding:22px 24px 40px;color:var(--ink-3);
   <div class="tier">
     <h3>The arithmetic</h3>
     <div class="calc-row"><span>Tax at slab rates</span><span class="v">&#8377;88,000</span></div>
-    <div class="calc-row"><span>Health &amp; education cess, 4%</span><span class="v">&#8377;3,520</span></div>
+    <div class="calc-row"><span>Health &amp; education surcharge, 4% of the tax</span><span class="v">&#8377;3,520</span></div>
     <div class="calc-row t"><span>Total tax owed</span><span class="v">&#8377;91,520</span></div>
     <div class="calc-row"><span>Already paid on your behalf</span><span class="v">&minus;&#8377;97,920</span></div>
-    <div class="callout good"><b>You overpaid by &#8377;6,400.</b> That is the amount coming back to
-      you. Every figure above opens to the card it came from.</div>
+    <div class="callout good"><b>You overpaid by &#8377;6,400.</b> That comes back to you, usually within 2&ndash;5 weeks of filing. Every figure above opens to the card it came from.</div>
   </div>
 </div></section>
 
@@ -369,7 +368,7 @@ fileBtn.addEventListener('click', () => {
   fileBtn.firstChild.nodeValue = 'Filing…';
   const step = t => { const k = Math.min(1,(t-t0)/d); pg.style.width = k*100+'%';
     if (k<1) requestAnimationFrame(step);
-    else fileBtn.firstChild.nodeValue = 'Filed ✓ WPS-2026-4471'; };
+    else fileBtn.firstChild.nodeValue = 'Filed — refund in 2–5 weeks'; };
   requestAnimationFrame(step);
 });
 refresh();

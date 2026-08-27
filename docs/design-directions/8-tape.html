@@ -117,7 +117,7 @@ h1{font-family:var(--sans);font-size:clamp(24px,4vw,34px);font-weight:600;letter
 <div class="wrap">
   <h1>Your return, computed line by line</h1>
   <p class="lede">Nothing here is hidden behind a spinner. Every step of the calculation is shown as it runs,
-  with the document each figure came from.</p>
+  with the document each figure came from, and what it means.</p>
 
   <div class="tape">
     <div class="tapehead"><span>computation trace</span><span id="clock">00.00s</span></div>
@@ -148,8 +148,8 @@ const R = n => '₹' + n.toLocaleString('en-IN');
 const LINES = [
   {h:'reported about you'},
   {l:'salary',            s:'Meridian Systems · Form 16 · 14 Jun',   v:R(1240000)},
-  {l:'tds deducted',      s:'Meridian Systems · quarterly · 14 Jun', v:R(97920)},
-  {l:'savings interest',  s:'State Bank · AIS · 2 Jun',              v:R(3480)},
+  {l:'tax paid for you',  s:'Meridian Systems · quarterly TDS · 14 Jun', v:R(97920)},
+  {l:'savings interest',  s:'State Bank · yearly statement · 2 Jun',              v:R(3480)},
   {h:'claimed'},
   {l:'standard deduction',s:'auto-applied · all salaried filers',    v:R(75000)},
   {l:'80C — lic + pf',    s:'entered by you · 21 Jun',               v:R(150000)},
@@ -158,10 +158,10 @@ const LINES = [
   {l:'less deductions',   v:'−'+R(225000), neg:true},
   {l:'taxable income',    v:R(1018480), tot:true},
   {l:'slab tax',          v:R(88000)},
-  {l:'cess @ 4%',         v:R(3520)},
+  {l:'surcharge @ 4%',    v:R(3520)},
   {l:'total liability',   v:R(91520), tot:true},
-  {l:'tds credits',       v:'−'+R(97920), neg:true},
-  {l:'net position',      v:R(6400), res:true}
+  {l:'already paid for you', v:'−'+R(97920), neg:true},
+  {l:'refund due to you', v:R(6400), res:true}
 ];
 
 const stream = document.getElementById('stream'),
@@ -229,7 +229,7 @@ fileBtn.addEventListener('click', ()=>{
   fileBtn.firstChild.nodeValue = 'filing…';
   const step = t => { const k = Math.min(1,(t-s0)/dur); pg.style.width = k*100+'%';
     if (k<1) requestAnimationFrame(step);
-    else fileBtn.firstChild.nodeValue = 'filed ✓ WPS-2026-4471'; };
+    else fileBtn.firstChild.nodeValue = 'filed · refund in 2–5 weeks'; };
   requestAnimationFrame(step);
 });
 

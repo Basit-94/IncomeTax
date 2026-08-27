@@ -107,13 +107,13 @@ h1{font-size:15px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;
       <span class="src">Meridian Systems &middot; Form 16 &middot; 14 Jun</span></div>
     <div class="v">12,40,000</div></div>
 
-  <div class="li"><div class="l"><span>Tax deducted</span>
-      <span class="src">Meridian Systems &middot; TDS &middot; 14 Jun</span></div>
+  <div class="li"><div class="l"><span>Tax paid for you</span>
+      <span class="src">Meridian Systems &middot; quarterly &middot; 14 Jun</span></div>
     <div class="v">97,920</div></div>
 
   <div class="li" id="int"><div class="l"><span>Savings interest</span>
-      <span class="src">State Bank &middot; AIS &middot; 2 Jun &middot;
-        <button class="fix" id="fix">wrong?</button></span></div>
+      <span class="src">State Bank &middot; yearly statement &middot; 2 Jun &middot;
+        <button class="fix" id="fix">looks wrong?</button></span></div>
     <div class="v">3,480</div></div>
 
   <hr class="dash">
@@ -134,7 +134,7 @@ h1{font-size:15px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;
 
   <hr class="dash">
   <div class="li"><div class="l"><span>Tax at slabs</span></div><div class="v">88,000</div></div>
-  <div class="li"><div class="l"><span>Cess 4%</span></div><div class="v">3,520</div></div>
+  <div class="li"><div class="l"><span>Surcharge 4%</span></div><div class="v">3,520</div></div>
   <div class="tot"><span>Tax owed</span><span class="v">91,520</span></div>
   <div class="li"><div class="l"><span>Already paid</span></div><div class="v">&minus;97,920</div></div>
 
@@ -149,7 +149,7 @@ h1{font-size:15px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;
   <button class="btn" id="file">File this return<span class="pg"></span></button>
 
   <div class="barcode" id="bc"></div>
-  <p class="foot">TAP ANY LINE TO SEE ITS SOURCE</p>
+  <p class="foot">TAP ANY LINE TO SEE WHERE IT CAME FROM</p>
 
 </div>
 <div class="tag">Direction 3 &mdash; The Receipt</div>
@@ -193,7 +193,7 @@ btn.addEventListener('click', ()=>{
   btn.disabled = true; btn.firstChild.nodeValue='Filing…';
   const t0=performance.now(), d=1800;
   const step=t=>{const k=Math.min(1,(t-t0)/d); pg.style.width=k*100+'%';
-    if(k<1)requestAnimationFrame(step); else btn.firstChild.nodeValue='Filed ✓ WPS-2026-4471';};
+    if(k<1)requestAnimationFrame(step); else btn.firstChild.nodeValue='Filed · refund in 2-5 wks';};
   requestAnimationFrame(step);
 });
 </script>

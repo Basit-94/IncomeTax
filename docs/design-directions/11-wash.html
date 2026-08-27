@@ -148,12 +148,12 @@ h2{font-family:var(--mono);font-size:10px;letter-spacing:.26em;text-transform:up
 
 <div class="e" data-c="in"><span class="seep"></span>
   <div class="row"><div class="t">Tax already deducted</div><div class="v">₹97,920</div></div>
-  <div class="p">by <b>Meridian Systems Pvt Ltd</b> · quarterly TDS · 14 June 2026 <span class="hint">— tap to confirm</span></div>
+  <div class="p">by <b>Meridian Systems Pvt Ltd</b> · tax paid for you, quarterly · 14 June 2026 <span class="hint">— tap to confirm</span></div>
 </div>
 
 <div class="e" data-c="in"><span class="seep"></span>
   <div class="row"><div class="t">Interest on savings</div><div class="v">₹3,480</div></div>
-  <div class="p">by <b>State Bank</b> · AIS · 2 June 2026 <span class="hint">— tap to confirm</span></div>
+  <div class="p">by <b>State Bank</b> · yearly statement · 2 June 2026 <span class="hint">— tap to confirm</span></div>
 </div>
 
 <h2>Written by you</h2>
@@ -172,7 +172,7 @@ h2{font-family:var(--mono);font-size:10px;letter-spacing:.26em;text-transform:up
   <div class="line"><span>Income counted</span><span class="v">₹12,43,480</span></div>
   <div class="line"><span>Less deductions allowed</span><span class="v">−₹2,25,000</span></div>
   <div class="line t"><span>Income you are taxed on</span><span class="v">₹10,18,480</span></div>
-  <div class="line"><span>Tax at slab rates, with cess</span><span class="v">₹91,520</span></div>
+  <div class="line"><span>Tax, with the 4% surcharge</span><span class="v">₹91,520</span></div>
   <div class="line"><span>Already paid on your behalf</span><span class="v">−₹97,920</span></div>
 
   <div class="final">
@@ -180,7 +180,7 @@ h2{font-family:var(--mono);font-size:10px;letter-spacing:.26em;text-transform:up
       <div class="k">Due back to you</div>
       <div class="amt" id="amt">₹0</div>
     </div>
-    <p>Because you paid ₹6,400 more than you owed.</p>
+    <p>Because you paid ₹6,400 more than you owed. It usually arrives in 2–5 weeks.</p>
   </div>
 
   <button class="sign" id="sign"><span class="flood"></span><span id="lab">Sign and file this return</span></button>
@@ -315,8 +315,8 @@ sign.addEventListener('click', () => {
   note.textContent = 'Writing your return to the record…';
   setTimeout(() => {
     sign.classList.remove('busy'); sign.classList.add('done');
-    lab.textContent = 'Filed — reference WPS-2026-4471';
-    note.textContent = 'Acknowledgement sent. You can download it any time.';
+    lab.textContent = 'Filed — refund in 2–5 weeks';
+    note.textContent = 'Reference WPS-2026-4471 · acknowledgement saved, download it any time.';
   }, 1950);
 });
 </script>

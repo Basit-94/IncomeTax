@@ -128,12 +128,12 @@ h1{font-family:var(--disp);font-size:clamp(30px,5.4vw,46px);font-weight:600;marg
       <div class="v">&#8377;12,40,000</div></div>
 
     <div class="fact"><div><div class="t">Tax already deducted</div>
-      <span class="badge">Meridian Systems &middot; TDS &middot; 14 Jun</span></div>
+      <span class="badge">Paid for you, quarterly &middot; 14 Jun</span></div>
       <div class="v">&#8377;97,920</div></div>
 
     <div class="fact" id="int"><div><div class="t">Interest on savings</div>
-      <span class="badge">State Bank &middot; AIS &middot; 2 Jun</span>
-      <button class="wrong" id="fix">This doesn&rsquo;t look right</button></div>
+      <span class="badge">State Bank &middot; yearly statement &middot; 2 Jun</span>
+      <button class="wrong" id="fix">This looks wrong</button></div>
       <div class="v">&#8377;3,480</div></div>
 
     <div class="fact"><div><div class="t">Standard deduction</div>
@@ -149,7 +149,7 @@ h1{font-family:var(--disp);font-size:clamp(30px,5.4vw,46px);font-weight:600;marg
       <div class="crow"><span>Less deductions</span><span class="v">&minus;&#8377;2,25,000</span></div>
       <div class="crow t"><span>Taxed on</span><span class="v">&#8377;10,18,480</span></div>
       <div class="crow"><span>Tax at slab rates</span><span class="v">&#8377;88,000</span></div>
-      <div class="crow"><span>Cess, 4%</span><span class="v">&#8377;3,520</span></div>
+      <div class="crow"><span>Surcharge, 4% of the tax</span><span class="v">&#8377;3,520</span></div>
       <div class="crow t"><span>Total owed</span><span class="v">&#8377;91,520</span></div>
       <div class="crow"><span>Already paid</span><span class="v">&minus;&#8377;97,920</span></div>
     </div>
@@ -159,7 +159,7 @@ h1{font-family:var(--disp);font-size:clamp(30px,5.4vw,46px);font-weight:600;marg
     <div>
       <div class="k">Coming back to you</div>
       <div class="v" id="amt">&#8377;0</div>
-      <p>You paid more than you owed this year.</p>
+      <p>You paid more than you owed. It usually arrives within 2–5 weeks.</p>
     </div>
     <button class="btn" id="file">Check once, then file<span class="pg"></span></button>
   </div>
@@ -204,7 +204,7 @@ btn.addEventListener('click',()=>{
   btn.disabled=true; btn.firstChild.nodeValue='Filing…';
   const t0=performance.now(), d=1800;
   const step=t=>{const k=Math.min(1,(t-t0)/d); pg.style.width=k*100+'%';
-    if(k<1)requestAnimationFrame(step); else btn.firstChild.nodeValue='Filed ✓ WPS-2026-4471';};
+    if(k<1)requestAnimationFrame(step); else btn.firstChild.nodeValue='Filed — refund in 2–5 weeks';};
   requestAnimationFrame(step);
 });
 </script>

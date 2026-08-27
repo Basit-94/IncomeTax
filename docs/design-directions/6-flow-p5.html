@@ -136,12 +136,12 @@ h1{font-size:clamp(28px,4.6vw,42px);font-weight:600;letter-spacing:-.03em;margin
     <div class="ch" style="--c:var(--out);--fill:.74">
       <div class="k">Went to tax</div>
       <div class="v" data-count="91520">&#8377;0</div>
-      <div class="d">After every deduction you were entitled to.</div>
+      <div class="d">What you actually owed, after every deduction.</div>
     </div>
     <div class="ch" style="--c:var(--keep);--fill:.05">
       <div class="k">Overpaid</div>
       <div class="v" data-count="6400">&#8377;0</div>
-      <div class="d">Deducted from your salary but never owed.</div>
+      <div class="d">Taken from your salary but never owed. This comes back.</div>
     </div>
   </div>
 
@@ -150,10 +150,10 @@ h1{font-size:clamp(28px,4.6vw,42px);font-weight:600;letter-spacing:-.03em;margin
       <div class="prov"><i class="dot"></i>Meridian Systems &middot; Form 16 &middot; 14 Jun</div></div>
       <div class="v">&#8377;12,40,000</div></div>
     <div class="f"><div><div class="t">Tax already deducted</div>
-      <div class="prov"><i class="dot"></i>Meridian Systems &middot; TDS &middot; 14 Jun</div></div>
+      <div class="prov"><i class="dot"></i>Paid for you, quarterly &middot; 14 Jun</div></div>
       <div class="v">&#8377;97,920</div></div>
     <div class="f"><div><div class="t">Interest on savings</div>
-      <div class="prov"><i class="dot"></i>State Bank &middot; AIS &middot; 2 Jun</div></div>
+      <div class="prov"><i class="dot"></i>State Bank &middot; yearly statement &middot; 2 Jun</div></div>
       <div class="v">&#8377;3,480</div></div>
     <div class="f"><div><div class="t">Standard deduction</div>
       <div class="prov"><i class="dot sys"></i>Applied for you &middot; every salaried filer</div></div>
@@ -167,11 +167,11 @@ h1{font-size:clamp(28px,4.6vw,42px);font-weight:600;letter-spacing:-.03em;margin
     <div>
       <div class="k">Coming back to you</div>
       <div class="v" data-count="6400">&#8377;0</div>
-      <p>You paid &#8377;97,920 and owed &#8377;91,520.</p>
+      <p>You paid &#8377;97,920 and owed &#8377;91,520. Refunds usually arrive in 2&ndash;5 weeks.</p>
     </div>
     <button class="btn" id="file">File this return<span class="bar"></span></button>
   </div>
-  <p class="hint">Tap any line to see the document it came from.</p>
+  <p class="hint">Tap any line to see where the figure came from.</p>
 </div>
 
 <div class="tag">Direction 6 &mdash; Flow &middot; p5.js</div>
@@ -254,7 +254,7 @@ btn.addEventListener('click', () => {
     const k = Math.min(1, (t - t0)/dur);
     bar.style.width = (k*100) + '%';
     if (k < 1) requestAnimationFrame(step);
-    else { btn.dataset.state='done'; btn.firstChild.nodeValue='Filed ✓  ref WPS-2026-4471'; }
+    else { btn.dataset.state='done'; btn.firstChild.nodeValue='Filed — refund in 2–5 weeks'; }
   };
   requestAnimationFrame(step);
 });

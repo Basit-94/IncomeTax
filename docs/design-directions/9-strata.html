@@ -118,7 +118,7 @@ h1{font-size:clamp(28px,5.6vw,40px);font-weight:600;letter-spacing:-.03em;margin
 <header>
   <div class="eyebrow">Assessment year 2026–27</div>
   <h1>Five things we were told about you</h1>
-  <p class="lede">Swipe a card right to confirm it. Tap to see exactly where it came from.</p>
+  <p class="lede">Swipe a card right if it looks correct. Tap it to see where the figure came from.</p>
   <p class="count"><b id="done">0</b> of <b>5</b> confirmed</p>
 </header>
 
@@ -142,7 +142,7 @@ h1{font-size:clamp(28px,5.6vw,40px);font-weight:600;letter-spacing:-.03em;margin
     <div class="top"><div class="t">Tax already deducted</div><div class="v">₹97,920</div></div>
     <div class="who"><i></i>Meridian Systems Pvt Ltd</div>
     <div class="more"><div class="moreIn">
-      <div><dt>Document</dt>Quarterly TDS return</div>
+      <div><dt>Document</dt>Quarterly tax return your employer files</div>
       <div><dt>Reported</dt>14 June 2026</div>
       <div><dt>Identifier</dt>TAN BLRM09321F</div>
       <div class="acts"><button class="mini">Open document</button><button class="mini bad">This is wrong</button></div>
@@ -155,7 +155,7 @@ h1{font-size:clamp(28px,5.6vw,40px);font-weight:600;letter-spacing:-.03em;margin
     <div class="top"><div class="t">Interest on savings</div><div class="v">₹3,480</div></div>
     <div class="who"><i></i>State Bank</div>
     <div class="more"><div class="moreIn">
-      <div><dt>Document</dt>Annual information statement</div>
+      <div><dt>Document</dt>Yearly statement your bank files</div>
       <div><dt>Reported</dt>2 June 2026</div>
       <div><dt>Account</dt>xxxx-4417</div>
       <div class="acts"><button class="mini">Open document</button><button class="mini bad">This is wrong</button></div>
@@ -181,7 +181,7 @@ h1{font-size:clamp(28px,5.6vw,40px);font-weight:600;letter-spacing:-.03em;margin
     <div class="who"><i></i>Entered by you</div>
     <div class="more"><div class="moreIn">
       <div><dt>Entered</dt>21 June 2026, 14:22</div>
-      <div><dt>Section</dt>80C</div>
+      <div><dt>Counts under</dt>Section 80C — insurance &amp; provident fund</div>
       <div><dt>Proof</dt>Not attached</div>
       <div class="acts"><button class="mini">Attach proof</button><button class="mini">Edit amount</button></div>
     </div></div>
@@ -193,7 +193,7 @@ h1{font-size:clamp(28px,5.6vw,40px);font-weight:600;letter-spacing:-.03em;margin
 <div class="res">
   <div class="k">If all five are right</div>
   <div class="amt" id="amt">₹6,400</div>
-  <p>comes back to you. You paid ₹97,920 and owed ₹91,520.</p>
+  <p>comes back to you — usually in 2–5 weeks. You paid ₹97,920 and owed ₹91,520.</p>
   <div class="meter"><i class="paid" id="mp"></i><i class="over" id="mo"></i></div>
   <div class="leg"><span class="a">Owed 91,520</span><span class="b">Overpaid 6,400</span></div>
   <button class="go" id="go" disabled>Confirm all five to continue</button>
@@ -270,7 +270,7 @@ new IntersectionObserver((es,o) => es.forEach(e => {
 go.addEventListener('click', () => {
   if (go.disabled) return;
   go.disabled = true; go.textContent = 'Filing…';
-  setTimeout(()=> go.textContent = 'Filed ✓ WPS-2026-4471', 1800);
+  setTimeout(()=> go.textContent = 'Filed — refund in 2–5 weeks', 1800);
 });
 refresh();
 </script>

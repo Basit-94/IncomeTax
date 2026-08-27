@@ -153,11 +153,11 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--serif)
     <div class="row"><div><div class="t">Salary received</div>
       <div class="p">Reported by <b>Meridian Systems Pvt Ltd</b> &middot; Form 16 &middot; 14 June 2026</div></div>
       <div class="v">&#8377;12,40,000</div></div>
-    <div class="row"><div><div class="t">Tax deducted at source</div>
+    <div class="row"><div><div class="t">Tax your employer already paid</div>
       <div class="p">Reported by <b>Meridian Systems Pvt Ltd</b> &middot; quarterly &middot; 14 June 2026</div></div>
       <div class="v">&#8377;97,920</div></div>
     <div class="row"><div><div class="t">Interest on savings</div>
-      <div class="p">Reported by <b>State Bank</b> &middot; AIS &middot; 2 June 2026<a class="q">I dispute this</a></div></div>
+      <div class="p">Reported by <b>State Bank</b> &middot; yearly statement &middot; 2 June 2026<a class="q">This looks wrong</a></div></div>
       <div class="v">&#8377;3,480</div></div>
   </div>
 
@@ -176,7 +176,7 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--serif)
     <div class="row"><div class="t">Income counted</div><div class="v">&#8377;12,43,480</div></div>
     <div class="row"><div class="t">Less deductions allowed</div><div class="v">&minus;&#8377;2,25,000</div></div>
     <div class="row"><div class="t">Income you are taxed on</div><div class="v">&#8377;10,18,480</div></div>
-    <div class="row"><div class="t">Tax, with cess</div><div class="v">&#8377;91,520</div></div>
+    <div class="row"><div class="t">Tax, with the 4% surcharge</div><div class="v">&#8377;91,520</div></div>
     <div class="row"><div class="t">Already paid on your behalf</div><div class="v">&minus;&#8377;97,920</div></div>
   </div>
 
@@ -188,7 +188,7 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--serif)
     </svg>
     <div class="k">The finding of this office</div>
     <div class="v" id="amount">&#8377;0</div>
-    <p>You paid more than you owed. This sum is due back to you.</p>
+    <p>You paid more than you owed. This sum returns to you, usually within 2&ndash;5 weeks.</p>
 
     <button class="press" id="press">
       <span class="fillbar"></span>
@@ -248,7 +248,7 @@ function cancel(){
 }
 function finish(){
   done = true; raf = null; btn.classList.add('done');
-  lab.textContent = 'Affirmed and filed';
+  lab.textContent = 'Affirmed — refund in 2–5 weeks';
   stamp.classList.add('hit');
 }
 ['mousedown','touchstart'].forEach(ev => btn.addEventListener(ev, begin, {passive:false}));

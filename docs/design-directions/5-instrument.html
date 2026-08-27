@@ -142,10 +142,10 @@ tr.open .caret{transform:rotate(90deg)}
           <tr><td><div class="lbl">Salary</div><div class="src">Form 16 &middot; 14 Jun 2026</div></td>
             <td><span class="chip v">verified</span>Meridian Systems<div class="src"><button class="drill">open source &#8599;</button></div></td>
             <td class="n">12,40,000</td></tr>
-          <tr><td><div class="lbl">TDS deducted</div><div class="src">Quarterly &middot; 14 Jun 2026</div></td>
+          <tr><td><div class="lbl">Tax paid for you (TDS)</div><div class="src">Quarterly &middot; 14 Jun 2026</div></td>
             <td><span class="chip v">verified</span>Meridian Systems<div class="src"><button class="drill">open source &#8599;</button></div></td>
             <td class="n">97,920</td></tr>
-          <tr><td><div class="lbl">Savings interest</div><div class="src">AIS &middot; 2 Jun 2026</div></td>
+          <tr><td><div class="lbl">Savings interest</div><div class="src">Bank&rsquo;s yearly statement &middot; 2 Jun 2026</div></td>
             <td><span class="chip d">disputed</span>State Bank<div class="src"><button class="drill">open source &#8599;</button></div></td>
             <td class="n">3,480</td></tr>
           <tr><td><div class="lbl">Standard deduction</div><div class="src">Statutory &middot; auto-applied</div></td>
@@ -169,10 +169,10 @@ tr.open .caret{transform:rotate(90deg)}
           <tr class="t"><td>Taxable income</td><td class="n">10,18,480</td></tr>
           <tr class="head-row"><td><span class="caret">&#9656;</span> Slab tax</td><td class="n">88,000</td></tr>
           <tr class="exp"><td colspan="2">computed across the AY2026-27 new-regime slab table &nbsp;·&nbsp; rounding: half-up to whole paise</td></tr>
-          <tr><td>Cess @ 4%</td><td class="n">3,520</td></tr>
+          <tr><td>Surcharge @ 4% of the tax</td><td class="n">3,520</td></tr>
           <tr class="t"><td>Total liability</td><td class="n">91,520</td></tr>
-          <tr><td>Tax credits (TDS)</td><td class="n">&minus;97,920</td></tr>
-          <tr class="g"><td>Net position</td><td class="n" style="color:var(--pos)">&minus;6,400</td></tr>
+          <tr><td>Already paid for you (TDS)</td><td class="n">&minus;97,920</td></tr>
+          <tr class="g"><td>Refund due to you</td><td class="n" style="color:var(--pos)">&minus;6,400</td></tr>
         </tbody>
       </table>
     </div>
@@ -182,7 +182,7 @@ tr.open .caret{transform:rotate(90deg)}
     <div class="stat">
       <div class="k">Refund due</div>
       <div class="v pos" id="amt">&#8377;0</div>
-      <div class="d">Credits exceed liability. Every line traces to a source record.</div>
+      <div class="d">You paid more than you owed. Every line traces back to the document it came from.</div>
       <svg class="spark" viewBox="0 0 280 34" preserveAspectRatio="none" aria-hidden="true">
         <path d="M2 30 L46 27 L90 22 L134 24 L178 15 L222 11 L272 5"/>
         <circle cx="272" cy="5" r="3.4"/>
@@ -202,9 +202,8 @@ tr.open .caret{transform:rotate(90deg)}
         <div class="src" style="margin-top:6px"><button class="drill">show both computations &#8599;</button></div>
       </div>
     </div>
-    <button class="btn" id="file">Review &amp; file<span class="pg"></span></button>
-    <div class="rail-note">1 disputed record. Filing with a disputed figure is allowed &mdash;
-      the dispute is recorded alongside the return.</div>
+    <button class="btn" id="file">Check, then file<span class="pg"></span></button>
+    <div class="rail-note">One figure is marked wrong. You can still file &mdash; your note is recorded with the return.</div>
   </aside>
 
 </div></div>
@@ -247,7 +246,7 @@ btn.addEventListener('click',()=>{
   btn.disabled=true;btn.firstChild.nodeValue='Filing…';
   const t0=performance.now(),d=1800;
   const step=t=>{const k=Math.min(1,(t-t0)/d);pg.style.width=k*100+'%';
-    if(k<1)requestAnimationFrame(step);else btn.firstChild.nodeValue='Filed ✓ WPS-2026-4471';};
+    if(k<1)requestAnimationFrame(step);else btn.firstChild.nodeValue='Filed — refund in 2–5 weeks';};
   requestAnimationFrame(step);
 });
 </script>

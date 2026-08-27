@@ -157,7 +157,7 @@ body{margin:0;background:var(--room);color:var(--ink);font-family:var(--body);
   <div class="deskhead">
     <div>
       <div class="who">Priya Sharma</div>
-      <div class="meta">Assessment year 2026&ndash;27 &middot; ITR-1 &middot; salaried</div>
+      <div class="meta">Tax year 2026&ndash;27 &middot; the return for salaried people</div>
     </div>
     <span class="notice">Sample data &middot; not a filing</span>
   </div>
@@ -167,12 +167,12 @@ body{margin:0;background:var(--room);color:var(--ink);font-family:var(--body);
     <div class="entry"><div><div class="t">Salary received</div>
       <div class="p">by <b>Meridian Systems Pvt Ltd</b> &middot; Form 16 &middot; 14 June 2026</div></div>
       <div class="v">&#8377;12,40,000</div></div>
-    <div class="entry"><div><div class="t">Tax already deducted at source</div>
+    <div class="entry"><div><div class="t">Tax your employer already paid for you</div>
       <div class="p">by <b>Meridian Systems Pvt Ltd</b> &middot; quarterly &middot; 14 June 2026</div></div>
       <div class="v">&#8377;97,920</div></div>
     <div class="entry" id="int"><div><div class="t">Interest on savings account</div>
       <div class="p">by <b>State Bank</b> &middot; annual statement &middot; 2 June 2026
-        <button class="dispute" id="disp">I dispute this</button></div></div>
+        <button class="dispute" id="disp">This looks wrong</button></div></div>
       <div class="v">&#8377;3,480</div></div>
 
     <h2>Claimed by you</h2>
@@ -189,7 +189,7 @@ body{margin:0;background:var(--room);color:var(--ink);font-family:var(--body);
     <div class="row"><span>Less deductions allowed</span><span class="v">&minus;&#8377;2,25,000</span></div>
     <div class="row tot"><span>Income you are taxed on</span><span class="v">&#8377;10,18,480</span></div>
     <div class="row"><span>Tax at slab rates</span><span class="v">&#8377;88,000</span></div>
-    <div class="row"><span>Health and education cess</span><span class="v">&#8377;3,520</span></div>
+    <div class="row"><span>Health and education surcharge, 4% of the tax</span><span class="v">&#8377;3,520</span></div>
     <div class="row tot"><span>Total tax owed</span><span class="v">&#8377;91,520</span></div>
     <div class="row"><span>Already paid on your behalf</span><span class="v">&minus;&#8377;97,920</span></div>
   </div>
@@ -202,7 +202,7 @@ body{margin:0;background:var(--room);color:var(--ink);font-family:var(--body);
     </svg>
     <div class="k">The finding of this office</div>
     <div class="v" id="amt">&#8377;0</div>
-    <p>You paid more than you owed. This amount is due back to you.</p>
+    <p>You paid more than you owed. This comes back to you, usually within 2–5 weeks of filing.</p>
     <button class="press" id="press"><span class="fillbar"></span>
       <span class="lab" id="lab">Press and hold to affirm</span></button>
     <p class="attest">Holding signifies the entries above are true to the best of your knowledge.
@@ -239,7 +239,7 @@ document.getElementById('disp').addEventListener('click', e => {
   e.target.remove();
   const p = row.querySelector('.p');
   p.insertAdjacentHTML('beforeend',
-    '<br><span style="color:var(--red)">↳ disputed by you · 21 June 2026 · recorded with the return</span>');
+    '<br><span style="color:var(--red)">↳ you marked this wrong · 21 June 2026 · recorded with the return</span>');
 });
 
 const btn=document.getElementById('press'), fill=btn.querySelector('.fillbar'),
@@ -253,7 +253,7 @@ function begin(e){ if(done)return; e.preventDefault();
 function cancel(){ if(done||raf===null)return; cancelAnimationFrame(raf); raf=null;
   btn.classList.remove('armed'); fill.style.width='0%'; lab.textContent='Press and hold to affirm'; }
 function finish(){ done=true; raf=null; btn.classList.add('done');
-  lab.textContent='Affirmed and filed'; stamp.classList.add('hit'); }
+  lab.textContent='Affirmed — refund in 2–5 weeks'; stamp.classList.add('hit'); }
 ['mousedown','touchstart'].forEach(ev=>btn.addEventListener(ev,begin,{passive:false}));
 ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>btn.addEventListener(ev,cancel));
 btn.addEventListener('keydown',e=>{if(e.key===' '||e.key==='Enter')begin(e)});
