@@ -89,6 +89,24 @@ export default function RealUserTaxWizard({
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [selectedRegime, setSelectedRegime] = useState<"new" | "old">("new");
 
+  const isIncomeEntered = useMemo(() => {
+    if (formData.employmentType === "salaried") {
+      if (formData.hasForm16 === true) return formData.annualSalaryInput > 0;
+      if (formData.hasForm16 === false) return formData.monthlySalaryInput > 0;
+      return false;
+    }
+    if (formData.employmentType === "freelancer") {
+      return formData.consultingIncome > 0;
+    }
+    if (formData.employmentType === "business") {
+      return formData.businessIncome > 0;
+    }
+    if (formData.employmentType === "pension") {
+      return formData.otherIncome > 0;
+    }
+    return false;
+  }, [formData]);
+
   const updateField = (field: keyof UserTaxProfile, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -622,8 +640,9 @@ export default function RealUserTaxWizard({
               <span>Back</span>
             </button>
             <button
+              disabled={!isIncomeEntered}
               onClick={() => setWizardStep(3)}
-              className="px-5 py-2.5 bg-money hover:bg-money-deep text-white text-sm font-bold rounded-xl transition flex items-center gap-1 cursor-pointer"
+              className="px-5 py-2.5 bg-money hover:bg-money-deep text-white text-sm font-bold rounded-xl transition flex items-center gap-1 cursor-pointer disabled:bg-slate-200 disabled:text-ink-3"
             >
               <span>Next: Taxes & Investments</span>
               <ChevronRight size={16} />
