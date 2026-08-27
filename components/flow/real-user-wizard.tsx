@@ -13,15 +13,15 @@ export interface UserTaxProfile {
   pan: string;
   employmentType: "salaried" | "freelancer" | "business" | "pension";
   hasForm16: boolean | null;
-  monthlySalaryInput: number;
-  annualSalaryInput: number;
-  consultingIncome: number;
-  businessIncome: number;
-  savingsInterest: number;
-  otherIncome: number;
-  tdsDeducted: number;
-  section80C: number;
-  section80D: number;
+  monthlySalaryInput: number | "";
+  annualSalaryInput: number | "";
+  consultingIncome: number | "";
+  businessIncome: number | "";
+  savingsInterest: number | "";
+  otherIncome: number | "";
+  tdsDeducted: number | "";
+  section80C: number | "";
+  section80D: number | "";
 }
 
 export const BLANK_USER_PROFILE: UserTaxProfile = {
@@ -29,15 +29,15 @@ export const BLANK_USER_PROFILE: UserTaxProfile = {
   pan: "",
   employmentType: "salaried",
   hasForm16: null,
-  monthlySalaryInput: 0,
-  annualSalaryInput: 0,
-  consultingIncome: 0,
-  businessIncome: 0,
-  savingsInterest: 0,
-  otherIncome: 0,
-  tdsDeducted: 0,
-  section80C: 0,
-  section80D: 0,
+  monthlySalaryInput: "",
+  annualSalaryInput: "",
+  consultingIncome: "",
+  businessIncome: "",
+  savingsInterest: "",
+  otherIncome: "",
+  tdsDeducted: "",
+  section80C: "",
+  section80D: "",
 };
 
 interface RealUserTaxWizardProps {
@@ -89,22 +89,31 @@ export default function RealUserTaxWizard({
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [selectedRegime, setSelectedRegime] = useState<"new" | "old">("new");
 
-  const isIncomeEntered = useMemo(() => {
+  const isStep2Valid = useMemo(() => {
+    let incomeValid = false;
     if (formData.employmentType === "salaried") {
-      if (formData.hasForm16 === true) return formData.annualSalaryInput > 0;
-      if (formData.hasForm16 === false) return formData.monthlySalaryInput > 0;
-      return false;
+      if (formData.hasForm16 === true) {
+        incomeValid = formData.annualSalaryInput !== "" && Number(formData.annualSalaryInput) > 0;
+      } else if (formData.hasForm16 === false) {
+        incomeValid = formData.monthlySalaryInput !== "" && Number(formData.monthlySalaryInput) > 0;
+      }
+    } else if (formData.employmentType === "freelancer") {
+      incomeValid = formData.consultingIncome !== "" && Number(formData.consultingIncome) > 0;
+    } else if (formData.employmentType === "business") {
+      incomeValid = formData.businessIncome !== "" && Number(formData.businessIncome) > 0;
+    } else if (formData.employmentType === "pension") {
+      incomeValid = formData.otherIncome !== "" && Number(formData.otherIncome) > 0;
     }
-    if (formData.employmentType === "freelancer") {
-      return formData.consultingIncome > 0;
-    }
-    if (formData.employmentType === "business") {
-      return formData.businessIncome > 0;
-    }
-    if (formData.employmentType === "pension") {
-      return formData.otherIncome > 0;
-    }
-    return false;
+    const interestValid = formData.savingsInterest !== "";
+    return incomeValid && interestValid;
+  }, [formData]);
+
+  const isStep3Valid = useMemo(() => {
+    return (
+      formData.tdsDeducted !== "" &&
+      formData.section80C !== "" &&
+      formData.section80D !== ""
+    );
   }, [formData]);
 
   const updateField = (field: keyof UserTaxProfile, value: any) => {
@@ -181,9 +190,9 @@ export default function RealUserTaxWizard({
     let calculatedSalary = 0;
     if (formData.employmentType === "salaried") {
       if (formData.hasForm16) {
-        calculatedSalary = formData.annualSalaryInput;
+        calculatedSalary = Number(formData.annualSalaryInput) || 0;
       } else {
-        calculatedSalary = formData.monthlySalaryInput * 12;
+        calculatedSalary = (Number(formData.monthlySalaryInput) || 0) * 12;
       }
     }
 
@@ -203,11 +212,11 @@ export default function RealUserTaxWizard({
       });
     }
 
-    if (formData.employmentType === "freelancer" && formData.consultingIncome > 0) {
+    if (formData.employmentType === "freelancer" && Number(formData.consultingIncome) > 0) {
       list.push({
         id: "real-consulting",
         label: "Consulting / Professional Receipts",
-        amount: formData.consultingIncome,
+        amount: Number(formData.consultingIncome) || 0,
         kind: "salary" as const,
         provenance: {
           reporter: "Self Declared",
@@ -219,11 +228,11 @@ export default function RealUserTaxWizard({
       });
     }
 
-    if (formData.employmentType === "business" && formData.businessIncome > 0) {
+    if (formData.employmentType === "business" && Number(formData.businessIncome) > 0) {
       list.push({
         id: "real-business",
         label: "Business Receipts",
-        amount: formData.businessIncome,
+        amount: Number(formData.businessIncome) || 0,
         kind: "salary" as const,
         provenance: {
           reporter: "Self Declared",
@@ -235,11 +244,11 @@ export default function RealUserTaxWizard({
       });
     }
 
-    if (formData.savingsInterest > 0) {
+    if (Number(formData.savingsInterest) > 0) {
       list.push({
         id: "real-interest",
         label: "Bank Interest Income",
-        amount: formData.savingsInterest,
+        amount: Number(formData.savingsInterest) || 0,
         kind: "interest" as const,
         provenance: {
           reporter: "Self Declared",
@@ -251,11 +260,11 @@ export default function RealUserTaxWizard({
       });
     }
 
-    if (formData.otherIncome > 0) {
+    if (Number(formData.otherIncome) > 0) {
       list.push({
         id: "real-other",
         label: "Other Earnings & Dividends",
-        amount: formData.otherIncome,
+        amount: Number(formData.otherIncome) || 0,
         kind: "other" as const,
         provenance: {
           reporter: "Self Declared",
@@ -272,21 +281,21 @@ export default function RealUserTaxWizard({
 
   const claims = useMemo(() => {
     const list = [];
-    if (formData.section80C > 0) {
+    if (Number(formData.section80C) > 0) {
       list.push({
         id: "real-80c",
         section: "80C",
         label: "Section 80C Investments",
-        amount: formData.section80C,
+        amount: Number(formData.section80C) || 0,
         evidenceAttached: true,
       });
     }
-    if (formData.section80D > 0) {
+    if (Number(formData.section80D) > 0) {
       list.push({
         id: "real-80d",
         section: "80D_SELF",
         label: "Section 80D Medical Premium",
-        amount: formData.section80D,
+        amount: Number(formData.section80D) || 0,
         evidenceAttached: true,
       });
     }
@@ -298,7 +307,7 @@ export default function RealUserTaxWizard({
       facts,
       claims,
       regime: "new",
-      tdsCredits: formData.tdsDeducted,
+      tdsCredits: Number(formData.tdsDeducted) || 0,
       ageBand: "below_60",
     });
   }, [facts, claims, formData.tdsDeducted]);
@@ -308,7 +317,7 @@ export default function RealUserTaxWizard({
       facts,
       claims,
       regime: "old",
-      tdsCredits: formData.tdsDeducted,
+      tdsCredits: Number(formData.tdsDeducted) || 0,
       ageBand: "below_60",
     });
   }, [facts, claims, formData.tdsDeducted]);
@@ -341,7 +350,7 @@ export default function RealUserTaxWizard({
         {
           id: "real-tds-192",
           label: "Tax Witheld at Source (TDS)",
-          amount: formData.tdsDeducted,
+          amount: Number(formData.tdsDeducted) || 0,
           section: "192",
           provenance: {
             reporter: "Self Reported",
@@ -544,8 +553,8 @@ export default function RealUserTaxWizard({
                     <input
                       type="number"
                       placeholder="e.g. 800000"
-                      value={formData.annualSalaryInput || ""}
-                      onChange={(e) => updateField("annualSalaryInput", Number(e.target.value))}
+                      value={formData.annualSalaryInput}
+                      onChange={(e) => updateField("annualSalaryInput", e.target.value === "" ? "" : Number(e.target.value))}
                       className="w-full px-4 py-2.5 bg-paper border border-line rounded-xl text-ink font-mono text-sm focus:border-money focus:outline-none"
                     />
                   </div>
@@ -559,12 +568,12 @@ export default function RealUserTaxWizard({
                     <input
                       type="number"
                       placeholder="e.g. 50000"
-                      value={formData.monthlySalaryInput || ""}
-                      onChange={(e) => updateField("monthlySalaryInput", Number(e.target.value))}
+                      value={formData.monthlySalaryInput}
+                      onChange={(e) => updateField("monthlySalaryInput", e.target.value === "" ? "" : Number(e.target.value))}
                       className="w-full px-4 py-2.5 bg-paper border border-line rounded-xl text-ink font-mono text-sm focus:border-money focus:outline-none"
                     />
                     <span className="block text-[10px] text-ink-3 mt-1">
-                      We will automatically calculate your annual salary as ₹{(formData.monthlySalaryInput * 12).toLocaleString("en-IN")}
+                      We will automatically calculate your annual salary as ₹{((Number(formData.monthlySalaryInput) || 0) * 12).toLocaleString("en-IN")}
                     </span>
                   </div>
                 )}
@@ -579,8 +588,8 @@ export default function RealUserTaxWizard({
                 <input
                   type="number"
                   placeholder="e.g. 600000"
-                  value={formData.consultingIncome || ""}
-                  onChange={(e) => updateField("consultingIncome", Number(e.target.value))}
+                  value={formData.consultingIncome}
+                  onChange={(e) => updateField("consultingIncome", e.target.value === "" ? "" : Number(e.target.value))}
                   className="w-full px-4 py-2.5 bg-paper border border-line rounded-xl text-ink font-mono text-sm focus:border-money focus:outline-none"
                 />
               </div>
@@ -594,8 +603,8 @@ export default function RealUserTaxWizard({
                 <input
                   type="number"
                   placeholder="e.g. 1500000"
-                  value={formData.businessIncome || ""}
-                  onChange={(e) => updateField("businessIncome", Number(e.target.value))}
+                  value={formData.businessIncome}
+                  onChange={(e) => updateField("businessIncome", e.target.value === "" ? "" : Number(e.target.value))}
                   className="w-full px-4 py-2.5 bg-paper border border-line rounded-xl text-ink font-mono text-sm focus:border-money focus:outline-none"
                 />
               </div>
@@ -609,8 +618,8 @@ export default function RealUserTaxWizard({
                 <input
                   type="number"
                   placeholder="e.g. 350000"
-                  value={formData.otherIncome || ""}
-                  onChange={(e) => updateField("otherIncome", Number(e.target.value))}
+                  value={formData.otherIncome}
+                  onChange={(e) => updateField("otherIncome", e.target.value === "" ? "" : Number(e.target.value))}
                   className="w-full px-4 py-2.5 bg-paper border border-line rounded-xl text-ink font-mono text-sm focus:border-money focus:outline-none"
                 />
               </div>
@@ -620,13 +629,13 @@ export default function RealUserTaxWizard({
           {/* Bank interest details */}
           <div className="space-y-1 bg-paper-2 border border-line rounded-2xl p-5">
             <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider">
-              Do you have savings bank interest or FD interest? (₹)
+              Do you have savings bank interest or FD interest? (₹) <span className="text-red-500 font-semibold">(Mandatory. Enter 0 if none)</span>
             </label>
             <input
               type="number"
-              placeholder="If yes, enter interest amount (e.g. 12000) else leave 0"
-              value={formData.savingsInterest || ""}
-              onChange={(e) => updateField("savingsInterest", Number(e.target.value))}
+              placeholder="Enter interest amount or 0"
+              value={formData.savingsInterest}
+              onChange={(e) => updateField("savingsInterest", e.target.value === "" ? "" : Number(e.target.value))}
               className="w-full px-4 py-2.5 bg-paper border border-line rounded-xl text-ink font-mono text-sm focus:border-money focus:outline-none"
             />
           </div>
@@ -640,7 +649,7 @@ export default function RealUserTaxWizard({
               <span>Back</span>
             </button>
             <button
-              disabled={!isIncomeEntered}
+              disabled={!isStep2Valid}
               onClick={() => setWizardStep(3)}
               className="px-5 py-2.5 bg-money hover:bg-money-deep text-white text-sm font-bold rounded-xl transition flex items-center gap-1 cursor-pointer disabled:bg-slate-200 disabled:text-ink-3"
             >
@@ -662,7 +671,7 @@ export default function RealUserTaxWizard({
           <div className="space-y-4">
             <div className="space-y-1">
               <label className="block text-xs font-bold uppercase tracking-wider text-ink-2">
-                TDS: Taxes already deducted from your payments (₹)
+                TDS: Taxes already deducted from your payments (₹) <span className="text-red-500 font-semibold">(Mandatory. Enter 0 if none)</span>
                 {renderTooltip(
                   "tds",
                   "TDS (Tax Deducted at Source) is money withheld by companies or banks before they paid you. It counts as credit.",
@@ -672,16 +681,16 @@ export default function RealUserTaxWizard({
               </label>
               <input
                 type="number"
-                placeholder="e.g. 35000"
-                value={formData.tdsDeducted || ""}
-                onChange={(e) => updateField("tdsDeducted", Number(e.target.value))}
+                placeholder="Enter TDS or 0"
+                value={formData.tdsDeducted}
+                onChange={(e) => updateField("tdsDeducted", e.target.value === "" ? "" : Number(e.target.value))}
                 className="w-full px-4 py-2.5 bg-paper-2 border border-line rounded-xl text-ink font-mono text-sm focus:border-money focus:outline-none"
               />
             </div>
 
             <div className="space-y-1">
               <label className="block text-xs font-bold uppercase tracking-wider text-ink-2">
-                Tax-saving investments (Section 80C) (₹)
+                Tax-saving investments (Section 80C) (₹) <span className="text-red-500 font-semibold">(Mandatory. Enter 0 if none)</span>
                 {renderTooltip(
                   "80c",
                   "Under Section 80C, you can reduce taxable income up to ₹1,50,000 by investing in PPF, ELSS, or EPF.",
@@ -691,16 +700,16 @@ export default function RealUserTaxWizard({
               </label>
               <input
                 type="number"
-                placeholder="e.g. 150000"
-                value={formData.section80C || ""}
-                onChange={(e) => updateField("section80C", Number(e.target.value))}
+                placeholder="Enter Section 80C investments or 0"
+                value={formData.section80C}
+                onChange={(e) => updateField("section80C", e.target.value === "" ? "" : Number(e.target.value))}
                 className="w-full px-4 py-2.5 bg-paper-2 border border-line rounded-xl text-ink font-mono text-sm focus:border-money focus:outline-none"
               />
             </div>
 
             <div className="space-y-1">
               <label className="block text-xs font-bold uppercase tracking-wider text-ink-2">
-                Health insurance premium (Section 80D) (₹)
+                Health insurance premium (Section 80D) (₹) <span className="text-red-500 font-semibold">(Mandatory. Enter 0 if none)</span>
                 {renderTooltip(
                   "80d",
                   "Section 80D is a tax exemption on money spent to buy health insurance policies for yourself or parents.",
@@ -710,9 +719,9 @@ export default function RealUserTaxWizard({
               </label>
               <input
                 type="number"
-                placeholder="e.g. 25000"
-                value={formData.section80D || ""}
-                onChange={(e) => updateField("section80D", Number(e.target.value))}
+                placeholder="Enter Section 80D premium or 0"
+                value={formData.section80D}
+                onChange={(e) => updateField("section80D", e.target.value === "" ? "" : Number(e.target.value))}
                 className="w-full px-4 py-2.5 bg-paper-2 border border-line rounded-xl text-ink font-mono text-sm focus:border-money focus:outline-none"
               />
             </div>
@@ -727,8 +736,9 @@ export default function RealUserTaxWizard({
               <span>Back</span>
             </button>
             <button
+              disabled={!isStep3Valid}
               onClick={() => setWizardStep(4)}
-              className="px-5 py-2.5 bg-money hover:bg-money-deep text-white text-sm font-bold rounded-xl transition flex items-center gap-1 cursor-pointer"
+              className="px-5 py-2.5 bg-money hover:bg-money-deep text-white text-sm font-bold rounded-xl transition flex items-center gap-1 cursor-pointer disabled:bg-slate-200 disabled:text-ink-3"
             >
               <span>Next: Optimize my tax</span>
               <ChevronRight size={16} />
