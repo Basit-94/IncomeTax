@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Direction 3 — The Receipt</title>
+<script src="theme.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;500;700&display=swap">
+<style>
+:root{
+  --bg:#D9D9D4; --tape:#FCFCF8; --ink:#141414; --ink-2:#4A4A48; --ink-3:#8A8A85;
+  --line:#D2D2CC; --red:#C03A2B; --green:#1B7A3D;
+  --shadow:0 14px 40px rgba(0,0,0,.18);
+  --mono:'Roboto Mono',ui-monospace,SFMono-Regular,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0B0B0C; --tape:#171719; --ink:#EDEDEA; --ink-2:#B0B0AC; --ink-3:#777772;
+    --line:#2A2A2C; --red:#E07A6B; --green:#5CC98A;
+    --shadow:0 18px 50px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0B0B0C; --tape:#171719; --ink:#EDEDEA; --ink-2:#B0B0AC; --ink-3:#777772;
+  --line:#2A2A2C; --red:#E07A6B; --green:#5CC98A;
+  --shadow:0 18px 50px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:var(--mono);color:var(--ink);
+  -webkit-font-smoothing:antialiased;padding:30px 14px 84px;font-size:13px;line-height:1.55;
+  transition:background .3s,color .3s}
+.tape{max-width:420px;margin:0 auto;background:var(--tape);padding:30px 26px 34px;
+  box-shadow:var(--shadow);position:relative;transition:background .3s;
+  /* the roll unfurls */
+  animation:unroll .8s cubic-bezier(.2,.85,.25,1) both;transform-origin:top center}
+@keyframes unroll{from{transform:scaleY(.55);opacity:0}to{transform:none;opacity:1}}
+.tape::before,.tape::after{content:"";position:absolute;left:0;right:0;height:9px;
+  background:repeating-linear-gradient(135deg,var(--tape) 0 7px,transparent 7px 14px)}
+.tape::before{top:-8px;transform:scaleY(-1)} .tape::after{bottom:-8px}
+
+.c{text-align:center}
+h1{font-size:15px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;margin:0}
+.sub{font-size:11px;color:var(--ink-2);letter-spacing:.1em;text-transform:uppercase;margin:7px 0 0}
+.meta{font-size:10.5px;color:var(--ink-3);margin-top:14px;letter-spacing:.04em;line-height:1.7}
+.dash{border:0;border-top:1px dashed var(--line);margin:18px 0}
+.solid{border:0;border-top:1px solid var(--ink);margin:14px 0}
+.dbl{border:0;border-top:3px double var(--ink);margin:14px 0}
+.sec{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-3);margin:0 0 10px}
+
+.li{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:5px 0;
+  opacity:0;transform:translateY(4px)}
+.li.on{opacity:1;transform:none;transition:opacity .3s,transform .3s}
+.li .l{flex:1;min-width:0}
+.li .v{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:500}
+.src{display:block;font-size:10px;color:var(--ink-3);margin-top:2px;line-height:1.5}
+.fix{color:var(--red);background:none;border:0;border-bottom:1px dotted var(--red);
+  font-size:10px;font-family:inherit;cursor:pointer;padding:0}
+.corr{color:var(--red);font-size:11px}
+.struck .l>span:first-child,.struck .v{text-decoration:line-through;opacity:.5}
+
+.tot{display:flex;justify-content:space-between;gap:12px;font-weight:700;font-size:14px;padding:4px 0}
+.tot .v{font-variant-numeric:tabular-nums}
+
+.big{text-align:center;padding:18px 0 6px}
+.big .k{font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:var(--ink-3)}
+.big .v{font-size:42px;font-weight:700;color:var(--green);letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;line-height:1.1;margin-top:6px}
+.big .n{font-size:11px;color:var(--ink-2);margin-top:8px;line-height:1.6}
+
+.btn{display:block;width:100%;margin-top:18px;font-family:var(--mono);font-size:12px;
+  letter-spacing:.2em;text-transform:uppercase;font-weight:700;position:relative;overflow:hidden;
+  background:var(--ink);color:var(--tape);border:0;padding:16px;cursor:pointer;transition:opacity .2s}
+.btn:hover{opacity:.88} .btn:disabled{cursor:default;opacity:.8}
+.btn .pg{position:absolute;left:0;bottom:0;height:3px;background:var(--green);width:0}
+
+.barcode{margin:22px auto 0;height:44px;width:82%;
+  background:repeating-linear-gradient(90deg,var(--ink) 0 2px,transparent 2px 4px,
+    var(--ink) 4px 5px,transparent 5px 9px,var(--ink) 9px 12px,transparent 12px 14px);
+  opacity:0;transition:opacity .5s}
+.barcode.on{opacity:1}
+.foot{font-size:10px;color:var(--ink-3);text-align:center;margin-top:12px;letter-spacing:.1em}
+.tag{position:fixed;left:12px;bottom:12px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  background:var(--ink);color:var(--tape);padding:7px 11px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}
+  .li{opacity:1;transform:none}.barcode{opacity:1}}
+</style>
+</head>
+<body>
+<div class="tape">
+
+  <div class="c">
+    <h1>Wapsi</h1>
+    <p class="sub">Return &middot; AY 2026&ndash;27</p>
+    <div class="meta">
+      PRIYA SHARMA &middot; ITR-1 &middot; SALARIED<br>
+      DRAFT 21 JUN 2026 &middot; 14:22<br>
+      *** SAMPLE DATA — NOT A FILING ***
+    </div>
+  </div>
+
+  <hr class="dash">
+  <p class="sec">Reported about you</p>
+
+  <div class="li"><div class="l"><span>Salary</span>
+      <span class="src">Meridian Systems &middot; Form 16 &middot; 14 Jun</span></div>
+    <div class="v">12,40,000</div></div>
+
+  <div class="li"><div class="l"><span>Tax deducted</span>
+      <span class="src">Meridian Systems &middot; TDS &middot; 14 Jun</span></div>
+    <div class="v">97,920</div></div>
+
+  <div class="li" id="int"><div class="l"><span>Savings interest</span>
+      <span class="src">State Bank &middot; AIS &middot; 2 Jun &middot;
+        <button class="fix" id="fix">wrong?</button></span></div>
+    <div class="v">3,480</div></div>
+
+  <hr class="dash">
+  <p class="sec">Claimed by you</p>
+
+  <div class="li"><div class="l"><span>Standard deduction</span>
+      <span class="src">Automatic &mdash; all salaried filers</span></div>
+    <div class="v">75,000</div></div>
+
+  <div class="li"><div class="l"><span>80C &mdash; LIC + PF</span>
+      <span class="src">Entered by you &middot; 21 Jun</span></div>
+    <div class="v">1,50,000</div></div>
+
+  <hr class="solid">
+  <div class="li"><div class="l"><span>Income counted</span></div><div class="v">12,43,480</div></div>
+  <div class="li"><div class="l"><span>Deductions</span></div><div class="v">&minus;2,25,000</div></div>
+  <div class="tot"><span>Taxable</span><span class="v">10,18,480</span></div>
+
+  <hr class="dash">
+  <div class="li"><div class="l"><span>Tax at slabs</span></div><div class="v">88,000</div></div>
+  <div class="li"><div class="l"><span>Cess 4%</span></div><div class="v">3,520</div></div>
+  <div class="tot"><span>Tax owed</span><span class="v">91,520</span></div>
+  <div class="li"><div class="l"><span>Already paid</span></div><div class="v">&minus;97,920</div></div>
+
+  <hr class="dbl">
+
+  <div class="big">
+    <div class="k">Refund due</div>
+    <div class="v" id="amt">&#8377;0</div>
+    <p class="n">You paid 97,920. You owed 91,520.<br>The difference comes back to you.</p>
+  </div>
+
+  <button class="btn" id="file">File this return<span class="pg"></span></button>
+
+  <div class="barcode" id="bc"></div>
+  <p class="foot">TAP ANY LINE TO SEE ITS SOURCE</p>
+
+</div>
+<div class="tag">Direction 3 &mdash; The Receipt</div>
+
+<script>
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* the receipt prints itself, line by line */
+const lines = [...document.querySelectorAll('.li')];
+if (reduce){ lines.forEach(l=>l.classList.add('on')); document.getElementById('bc').classList.add('on'); }
+else lines.forEach((l,i)=> setTimeout(()=>l.classList.add('on'), 420 + i*95));
+
+/* total ticks up once the print finishes */
+const amt = document.getElementById('amt');
+setTimeout(()=>{
+  if (reduce){ amt.textContent='₹6,400'; document.getElementById('bc').classList.add('on'); return; }
+  const t0=performance.now(), d=1400;
+  const tick=t=>{const k=Math.min(1,(t-t0)/d);
+    amt.textContent='₹'+Math.round(6400*(1-Math.pow(1-k,3))).toLocaleString('en-IN');
+    if(k<1)requestAnimationFrame(tick); else document.getElementById('bc').classList.add('on');};
+  requestAnimationFrame(tick);
+}, reduce?0:420+lines.length*95);
+
+/* a correction prints a new line; the original stays struck through */
+document.getElementById('fix').addEventListener('click', ()=>{
+  const row = document.getElementById('int');
+  if (row.classList.contains('struck')) return;
+  row.classList.add('struck');
+  document.getElementById('fix').remove();
+  const el = document.createElement('div');
+  el.className = 'li corr';
+  el.innerHTML = '<div class="l"><span>↳ corrected by you</span>' +
+    '<span class="src">account closed in March</span></div><div class="v">1,140</div>';
+  row.after(el);
+  requestAnimationFrame(()=>el.classList.add('on'));
+});
+
+const btn=document.getElementById('file'), pg=btn.querySelector('.pg');
+btn.addEventListener('click', ()=>{
+  if (btn.disabled) return;
+  btn.disabled = true; btn.firstChild.nodeValue='Filing…';
+  const t0=performance.now(), d=1800;
+  const step=t=>{const k=Math.min(1,(t-t0)/d); pg.style.width=k*100+'%';
+    if(k<1)requestAnimationFrame(step); else btn.firstChild.nodeValue='Filed ✓ WPS-2026-4471';};
+  requestAnimationFrame(step);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="theme.js"></script>
+<title>Direction 6 — Flow (p5.js)</title>
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#080B10; --panel:#0E141C; --panel-2:#131B26;
+  --ink:#EAF2FF; --ink-2:#9DB0C6; --ink-3:#61748C;
+  --line:#1D2836;
+  --in:#4C8DFF;      /* income */
+  --out:#FF7A59;     /* tax out */
+  --keep:#37E0A6;    /* refund */
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --sans:'Instrument Sans',system-ui,sans-serif;
+}
+/* ── light: the same flow, daylight ─────────── */
+:root{
+  --bg:#F4F7FB; --panel:#FFFFFF; --panel-2:#EDF2F8;
+  --ink:#0C141F; --ink-2:#4A5A6E; --ink-3:#7C8CA0;
+  --line:#DCE4EE;
+  --in:#1D5FD0; --out:#C2410C; --keep:#067A55;
+  --veil:radial-gradient(120% 80% at 50% 0%,transparent 20%,rgba(244,247,251,.72) 70%,#F4F7FB 100%);
+  --glass:rgba(255,255,255,.82);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#080B10; --panel:#0E141C; --panel-2:#131B26;
+  --ink:#EAF2FF; --ink-2:#9DB0C6; --ink-3:#61748C;
+  --line:#1D2836;
+  --in:#4C8DFF; --out:#FF7A59; --keep:#37E0A6;
+  --veil:radial-gradient(120% 80% at 50% 0%,transparent 20%,rgba(8,11,16,.72) 70%,#080B10 100%);
+  --glass:rgba(14,20,28,.78);
+}}
+:root[data-theme="dark"]{
+  --bg:#080B10; --panel:#0E141C; --panel-2:#131B26;
+  --ink:#EAF2FF; --ink-2:#9DB0C6; --ink-3:#61748C;
+  --line:#1D2836;
+  --in:#4C8DFF; --out:#FF7A59; --keep:#37E0A6;
+  --veil:radial-gradient(120% 80% at 50% 0%,transparent 20%,rgba(8,11,16,.72) 70%,#080B10 100%);
+  --glass:rgba(14,20,28,.78);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;overflow-x:hidden}
+#sketch{position:fixed;inset:0;z-index:0}
+#sketch canvas{display:block}
+.veil{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:var(--veil)}
+.wrap{position:relative;z-index:2;max-width:940px;margin:0 auto;padding:44px 20px 90px}
+
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-3)}
+h1{font-size:clamp(28px,4.6vw,42px);font-weight:600;letter-spacing:-.03em;margin:12px 0 0;line-height:1.05}
+.sub{color:var(--ink-2);font-size:17px;margin:10px 0 0;max-width:46ch;font-weight:400}
+.flag{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--out);border:1px solid rgba(255,122,89,.4);padding:5px 9px;border-radius:4px}
+
+/* the three channels */
+.channels{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:34px}
+@media(max-width:720px){.channels{grid-template-columns:1fr}}
+.ch{background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:16px 16px 18px;
+  backdrop-filter:blur(9px);position:relative;overflow:hidden;
+  opacity:0;transform:translateY(14px);animation:rise .7s cubic-bezier(.2,.8,.2,1) forwards}
+.ch:nth-child(1){animation-delay:.15s} .ch:nth-child(2){animation-delay:.3s} .ch:nth-child(3){animation-delay:.45s}
+@keyframes rise{to{opacity:1;transform:none}}
+.ch::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--c,var(--in));
+  transform:scaleX(var(--fill,0));transform-origin:left;transition:transform 1.4s cubic-bezier(.2,.8,.2,1) .6s}
+.ch .k{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.ch .v{font-family:var(--mono);font-size:26px;font-weight:600;margin-top:8px;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;color:var(--c,var(--ink))}
+.ch .d{font-size:13px;color:var(--ink-2);margin-top:7px;line-height:1.5}
+
+/* facts */
+.facts{margin-top:16px;background:var(--glass);border:1px solid var(--line);border-radius:12px;
+  backdrop-filter:blur(9px);overflow:hidden}
+.f{display:flex;justify-content:space-between;gap:14px;padding:14px 16px;border-bottom:1px solid var(--line);
+  align-items:center;cursor:pointer;transition:background .18s}
+.f:last-child{border-bottom:0}
+.f:hover{background:rgba(76,141,255,.06)}
+.f .t{font-size:15px;font-weight:500}
+.prov{display:inline-flex;align-items:center;gap:7px;margin-top:5px;font-family:var(--mono);
+  font-size:10px;letter-spacing:.03em;color:var(--ink-3)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--in);box-shadow:0 0 0 3px rgba(76,141,255,.15)}
+.dot.you{background:var(--keep);box-shadow:0 0 0 3px rgba(55,224,166,.15)}
+.dot.sys{background:var(--ink-3);box-shadow:0 0 0 3px rgba(97,116,140,.15)}
+.f .v{font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* result */
+.result{margin-top:16px;border-radius:12px;padding:26px 22px;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--keep) 14%,transparent),var(--glass));
+  border:1px solid rgba(55,224,166,.3);display:flex;justify-content:space-between;
+  align-items:center;gap:20px;flex-wrap:wrap}
+.result .k{font-family:var(--mono);font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--keep)}
+.result .v{font-family:var(--mono);font-size:clamp(40px,8vw,58px);font-weight:600;color:var(--keep);
+  letter-spacing:-.03em;line-height:1;margin-top:8px;font-variant-numeric:tabular-nums}
+.result p{margin:10px 0 0;color:var(--ink-2);font-size:14.5px;max-width:32ch}
+
+.btn{position:relative;background:var(--keep);color:#04231A;border:0;border-radius:10px;
+  padding:16px 26px;font-family:var(--sans);font-size:15px;font-weight:600;cursor:pointer;
+  overflow:hidden;transition:transform .12s}
+.btn:active{transform:translateY(1px) scale(.99)}
+.btn[data-state="working"]{background:#1E6A55;color:#BFF3E2;cursor:progress}
+.btn[data-state="done"]{background:#0F4A3A;color:#8FE8CC}
+.btn .bar{position:absolute;left:0;bottom:0;height:3px;background:rgba(255,255,255,.55);width:0}
+.hint{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:14px;letter-spacing:.04em}
+.tag{position:fixed;left:12px;bottom:12px;z-index:3;font-family:var(--mono);font-size:10px;
+  letter-spacing:.14em;text-transform:uppercase;background:var(--in);color:#04101F;padding:7px 11px;border-radius:5px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="sketch"></div><div class="veil"></div>
+
+<div class="wrap">
+  <div class="top">
+    <div>
+      <div class="eyebrow">Assessment year 2026&ndash;27 &middot; live computation</div>
+      <h1>Watch where your money went</h1>
+      <p class="sub">Every rupee you earned is flowing above. Most of it stays yours.</p>
+    </div>
+    <span class="flag">Sample data &middot; not a filing</span>
+  </div>
+
+  <div class="channels">
+    <div class="ch" style="--c:var(--in);--fill:1">
+      <div class="k">Earned</div>
+      <div class="v" data-count="1243480">&#8377;0</div>
+      <div class="d">Salary and interest reported by others.</div>
+    </div>
+    <div class="ch" style="--c:var(--out);--fill:.74">
+      <div class="k">Went to tax</div>
+      <div class="v" data-count="91520">&#8377;0</div>
+      <div class="d">After every deduction you were entitled to.</div>
+    </div>
+    <div class="ch" style="--c:var(--keep);--fill:.05">
+      <div class="k">Overpaid</div>
+      <div class="v" data-count="6400">&#8377;0</div>
+      <div class="d">Deducted from your salary but never owed.</div>
+    </div>
+  </div>
+
+  <div class="facts">
+    <div class="f"><div><div class="t">Salary received</div>
+      <div class="prov"><i class="dot"></i>Meridian Systems &middot; Form 16 &middot; 14 Jun</div></div>
+      <div class="v">&#8377;12,40,000</div></div>
+    <div class="f"><div><div class="t">Tax already deducted</div>
+      <div class="prov"><i class="dot"></i>Meridian Systems &middot; TDS &middot; 14 Jun</div></div>
+      <div class="v">&#8377;97,920</div></div>
+    <div class="f"><div><div class="t">Interest on savings</div>
+      <div class="prov"><i class="dot"></i>State Bank &middot; AIS &middot; 2 Jun</div></div>
+      <div class="v">&#8377;3,480</div></div>
+    <div class="f"><div><div class="t">Standard deduction</div>
+      <div class="prov"><i class="dot sys"></i>Applied for you &middot; every salaried filer</div></div>
+      <div class="v">&#8377;75,000</div></div>
+    <div class="f"><div><div class="t">Life insurance &amp; provident fund</div>
+      <div class="prov"><i class="dot you"></i>Entered by you &middot; 21 Jun &middot; 80C</div></div>
+      <div class="v">&#8377;1,50,000</div></div>
+  </div>
+
+  <div class="result">
+    <div>
+      <div class="k">Coming back to you</div>
+      <div class="v" data-count="6400">&#8377;0</div>
+      <p>You paid &#8377;97,920 and owed &#8377;91,520.</p>
+    </div>
+    <button class="btn" id="file">File this return<span class="bar"></span></button>
+  </div>
+  <p class="hint">Tap any line to see the document it came from.</p>
+</div>
+
+<div class="tag">Direction 6 &mdash; Flow &middot; p5.js</div>
+
+<script>
+/* ---- money flowing through three channels ---- */
+new p5((s) => {
+  let parts = [], W, H, reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function rgbOf(name){
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    const d = document.createElement('span'); d.style.color = v; document.body.appendChild(d);
+    const m = getComputedStyle(d).color.match(/\d+/g); d.remove();
+    return m ? m.slice(0,3).map(Number) : [128,128,128];
+  }
+  let COL = { in:[76,141,255], out:[255,122,89], keep:[55,224,166] };
+  function readTheme(){ COL = { in:rgbOf('--in'), out:rgbOf('--out'), keep:rgbOf('--keep') }; }
+
+  s.setup = () => {
+    const c = s.createCanvas(window.innerWidth, window.innerHeight);
+    c.parent('sketch'); W = s.width; H = s.height; readTheme();
+    new MutationObserver(readTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTheme);
+    const n = reduced ? 60 : 260;
+    for (let i = 0; i < n; i++) parts.push(spawn(s.random(W)));
+    s.noStroke();
+  };
+  function spawn(x){
+    // 74% of flow diverts to tax, 5% returns, rest is deduction-sheltered
+    const r = Math.random();
+    const lane = r < .74 ? 'out' : (r < .79 ? 'keep' : 'in');
+    return { x, y: Math.random()*H*.42, lane, sp: .5+Math.random()*1.4,
+             a: 30+Math.random()*90, r: 1+Math.random()*1.8, ph: Math.random()*6.28 };
+  }
+  s.draw = () => {
+    s.clear();
+    const t = s.frameCount * (reduced ? 0 : .006);
+    for (const p of parts){
+      // horizontal drift toward the lane's settling band
+      const target = p.lane === 'out' ? H*.72 : p.lane === 'keep' ? H*.52 : H*.34;
+      p.y += (target - p.y) * .006 + Math.sin(t*2 + p.ph) * .25;
+      p.x += p.sp * (reduced ? 0 : 1);
+      if (p.x > W + 10) { p.x = -10; p.y = Math.random()*H*.42; }
+      const c = COL[p.lane];
+      s.fill(c[0], c[1], c[2], p.a);
+      s.circle(p.x, p.y, p.r*2);
+      // faint trail
+      s.fill(c[0], c[1], c[2], p.a*.25);
+      s.circle(p.x - p.sp*6, p.y, p.r*1.2);
+    }
+  };
+  s.windowResized = () => { s.resizeCanvas(window.innerWidth, window.innerHeight); W=s.width; H=s.height; };
+});
+
+/* ---- count-up: visible work reads as trustworthy ---- */
+const fmt = n => '₹' + Math.round(n).toLocaleString('en-IN');
+function countUp(el){
+  const target = +el.dataset.count;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches){ el.textContent = fmt(target); return; }
+  const dur = 1500, t0 = performance.now();
+  const tick = t => {
+    const k = Math.min(1, (t - t0)/dur);
+    el.textContent = fmt(target * (1 - Math.pow(1-k, 3)));   // ease-out cubic
+    if (k < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+const io = new IntersectionObserver((es) => es.forEach(e => {
+  if (e.isIntersecting){ countUp(e.target); io.unobserve(e.target); }
+}), { threshold:.4 });
+document.querySelectorAll('[data-count]').forEach(el => io.observe(el));
+
+/* ---- staged confirmation: weight proportional to stakes ---- */
+const btn = document.getElementById('file'), bar = btn.querySelector('.bar');
+btn.addEventListener('click', () => {
+  if (btn.dataset.state) return;
+  btn.dataset.state = 'working';
+  btn.firstChild.nodeValue = 'Filing…';
+  const dur = 1900, t0 = performance.now();
+  const step = t => {
+    const k = Math.min(1, (t - t0)/dur);
+    bar.style.width = (k*100) + '%';
+    if (k < 1) requestAnimationFrame(step);
+    else { btn.dataset.state='done'; btn.firstChild.nodeValue='Filed ✓  ref WPS-2026-4471'; }
+  };
+  requestAnimationFrame(step);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="theme.js"></script>
+<title>Direction 9 — Strata</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#EDEAE3; --card:#FFFFFF; --card-2:#F7F5F0;
+  --ink:#191713; --ink-2:#585349; --ink-3:#8B857A;
+  --line:#DDD8CE;
+  --them:#3D5AFE;   /* reported by others */
+  --you:#00875A;    /* entered by you     */
+  --sys:#8B857A;    /* system applied     */
+  --pos:#00875A; --neg:#C0392B;
+  --disp:'Bricolage Grotesque',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#14130F; --card:#1D1B16; --card-2:#232019;
+  --ink:#F0EDE6; --ink-2:#B3AC9E; --ink-3:#7E786B; --line:#2E2A22;
+  --them:#7C93FF; --you:#4CC38A; --pos:#4CC38A; --neg:#E5776A;
+}}
+:root[data-theme="dark"]{
+  --bg:#14130F; --card:#1D1B16; --card-2:#232019;
+  --ink:#F0EDE6; --ink-2:#B3AC9E; --ink-3:#7E786B; --line:#2E2A22;
+  --them:#7C93FF; --you:#4CC38A; --pos:#4CC38A; --neg:#E5776A;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--disp);
+  -webkit-font-smoothing:antialiased;padding:0 18px 90px}
+.wrap{max-width:640px;margin:0 auto}
+
+header{padding:46px 0 10px}
+.eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-3)}
+h1{font-size:clamp(28px,5.6vw,40px);font-weight:600;letter-spacing:-.03em;margin:12px 0 0;line-height:1.05}
+.lede{font-size:16.5px;color:var(--ink-2);margin:10px 0 0;max-width:44ch}
+.count{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-top:16px;letter-spacing:.06em}
+.count b{color:var(--ink)}
+
+/* ── the stack ─────────────────────────────── */
+.stack{margin-top:22px;display:flex;flex-direction:column;gap:11px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 16px 14px;
+  position:relative;cursor:grab;touch-action:pan-y;
+  box-shadow:0 1px 2px rgba(0,0,0,.05),0 8px 18px rgba(0,0,0,.05);
+  opacity:0;transform:translateY(22px) scale(.97);
+  animation:settle .62s cubic-bezier(.16,1.02,.3,1) forwards}
+@keyframes settle{to{opacity:1;transform:none}}
+.card:active{cursor:grabbing}
+.card::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:0 3px 3px 0;
+  background:var(--src,var(--them))}
+.top{display:flex;justify-content:space-between;gap:14px;align-items:baseline}
+.t{font-size:16.5px;font-weight:500;letter-spacing:-.01em}
+.v{font-family:var(--mono);font-size:16.5px;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:500}
+.who{display:inline-flex;align-items:center;gap:7px;margin-top:9px;font-family:var(--mono);
+  font-size:10.5px;color:var(--ink-3);letter-spacing:.02em}
+.who i{width:7px;height:7px;border-radius:2px;background:var(--src,var(--them))}
+
+/* provenance drawer */
+.more{max-height:0;overflow:hidden;transition:max-height .42s cubic-bezier(.2,.8,.2,1)}
+.card.open .more{max-height:190px}
+.moreIn{border-top:1px dashed var(--line);margin-top:13px;padding-top:12px;
+  font-family:var(--mono);font-size:11.5px;color:var(--ink-2);line-height:1.8}
+.moreIn dt{color:var(--ink-3);display:inline-block;min-width:104px}
+.acts{display:flex;gap:8px;margin-top:12px}
+.mini{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;padding:8px 11px;border-radius:8px;
+  border:1px solid var(--line);background:var(--card-2);color:var(--ink-2);cursor:pointer}
+.mini:hover{border-color:var(--ink-3);color:var(--ink)}
+.mini.bad{color:var(--neg);border-color:rgba(192,57,43,.3)}
+.chev{position:absolute;right:15px;bottom:12px;color:var(--ink-3);font-size:11px;
+  transition:transform .3s;font-family:var(--mono)}
+.card.open .chev{transform:rotate(180deg)}
+
+/* swipe affordance */
+.swipe{position:absolute;inset:0;border-radius:14px;pointer-events:none;
+  display:flex;align-items:center;padding:0 18px;font-family:var(--mono);font-size:11px;
+  letter-spacing:.1em;text-transform:uppercase;opacity:0}
+.swipe.ok{justify-content:flex-start;color:var(--pos);background:linear-gradient(90deg,rgba(0,135,90,.13),transparent 55%)}
+.card.confirmed{border-color:var(--pos)}
+.card.confirmed .t::after{content:" ✓";color:var(--pos)}
+
+/* ── result ────────────────────────────────── */
+.res{margin-top:20px;background:var(--card);border:1px solid var(--line);border-radius:18px;
+  padding:24px 20px;box-shadow:0 10px 30px rgba(0,0,0,.07)}
+.res .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3)}
+.res .amt{font-size:clamp(40px,9vw,56px);font-weight:700;color:var(--pos);letter-spacing:-.035em;
+  line-height:1;margin-top:8px;font-variant-numeric:tabular-nums}
+.res p{color:var(--ink-2);font-size:15px;margin:10px 0 0}
+.meter{display:flex;height:7px;border-radius:99px;overflow:hidden;margin-top:16px;background:var(--card-2)}
+.meter i{height:100%;width:0;transition:width 1.1s cubic-bezier(.2,.8,.2,1)}
+.meter .paid{background:var(--them)} .meter .over{background:var(--pos)}
+.leg{display:flex;gap:16px;margin-top:9px;font-family:var(--mono);font-size:10.5px;color:var(--ink-3)}
+.leg span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}
+.leg .a::before{background:var(--them)} .leg .b::before{background:var(--pos)}
+.go{margin-top:18px;width:100%;border:0;border-radius:12px;background:var(--ink);color:var(--bg);
+  font-family:var(--disp);font-size:16px;font-weight:600;padding:17px;cursor:pointer;
+  transition:transform .12s}
+.go:active{transform:scale(.985)}
+.go:disabled{background:var(--line);color:var(--ink-3);cursor:not-allowed}
+.undo{margin-top:12px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.undo button{background:none;border:0;color:var(--them);cursor:pointer;font:inherit;text-decoration:underline}
+.flag{position:fixed;top:12px;right:12px;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--neg);border:1px solid rgba(192,57,43,.3);padding:5px 9px;
+  border-radius:5px;background:var(--card)}
+.tag{position:fixed;left:12px;bottom:12px;font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;background:var(--ink);color:var(--bg);padding:7px 11px;border-radius:6px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}
+  .card{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<span class="flag">Sample data</span>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Assessment year 2026–27</div>
+  <h1>Five things we were told about you</h1>
+  <p class="lede">Swipe a card right to confirm it. Tap to see exactly where it came from.</p>
+  <p class="count"><b id="done">0</b> of <b>5</b> confirmed</p>
+</header>
+
+<div class="stack" id="stack">
+
+  <article class="card" style="--src:var(--them);animation-delay:.05s">
+    <div class="swipe ok">confirm</div>
+    <div class="top"><div class="t">Salary received</div><div class="v">₹12,40,000</div></div>
+    <div class="who"><i></i>Meridian Systems Pvt Ltd</div>
+    <div class="more"><div class="moreIn">
+      <div><dt>Document</dt>Form 16, Part B</div>
+      <div><dt>Reported</dt>14 June 2026, 09:14</div>
+      <div><dt>Identifier</dt>TAN BLRM09321F</div>
+      <div class="acts"><button class="mini">Open document</button><button class="mini bad">This is wrong</button></div>
+    </div></div>
+    <span class="chev">⌄</span>
+  </article>
+
+  <article class="card" style="--src:var(--them);animation-delay:.12s">
+    <div class="swipe ok">confirm</div>
+    <div class="top"><div class="t">Tax already deducted</div><div class="v">₹97,920</div></div>
+    <div class="who"><i></i>Meridian Systems Pvt Ltd</div>
+    <div class="more"><div class="moreIn">
+      <div><dt>Document</dt>Quarterly TDS return</div>
+      <div><dt>Reported</dt>14 June 2026</div>
+      <div><dt>Identifier</dt>TAN BLRM09321F</div>
+      <div class="acts"><button class="mini">Open document</button><button class="mini bad">This is wrong</button></div>
+    </div></div>
+    <span class="chev">⌄</span>
+  </article>
+
+  <article class="card" style="--src:var(--them);animation-delay:.19s">
+    <div class="swipe ok">confirm</div>
+    <div class="top"><div class="t">Interest on savings</div><div class="v">₹3,480</div></div>
+    <div class="who"><i></i>State Bank</div>
+    <div class="more"><div class="moreIn">
+      <div><dt>Document</dt>Annual information statement</div>
+      <div><dt>Reported</dt>2 June 2026</div>
+      <div><dt>Account</dt>xxxx-4417</div>
+      <div class="acts"><button class="mini">Open document</button><button class="mini bad">This is wrong</button></div>
+    </div></div>
+    <span class="chev">⌄</span>
+  </article>
+
+  <article class="card" style="--src:var(--sys);animation-delay:.26s">
+    <div class="swipe ok">confirm</div>
+    <div class="top"><div class="t">Standard deduction</div><div class="v">₹75,000</div></div>
+    <div class="who"><i></i>Applied for you automatically</div>
+    <div class="more"><div class="moreIn">
+      <div><dt>Why</dt>Every salaried filer receives this</div>
+      <div><dt>Rule set</dt>AY2026-27 · new regime</div>
+      <div class="acts"><button class="mini">View provision</button></div>
+    </div></div>
+    <span class="chev">⌄</span>
+  </article>
+
+  <article class="card" style="--src:var(--you);animation-delay:.33s">
+    <div class="swipe ok">confirm</div>
+    <div class="top"><div class="t">Life insurance & provident fund</div><div class="v">₹1,50,000</div></div>
+    <div class="who"><i></i>Entered by you</div>
+    <div class="more"><div class="moreIn">
+      <div><dt>Entered</dt>21 June 2026, 14:22</div>
+      <div><dt>Section</dt>80C</div>
+      <div><dt>Proof</dt>Not attached</div>
+      <div class="acts"><button class="mini">Attach proof</button><button class="mini">Edit amount</button></div>
+    </div></div>
+    <span class="chev">⌄</span>
+  </article>
+
+</div>
+
+<div class="res">
+  <div class="k">If all five are right</div>
+  <div class="amt" id="amt">₹6,400</div>
+  <p>comes back to you. You paid ₹97,920 and owed ₹91,520.</p>
+  <div class="meter"><i class="paid" id="mp"></i><i class="over" id="mo"></i></div>
+  <div class="leg"><span class="a">Owed 91,520</span><span class="b">Overpaid 6,400</span></div>
+  <button class="go" id="go" disabled>Confirm all five to continue</button>
+  <p class="undo">Changed something by mistake? <button id="undoBtn">Undo last change</button></p>
+</div>
+
+</div>
+<div class="tag">Direction 9 — Strata</div>
+
+<script>
+const cards = [...document.querySelectorAll('.card')];
+const doneEl = document.getElementById('done'), go = document.getElementById('go');
+const history = [];
+
+function refresh(){
+  const n = cards.filter(c => c.classList.contains('confirmed')).length;
+  doneEl.textContent = n;
+  go.disabled = n < cards.length;
+  go.textContent = n < cards.length ? `Confirm all five to continue` : 'File this return';
+}
+function confirmCard(c){
+  if (c.classList.contains('confirmed')) return;
+  c.classList.add('confirmed'); history.push(c); refresh();
+}
+
+cards.forEach(card => {
+  /* tap toggles provenance — never on a button press */
+  card.addEventListener('click', e => {
+    if (e.target.closest('.mini')) return;
+    card.classList.toggle('open');
+  });
+
+  /* drag right to confirm — fully interruptible, snaps back if released early */
+  let sx = 0, dx = 0, dragging = false;
+  const sw = card.querySelector('.swipe');
+  const down = e => {
+    if (e.target.closest('.mini')) return;
+    dragging = true; sx = (e.touches ? e.touches[0].clientX : e.clientX);
+    card.style.transition = 'none';
+  };
+  const move = e => {
+    if (!dragging) return;
+    const x = (e.touches ? e.touches[0].clientX : e.clientX);
+    dx = Math.max(0, Math.min(150, x - sx));
+    card.style.transform = `translateX(${dx}px)`;
+    sw.style.opacity = Math.min(1, dx / 90);
+  };
+  const up = () => {
+    if (!dragging) return;
+    dragging = false;
+    card.style.transition = 'transform .34s cubic-bezier(.2,.9,.2,1), opacity .2s';
+    if (dx > 88) confirmCard(card);          /* past the threshold — commit */
+    card.style.transform = '';                /* otherwise it springs back  */
+    sw.style.opacity = 0; dx = 0;
+  };
+  card.addEventListener('mousedown', down); card.addEventListener('touchstart', down, {passive:true});
+  window.addEventListener('mousemove', move); window.addEventListener('touchmove', move, {passive:true});
+  window.addEventListener('mouseup', up);    window.addEventListener('touchend', up);
+});
+
+document.getElementById('undoBtn').addEventListener('click', () => {
+  const last = history.pop();
+  if (last){ last.classList.remove('confirmed'); refresh(); }
+});
+
+/* meter fills once visible */
+new IntersectionObserver((es,o) => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  document.getElementById('mp').style.width = '93.5%';
+  document.getElementById('mo').style.width = '6.5%';
+  o.unobserve(e.target);
+}), {threshold:.4}).observe(document.querySelector('.res'));
+
+go.addEventListener('click', () => {
+  if (go.disabled) return;
+  go.disabled = true; go.textContent = 'Filing…';
+  setTimeout(()=> go.textContent = 'Filed ✓ WPS-2026-4471', 1800);
+});
+refresh();
+</script>
+</body>
+</html>

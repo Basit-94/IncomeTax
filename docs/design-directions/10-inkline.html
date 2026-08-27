@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="theme.js"></script>
+<title>Direction 10 — Inkline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#FCFBF7; --paper-2:#F4F1E9; --wash:#EDE9DE;
+  --ink:#15130F; --ink-2:#4E4940; --ink-3:#8A8377;
+  --rule:#DAD4C6;
+  --azure:#1B4D8F;   /* reported by others */
+  --moss:#2F6B4F;    /* yours / positive   */
+  --rust:#A63A22;    /* dispute            */
+  --serif:'Fraunces',Georgia,serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+/* ── dark: night ink ────────────────────────── */
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#100F0C; --paper-2:#191713; --wash:#201D18;
+  --ink:#F1EDE3; --ink-2:#BDB5A6; --ink-3:#8A8377;
+  --rule:#2C2822;
+  --azure:#7FA7DE; --moss:#6FB98E; --rust:#D9836B;
+}}
+:root[data-theme="dark"]{
+  --paper:#100F0C; --paper-2:#191713; --wash:#201D18;
+  --ink:#F1EDE3; --ink-2:#BDB5A6; --ink-3:#8A8377;
+  --rule:#2C2822;
+  --azure:#7FA7DE; --moss:#6FB98E; --rust:#D9836B;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--serif);
+  -webkit-font-smoothing:antialiased;padding:0 20px 96px;
+  background-image:radial-gradient(circle at 18% 12%,rgba(0,0,0,.018) 0 1px,transparent 1px),
+                   radial-gradient(circle at 72% 62%,rgba(0,0,0,.014) 0 1px,transparent 1px);
+  background-size:13px 13px,17px 17px}
+.wrap{max-width:700px;margin:0 auto}
+
+/* ── masthead with a rule that draws itself ── */
+header{padding:56px 0 0;position:relative}
+.eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-3)}
+h1{font-size:clamp(32px,6vw,50px);font-weight:400;letter-spacing:-.02em;line-height:1.04;margin:14px 0 0}
+h1 em{font-style:italic;color:var(--azure)}
+.lede{font-size:18px;color:var(--ink-2);margin:14px 0 0;max-width:44ch;font-weight:300;line-height:1.55}
+.hr{width:100%;height:16px;margin-top:24px;overflow:visible}
+.hr path{fill:none;stroke:var(--ink);stroke-width:1.4;stroke-linecap:round;
+  stroke-dasharray:700;stroke-dashoffset:700;animation:draw 1.5s cubic-bezier(.25,.8,.25,1) .2s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+
+/* ── entries ─────────────────────────────── */
+h2{font-family:var(--mono);font-size:10px;letter-spacing:.26em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:500;margin:38px 0 2px}
+.e{padding:15px 0 13px;border-bottom:1px solid var(--rule);position:relative;
+  opacity:0;transform:translateY(10px);transition:opacity .55s,transform .55s cubic-bezier(.2,.85,.25,1)}
+.e.in{opacity:1;transform:none}
+.e .row{display:flex;justify-content:space-between;gap:16px;align-items:baseline}
+.e .t{font-size:17.5px;font-weight:400}
+.e .v{font-family:var(--mono);font-size:16px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.e .p{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:6px;letter-spacing:.02em}
+.e .p b{color:var(--azure);font-weight:500}
+.e .p b.you{color:var(--moss)}
+.q{margin-left:10px;color:var(--rust);border-bottom:1px dotted var(--rust);cursor:pointer}
+
+/* ink underline sweeps beneath a confirmed entry */
+.uline{position:absolute;left:0;bottom:-1px;height:2px;width:0;background:var(--moss);
+  border-radius:2px;transition:width .5s cubic-bezier(.2,.9,.25,1)}
+.e.ok .uline{width:100%}
+.e.ok .t::after{content:" ✓";color:var(--moss);font-family:var(--mono);font-size:12px}
+.tapme{font-family:var(--mono);font-size:10px;color:var(--ink-3);letter-spacing:.08em;
+  opacity:0;transition:opacity .25s}
+.e:hover .tapme{opacity:1}
+
+/* ── the sum, drawn ──────────────────────── */
+.sum{margin-top:44px;background:var(--paper-2);border:1px solid var(--rule);border-radius:3px;
+  padding:28px 24px 26px;position:relative;overflow:hidden}
+.brace{position:absolute;left:0;top:0;bottom:0;width:14px}
+.brace path{fill:none;stroke:var(--azure);stroke-width:1.6;stroke-linecap:round;
+  stroke-dasharray:420;stroke-dashoffset:420}
+.sum.in .brace path{animation:draw 1.3s cubic-bezier(.25,.8,.25,1) forwards}
+.line{display:flex;justify-content:space-between;gap:14px;padding:6px 0;font-size:16px;color:var(--ink-2)}
+.line .v{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.line.tot{border-top:1px solid var(--rule);margin-top:8px;padding-top:11px;color:var(--ink);font-weight:500}
+.final{margin-top:20px;padding-top:18px;border-top:2px solid var(--ink);
+  display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.final .k{font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-3)}
+.final .amt{font-size:clamp(42px,9vw,60px);font-weight:500;color:var(--moss);line-height:1;
+  letter-spacing:-.025em;font-variant-numeric:tabular-nums;margin-top:8px}
+.final p{font-style:italic;color:var(--ink-2);font-size:15.5px;margin:8px 0 0;max-width:32ch}
+
+/* ── nib button ──────────────────────────── */
+.sign{margin-top:26px;width:100%;border:1.5px solid var(--ink);background:transparent;color:var(--ink);
+  font-family:var(--serif);font-size:17px;padding:17px;cursor:pointer;border-radius:2px;
+  position:relative;overflow:hidden;transition:color .3s}
+.sign .wash{position:absolute;inset:0;background:var(--ink);transform:scaleX(0);transform-origin:left;
+  transition:transform .55s cubic-bezier(.3,.8,.25,1)}
+.sign span{position:relative;z-index:1}
+.sign:hover .wash{transform:scaleX(1)} .sign:hover{color:var(--paper)}
+.sign.done{border-color:var(--moss);color:var(--moss)} .sign.done .wash{transform:scaleX(0)}
+.note{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:14px;text-align:center;letter-spacing:.03em}
+.flag{position:fixed;top:14px;right:14px;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--rust);border:1px solid rgba(166,58,34,.32);padding:5px 9px;background:var(--paper)}
+.tag{position:fixed;left:12px;bottom:12px;font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;background:var(--ink);color:var(--paper);padding:7px 11px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}
+  .e{opacity:1;transform:none}.hr path,.brace path{stroke-dashoffset:0}}
+</style>
+</head>
+<body>
+<span class="flag">Sample data</span>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Assessment year 2026–27 · ITR-1</div>
+  <h1>What was written down <em>about you</em></h1>
+  <p class="lede">Five entries. Each one names who wrote it and when. Tap an entry to mark it read.</p>
+  <svg class="hr" viewBox="0 0 700 16" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0 9 C 120 3, 260 13, 380 7 S 600 2, 700 8"/>
+  </svg>
+</header>
+
+<h2>Written by others</h2>
+
+<div class="e"><span class="uline"></span>
+  <div class="row"><div class="t">Salary received</div><div class="v">₹12,40,000</div></div>
+  <div class="p">by <b>Meridian Systems Pvt Ltd</b> · Form 16 · 14 June 2026 <span class="tapme">— tap to confirm</span></div>
+</div>
+
+<div class="e"><span class="uline"></span>
+  <div class="row"><div class="t">Tax already deducted</div><div class="v">₹97,920</div></div>
+  <div class="p">by <b>Meridian Systems Pvt Ltd</b> · quarterly TDS · 14 June 2026 <span class="tapme">— tap to confirm</span></div>
+</div>
+
+<div class="e"><span class="uline"></span>
+  <div class="row"><div class="t">Interest on savings</div><div class="v">₹3,480</div></div>
+  <div class="p">by <b>State Bank</b> · AIS · 2 June 2026<span class="q">I dispute this</span></div>
+</div>
+
+<h2>Written by you</h2>
+
+<div class="e"><span class="uline"></span>
+  <div class="row"><div class="t">Standard deduction</div><div class="v">₹75,000</div></div>
+  <div class="p">applied <b class="you">for you</b> · every salaried filer receives this <span class="tapme">— tap to confirm</span></div>
+</div>
+
+<div class="e"><span class="uline"></span>
+  <div class="row"><div class="t">Life insurance &amp; provident fund</div><div class="v">₹1,50,000</div></div>
+  <div class="p">entered by <b class="you">you</b> · 21 June 2026 · section 80C <span class="tapme">— tap to confirm</span></div>
+</div>
+
+<div class="sum" id="sum">
+  <svg class="brace" viewBox="0 0 14 400" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M12 4 C 4 4, 4 100, 4 200 C 4 300, 4 396, 12 396"/>
+  </svg>
+  <div class="line"><span>Income counted</span><span class="v">₹12,43,480</span></div>
+  <div class="line"><span>Less deductions allowed</span><span class="v">−₹2,25,000</span></div>
+  <div class="line tot"><span>Income you are taxed on</span><span class="v">₹10,18,480</span></div>
+  <div class="line"><span>Tax at slab rates, with cess</span><span class="v">₹91,520</span></div>
+  <div class="line"><span>Already paid on your behalf</span><span class="v">−₹97,920</span></div>
+
+  <div class="final">
+    <div>
+      <div class="k">Due back to you</div>
+      <div class="amt" id="amt">₹0</div>
+    </div>
+    <p>Because you paid ₹6,400 more than you owed.</p>
+  </div>
+
+  <button class="sign" id="sign"><span class="wash"></span><span id="lab">Sign and file this return</span></button>
+  <p class="note" id="note">Nothing is sent until you sign.</p>
+</div>
+
+</div>
+<div class="tag">Direction 10 — Inkline</div>
+
+<script>
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* entries fade up as they arrive */
+const io = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+}), {threshold:.3});
+document.querySelectorAll('.e').forEach((el,i) => {
+  el.style.transitionDelay = (i%2)*80 + 'ms'; io.observe(el);
+  el.addEventListener('click', ev => {
+    if (ev.target.classList.contains('q')) return;   /* disputing is not confirming */
+    el.classList.toggle('ok');
+  });
+});
+
+/* the sum draws its brace and ticks the figure up */
+new IntersectionObserver((es,o) => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  e.target.classList.add('in'); o.unobserve(e.target);
+  const amt = document.getElementById('amt'), T = 6400;
+  if (reduce){ amt.textContent = '₹6,400'; return; }
+  const t0 = performance.now(), dur = 1600;
+  const tick = t => { const k = Math.min(1,(t-t0)/dur);
+    amt.textContent = '₹' + Math.round(T*(1-Math.pow(1-k,3))).toLocaleString('en-IN');
+    if (k<1) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+}), {threshold:.35}).observe(document.getElementById('sum'));
+
+/* filing takes a visible, deliberate moment */
+const sign = document.getElementById('sign'), lab = document.getElementById('lab'),
+      note = document.getElementById('note');
+sign.addEventListener('click', () => {
+  if (sign.classList.contains('done') || sign.dataset.busy) return;
+  sign.dataset.busy = '1'; lab.textContent = 'Signing…';
+  note.textContent = 'Writing your return to the record…';
+  setTimeout(() => {
+    sign.classList.add('done'); delete sign.dataset.busy;
+    lab.textContent = 'Filed — reference WPS-2026-4471';
+    note.textContent = 'Acknowledgement sent. You can download it any time.';
+  }, 1900);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="theme.js"></script>
+<title>Direction 7 — Reckoning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#12100C; --panel:#1A1712; --panel-2:#221E18;
+  --paper:#EFE7D6; --paper-2:#DCD2BC;
+  --ink:#F0E9DA; --ink-2:#B8AC94; --ink-3:#857B67;
+  --gold:#C8A54B; --gold-2:#E7CB7E; --line:#2E2820;
+  --pos:#79C99A; --neg:#D0685A;
+  --serif:'Newsreader',Georgia,serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+/* ── light: the chamber at midday ───────────── */
+:root{
+  --ground:#F2EBDC; --panel:#FBF6EA; --panel-2:#F5EEDF;
+  --paper:#2A2115; --paper-2:#3A2F1F;
+  --ink:#211A11; --ink-2:#584D3A; --ink-3:#877B64;
+  --gold:#8A6D1B; --gold-2:#6F5714; --line:#DFD4BC;
+  --pos:#2C6B45; --neg:#A33F2A;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#12100C; --panel:#1A1712; --panel-2:#221E18;
+  --paper:#EFE7D6; --paper-2:#DCD2BC;
+  --ink:#F0E9DA; --ink-2:#B8AC94; --ink-3:#857B67;
+  --gold:#C8A54B; --gold-2:#E7CB7E; --line:#2E2820;
+  --pos:#79C99A; --neg:#D0685A;
+}}
+:root[data-theme="dark"]{
+  --ground:#12100C; --panel:#1A1712; --panel-2:#221E18;
+  --paper:#EFE7D6; --paper-2:#DCD2BC;
+  --ink:#F0E9DA; --ink-2:#B8AC94; --ink-3:#857B67;
+  --gold:#C8A54B; --gold-2:#E7CB7E; --line:#2E2820;
+  --pos:#79C99A; --neg:#D0685A;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--serif);
+  -webkit-font-smoothing:antialiased;padding-bottom:90px;overflow-x:hidden}
+
+/* ── the approach ─────────────────────────────── */
+.hall{min-height:52vh;display:grid;place-items:center;text-align:center;padding:60px 20px 44px;
+  position:relative;border-bottom:1px solid var(--line);
+  background:radial-gradient(90% 60% at 50% -10%,rgba(200,165,75,.13),transparent 62%)}
+.seal{width:96px;height:96px;margin:0 auto 26px}
+.seal circle,.seal path,.seal line{fill:none;stroke:var(--gold);stroke-width:1.4;
+  stroke-dasharray:var(--len,400);stroke-dashoffset:var(--len,400);
+  animation:draw 2.1s cubic-bezier(.3,.7,.2,1) forwards}
+.seal .r2{animation-delay:.25s} .seal .tick{animation-delay:.5s} .seal .rupee{animation-delay:.8s}
+@keyframes draw{to{stroke-dashoffset:0}}
+.dept{font-family:var(--mono);font-size:10px;letter-spacing:.34em;text-transform:uppercase;
+  color:var(--gold);opacity:0;animation:fade .8s .9s forwards}
+.hall h1{font-size:clamp(32px,6vw,58px);font-weight:500;letter-spacing:-.015em;line-height:1.04;
+  margin:16px 0 0;opacity:0;animation:fade .9s 1.1s forwards}
+.hall h1 em{font-style:italic;color:var(--gold-2)}
+.hall p{font-size:19px;color:var(--ink-2);max-width:46ch;margin:16px auto 0;font-weight:300;
+  opacity:0;animation:fade .9s 1.3s forwards}
+@keyframes fade{to{opacity:1}}
+.scroll-cue{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-3);
+  opacity:0;animation:fade 1s 1.9s forwards}
+.scroll-cue::after{content:"";display:block;width:1px;height:22px;background:var(--ink-3);
+  margin:9px auto 0;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:.25;transform:scaleY(.6)}50%{opacity:1;transform:scaleY(1)}}
+
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+
+/* ── entries reveal on scroll ─────────────────── */
+.sec{margin-top:44px}
+.sec h2{font-family:var(--mono);font-size:10px;letter-spacing:.28em;text-transform:uppercase;
+  color:var(--gold);font-weight:500;margin:0 0 6px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.row{display:flex;justify-content:space-between;gap:16px;align-items:baseline;
+  padding:16px 0;border-bottom:1px solid var(--line);
+  opacity:0;transform:translateY(12px);transition:opacity .6s,transform .6s cubic-bezier(.2,.8,.2,1)}
+.row.in{opacity:1;transform:none}
+.row .t{font-size:17px}
+.row .p{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:6px;letter-spacing:.02em}
+.row .v{font-family:var(--mono);font-size:16px;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--paper-2)}
+.row .p b{color:var(--gold);font-weight:500}
+.q{margin-left:9px;font-family:var(--mono);font-size:10px;color:var(--neg);
+  border-bottom:1px dotted var(--neg);text-decoration:none;cursor:pointer}
+
+/* ── the reckoning ────────────────────────────── */
+.judg{margin-top:52px;border:1px solid var(--line);border-radius:2px;background:var(--panel);
+  padding:38px 26px 34px;text-align:center;position:relative;overflow:hidden}
+.judg::before{content:"";position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(200,165,75,.09),transparent 55%)}
+.judg .k{position:relative;font-family:var(--mono);font-size:10px;letter-spacing:.3em;
+  text-transform:uppercase;color:var(--gold)}
+.judg .v{position:relative;font-size:clamp(52px,12vw,86px);font-weight:600;color:var(--pos);
+  line-height:1;margin-top:14px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.judg p{position:relative;font-style:italic;font-size:18px;color:var(--ink-2);max-width:40ch;margin:16px auto 0}
+
+/* press-and-hold to file — weight matched to stakes */
+.press{position:relative;margin:30px auto 0;display:block;width:min(340px,100%);
+  background:transparent;border:1.5px solid var(--gold);color:var(--gold-2);
+  font-family:var(--mono);font-size:12px;letter-spacing:.2em;text-transform:uppercase;
+  padding:19px 22px;cursor:pointer;overflow:hidden;user-select:none;-webkit-user-select:none}
+.press .fillbar{position:absolute;inset:0;background:var(--gold);width:0%;z-index:0}
+.press .lab{position:relative;z-index:1;transition:color .2s}
+.press.armed .lab{color:var(--ground)}
+.press.done{border-color:var(--pos);color:var(--pos)}
+.press.done .fillbar{background:transparent}
+.attest{font-family:var(--serif);font-style:italic;font-size:14.5px;color:var(--ink-3);
+  max-width:46ch;margin:18px auto 0}
+
+/* stamp that lands on completion */
+.stamp{position:absolute;top:22px;right:22px;width:112px;height:112px;pointer-events:none;
+  opacity:0;transform:scale(2.4) rotate(-24deg)}
+.stamp.hit{animation:slam .55s cubic-bezier(.2,1.5,.4,1) forwards}
+@keyframes slam{60%{opacity:.96;transform:scale(.92) rotate(-11deg)}
+  100%{opacity:.9;transform:scale(1) rotate(-11deg)}}
+.stamp circle,.stamp rect{fill:none;stroke:var(--pos);stroke-width:2}
+.stamp text{fill:var(--pos);font-family:var(--mono);font-size:11px;letter-spacing:.14em}
+
+.flag{position:fixed;top:14px;right:14px;z-index:9;font-family:var(--mono);font-size:9.5px;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--gold);
+  border:1px solid var(--gold);padding:6px 10px;background:var(--ground)}
+.tag{position:fixed;left:12px;bottom:12px;font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;background:var(--gold);color:var(--ground);padding:7px 11px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}
+  .row{opacity:1;transform:none} .seal circle,.seal path,.seal line{stroke-dashoffset:0}}
+</style>
+</head>
+<body>
+<span class="flag">Sample data &middot; not a filing</span>
+
+<section class="hall">
+  <div>
+    <svg class="seal" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="50" r="46" style="--len:290"/>
+      <circle class="r2" cx="50" cy="50" r="38" style="--len:240"/>
+      <path class="rupee" d="M40 34h20M40 42h20M56 34c0 10-16 8-16 8l18 20" style="--len:90" stroke-linecap="round"/>
+      <line class="tick" x1="50" y1="4" x2="50" y2="12" style="--len:10"/>
+      <line class="tick" x1="50" y1="88" x2="50" y2="96" style="--len:10"/>
+    </svg>
+    <div class="dept">Office of assessment &middot; chamber IV</div>
+    <h1>The <em>reckoning</em> of your year</h1>
+    <p>Everything below was reported by someone. Read it, then affirm it.</p>
+  </div>
+  <div class="scroll-cue">Proceed</div>
+</section>
+
+<div class="wrap">
+
+  <div class="sec">
+    <h2>Placed on record by others</h2>
+    <div class="row"><div><div class="t">Salary received</div>
+      <div class="p">Reported by <b>Meridian Systems Pvt Ltd</b> &middot; Form 16 &middot; 14 June 2026</div></div>
+      <div class="v">&#8377;12,40,000</div></div>
+    <div class="row"><div><div class="t">Tax deducted at source</div>
+      <div class="p">Reported by <b>Meridian Systems Pvt Ltd</b> &middot; quarterly &middot; 14 June 2026</div></div>
+      <div class="v">&#8377;97,920</div></div>
+    <div class="row"><div><div class="t">Interest on savings</div>
+      <div class="p">Reported by <b>State Bank</b> &middot; AIS &middot; 2 June 2026<a class="q">I dispute this</a></div></div>
+      <div class="v">&#8377;3,480</div></div>
+  </div>
+
+  <div class="sec">
+    <h2>Claimed by you</h2>
+    <div class="row"><div><div class="t">Standard deduction</div>
+      <div class="p">Allowed to <b>every salaried filer</b> &middot; applied for you</div></div>
+      <div class="v">&#8377;75,000</div></div>
+    <div class="row"><div><div class="t">Life insurance and provident fund</div>
+      <div class="p">Entered by <b>you</b> &middot; 21 June 2026 &middot; section 80C</div></div>
+      <div class="v">&#8377;1,50,000</div></div>
+  </div>
+
+  <div class="sec">
+    <h2>The arithmetic</h2>
+    <div class="row"><div class="t">Income counted</div><div class="v">&#8377;12,43,480</div></div>
+    <div class="row"><div class="t">Less deductions allowed</div><div class="v">&minus;&#8377;2,25,000</div></div>
+    <div class="row"><div class="t">Income you are taxed on</div><div class="v">&#8377;10,18,480</div></div>
+    <div class="row"><div class="t">Tax, with cess</div><div class="v">&#8377;91,520</div></div>
+    <div class="row"><div class="t">Already paid on your behalf</div><div class="v">&minus;&#8377;97,920</div></div>
+  </div>
+
+  <div class="judg">
+    <svg class="stamp" id="stamp" viewBox="0 0 120 120" aria-hidden="true">
+      <circle cx="60" cy="60" r="52"/><circle cx="60" cy="60" r="43"/>
+      <text x="60" y="56" text-anchor="middle">FILED</text>
+      <text x="60" y="72" text-anchor="middle" style="font-size:8px">WPS-2026-4471</text>
+    </svg>
+    <div class="k">The finding of this office</div>
+    <div class="v" id="amount">&#8377;0</div>
+    <p>You paid more than you owed. This sum is due back to you.</p>
+
+    <button class="press" id="press">
+      <span class="fillbar"></span>
+      <span class="lab" id="lab">Press and hold to affirm</span>
+    </button>
+    <p class="attest">Holding signifies that the entries above are true to the best of your
+    knowledge. Release before the seal completes and nothing is filed.</p>
+  </div>
+</div>
+
+<div class="tag">Direction 7 &mdash; Reckoning</div>
+
+<script>
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* reveal rows as they enter */
+const io = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+}), { threshold:.25 });
+document.querySelectorAll('.row').forEach((r,i) => {
+  r.style.transitionDelay = (i % 3) * 70 + 'ms'; io.observe(r);
+});
+
+/* the figure counts up once the reckoning is on screen */
+const amt = document.getElementById('amount'), TARGET = 6400;
+const io2 = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return; io2.unobserve(e.target);
+  if (reduce){ amt.textContent = '₹6,400'; return; }
+  const t0 = performance.now(), dur = 1700;
+  const tick = t => { const k = Math.min(1,(t-t0)/dur);
+    amt.textContent = '₹' + Math.round(TARGET*(1-Math.pow(1-k,4))).toLocaleString('en-IN');
+    if (k<1) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+}), { threshold:.5 });
+io2.observe(document.querySelector('.judg'));
+
+/* press-and-hold — deliberate weight, fully reversible until complete */
+const btn = document.getElementById('press'), fill = btn.querySelector('.fillbar'),
+      lab = document.getElementById('lab'), stamp = document.getElementById('stamp');
+const HOLD = 1400; let raf = null, start = 0, done = false;
+
+function begin(e){
+  if (done) return; e.preventDefault();
+  btn.classList.add('armed'); start = performance.now(); lab.textContent = 'Keep holding…';
+  const step = t => {
+    const k = Math.min(1, (t - start)/HOLD);
+    fill.style.width = (k*100) + '%';
+    if (k < 1) raf = requestAnimationFrame(step); else finish();
+  };
+  raf = requestAnimationFrame(step);
+}
+function cancel(){
+  if (done || raf === null) return;
+  cancelAnimationFrame(raf); raf = null;
+  btn.classList.remove('armed'); fill.style.width = '0%';
+  lab.textContent = 'Press and hold to affirm';        /* nothing was filed */
+}
+function finish(){
+  done = true; raf = null; btn.classList.add('done');
+  lab.textContent = 'Affirmed and filed';
+  stamp.classList.add('hit');
+}
+['mousedown','touchstart'].forEach(ev => btn.addEventListener(ev, begin, {passive:false}));
+['mouseup','mouseleave','touchend','touchcancel'].forEach(ev => btn.addEventListener(ev, cancel));
+btn.addEventListener('keydown', e => { if (e.key===' '||e.key==='Enter') begin(e); });
+btn.addEventListener('keyup', cancel);
+</script>
+</body>
+</html>

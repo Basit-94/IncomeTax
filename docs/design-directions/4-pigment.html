@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Direction 4 — Pigment</title>
+<script src="theme.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Karla:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap">
+<style>
+:root{
+  --indigo:#1F3A6E; --indigo-2:#2E4E88; --indigo-soft:#E4E9F4; --indigo-ink:#1F3A6E;
+  --haldi:#E0A21C; --haldi-soft:#FBF0D6; --haldi-ink:#8A6410;
+  --terra:#B85C38; --terra-soft:#F7E5DC;
+  --leaf:#3E7D5A; --leaf-soft:#E1EFE6; --leaf-on:#F2FAF4;
+  --cream:#FDF8EE; --cream-2:#F6EEDF; --line:#E2D6BE;
+  --ink:#231A12; --ink-2:#5A4B3C; --ink-3:#8B7A66;
+  --banner-fg:#FDF8EE; --banner-sub:#C7D2E8;
+  --disp:'Fraunces',Georgia,serif; --body:'Karla',system-ui,sans-serif;
+  --mono:'Space Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --indigo:#12213F; --indigo-2:#2E4E88; --indigo-soft:#1B2C4C; --indigo-ink:#8FA9DC;
+    --haldi:#E0A21C; --haldi-soft:#2E2510; --haldi-ink:#E5B450;
+    --terra:#D9805C; --terra-soft:#33211A;
+    --leaf:#4C9970; --leaf-soft:#16291F; --leaf-on:#EAF6EE;
+    --cream:#14110C; --cream-2:#1D1913; --line:#2E2820;
+    --ink:#F2EADC; --ink-2:#BEB2A0; --ink-3:#8A8072;
+    --banner-fg:#F2EADC; --banner-sub:#9FB2D4;
+  }
+}
+:root[data-theme="dark"]{
+  --indigo:#12213F; --indigo-2:#2E4E88; --indigo-soft:#1B2C4C; --indigo-ink:#8FA9DC;
+  --haldi:#E0A21C; --haldi-soft:#2E2510; --haldi-ink:#E5B450;
+  --terra:#D9805C; --terra-soft:#33211A;
+  --leaf:#4C9970; --leaf-soft:#16291F; --leaf-on:#EAF6EE;
+  --cream:#14110C; --cream-2:#1D1913; --line:#2E2820;
+  --ink:#F2EADC; --ink-2:#BEB2A0; --ink-3:#8A8072;
+  --banner-fg:#F2EADC; --banner-sub:#9FB2D4;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--cream);color:var(--ink);font-family:var(--body);
+  -webkit-font-smoothing:antialiased;padding-bottom:84px;transition:background .3s,color .3s}
+
+.top{background:var(--indigo);color:var(--banner-fg);padding:34px 20px 30px;position:relative;overflow:hidden}
+.top::after{content:"";position:absolute;inset:0;opacity:.16;
+  background-image:radial-gradient(circle at 10px 10px,var(--haldi) 2.2px,transparent 2.4px),
+    radial-gradient(circle at 30px 30px,var(--haldi) 2.2px,transparent 2.4px);
+  background-size:40px 40px;animation:drift 26s linear infinite}
+@keyframes drift{to{background-position:40px 40px,40px 40px}}
+.top .in{position:relative;max-width:820px;margin:0 auto}
+.kicker{font-family:var(--mono);font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:var(--haldi)}
+h1{font-family:var(--disp);font-size:clamp(30px,5.4vw,46px);font-weight:600;margin:12px 0 0;
+  line-height:1.06;letter-spacing:-.015em}
+.top p{margin:10px 0 0;font-size:16.5px;color:var(--banner-sub);max-width:46ch;font-weight:300}
+
+.wrap{max-width:820px;margin:0 auto;padding:0 20px}
+.card{background:var(--cream-2);border:1px solid var(--line);border-radius:14px;
+  margin-top:26px;overflow:hidden;transition:background .3s,border-color .3s}
+.cardhead{padding:16px 20px;display:flex;justify-content:space-between;align-items:center;
+  gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--line);background:var(--cream)}
+.cardhead h2{font-family:var(--disp);font-size:19px;font-weight:600;margin:0}
+.pill{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+  padding:5px 10px;border-radius:999px;background:var(--terra-soft);color:var(--terra)}
+
+.fact{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;
+  padding:15px 20px;border-bottom:1px solid var(--line);cursor:pointer;
+  opacity:0;transform:translateY(10px);transition:background .18s}
+.fact.in{opacity:1;transform:none;transition:opacity .5s,transform .5s cubic-bezier(.2,.85,.25,1),background .18s}
+.fact:last-of-type{border-bottom:0}
+.fact:hover{background:var(--indigo-soft)}
+.fact .t{font-size:16px;font-weight:500}
+.badge{display:inline-flex;align-items:center;gap:6px;margin-top:6px;font-family:var(--mono);
+  font-size:10px;letter-spacing:.04em;background:var(--indigo-soft);color:var(--indigo-ink);
+  padding:4px 9px;border-radius:999px}
+.badge.you{background:var(--leaf-soft);color:var(--leaf)}
+.badge.auto{background:var(--haldi-soft);color:var(--haldi-ink)}
+.fact .v{font-family:var(--mono);font-size:16px;font-weight:700;white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+.wrong{display:block;margin-top:7px;font-size:12px;color:var(--terra);background:none;border:0;
+  border-bottom:1px solid var(--terra);cursor:pointer;padding:0;font-family:inherit}
+.note-corr{color:var(--terra);font-size:12px;margin-top:6px}
+
+.calc{padding:6px 20px 18px;background:var(--cream)}
+.crow{display:flex;justify-content:space-between;padding:8px 0;font-size:15px;color:var(--ink-2)}
+.crow .v{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.crow.t{border-top:1px solid var(--line);margin-top:6px;padding-top:12px;color:var(--ink);font-weight:600}
+
+.result{margin-top:26px;background:var(--leaf);color:var(--leaf-on);border-radius:14px;padding:28px 24px;
+  display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+.result .k{font-family:var(--mono);font-size:10px;letter-spacing:.24em;text-transform:uppercase;opacity:.8}
+.result .v{font-family:var(--disp);font-size:clamp(42px,9vw,60px);font-weight:700;line-height:1;
+  margin-top:8px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.result p{margin:10px 0 0;font-size:15px;opacity:.85;max-width:34ch;font-weight:300}
+.btn{background:var(--haldi);color:#2A1E05;border:0;border-radius:10px;padding:16px 26px;
+  font-family:var(--body);font-size:15px;font-weight:600;cursor:pointer;position:relative;
+  overflow:hidden;transition:filter .18s,transform .1s}
+.btn:hover{filter:brightness(1.06)} .btn:active{transform:translateY(1px)}
+.btn:disabled{cursor:default}
+.btn .pg{position:absolute;left:0;bottom:0;height:3px;background:rgba(0,0,0,.35);width:0}
+.note{margin:18px 0 0;font-size:13.5px;color:var(--ink-3);max-width:60ch}
+.tag{position:fixed;left:12px;bottom:12px;font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;background:var(--indigo);color:var(--banner-fg);padding:7px 11px;border-radius:6px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}
+  .fact{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<div class="top"><div class="in">
+  <div class="kicker">Assessment year 2026&ndash;27</div>
+  <h1>Everything we were told about your money</h1>
+  <p>Each figure below came from someone. Say yes, or tell us it&rsquo;s wrong.</p>
+</div></div>
+
+<div class="wrap">
+
+  <div class="card">
+    <div class="cardhead">
+      <h2>Priya Sharma &middot; salaried</h2>
+      <span class="pill">Sample data &middot; not a filing</span>
+    </div>
+
+    <div class="fact"><div><div class="t">Salary received</div>
+      <span class="badge">Meridian Systems &middot; Form 16 &middot; 14 Jun</span></div>
+      <div class="v">&#8377;12,40,000</div></div>
+
+    <div class="fact"><div><div class="t">Tax already deducted</div>
+      <span class="badge">Meridian Systems &middot; TDS &middot; 14 Jun</span></div>
+      <div class="v">&#8377;97,920</div></div>
+
+    <div class="fact" id="int"><div><div class="t">Interest on savings</div>
+      <span class="badge">State Bank &middot; AIS &middot; 2 Jun</span>
+      <button class="wrong" id="fix">This doesn&rsquo;t look right</button></div>
+      <div class="v">&#8377;3,480</div></div>
+
+    <div class="fact"><div><div class="t">Standard deduction</div>
+      <span class="badge auto">Applied for you &middot; every salaried filer</span></div>
+      <div class="v">&#8377;75,000</div></div>
+
+    <div class="fact"><div><div class="t">Life insurance &amp; provident fund</div>
+      <span class="badge you">Entered by you &middot; 21 Jun &middot; 80C</span></div>
+      <div class="v">&#8377;1,50,000</div></div>
+
+    <div class="calc">
+      <div class="crow"><span>Income counted</span><span class="v">&#8377;12,43,480</span></div>
+      <div class="crow"><span>Less deductions</span><span class="v">&minus;&#8377;2,25,000</span></div>
+      <div class="crow t"><span>Taxed on</span><span class="v">&#8377;10,18,480</span></div>
+      <div class="crow"><span>Tax at slab rates</span><span class="v">&#8377;88,000</span></div>
+      <div class="crow"><span>Cess, 4%</span><span class="v">&#8377;3,520</span></div>
+      <div class="crow t"><span>Total owed</span><span class="v">&#8377;91,520</span></div>
+      <div class="crow"><span>Already paid</span><span class="v">&minus;&#8377;97,920</span></div>
+    </div>
+  </div>
+
+  <div class="result">
+    <div>
+      <div class="k">Coming back to you</div>
+      <div class="v" id="amt">&#8377;0</div>
+      <p>You paid more than you owed this year.</p>
+    </div>
+    <button class="btn" id="file">Check once, then file<span class="pg"></span></button>
+  </div>
+
+  <p class="note">Nothing is sent until you press file. Any figure you correct keeps the original
+  beside it, so you can always see what changed and why.</p>
+
+</div>
+<div class="tag">Direction 4 &mdash; Pigment</div>
+
+<script>
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const io = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+}), {threshold:.25});
+document.querySelectorAll('.fact').forEach((f,i)=>{ f.style.transitionDelay=(i%5)*65+'ms'; io.observe(f); });
+
+const amt=document.getElementById('amt');
+new IntersectionObserver((es,o)=>es.forEach(e=>{
+  if(!e.isIntersecting)return; o.unobserve(e.target);
+  if(reduce){amt.textContent='₹6,400';return;}
+  const t0=performance.now(), d=1600;
+  const tick=t=>{const k=Math.min(1,(t-t0)/d);
+    amt.textContent='₹'+Math.round(6400*(1-Math.pow(1-k,3))).toLocaleString('en-IN');
+    if(k<1)requestAnimationFrame(tick);};
+  requestAnimationFrame(tick);
+}),{threshold:.5}).observe(document.querySelector('.result'));
+
+document.getElementById('fix').addEventListener('click', e=>{
+  e.stopPropagation();
+  const row=document.getElementById('int');
+  e.target.remove();
+  row.querySelector('.v').style.textDecoration='line-through';
+  row.querySelector('.v').style.opacity='.5';
+  row.querySelector('div').insertAdjacentHTML('beforeend',
+    '<div class="note-corr">↳ corrected to ₹1,140 by you · account closed in March</div>');
+});
+
+const btn=document.getElementById('file'), pg=btn.querySelector('.pg');
+btn.addEventListener('click',()=>{
+  if(btn.disabled)return;
+  btn.disabled=true; btn.firstChild.nodeValue='Filing…';
+  const t0=performance.now(), d=1800;
+  const step=t=>{const k=Math.min(1,(t-t0)/d); pg.style.width=k*100+'%';
+    if(k<1)requestAnimationFrame(step); else btn.firstChild.nodeValue='Filed ✓ WPS-2026-4471';};
+  requestAnimationFrame(step);
+});
+</script>
+</body>
+</html>

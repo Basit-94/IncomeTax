@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="theme.js"></script>
+<title>Direction 12 — Case File</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500;700&family=Caveat:wght@600;700&display=swap">
+<style>
+/* ── light: graph paper on a desk ───────────── */
+:root{
+  --paper:#F2EFE4; --grid:#D9D2B9; --card:#FBF9F1; --card-2:#F4F1E6;
+  --ink:#1C2233; --ink-2:#4A4E5C; --ink-3:#7C8090;
+  --edge:#1C2233; --hair:#D9D2B9;
+  --blue:#35618E; --blue-bg:#D7E3EE;
+  --amber:#B0761F; --amber-bg:#F6E4C3;
+  --brick:#A8493B; --brick-bg:#F2DCD6;
+  --green:#3E6B4F; --green-bg:#DCE7DA;
+  --shadow:4px 6px 0 rgba(28,34,51,.13);
+  --pin-a:#E7746A; --pin-b:#A8493B;
+  --disp:'Space Grotesk',system-ui,sans-serif; --serif:'Source Serif 4',Georgia,serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace; --hand:'Caveat',cursive;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#12141A; --grid:#232833; --card:#1A1E27; --card-2:#171B23;
+  --ink:#E9ECF2; --ink-2:#B0B6C4; --ink-3:#7C8494;
+  --edge:#333B4B; --hair:#282E3A;
+  --blue:#7FA9D8; --blue-bg:#1B2A3C;
+  --amber:#DFA busy; --amber:#DEA busy;
+  --amber:#DFA855; --amber-bg:#2E2413;
+  --brick:#E08471; --brick-bg:#331F1B;
+  --green:#77BC90; --green-bg:#16281D;
+  --shadow:4px 6px 0 rgba(0,0,0,.45);
+  --pin-a:#F0897E; --pin-b:#B4523F;
+}}
+:root[data-theme="dark"]{
+  --paper:#12141A; --grid:#232833; --card:#1A1E27; --card-2:#171B23;
+  --ink:#E9ECF2; --ink-2:#B0B6C4; --ink-3:#7C8494;
+  --edge:#333B4B; --hair:#282E3A;
+  --blue:#7FA9D8; --blue-bg:#1B2A3C;
+  --amber:#DFA855; --amber-bg:#2E2413;
+  --brick:#E08471; --brick-bg:#331F1B;
+  --green:#77BC90; --green-bg:#16281D;
+  --shadow:4px 6px 0 rgba(0,0,0,.45);
+  --pin-a:#F0897E; --pin-b:#B4523F;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;color:var(--ink);font-family:var(--serif);font-size:17px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;padding-bottom:96px;
+  background:linear-gradient(var(--grid) 1px,transparent 1px) 0 0/100% 28px,
+             linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/28px 100%,
+             var(--paper);
+  transition:background-color .3s,color .3s}
+h1,h2,h3,.disp{font-family:var(--disp)}
+.hand{font-family:var(--hand)}
+
+nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--paper) 94%,transparent);
+  border-bottom:2px solid var(--edge);backdrop-filter:blur(3px)}
+.nav-in{max-width:1000px;margin:0 auto;display:flex;gap:6px;padding:10px 20px;
+  overflow-x:auto;white-space:nowrap;align-items:center}
+.nav-in a{font-family:var(--disp);font-size:12.5px;font-weight:600;letter-spacing:.03em;
+  text-transform:uppercase;color:var(--ink-2);text-decoration:none;padding:6px 10px;
+  border-radius:3px;border:1px solid transparent}
+.nav-in a:hover,.nav-in a:focus-visible{border-color:var(--edge);color:var(--ink);outline:none}
+section{scroll-margin-top:64px}
+
+header.hero{max-width:1000px;margin:0 auto;padding:52px 24px 26px}
+.stamp{display:inline-block;font-family:var(--mono);font-size:12px;color:var(--ink-2);
+  border:1px solid var(--ink-2);padding:3px 8px;border-radius:2px;transform:rotate(-1.5deg)}
+h1.title{font-size:clamp(28px,5vw,42px);margin:14px 0 6px;line-height:1.14;font-weight:700}
+.sub{color:var(--ink-2);font-size:18px;max-width:60ch}
+.thread{margin-top:22px;padding:14px 18px;background:var(--blue-bg);
+  border-left:4px solid var(--blue);border-radius:2px;font-size:15.5px}
+
+main{max-width:1000px;margin:0 auto;padding:0 24px}
+
+/* hand-drawn dividers */
+.divider{display:flex;align-items:center;gap:10px;margin:48px 0 22px}
+.divider .line{flex:1;height:1px;background:var(--grid)}
+.divider .label{font-family:var(--mono);font-size:11px;letter-spacing:.08em;
+  color:var(--ink-2);text-transform:uppercase}
+.divider svg path{stroke-dasharray:120;stroke-dashoffset:120;animation:draw 1.1s ease-out forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+
+/* ── pinned index cards ─────────────────────── */
+.card{position:relative;background:var(--card);border:1px solid var(--edge);
+  box-shadow:var(--shadow);border-radius:2px;padding:26px 26px 22px;margin-bottom:20px;
+  cursor:pointer;opacity:0;transform:translateY(16px) rotate(var(--tilt,0deg));
+  transition:box-shadow .2s,border-color .2s}
+.card.in{opacity:1;transform:translateY(0) rotate(var(--tilt,0deg));
+  transition:opacity .55s,transform .55s cubic-bezier(.2,.85,.25,1),box-shadow .2s,border-color .2s}
+.card:hover{box-shadow:6px 9px 0 rgba(28,34,51,.16)}
+.card.ok{--tilt:0deg;border-color:var(--green)}
+.pin{position:absolute;top:-10px;left:26px;width:18px;height:18px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,var(--pin-a),var(--pin-b));
+  box-shadow:0 2px 3px rgba(0,0,0,.35);transition:background .3s,transform .3s}
+.card.ok .pin{background:radial-gradient(circle at 35% 30%,var(--green),#2A5138);transform:scale(1.12)}
+.no{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+.card h3{margin:2px 0 2px;font-size:22px}
+.card .who{color:var(--ink-2);font-size:14px;margin-bottom:12px}
+
+.badges{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px}
+.badge{font-family:var(--disp);font-weight:600;font-size:11.5px;letter-spacing:.04em;
+  text-transform:uppercase;padding:4px 9px;border-radius:20px;border:1.4px solid currentColor}
+.badge.rep{color:var(--blue);background:var(--blue-bg)}
+.badge.you{color:var(--green);background:var(--green-bg)}
+.badge.sys{color:var(--amber);background:var(--amber-bg)}
+.badge.dis{color:var(--brick);background:var(--brick-bg)}
+
+.amt{font-family:var(--mono);font-weight:700;font-size:26px;color:var(--ink);
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.card h4{font-family:var(--disp);font-size:13px;margin:16px 0 6px;text-transform:uppercase;
+  letter-spacing:.03em;color:var(--ink-2)}
+
+/* the margin note — the explanation layer, in pencil */
+.margin{margin:14px 0 2px;padding:11px 14px;background:var(--amber-bg);
+  border-left:4px solid var(--amber);border-radius:2px;font-size:15px;color:var(--ink)}
+.margin .hand{font-size:21px;display:block;margin-bottom:2px;color:var(--ink)}
+.confirmline{margin-top:14px;font-family:var(--mono);font-size:11px;color:var(--ink-3);
+  letter-spacing:.06em;text-transform:uppercase}
+.card.ok .confirmline{color:var(--green)}
+
+/* ── stat sheet ─────────────────────────────── */
+.sheet{background:var(--card);border:1px solid var(--edge);border-radius:2px;padding:8px 0 6px}
+.tier{padding:20px 26px;border-bottom:1px dashed var(--hair)}
+.tier:last-child{border-bottom:none}
+.tier h3{margin:0 0 10px;font-size:18px}
+.stat-row{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0 2px}
+.stat{flex:1 1 150px;background:var(--card-2);border:1px solid var(--hair);border-radius:3px;padding:10px 12px}
+.stat .num{font-family:var(--mono);font-weight:700;font-size:19px;color:var(--blue);
+  display:block;font-variant-numeric:tabular-nums}
+.stat .lbl{font-size:12.5px;color:var(--ink-2)}
+.calc-row{display:flex;justify-content:space-between;gap:14px;padding:7px 0;font-size:15.5px;color:var(--ink-2)}
+.calc-row .v{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.calc-row.t{border-top:1px solid var(--hair);margin-top:6px;padding-top:11px;color:var(--ink);font-weight:600}
+.callout{margin:14px 0 2px;padding:12px 14px;border-radius:2px;font-size:15px}
+.callout.good{background:var(--green-bg);border-left:4px solid var(--green)}
+
+/* ── checklist ──────────────────────────────── */
+.checklist{background:var(--card);border:1px solid var(--edge);border-radius:2px;padding:20px 26px}
+.check{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--hair)}
+.check:last-child{border-bottom:none}
+.box{flex-shrink:0;width:19px;height:19px;border:2px solid var(--edge);border-radius:3px;
+  margin-top:3px;position:relative;transition:background .25s,border-color .25s}
+.box svg{position:absolute;inset:-2px;width:19px;height:19px}
+.box path{fill:none;stroke:var(--green);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:22;stroke-dashoffset:22;transition:stroke-dashoffset .35s cubic-bezier(.3,.8,.3,1)}
+.check.done .box{border-color:var(--green)}
+.check.done .box path{stroke-dashoffset:0}
+.check.done .txt{color:var(--ink-3);text-decoration:line-through}
+.txt{font-size:15.5px}
+
+.finish{margin-top:22px;background:var(--card);border:1px solid var(--edge);border-radius:2px;
+  padding:24px 26px;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+.finish .k{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-2)}
+.finish .big{font-family:var(--mono);font-size:clamp(36px,7vw,48px);font-weight:700;color:var(--green);
+  font-variant-numeric:tabular-nums;letter-spacing:-.03em;line-height:1.1;margin-top:6px}
+.file{font-family:var(--disp);font-weight:600;font-size:15px;background:var(--ink);color:var(--paper);
+  border:0;border-radius:3px;padding:16px 26px;cursor:pointer;position:relative;overflow:hidden;
+  transition:opacity .2s}
+.file:disabled{background:var(--hair);color:var(--ink-3);cursor:not-allowed}
+.file .pg{position:absolute;left:0;bottom:0;height:3px;background:var(--green);width:0}
+footer{max-width:1000px;margin:0 auto;padding:22px 24px 40px;color:var(--ink-3);font-size:13px}
+.tag{position:fixed;left:12px;bottom:12px;z-index:60;font-family:var(--mono);font-size:10px;
+  letter-spacing:.14em;text-transform:uppercase;background:var(--ink);color:var(--paper);padding:7px 11px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}
+  .card{opacity:1;transform:rotate(var(--tilt,0deg))}.divider svg path{stroke-dashoffset:0}}
+@media(max-width:640px){.card{padding:20px 18px 18px}.tier{padding:16px 18px}}
+</style>
+</head>
+<body>
+
+<nav><div class="nav-in">
+  <a href="#top">Cover</a><a href="#facts">The facts</a><a href="#work">Working</a>
+  <a href="#checks">Before filing</a>
+</div></nav>
+
+<header class="hero" id="top">
+  <span class="stamp">CASE 4471 · AY 2026&ndash;27 · ITR-1</span>
+  <h1 class="title">Priya Sharma &mdash; salaried, one employer</h1>
+  <p class="sub">Five facts on the board. Each one names who reported it and when. Read them, pin the
+  ones you agree with, and the return writes itself.</p>
+  <div class="thread"><strong>How to read this:</strong> nothing here was invented by us. Every figure
+  came from a document someone filed, or from something you entered yourself. The pencil notes explain
+  what each one actually means &mdash; in plain words, not tax words.</div>
+</header>
+
+<main>
+
+<div class="divider">
+  <svg width="70" height="18" viewBox="0 0 70 18"><path d="M0 15 C 10 15, 15 4, 25 4 S 40 15, 50 15 S 60 3, 70 3" fill="none" stroke="var(--blue)" stroke-width="2"/></svg>
+  <span class="label">The facts &middot; 5 cards</span><div class="line"></div>
+</div>
+
+<section id="facts">
+
+  <article class="card" style="--tilt:-.4deg">
+    <div class="pin"></div>
+    <div class="no">CARD 01 &middot; REPORTED 14 JUN 2026</div>
+    <h3>Salary received</h3>
+    <div class="who">Meridian Systems Pvt Ltd &middot; Form 16, Part B &middot; TAN BLRM09321F</div>
+    <div class="badges"><span class="badge rep">Reported by employer</span><span class="badge sys">Matches AIS</span></div>
+    <div class="amt">&#8377;12,40,000</div>
+    <div class="margin"><span class="hand">what this is</span>
+      Everything your employer paid you this year before anything was taken out &mdash; not what
+      landed in your bank account.</div>
+    <div class="confirmline">Tap this card to confirm it</div>
+  </article>
+
+  <article class="card" style="--tilt:.35deg">
+    <div class="pin"></div>
+    <div class="no">CARD 02 &middot; REPORTED 14 JUN 2026</div>
+    <h3>Tax already deducted</h3>
+    <div class="who">Meridian Systems Pvt Ltd &middot; quarterly TDS return</div>
+    <div class="badges"><span class="badge rep">Reported by employer</span></div>
+    <div class="amt">&#8377;97,920</div>
+    <div class="margin"><span class="hand">why it matters</span>
+      Your employer already sent this to the government on your behalf, month by month. If it turns
+      out to be more than you owed, the difference comes back to you.</div>
+    <div class="confirmline">Tap this card to confirm it</div>
+  </article>
+
+  <article class="card" style="--tilt:-.25deg">
+    <div class="pin"></div>
+    <div class="no">CARD 03 &middot; REPORTED 02 JUN 2026</div>
+    <h3>Interest on savings</h3>
+    <div class="who">State Bank &middot; annual information statement &middot; a/c xxxx-4417</div>
+    <div class="badges"><span class="badge rep">Reported by bank</span><span class="badge dis">You can dispute this</span></div>
+    <div class="amt">&#8377;3,480</div>
+    <div class="margin"><span class="hand">plain words</span>
+      Interest your bank paid you counts as income too. Small, but it has to be declared.
+      If the account was closed part-way through the year, this figure may be too high.</div>
+    <div class="confirmline">Tap this card to confirm it</div>
+  </article>
+
+  <article class="card" style="--tilt:.3deg">
+    <div class="pin"></div>
+    <div class="no">CARD 04 &middot; APPLIED AUTOMATICALLY</div>
+    <h3>Standard deduction</h3>
+    <div class="who">Statutory &middot; rule set AY2026&ndash;27</div>
+    <div class="badges"><span class="badge sys">We applied this for you</span></div>
+    <div class="amt">&#8377;75,000</div>
+    <div class="margin"><span class="hand">you didn&rsquo;t ask for this</span>
+      Every salaried person gets it, automatically, with no paperwork and no proof. We put it in
+      because leaving it out would mean you pay more than you have to.</div>
+    <div class="confirmline">Tap this card to confirm it</div>
+  </article>
+
+  <article class="card" style="--tilt:-.35deg">
+    <div class="pin"></div>
+    <div class="no">CARD 05 &middot; ENTERED BY YOU, 21 JUN 2026</div>
+    <h3>Life insurance &amp; provident fund</h3>
+    <div class="who">Section 80C &middot; self-declared &middot; proof not attached</div>
+    <div class="badges"><span class="badge you">You entered this</span><span class="badge dis">Proof missing</span></div>
+    <div class="amt">&#8377;1,50,000</div>
+    <div class="margin"><span class="hand">keep the receipts</span>
+      Money you put into insurance or provident fund is taken off your taxable income. You don&rsquo;t
+      have to upload proof to file &mdash; but keep it, in case you&rsquo;re asked later.</div>
+    <div class="confirmline">Tap this card to confirm it</div>
+  </article>
+
+</section>
+
+<div class="divider">
+  <svg width="70" height="18" viewBox="0 0 70 18"><path d="M0 4 C 10 4, 15 15, 25 15 S 40 4, 50 4 S 60 16, 70 16" fill="none" stroke="var(--amber)" stroke-width="2"/></svg>
+  <span class="label">The working</span><div class="line"></div>
+</div>
+
+<section id="work"><div class="sheet">
+  <div class="tier">
+    <h3>What you were paid, and what you can set against it</h3>
+    <div class="stat-row">
+      <div class="stat"><span class="num">&#8377;12,43,480</span><span class="lbl">everything counted as income</span></div>
+      <div class="stat"><span class="num">&#8377;2,25,000</span><span class="lbl">deductions you are entitled to</span></div>
+      <div class="stat"><span class="num">&#8377;10,18,480</span><span class="lbl">what you are actually taxed on</span></div>
+    </div>
+  </div>
+  <div class="tier">
+    <h3>The arithmetic</h3>
+    <div class="calc-row"><span>Tax at slab rates</span><span class="v">&#8377;88,000</span></div>
+    <div class="calc-row"><span>Health &amp; education cess, 4%</span><span class="v">&#8377;3,520</span></div>
+    <div class="calc-row t"><span>Total tax owed</span><span class="v">&#8377;91,520</span></div>
+    <div class="calc-row"><span>Already paid on your behalf</span><span class="v">&minus;&#8377;97,920</span></div>
+    <div class="callout good"><b>You overpaid by &#8377;6,400.</b> That is the amount coming back to
+      you. Every figure above opens to the card it came from.</div>
+  </div>
+</div></section>
+
+<div class="divider">
+  <svg width="70" height="18" viewBox="0 0 70 18"><path d="M0 9 C 12 9, 12 2, 24 2 S 36 16, 48 16 S 60 9, 70 9" fill="none" stroke="var(--brick)" stroke-width="2"/></svg>
+  <span class="label">Before you file</span><div class="line"></div>
+</div>
+
+<section id="checks">
+  <div class="checklist" id="list">
+    <div class="check" data-i="0"><div class="box"><svg viewBox="0 0 19 19"><path d="M4 10 l3.6 3.6 L15.5 5.5"/></svg></div>
+      <div class="txt">Confirm your <b>salary</b> matches the Form 16 your employer gave you.</div></div>
+    <div class="check" data-i="1"><div class="box"><svg viewBox="0 0 19 19"><path d="M4 10 l3.6 3.6 L15.5 5.5"/></svg></div>
+      <div class="txt">Confirm the <b>tax already deducted</b> &mdash; this is what decides your refund.</div></div>
+    <div class="check" data-i="2"><div class="box"><svg viewBox="0 0 19 19"><path d="M4 10 l3.6 3.6 L15.5 5.5"/></svg></div>
+      <div class="txt">Check the <b>savings interest</b>. If your account closed mid-year, dispute it.</div></div>
+    <div class="check" data-i="3"><div class="box"><svg viewBox="0 0 19 19"><path d="M4 10 l3.6 3.6 L15.5 5.5"/></svg></div>
+      <div class="txt">Confirm the <b>standard deduction</b> we applied on your behalf.</div></div>
+    <div class="check" data-i="4"><div class="box"><svg viewBox="0 0 19 19"><path d="M4 10 l3.6 3.6 L15.5 5.5"/></svg></div>
+      <div class="txt">Confirm your <b>80C claim</b> &mdash; and keep the receipts somewhere safe.</div></div>
+  </div>
+
+  <div class="finish">
+    <div>
+      <div class="k">Refund due</div>
+      <div class="big" id="amt">&#8377;0</div>
+    </div>
+    <button class="file" id="file" disabled>Pin all five cards first<span class="pg"></span></button>
+  </div>
+</section>
+
+</main>
+
+<footer>Sample data throughout &mdash; every identifier is synthetic and this filing goes nowhere.
+Corrections are written as new entries; nothing on this board is ever overwritten.</footer>
+<div class="tag">Direction 12 &mdash; Case File</div>
+
+<script>
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const cards = [...document.querySelectorAll('.card')];
+const checks = [...document.querySelectorAll('.check')];
+const fileBtn = document.getElementById('file');
+
+const io = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+}), {threshold:.2});
+cards.forEach((c,i) => { c.style.transitionDelay = (i%3)*80+'ms'; io.observe(c); });
+
+function refresh(){
+  const n = cards.filter(c => c.classList.contains('ok')).length;
+  fileBtn.disabled = n < cards.length;
+  fileBtn.firstChild.nodeValue = n < cards.length
+    ? `Pin ${cards.length - n} more card${cards.length-n>1?'s':''}`
+    : 'File this return';
+}
+cards.forEach((c,i) => c.addEventListener('click', () => {
+  c.classList.toggle('ok');
+  checks[i].classList.toggle('done', c.classList.contains('ok'));
+  c.querySelector('.confirmline').textContent =
+    c.classList.contains('ok') ? 'Pinned — tap again to unpin' : 'Tap this card to confirm it';
+  refresh();
+}));
+/* the checklist is a second door to the same state */
+checks.forEach((ch,i) => ch.addEventListener('click', () => cards[i].click()));
+
+const amt = document.getElementById('amt');
+new IntersectionObserver((es,o) => es.forEach(e => {
+  if (!e.isIntersecting) return; o.unobserve(e.target);
+  if (reduce){ amt.textContent = '₹6,400'; return; }
+  const t0 = performance.now(), d = 1600;
+  const tick = t => { const k = Math.min(1,(t-t0)/d);
+    amt.textContent = '₹' + Math.round(6400*(1-Math.pow(1-k,3))).toLocaleString('en-IN');
+    if (k<1) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+}), {threshold:.5}).observe(document.querySelector('.finish'));
+
+fileBtn.addEventListener('click', () => {
+  if (fileBtn.disabled || fileBtn.dataset.done) return;
+  fileBtn.dataset.done = '1';
+  const pg = fileBtn.querySelector('.pg'), t0 = performance.now(), d = 1900;
+  fileBtn.firstChild.nodeValue = 'Filing…';
+  const step = t => { const k = Math.min(1,(t-t0)/d); pg.style.width = k*100+'%';
+    if (k<1) requestAnimationFrame(step);
+    else fileBtn.firstChild.nodeValue = 'Filed ✓ WPS-2026-4471'; };
+  requestAnimationFrame(step);
+});
+refresh();
+</script>
+</body>
+</html>

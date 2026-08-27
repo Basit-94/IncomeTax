@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="theme.js"></script>
+<title>Wapsi — Design Directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#FAFAF9;--panel:#fff;--ink:#15181C;--ink-2:#4B525A;--ink-3:#828A93;
+  --line:#E5E3DE;--sig:#B45309;--sig-soft:#FDF3E3;--live:#0A7A3D}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0E1013;--panel:#16191D;
+  --ink:#EDEFF2;--ink-2:#B6BCC4;--ink-3:#7C848D;--line:#242A30;--sig:#E0A458;--sig-soft:#251C10;--live:#4ADE80}}
+:root[data-theme="dark"]{--bg:#0E1013;--panel:#16191D;--ink:#EDEFF2;--ink-2:#B6BCC4;
+  --ink-3:#7C848D;--line:#242A30;--sig:#E0A458;--sig-soft:#251C10;--live:#4ADE80}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;padding:0 20px 90px;transition:background .3s,color .3s}
+.wrap{max-width:1040px;margin:0 auto}
+header{padding:54px 0 28px;border-bottom:1px solid var(--line)}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--ink-3)}
+h1{font-size:clamp(30px,5vw,46px);font-weight:700;letter-spacing:-.03em;margin:14px 0 0;line-height:1.05}
+.lede{font-size:18px;color:var(--ink-2);max-width:66ch;margin:16px 0 0;font-weight:300;line-height:1.55}
+.hintbar{margin-top:20px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-3);
+  border:1px dashed var(--line);padding:10px 14px;border-radius:6px;display:inline-block}
+.hintbar b{color:var(--sig)}
+h2.sec{font-size:12.5px;font-family:'IBM Plex Mono',monospace;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--ink-3);margin:42px 0 4px;font-weight:500}
+.secsub{font-size:14.5px;color:var(--ink-3);margin:0 0 4px;max-width:60ch}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px;margin-top:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:22px;
+  text-decoration:none;color:inherit;display:block;transition:transform .15s,border-color .15s,box-shadow .15s}
+.card:hover{transform:translateY(-3px);border-color:var(--sig);box-shadow:0 10px 26px rgba(0,0,0,.09)}
+.n{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;color:var(--sig)}
+.card h3{font-size:21px;font-weight:600;margin:10px 0 0;letter-spacing:-.015em}
+.card p{font-size:14.5px;color:var(--ink-2);margin:9px 0 0;line-height:1.55}
+.tech{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.07em;color:var(--live);
+  margin-top:12px;display:block}
+.swatches{display:flex;gap:5px;margin-top:13px}
+.swatches i{width:24px;height:24px;border-radius:4px;border:1px solid rgba(128,128,128,.28)}
+.best{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--sig);background:var(--sig-soft);padding:4px 8px;border-radius:4px;display:inline-block;margin-top:13px}
+.note{margin-top:36px;border:1px solid var(--line);border-left:3px solid var(--sig);
+  background:var(--panel);padding:20px 22px;border-radius:6px}
+.note h4{margin:0 0 10px;font-size:16px;font-weight:600}
+.note p{margin:0;font-size:15px;color:var(--ink-2);line-height:1.62}
+.note p+p{margin-top:11px}
+.note strong{color:var(--ink)}
+</style>
+</head>
+<body><div class="wrap">
+<header>
+  <div class="eyebrow">Wapsi &middot; design directions</div>
+  <h1>Twelve ways this could look</h1>
+  <p class="lede">Every direction shows the same screen with the same figures &mdash; the return summary,
+  the one that has to earn trust. Compare on feel, not content. All twelve support light and dark.</p>
+  <div class="hintbar">Use the <b>toggle, bottom-right</b> of any page &middot; click to switch theme,
+    right-click to go back to following your system</div>
+</header>
+
+<h2 class="sec">Generative &amp; live</h2>
+<p class="secsub">The computation is something you watch happen, not a number you are handed.</p>
+<div class="grid">
+  <a class="card" href="11-wash.html">
+    <div class="n">11</div><h3>Wash</h3>
+    <p>Your return painted as watercolour. Each pool is one figure, sized by its amount; the green bloom
+    is what comes back. Repaints on demand and re-pigments when you switch theme.</p>
+    <span class="tech">canvas watercolour &middot; granulation &middot; no CDN</span>
+    <div class="swatches"><i style="background:#FBF8F1"></i><i style="background:#2E5E9E"></i>
+      <i style="background:#B4553A"></i><i style="background:#2F7D5B"></i></div>
+    <span class="best">Most beautiful</span>
+  </a>
+
+  <a class="card" href="6-flow-p5.html">
+    <div class="n">06</div><h3>Flow</h3>
+    <p>Money moves across the screen as particles &mdash; most diverted to tax, a thin stream returning to
+    you. Particle colours read from the live theme.</p>
+    <span class="tech">p5.js &middot; needs a connection</span>
+    <div class="swatches"><i style="background:#080B10"></i><i style="background:#4C8DFF"></i>
+      <i style="background:#FF7A59"></i><i style="background:#37E0A6"></i></div>
+    <span class="best">Most memorable</span>
+  </a>
+
+  <a class="card" href="8-tape.html">
+    <div class="n">08</div><h3>Tape</h3>
+    <p>The return computes in front of you, line by line, with a live clock and skeleton rows first.
+    Visible work reads as trustworthy work.</p>
+    <span class="tech">streaming trace &middot; skeletons &middot; replay</span>
+    <div class="swatches"><i style="background:#0A0A0A"></i><i style="background:#7DD3A0"></i>
+      <i style="background:#E8B366"></i><i style="background:#8AB4F8"></i></div>
+    <span class="best">Best for the CA</span>
+  </a>
+</div>
+
+<h2 class="sec">Ceremonial</h2>
+<p class="secsub">Filing is consequential, so the interface makes it feel that way.</p>
+<div class="grid">
+  <a class="card" href="7-reckoning.html">
+    <div class="n">07</div><h3>Reckoning</h3>
+    <p>A seal draws itself, entries rise as you scroll, and filing takes a <em>press and hold</em> &mdash;
+    release early and nothing happens. A stamp lands when it is done.</p>
+    <span class="tech">SVG stroke draw &middot; press-and-hold &middot; stamp</span>
+    <div class="swatches"><i style="background:#12100C"></i><i style="background:#C8A54B"></i>
+      <i style="background:#EFE7D6"></i><i style="background:#79C99A"></i></div>
+    <span class="best">Court / tax office</span>
+  </a>
+
+  <a class="card" href="2-the-chamber.html">
+    <div class="n">02</div><h3>The Chamber</h3>
+    <p>Teak, brass and green baize &mdash; a counter you approach and a finding you affirm. Disputes are
+    recorded in place rather than hidden.</p>
+    <span class="tech">seal draw &middot; press-and-hold &middot; dispute log</span>
+    <div class="swatches"><i style="background:#2A1D14"></i><i style="background:#C9A227"></i>
+      <i style="background:#1E3A2F"></i><i style="background:#E8DFCD"></i></div>
+    <span class="best">Institutional weight</span>
+  </a>
+</div>
+
+<h2 class="sec">Document</h2>
+<p class="secsub">Trust borrowed from paper. Corrections append a new line and strike the old one &mdash;
+the append-only ledger, made visible.</p>
+<div class="grid">
+  <a class="card" href="12-case-file.html">
+    <div class="n">12</div><h3>Case File</h3>
+    <p>Your return as a researcher&rsquo;s pinboard &mdash; index cards on graph paper, each with a push-pin,
+    a provenance badge, and a pencil margin note explaining what the figure actually means. Pin all five
+    to unlock filing.</p>
+    <span class="tech">pinboard &middot; margin notes &middot; linked checklist</span>
+    <div class="swatches"><i style="background:#F2EFE4"></i><i style="background:#35618E"></i>
+      <i style="background:#C9862B"></i><i style="background:#A8493B"></i></div>
+    <span class="best">Best at explaining</span>
+  </a>
+
+  <a class="card" href="1-the-ledger.html">
+    <div class="n">01</div><h3>The Ledger</h3>
+    <p>Ruled accounting paper that draws its own lines. Marking a figure wrong writes a correction
+    beneath it and strikes the original.</p>
+    <span class="tech">rule draw &middot; append-only correction</span>
+    <div class="swatches"><i style="background:#F6F1E4"></i><i style="background:#1F1B14"></i>
+      <i style="background:#9B2921"></i><i style="background:#2C5E3F"></i></div>
+    <span class="best">Best for the CA</span>
+  </a>
+
+  <a class="card" href="3-the-receipt.html">
+    <div class="n">03</div><h3>The Receipt</h3>
+    <p>One narrow monospace column that unrolls and prints itself line by line. Impossible to get lost in;
+    reads the same on any phone.</p>
+    <span class="tech">print-out sequence &middot; tear edges</span>
+    <div class="swatches"><i style="background:#FCFCF8"></i><i style="background:#141414"></i>
+      <i style="background:#C03A2B"></i><i style="background:#1B7A3D"></i></div>
+    <span class="best">Best for the first-timer</span>
+  </a>
+
+  <a class="card" href="10-inkline.html">
+    <div class="n">10</div><h3>Inkline</h3>
+    <p>Rules draw themselves in ink, a brace sweeps around the sum, and confirming an entry pulls a green
+    underline beneath it. Quiet, restrained motion.</p>
+    <span class="tech">SVG draw &middot; ink underline &middot; tick-up</span>
+    <div class="swatches"><i style="background:#FCFBF7"></i><i style="background:#1B4D8F"></i>
+      <i style="background:#2F6B4F"></i><i style="background:#A63A22"></i></div>
+    <span class="best">Most refined</span>
+  </a>
+</div>
+
+<h2 class="sec">Interface</h2>
+<p class="secsub">Built to be operated rather than read.</p>
+<div class="grid">
+  <a class="card" href="9-strata.html">
+    <div class="n">09</div><h3>Strata</h3>
+    <p>Each fact is a card you swipe right to confirm and tap to open. Drag halfway and it springs back &mdash;
+    nothing commits until you pass the threshold.</p>
+    <span class="tech">drag gestures &middot; spring settle &middot; undo</span>
+    <div class="swatches"><i style="background:#EDEAE3"></i><i style="background:#3D5AFE"></i>
+      <i style="background:#00875A"></i><i style="background:#191713"></i></div>
+    <span class="best">Best on mobile</span>
+  </a>
+
+  <a class="card" href="5-instrument.html">
+    <div class="n">05</div><h3>Instrument</h3>
+    <p>A dense precision panel. Click any line of the computation trace to see the inputs behind it.
+    Sparkline, regime comparison, disputed-record count.</p>
+    <span class="tech">expandable trace &middot; sparkline &middot; meter</span>
+    <div class="swatches"><i style="background:#FCFCFC"></i><i style="background:#0047FF"></i>
+      <i style="background:#0A7A3D"></i><i style="background:#0B0C0E"></i></div>
+    <span class="best">Professional density</span>
+  </a>
+
+  <a class="card" href="4-pigment.html">
+    <div class="n">04</div><h3>Pigment</h3>
+    <p>Indigo, haldi, terracotta and leaf &mdash; pigments rather than corporate blue, with a drifting
+    jaali pattern. Reads as Indian rather than generic global fintech.</p>
+    <span class="tech">badge system &middot; drift &middot; inline correction</span>
+    <div class="swatches"><i style="background:#1F3A6E"></i><i style="background:#E0A21C"></i>
+      <i style="background:#B85C38"></i><i style="background:#3E7D5A"></i></div>
+    <span class="best">Most distinctive</span>
+  </a>
+</div>
+
+<div class="note">
+  <h4>How to choose</h4>
+  <p>You probably want a <strong>skin</strong> from one and a <strong>flow</strong> from another. The two
+  ends of your real problem are <strong>03 / 09</strong> (a first-timer needs one column and one decision)
+  and <strong>05 / 08</strong> (a CA needs density and drill-down). Serving both is progressive disclosure,
+  not compromise &mdash; so pick a visual language, then borrow the first-time flow and the expert view.</p>
+  <p><strong>If you want one that people talk about</strong>, it is 11 or 06. <strong>If you want one a
+  professional signs off on</strong>, it is 08 or 05. <strong>If you want filing to feel like it matters</strong>,
+  it is 07.</p>
+  <p>Every direction shares the same figures and the same provenance model: each amount names who reported
+  it and when, and every correction is written as a new entry rather than an edit.</p>
+</div>
+</div></body>
+</html>

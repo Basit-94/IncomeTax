@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="theme.js"></script>
+<title>Direction 11 — Wash</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* ── light: pigment on cotton paper ─────────── */
+:root{
+  --paper:#FBF8F1; --paper-2:#F3EEE2; --grain:rgba(90,70,40,.05);
+  --ink:#1A160F; --ink-2:#544C3E; --ink-3:#8B8271;
+  --rule:#DFD7C6;
+  --w-in:#2E5E9E;    /* income wash   */
+  --w-out:#B4553A;   /* tax wash      */
+  --w-keep:#2F7D5B;  /* refund bloom  */
+  --w-you:#8A6A1F;   /* your claims   */
+  --serif:'Newsreader',Georgia,serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#0F0E0C; --paper-2:#171512; --grain:rgba(255,240,200,.035);
+  --ink:#F2EDE2; --ink-2:#BCB3A2; --ink-3:#877F70;
+  --rule:#2A2620;
+  --w-in:#6FA3E8; --w-out:#E28A6B; --w-keep:#6FC79A; --w-you:#D9B45C;
+}}
+:root[data-theme="dark"]{
+  --paper:#0F0E0C; --paper-2:#171512; --grain:rgba(255,240,200,.035);
+  --ink:#F2EDE2; --ink-2:#BCB3A2; --ink-3:#877F70;
+  --rule:#2A2620;
+  --w-in:#6FA3E8; --w-out:#E28A6B; --w-keep:#6FC79A; --w-you:#D9B45C;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--serif);
+  -webkit-font-smoothing:antialiased;padding-bottom:96px;transition:background .35s,color .35s}
+/* cold-press paper tooth */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.9;
+  background-image:radial-gradient(circle at 20% 30%,var(--grain) 0 1px,transparent 1px),
+                   radial-gradient(circle at 70% 60%,var(--grain) 0 1px,transparent 1px),
+                   radial-gradient(circle at 45% 85%,var(--grain) 0 1px,transparent 1px);
+  background-size:7px 7px,11px 11px,13px 13px}
+
+.wrap{max-width:840px;margin:0 auto;padding:0 22px;position:relative;z-index:2}
+
+header{padding:58px 0 6px}
+.eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-3)}
+h1{font-size:clamp(32px,6vw,52px);font-weight:300;letter-spacing:-.02em;line-height:1.04;margin:14px 0 0}
+h1 em{font-style:italic;color:var(--w-in)}
+.lede{font-size:18.5px;color:var(--ink-2);max-width:46ch;margin:14px 0 0;font-weight:300;line-height:1.55}
+
+/* ── the painting ─────────────────────────── */
+.plate{position:relative;margin-top:30px;border:1px solid var(--rule);background:var(--paper-2);
+  border-radius:2px;overflow:hidden;transition:background .35s,border-color .35s}
+#wash{display:block;width:100%;height:340px}
+@media(max-width:640px){#wash{height:280px}}
+.plate figcaption{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:11px 15px;border-top:1px solid var(--rule);font-family:var(--mono);
+  font-size:10.5px;letter-spacing:.06em;color:var(--ink-3)}
+.repaint{background:none;border:1px solid var(--rule);color:var(--ink-2);font-family:var(--mono);
+  font-size:10.5px;letter-spacing:.1em;padding:6px 11px;border-radius:2px;cursor:pointer;
+  transition:border-color .2s,color .2s}
+.repaint:hover{border-color:var(--ink-3);color:var(--ink)}
+.key{display:flex;gap:16px;flex-wrap:wrap}
+.key span{display:inline-flex;align-items:center;gap:6px}
+.key i{width:9px;height:9px;border-radius:50%;opacity:.75}
+
+/* ── entries ──────────────────────────────── */
+h2{font-family:var(--mono);font-size:10px;letter-spacing:.26em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:500;margin:40px 0 2px}
+.e{padding:16px 0 14px;border-bottom:1px solid var(--rule);position:relative;cursor:pointer;
+  opacity:0;transform:translateY(9px)}
+.e.in{opacity:1;transform:none;transition:opacity .55s,transform .55s cubic-bezier(.2,.85,.25,1)}
+.e .row{display:flex;justify-content:space-between;gap:16px;align-items:baseline}
+.e .t{font-size:17.5px;font-weight:400}
+.e .v{font-family:var(--mono);font-size:16px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.e .p{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:6px}
+.e .p b{font-weight:500;color:var(--w-in)}
+.e .p b.you{color:var(--w-you)}
+/* a wash of colour seeps under the entry you confirm */
+.seep{position:absolute;left:-10px;right:-10px;top:2px;bottom:2px;z-index:-1;opacity:0;
+  border-radius:14px;transition:opacity .6s}
+.e.ok .seep{opacity:.13}
+.e.ok .t::after{content:" ✓";font-family:var(--mono);font-size:12px;color:var(--w-keep)}
+.hint{font-family:var(--mono);font-size:10px;color:var(--ink-3);opacity:0;transition:opacity .25s}
+.e:hover .hint{opacity:1}
+
+/* ── the sum ──────────────────────────────── */
+.sum{margin-top:44px;border-top:2px solid var(--ink);padding-top:22px}
+.line{display:flex;justify-content:space-between;gap:14px;padding:7px 0;font-size:16px;color:var(--ink-2)}
+.line .v{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.line.t{color:var(--ink);font-weight:500;border-top:1px solid var(--rule);margin-top:7px;padding-top:11px}
+.final{margin-top:26px;display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap}
+.final .k{font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-3)}
+.final .amt{font-size:clamp(46px,10vw,70px);font-weight:400;color:var(--w-keep);line-height:1;
+  letter-spacing:-.03em;font-variant-numeric:tabular-nums;margin-top:8px}
+.final p{font-style:italic;color:var(--ink-2);font-size:16px;margin:0;max-width:30ch}
+
+.sign{margin-top:28px;width:100%;border:1.5px solid var(--ink);background:transparent;color:var(--ink);
+  font-family:var(--serif);font-size:17px;padding:17px;cursor:pointer;border-radius:2px;
+  position:relative;overflow:hidden;transition:color .35s}
+.sign .flood{position:absolute;inset:0;background:var(--w-keep);transform:scaleX(0);transform-origin:left;
+  transition:transform 1.9s cubic-bezier(.3,.7,.2,1);opacity:.22}
+.sign span{position:relative;z-index:1}
+.sign.busy .flood{transform:scaleX(1)}
+.sign.done{border-color:var(--w-keep);color:var(--w-keep)}
+.note{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-top:14px;text-align:center}
+.flag{position:fixed;top:14px;right:14px;z-index:5;font-family:var(--mono);font-size:9.5px;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--w-out);border:1px solid var(--w-out);
+  padding:5px 9px;background:var(--paper)}
+.tag{position:fixed;left:12px;bottom:12px;z-index:5;font-family:var(--mono);font-size:10px;
+  letter-spacing:.14em;text-transform:uppercase;background:var(--ink);color:var(--paper);padding:7px 11px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}
+  .e{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<span class="flag">Sample data</span>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Assessment year 2026–27 · painted from your figures</div>
+  <h1>Your year, <em>as a wash</em></h1>
+  <p class="lede">Each pool below is one figure from your return. The bigger the pool, the bigger the
+  amount. The green bloom is what comes back to you.</p>
+</header>
+
+<figure class="plate" style="margin:30px 0 0">
+  <canvas id="wash" aria-label="A watercolour painting of this year's return: large blue pools of income, a rust pool of tax, and a green bloom for the refund."></canvas>
+  <figcaption>
+    <div class="key">
+      <span><i style="background:var(--w-in)"></i>income</span>
+      <span><i style="background:var(--w-you)"></i>your claims</span>
+      <span><i style="background:var(--w-out)"></i>tax</span>
+      <span><i style="background:var(--w-keep)"></i>refund</span>
+    </div>
+    <button class="repaint" id="repaint">↻ repaint</button>
+  </figcaption>
+</figure>
+
+<h2>Written by others</h2>
+
+<div class="e" data-c="in"><span class="seep"></span>
+  <div class="row"><div class="t">Salary received</div><div class="v">₹12,40,000</div></div>
+  <div class="p">by <b>Meridian Systems Pvt Ltd</b> · Form 16 · 14 June 2026 <span class="hint">— tap to confirm</span></div>
+</div>
+
+<div class="e" data-c="in"><span class="seep"></span>
+  <div class="row"><div class="t">Tax already deducted</div><div class="v">₹97,920</div></div>
+  <div class="p">by <b>Meridian Systems Pvt Ltd</b> · quarterly TDS · 14 June 2026 <span class="hint">— tap to confirm</span></div>
+</div>
+
+<div class="e" data-c="in"><span class="seep"></span>
+  <div class="row"><div class="t">Interest on savings</div><div class="v">₹3,480</div></div>
+  <div class="p">by <b>State Bank</b> · AIS · 2 June 2026 <span class="hint">— tap to confirm</span></div>
+</div>
+
+<h2>Written by you</h2>
+
+<div class="e" data-c="you"><span class="seep"></span>
+  <div class="row"><div class="t">Standard deduction</div><div class="v">₹75,000</div></div>
+  <div class="p">applied <b class="you">for you</b> · every salaried filer receives this <span class="hint">— tap to confirm</span></div>
+</div>
+
+<div class="e" data-c="you"><span class="seep"></span>
+  <div class="row"><div class="t">Life insurance &amp; provident fund</div><div class="v">₹1,50,000</div></div>
+  <div class="p">entered by <b class="you">you</b> · 21 June 2026 · section 80C <span class="hint">— tap to confirm</span></div>
+</div>
+
+<div class="sum">
+  <div class="line"><span>Income counted</span><span class="v">₹12,43,480</span></div>
+  <div class="line"><span>Less deductions allowed</span><span class="v">−₹2,25,000</span></div>
+  <div class="line t"><span>Income you are taxed on</span><span class="v">₹10,18,480</span></div>
+  <div class="line"><span>Tax at slab rates, with cess</span><span class="v">₹91,520</span></div>
+  <div class="line"><span>Already paid on your behalf</span><span class="v">−₹97,920</span></div>
+
+  <div class="final">
+    <div>
+      <div class="k">Due back to you</div>
+      <div class="amt" id="amt">₹0</div>
+    </div>
+    <p>Because you paid ₹6,400 more than you owed.</p>
+  </div>
+
+  <button class="sign" id="sign"><span class="flood"></span><span id="lab">Sign and file this return</span></button>
+  <p class="note" id="note">Nothing is sent until you sign.</p>
+</div>
+
+</div>
+<div class="tag">Direction 11 — Wash</div>
+
+<script>
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ─────────────────────────────────────────────
+   A watercolour renderer, in plain canvas.
+   Real pigment gets its edge from many overlapping
+   translucent layers, each a slightly different
+   deformation of the same blob — so that's what we do.
+   ───────────────────────────────────────────── */
+const cv = document.getElementById('wash');
+const ctx = cv.getContext('2d');
+let seed = 7;
+function rnd(){ seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+
+function token(name){
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#888';
+}
+function toRGB(css){
+  const d = document.createElement('span');
+  d.style.color = css; document.body.appendChild(d);
+  const m = getComputedStyle(d).color.match(/\d+/g); d.remove();
+  return m ? m.slice(0,3).map(Number) : [136,136,136];
+}
+
+/* one pigment pool: `layers` deformed polygons stacked at very low alpha */
+function pool(cx, cy, radius, rgb, layers, spread){
+  for (let l = 0; l < layers; l++){
+    const pts = 26, wob = spread * (0.35 + l / layers);
+    ctx.beginPath();
+    for (let i = 0; i <= pts; i++){
+      const a = (i / pts) * Math.PI * 2;
+      // low-frequency lobes + per-layer jitter = a believable bleeding edge
+      const r = radius * (1
+        + 0.16 * Math.sin(a * 3 + l * 0.7)
+        + 0.10 * Math.sin(a * 5 + l * 1.3)
+        + (rnd() - 0.5) * wob);
+      const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r * 0.82;
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.035)`;
+    ctx.fill();
+  }
+  /* granulation — pigment settling into the paper tooth */
+  for (let g = 0; g < radius * 0.9; g++){
+    const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * radius * 0.92;
+    ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${0.05 + rnd() * 0.07})`;
+    ctx.beginPath();
+    ctx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d * 0.82, rnd() * 1.5 + 0.3, 0, 6.28);
+    ctx.fill();
+  }
+}
+
+function paint(){
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  const w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = w * dpr; cv.height = h * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  const IN = toRGB(token('--w-in')), OUT = toRGB(token('--w-out')),
+        KEEP = toRGB(token('--w-keep')), YOU = toRGB(token('--w-you'));
+
+  /* pools sized by the figures they represent (√ so area, not radius, tracks value) */
+  const unit = Math.min(w, h) / 5.2;
+  const s = v => unit * Math.sqrt(v / 1240000);
+
+  pool(w * 0.30, h * 0.46, s(1240000) * 1.15, IN,   16, 0.10);  // salary
+  pool(w * 0.30, h * 0.46, s(97920)  * 1.15, IN,    10, 0.14);  // tds, layered inside
+  pool(w * 0.52, h * 0.62, s(150000) * 1.25, YOU,   12, 0.13);  // 80C
+  pool(w * 0.44, h * 0.34, s(75000)  * 1.30, YOU,   10, 0.15);  // standard deduction
+  pool(w * 0.68, h * 0.48, s(91520)  * 1.35, OUT,   14, 0.12);  // tax owed
+  pool(w * 0.845, h * 0.40, s(6400)  * 2.60, KEEP,  18, 0.20);  // the refund bloom
+
+  /* a wet edge where tax meets refund */
+  ctx.globalCompositeOperation = 'multiply';
+  pool(w * 0.775, h * 0.44, s(6400) * 1.5, OUT, 6, 0.24);
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+function repaint(newSeed){
+  seed = newSeed ?? Math.floor(Math.random() * 2147483000) + 1;
+  paint();
+}
+paint();
+
+document.getElementById('repaint').addEventListener('click', () => repaint());
+addEventListener('resize', () => { clearTimeout(window._t); window._t = setTimeout(paint, 140); });
+/* repaint when the theme flips so the pigments follow */
+new MutationObserver(paint).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => setTimeout(paint, 60));
+
+/* ── entries ─────────────────────────────── */
+const io = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+}), {threshold:.25});
+document.querySelectorAll('.e').forEach((el,i) => {
+  el.style.transitionDelay = (i%3)*70 + 'ms';
+  el.querySelector('.seep').style.background =
+    el.dataset.c === 'you' ? 'var(--w-you)' : 'var(--w-in)';
+  io.observe(el);
+  el.addEventListener('click', () => el.classList.toggle('ok'));
+});
+
+/* ── the figure ──────────────────────────── */
+const amt = document.getElementById('amt');
+new IntersectionObserver((es,o) => es.forEach(e => {
+  if (!e.isIntersecting) return; o.unobserve(e.target);
+  if (reduce){ amt.textContent = '₹6,400'; return; }
+  const t0 = performance.now(), d = 1700;
+  const tick = t => { const k = Math.min(1,(t-t0)/d);
+    amt.textContent = '₹' + Math.round(6400*(1-Math.pow(1-k,3))).toLocaleString('en-IN');
+    if (k<1) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+}), {threshold:.5}).observe(document.querySelector('.final'));
+
+/* filing floods the button like pigment across wet paper */
+const sign = document.getElementById('sign'), lab = document.getElementById('lab'),
+      note = document.getElementById('note');
+sign.addEventListener('click', () => {
+  if (sign.classList.contains('done') || sign.classList.contains('busy')) return;
+  sign.classList.add('busy'); lab.textContent = 'Signing…';
+  note.textContent = 'Writing your return to the record…';
+  setTimeout(() => {
+    sign.classList.remove('busy'); sign.classList.add('done');
+    lab.textContent = 'Filed — reference WPS-2026-4471';
+    note.textContent = 'Acknowledgement sent. You can download it any time.';
+  }, 1950);
+});
+</script>
+</body>
+</html>
