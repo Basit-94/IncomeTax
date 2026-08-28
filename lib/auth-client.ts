@@ -89,6 +89,16 @@ export async function ensureSession(
   fullName: string,
   code: string,
 ): Promise<AuthResult> {
+  if (process.env.NEXT_PUBLIC_MOCK_MODE !== "false") {
+    const mockSession: SessionInfo = {
+      token: `mock-token-${pan}-${Date.now()}`,
+      pan,
+      fullName: fullName || "Wapsi User",
+      personalisedMessage: DEMO_MESSAGE,
+    };
+    return { ok: true, session: mockSession };
+  }
+
   try {
     const existing = await trySignIn(pan);
     if (existing) return { ok: true, session: existing };
