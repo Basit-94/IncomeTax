@@ -9,9 +9,22 @@ public record SubmissionRequest(
         String citizenReference,
         String assessmentYear,
         String ruleSetVersion,
+        String ageBand,
         List<FactRequest> facts,
         List<ClaimRequest> claims,
         long tdsCreditsPaise) {
+
+    public SubmissionRequest(
+            String idempotencyKey,
+            String citizenReference,
+            String assessmentYear,
+            String ruleSetVersion,
+            List<FactRequest> facts,
+            List<ClaimRequest> claims,
+            long tdsCreditsPaise) {
+        this(idempotencyKey, citizenReference, assessmentYear, ruleSetVersion, "below_60", facts, claims, tdsCreditsPaise);
+    }
+
     public SubmissionRequest {
         facts = List.copyOf(Objects.requireNonNullElse(facts, List.of()));
         claims = List.copyOf(Objects.requireNonNullElse(claims, List.of()));

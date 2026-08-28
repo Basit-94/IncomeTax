@@ -58,7 +58,7 @@ public final class TaxEngine {
                 .reduce(0L, Math::addExact);
         // s.87A (incl. marginal relief) applies to the slab portion only — the
         // rebate is not available against special-rate gains.
-        long rebatePaise = rebatePaise(rules, slabTaxablePaise, slabTaxPaise);
+        long rebatePaise = rebatePaise(rules, taxablePaise, slabTaxPaise);
         long taxBeforeRebatePaise = Math.addExact(slabTaxPaise, specialTaxPaise);
         long taxAfterRebatePaise = Math.subtractExact(taxBeforeRebatePaise, rebatePaise);
         long cessPaise = roundToWholeRupeePaise(taxAfterRebatePaise, rules.cessRate());

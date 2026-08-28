@@ -71,11 +71,14 @@ export function validatePan(raw: string): FieldResult {
   return { ok: false, issue: { kind: "shape" } };
 }
 
+const DEMO_IFSC_PREFIXES = ["KAVC", "GOMT", "GODG", "DECU"];
+
 export function validateIfsc(raw: string): FieldResult {
   const value = normalise(raw);
   const parsed = IfscSchema.safeParse(value);
   if (parsed.success) {
-    return { ok: true, value: parsed.data, isDemo: true };
+    const isDemo = DEMO_IFSC_PREFIXES.some(prefix => parsed.data.startsWith(prefix));
+    return { ok: true, value: parsed.data, isDemo };
   }
   if (value.length < 11) return { ok: false, issue: { kind: "incomplete", length: value.length } };
   return { ok: false, issue: { kind: "shape" } };

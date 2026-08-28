@@ -1,6 +1,7 @@
 import { computeTax } from "./engine/tax";
 import type { TaxInputFact } from "./engine/types";
 import type { Claim } from "./types";
+import { REBATE_87A_NEW_THRESHOLD } from "./engine/constants";
 
 export interface TaxEngineInput {
   isSalaried: boolean;
@@ -84,7 +85,7 @@ function calculateForRegime(input: TaxEngineInput, regime: "new" | "old"): Regim
   let marginalReliefVal = 0;
 
   if (regime === "new") {
-    if (breakdown.taxableIncome <= 700000) {
+    if (breakdown.taxableIncome <= REBATE_87A_NEW_THRESHOLD) {
       rebate87AVal = breakdown.rebate87A;
     } else {
       marginalReliefVal = breakdown.rebate87A;

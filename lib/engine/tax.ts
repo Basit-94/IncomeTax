@@ -125,14 +125,14 @@ export function computeTax(input: TaxInput): TaxBreakdown {
   // s.87A (incl. marginal relief) is computed against the slab portion only —
   // the rebate is not available against special-rate gains under the new
   // regime, and this engine models the same rule for both regimes.
-  const rebate87A = rebateFor(input.regime, slabTaxable, slabTax);
+  const rebate87A = rebateFor(input.regime, taxableIncome, slabTax);
   const taxBeforeRebate = slabTax + specialTax;
   const taxAfterRebate = taxBeforeRebate - rebate87A;
 
   const marginalReliefApplied =
     input.regime === "new" &&
-    slabTaxable > REBATE_87A_NEW_THRESHOLD &&
-    slabTax > (slabTaxable - REBATE_87A_NEW_THRESHOLD);
+    taxableIncome > REBATE_87A_NEW_THRESHOLD &&
+    slabTax > (taxableIncome - REBATE_87A_NEW_THRESHOLD);
 
   // Cess rounds half-up like slab slices; applied AFTER rebate/relief.
   const cess = Math.round(taxAfterRebate * HEALTH_EDU_CESS_RATE);

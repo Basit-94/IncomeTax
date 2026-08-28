@@ -2,7 +2,7 @@ package com.wapsi.backend.config;
 
 import javax.sql.DataSource;
 
-import org.postgresql.ds.PGSimpleDataSource;
+import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -57,14 +57,19 @@ public class PersistenceConfig {
             @Value("${wapsi.datasource.url}") String url,
             @Value("${wapsi.datasource.username:}") String username,
             @Value("${wapsi.datasource.password:}") String password) {
-        PGSimpleDataSource dataSource = new PGSimpleDataSource();
-        dataSource.setUrl(url);
+        HikariDataSource dataSource = new HikariDataSource();
+        dataSource.setJdbcUrl(url);
         if (!username.isBlank()) {
-            dataSource.setUser(username);
+            dataSource.setUsername(username);
         }
         if (!password.isBlank()) {
             dataSource.setPassword(password);
         }
+        // Set maximum pool size and other optimal defaults for virtual thread concurrency
+        dataSource.setMaximumPoolSize(25);
+        dataSource.setMinimumIdle(5);
+        dataSource.setIdleTimeout(30000);
+        dataSource.setConnectionTimeout(20000);
         return dataSource;
     }
 

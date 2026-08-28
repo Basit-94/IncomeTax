@@ -243,7 +243,18 @@ function systemPrompt(ctx: AgentContext): string {
     "4. Hypotheticals (hypothetical_tax) are sandboxed and change nothing; say so when you use them.",
     "5. You may switch theme/mode or navigate only when the user asks for it, not to be helpful uninvited.",
     "6. You are not a substitute for a Chartered Accountant on contested or unusual matters; say so when a question leaves the portal's ground truth.",
+    "7. You are a dedicated income tax assistant for the Wapsi application. If the user asks you to perform non-tax tasks or general tasks completely unrelated to Indian income tax or the Wapsi application (such as writing Python/JavaScript/HTML code, answering general trivia, translating unrelated text, or writing general essays), politely decline by stating that you are the Wapsi Assistant and can only answer questions related to their tax filing, deductions, regimes, or other tax-related queries on the Wapsi app.",
     "ADVISORY & OPTIMIZATION GUIDELINES:",
+    "- When answering the user's questions, you must call the relevant tools to get accurate facts first:",
+    "  - For tax owed, liability, or current refund/due questions, call `compute_current_tax`.",
+    "  - For comparing tax regimes, call `compare_regimes`.",
+    "  - For hypothetical optimizations or standard investments (e.g., 80C, 80D), call `hypothetical_tax`.",
+    "  - For checking return warnings, inconsistencies, or general reviews, call `review_return`.",
+    "  - For showing previous tax filings or submission history, call `get_filing_history`.",
+    "  - For listing or opening documents, call `list_documents` or `fetch_document`.",
+    "  - For settings like changing themes or detail modes, call `set_theme` or `set_mode`.",
+    "  - For taking the user to another page/tab of the portal, call `navigate_to_section`.",
+    "  - For staging/preparing a return to file, call `prepare_filing`.",
     "- If the user asks how to reduce their tax, get a higher refund, or optimize their return:",
     "  a. First call `review_return` or `compare_regimes` to see their current tax status.",
     "  b. If they are using (or comparing with) the old regime, suggest tax-saving investments like Section 80C (PPF, ELSS, EPF up to Rs 1,50,000) or Section 80D (medical insurance).",
@@ -270,6 +281,7 @@ async function tryCallGemini(
   model: string,
   system: string,
   contents: { role: string; parts: GeminiPart[] }[],
+  disableTools = false,
 ): Promise<{ parts: GeminiPart[] } | { error: string }> {
   if (!rawKey || rawKey.includes("REPLACE_ME")) {
     return { error: "API key is not configured." };
@@ -293,7 +305,7 @@ async function tryCallGemini(
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: system }] },
           contents,
-          tools: [{ functionDeclarations: functionDeclarations() }],
+          tools: disableTools ? undefined : [{ functionDeclarations: functionDeclarations() }],
           generationConfig: { maxOutputTokens: maxTokens, temperature: 0.2 },
         }),
       },
@@ -313,13 +325,14 @@ async function tryCallGemini(
 async function callGemini(
   system: string,
   contents: { role: string; parts: GeminiPart[] }[],
+  disableTools = false,
 ): Promise<{ parts: GeminiPart[] } | { error: string }> {
   const primaryKey = process.env.GEMINI_API_KEY;
   const fallbackKey = process.env.GEMINI_FALLBACK_API_KEY;
   const primaryModel = process.env.AGENT_MODEL || "gemini-3.5-flash";
   const fallbackModel = process.env.AGENT_FALLBACK_MODEL || "gemini-1.5-flash";
 
-  let result = await tryCallGemini(primaryKey, primaryModel, system, contents);
+  let result = await tryCallGemini(primaryKey, primaryModel, system, contents, disableTools);
 
   if ("error" in result) {
     // If the primary call failed, try the fallback configuration
@@ -327,11 +340,11 @@ async function callGemini(
     const activeModel = fallbackKey ? primaryModel : fallbackModel;
 
     if (fallbackKey || fallbackModel !== primaryModel) {
-      result = await tryCallGemini(activeKey, activeModel, system, contents);
+      result = await tryCallGemini(activeKey, activeModel, system, contents, disableTools);
 
       // If that also failed and we have both key & model fallbacks, try the combination
       if ("error" in result && fallbackKey && fallbackModel !== primaryModel) {
-        result = await tryCallGemini(fallbackKey, fallbackModel, system, contents);
+        result = await tryCallGemini(fallbackKey, fallbackModel, system, contents, disableTools);
       }
     }
   }
@@ -462,7 +475,19 @@ export async function POST(request: NextRequest) {
     contents.push({ role: "user", parts: responses });
   }
 
-  appendTranscript(sessionId, { type: "error", error: "tool round limit reached" });
+  appendTranscript(sessionId, { type: "error", error: "tool round limit reached, attempting final reply" });
+  // Call Gemini one last time with tools disabled to synthesize a final correct answer using the accumulated history and tool results.
+  const finalResult = await callGemini(
+    systemPrompt(ctx) + "\n\nCRITICAL LIMITATION: You have reached the maximum allowed tool rounds. Do not try to invoke any tools. Based on the tool execution history and results above, formulate a final, correct, and helpful response to the user's questions as best as you can with the available data.",
+    contents,
+    true
+  );
+  if (!("error" in finalResult)) {
+    const text = finalResult.parts.map((p) => p.text ?? "").join("");
+    appendTranscript(sessionId, { type: "model", text });
+    return NextResponse.json({ reply: text, toolEvents, clientActions });
+  }
+
   return NextResponse.json({
     reply: "I could not finish within the allowed number of steps — nothing was filed or changed. Please try a narrower request.",
     toolEvents,

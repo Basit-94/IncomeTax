@@ -1053,6 +1053,7 @@ export default function WapsiPrototype() {
         citizenReference: persona.pan || persona.id,
         assessmentYear: "2026-27",
         ruleSetVersion,
+        ageBand: persona.age >= 80 ? "above_80" : persona.age >= 60 ? "60_to_80" : "below_60",
         facts,
         claims,
         tdsCreditsPaise,
@@ -1605,12 +1606,17 @@ export default function WapsiPrototype() {
                       onJump={(s) => setFlowStep(s)}
                     />
                     {undoStack.length > 0 && (
-                      <button
-                        onClick={handleGlobalUndo}
-                        className="text-xs text-ink-2 hover:text-navy font-semibold underline underline-offset-2"
-                      >
-                        {t.common.undo}
-                      </button>
+                      <div className="flex justify-end pr-2 print:hidden -mt-2 mb-4">
+                        <button
+                          onClick={handleGlobalUndo}
+                          className="px-3.5 py-1.5 bg-rose-50 border border-rose-200 text-rose-800 hover:bg-rose-100 text-xs font-bold rounded-lg transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
+                          </svg>
+                          <span>{t.common.undo}</span>
+                        </button>
+                      </div>
                     )}
 
                     <m.div

@@ -99,8 +99,9 @@ public final class SubmissionService implements AutoCloseable {
             var claims = request.claims().stream()
                     .map(claim -> new TaxClaim(claim.section(), Money.ofPaise(claim.amountPaise())))
                     .toList();
+            String ageBand = request.ageBand() != null ? request.ageBand() : "below_60";
             var result = taxEngine.compute(rules, new TaxInput(
-                    facts, claims, "below_60", Money.ofPaise(request.tdsCreditsPaise())));
+                    facts, claims, ageBand, Money.ofPaise(request.tdsCreditsPaise())));
             store.complete(request.idempotencyKey(), new SubmissionReceipt(
                     accepted.submissionId(), "completed", request.ruleSetVersion(), result.totalTax().paise(), "processed locally"));
         } catch (RuntimeException exception) {
