@@ -5,6 +5,7 @@ import { AnimatePresence, m } from "motion/react";
 import { AlertTriangle, Sparkles, Volume2, VolumeX } from "lucide-react";
 import type { Persona } from "../../lib/types";
 import type { Dict } from "../../lib/i18n";
+import { MockField, MockFill, MOCK } from "@/components/dev/mock-fill";
 
 interface DisputeModalProps {
   active: boolean;
@@ -112,13 +113,16 @@ export default function DisputeModal({
                       <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
                         What was the actual TDS deducted?
                       </label>
-                      <input
+                      <MockField>
+                        <input
                         type="number"
                         placeholder="Enter actual TDS amount (e.g. 0)"
                         value={disputeAmount}
                         onChange={(e) => setDisputeAmount(e.target.value)}
                         className="w-full px-3 py-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-700 focus:outline-none"
                       />
+                        <MockFill onFill={() => setDisputeAmount(String(MOCK.savingsInterest))} />
+                      </MockField>
                     </div>
 
                     <div>
@@ -182,13 +186,16 @@ export default function DisputeModal({
                         <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
                           Enter the actual amount you received (₹)
                         </label>
-                        <input
+                        <MockField>
+                          <input
                           type="number"
                           value={disputeAmount}
                           onChange={(e) => setDisputeAmount(e.target.value)}
                           className="w-full bg-paper-2 border border-line text-base font-semibold px-3 py-2 rounded-xl focus:outline-none focus:border-money"
                           placeholder="e.g. 50000"
                         />
+                          <MockFill onFill={() => setDisputeAmount(String(MOCK.savingsInterest))} />
+                        </MockField>
                       </div>
                     )}
 
@@ -246,12 +253,15 @@ export default function DisputeModal({
                   <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider mb-1.5">
                     Update your self-declared amount (₹)
                   </label>
-                  <input
+                  <MockField>
+                    <input
                     type="number"
                     value={disputeAmount}
                     onChange={(e) => setDisputeAmount(e.target.value)}
                     className="w-full bg-paper-2 border border-line text-base font-semibold px-3 py-2 rounded-xl focus:outline-none focus:border-money"
                   />
+                    <MockFill onFill={() => setDisputeAmount(String(MOCK.savingsInterest))} />
+                  </MockField>
                 </div>
 
                 <div>
@@ -281,7 +291,7 @@ export default function DisputeModal({
                 type="button"
                 onClick={saveDispute}
                 disabled={disputeAmount.trim() === ""}
-                className="flex-1 bg-money hover:bg-money-deep text-paper py-2 rounded-xl text-sm font-semibold transition-colors cursor-pointer disabled:bg-slate-200 disabled:text-ink-3 disabled:cursor-not-allowed"
+                className="flex-1 bg-navy hover:opacity-90 text-paper py-2 rounded-xl text-sm font-semibold transition-colors cursor-pointer disabled:bg-slate-200 disabled:text-ink-3 disabled:cursor-not-allowed"
               >
                 {!isPreFilled || disputeTarget === "tax" ? "Update & Recalculate" : t.file.disputeSave}
               </button>

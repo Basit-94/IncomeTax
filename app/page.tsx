@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { LazyMotion, domMax, m, AnimatePresence } from "motion/react";
 
-import { PERSONAS, TODAY } from "../lib/personas";
+import { PERSONAS, TODAY, findPersonaByPan } from "../lib/personas";
 import type { Persona, PersonaId, Lang, IncomeFact, BankAccount, Notice, RefundState, TimelineKey } from "../lib/types";
 import { REFUND_SEQUENCE } from "../lib/types";
 import { dict } from "../lib/i18n";
@@ -42,6 +42,20 @@ import OverviewTab from "../components/dashboard/overview-tab";
 import StatementTab from "../components/dashboard/statement-tab";
 import ActionsTab from "../components/dashboard/actions-tab";
 import SandboxDrawer from "../components/dashboard/sandbox-drawer";
+import Motes from "../components/ambient/motes";
+import {
+  clearSession,
+  ensureSession,
+  fetchHistory,
+  loadSession,
+  pushModePreference,
+  saveSession,
+  signOut,
+  type ServerFiling,
+  type SessionInfo,
+} from "../lib/auth-client";
+import MiniBurstHost from "../components/ambient/mini-burst";
+import AgentPanel from "../components/agent/agent-panel";
 import DisputeModal from "../components/dashboard/dispute-modal";
 import { EditIncomeModal } from "../components/dashboard/edit-income-modal";
 import BankIfscModal from "../components/dashboard/bank-ifsc-modal";
@@ -51,14 +65,15 @@ import FlowStepper, { FLOW_STEPS, type FlowStepName } from "../components/flow/f
 import DeductionsStep from "../components/flow/deductions-step";
 import RegimeStep from "../components/flow/regime-step";
 import CheckScreen from "../components/flow/check-screen";
+import BeforeFiling from "../components/flow/before-filing";
 import FilingStep from "../components/flow/filing-step";
 import { generateSeededUser } from "../components/sandbox-user";
 import Onboarding from "../components/onboarding";
-import { JudgeSandboxBar, JUDGE_VECTORS, type JudgeVector } from "../components/dashboard/judge-sandbox-bar";
 import { QuickEditModal } from "../components/dashboard/quick-edit-modal";
 import RealUserTaxWizard from "../components/flow/real-user-wizard";
 import { useTax } from "../context/TaxReturnContext";
 import InteractiveTaxDashboard from "../components/InteractiveTaxDashboard";
+import { stableIdempotencyKey } from "@/lib/submission-key";
 
 // --- VALIDATION (lib/validate.ts issue codes → dictionary messages) ---
 function panIssueMessage(raw: string, t: ReturnType<typeof dict>): string {
@@ -127,8 +142,14 @@ export default function WapsiPrototype() {
 
     const salaryVal = persona.facts.find(f => f.kind === 'salary')?.amount ?? 0;
     const interestVal = persona.facts.find(f => f.kind === 'interest')?.amount ?? 0;
-    const consultingVal = persona.facts.find(f => f.kind === 'other' || f.kind === 'rent')?.amount ?? 0;
-    const otherVal = persona.facts.find(f => f.kind === 'dividend' || f.kind === 'capital_gains')?.amount ?? 0;
+    // Sum, not find: a persona can hold BOTH dividend and capital gains, and .find() silently
+    // dropped whichever came second (Rakesh's ₹1,10,000 of gains vanished this way).
+    const consultingVal = persona.facts
+      .filter(f => f.kind === 'other' || f.kind === 'rent')
+      .reduce((sum, f) => sum + f.amount, 0);
+    const otherVal = persona.facts
+      .filter(f => f.kind === 'dividend' || f.kind === 'capital_gains')
+      .reduce((sum, f) => sum + f.amount, 0);
     const tdsVal = persona.taxPaid.reduce((sum, t) => sum + t.amount, 0);
     const ded80cVal = persona.claims.find(c => c.section === '80C')?.amount ?? 0;
     const ded80dVal = persona.claims.find(c => c.section === '80D' || c.section === '80D_SELF')?.amount ?? 0;
@@ -161,6 +182,8 @@ export default function WapsiPrototype() {
   const [flowStep, setFlowStep] = useState<FlowStepName>("facts");
 
   const t = dict(lang);
+  const uiMode = onboardingProfile?.mode ?? "simple";
+
   const breakdown = useMemo(
     () => (persona ? computeForPersona(persona, regime) : null),
     [persona, regime],
@@ -202,6 +225,12 @@ export default function WapsiPrototype() {
   // OTP input state
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [otpError, setOtpError] = useState(false);
+  const [authNote, setAuthNote] = useState<string | null>(null);
+  const [authBusy, setAuthBusy] = useState(false);
+  /** The REAL backend session (T2.7/T2.8): hashed-token identity for history,
+      preferences, documents and the agent's backend tools. */
+  const [session, setSession] = useState<SessionInfo | null>(null);
+  const [serverFilings, setServerFilings] = useState<ServerFiling[] | null>(null);
   const [autoFillCode, setAutoFillCode] = useState("949494");
 
   // Interaction Modals / Views
@@ -239,6 +268,8 @@ export default function WapsiPrototype() {
   // Load saved draft (versioned ReturnState; legacy raw-Persona drafts migrate)
   useEffect(() => {
     const savedLang = localStorage.getItem("wapsi_lang");
+    const savedSession = loadSession();
+    if (savedSession) setSession(savedSession);
     const savedTheme = localStorage.getItem("wapsi_theme");
     const savedOnboarding = loadOnboardingProfile();
     const savedOnboardingDraft = loadOnboardingDraft();
@@ -269,7 +300,9 @@ export default function WapsiPrototype() {
       }
       setActivePersonaId(result.state.personaId);
       setReturnState(result.state);
-      setIsRealMode(true);
+      // Only the blank custom persona is a "real user" return; restoring a seeded citizen
+      // as one relabelled Rakesh "(Real User Return)" after every reload.
+      setIsRealMode(result.state.personaId === "custom");
       setWizardCompleted(true);
       if (savedOnboarding) {
         const destination = getDashboardDestination(
@@ -290,6 +323,21 @@ export default function WapsiPrototype() {
       setStep("landing");
     }
   }, []);
+
+  // The account's filings, from the server, whenever a session is live on the
+  // dashboard - and again after a fresh filing so the new receipt appears.
+  useEffect(() => {
+    let cancelled = false;
+    if (step === "dashboard" && session) {
+      fetchHistory(session.token).then((filings) => {
+        if (!cancelled) setServerFilings(filings);
+      });
+    }
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, session, isFiled, stampFired]);
 
   // Sync document root class with theme state
   useEffect(() => {
@@ -403,6 +451,34 @@ export default function WapsiPrototype() {
     }
 
     setPanInputError(null);
+
+    // A seeded PAN loads that citizen's full return. This is what the quick-login buttons
+    // promise; before this, EVERY pan built the blank "custom" persona below, so "Rakesh
+    // Kumar" logged into an empty shell and the dashboard faithfully rendered the emptiness
+    // (SS4B round 1, finding C1 - the dashboard was never the bug).
+    const seeded = findPersonaByPan(cleanPan);
+    if (seeded) {
+      setCustomPan(cleanPan);
+      setIsRealMode(false);
+      // Their facts already exist - they belong on the dashboard, not in the empty wizard.
+      setWizardCompleted(true);
+      setActivePersonaId(seeded.id);
+      setReturnState({
+        version: CURRENT_VERSION,
+        lang,
+        personaId: seeded.id,
+        baselinePersona: seeded,
+        persona: seeded,
+        corrections: [],
+        confirmedFactIds: [],
+        regime: "new",
+      });
+      setUndoStack([]);
+      setOtp(["9", "4", "9", "4", "9", "4"]);
+      setStep("otp");
+      return;
+    }
+
     setCustomPan(cleanPan);
     setIsRealMode(true);
     setWizardCompleted(false);
@@ -465,35 +541,74 @@ export default function WapsiPrototype() {
     }
   };
 
-  const handleVerifyOtp = () => {
+  const handleVerifyOtp = async () => {
     if (simulatedError) {
       setOtpError(true);
       return;
     }
+    if (!returnState || authBusy) return;
 
-    const typedCode = otp.join("");
-    const correctCode = "949494";
-
-    if ((typedCode === correctCode || activePersonaId === "custom") && returnState) {
-      setOtpError(false);
-      saveState({ ...returnState, lang });
-      // Unfiled citizens enter the default path; already-filed ones land on the tracker.
-      const enter = () => {
-        setPersonalizedDashboardDestination(onboardingProfile, returnState);
-        setStep("dashboard");
-      };
-      if (simulatedDelay) {
-        setTimeout(enter, 3000);
-      } else {
-        enter();
-      }
-    } else {
+    // REAL sign-in (2026-08-29): the code the user typed is verified by the
+    // backend for both channels; an unknown PAN runs the full registration
+    // first. No client-side code comparison remains.
+    // SS4B round-1 filer finding F1: for an already-registered account the
+    // password sign-in succeeded regardless of the typed code, silently. The
+    // on-screen mock code IS "the code we sent you" (delivery is mocked), so
+    // the equality gate for returning accounts lives here; fresh registrations
+    // are additionally verified by the server, attempt-capped.
+    if (otp.join("") !== "949494") {
       setOtpError(true);
+      setAuthNote(null);
+      return;
+    }
+    setAuthBusy(true);
+    setAuthNote(t.login.authVerifying);
+    setOtpError(false);
+    const pan = returnState.persona.pan || customPan;
+    const result = await ensureSession(pan, returnState.persona.name, otp.join(""));
+    setAuthBusy(false);
+
+    if (!result.ok) {
+      setOtpError(true);
+      setAuthNote(
+        result.failure.kind === "unreachable"
+          ? t.login.authUnreachable
+          : result.failure.kind === "rejected"
+            ? t.login.authRejected(result.failure.detail)
+            : null,
+      );
+      return;
+    }
+
+    setAuthNote(null);
+    setSession(result.session);
+    saveSession(result.session);
+    // T5.1: the local mode choice follows the account from the first sign-in.
+    if (onboardingProfile) {
+      void pushModePreference(result.session.token, onboardingProfile.mode);
+    }
+
+    saveState({ ...returnState, lang });
+    // Unfiled citizens enter the default path; already-filed ones land on the tracker.
+    const enter = () => {
+      setPersonalizedDashboardDestination(onboardingProfile, returnState);
+      setStep("dashboard");
+    };
+    if (simulatedDelay) {
+      setTimeout(enter, 3000);
+    } else {
+      enter();
     }
   };
 
   // Log Out / Reset
   const handleLogOut = () => {
+    if (session) {
+      void signOut(session.token);
+    }
+    setSession(null);
+    setServerFilings(null);
+    clearSession();
     localStorage.clear();
     setStep("onboarding");
     setActivePersonaId(null);
@@ -513,6 +628,9 @@ export default function WapsiPrototype() {
     setActiveTab("overview");
     setIsRealMode(true);
     setWizardCompleted(false);
+    // The Quick Edit modal is page-level state: left true across a logout it floats over
+    // whatever renders next and traps the pointer (SS4B round 1, finding C5).
+    setQuickEditActive(false);
   };
 
   // Change Language
@@ -541,6 +659,13 @@ export default function WapsiPrototype() {
     return map;
   }, [returnState]);
 
+  /** Checklist ticks confirm WITHOUT the board's auto-scroll - a person mid-
+      checklist must not be yanked back up to the cards (observed 2026-08-29). */
+  const handleConfirmFactQuiet = (factId: string) => {
+    if (!returnState) return;
+    commitWithUndo(confirmFact(returnState, factId));
+  };
+
   const handleConfirmFact = (factId: string) => {
     if (!returnState) return;
     commitWithUndo(confirmFact(returnState, factId));
@@ -557,6 +682,33 @@ export default function WapsiPrototype() {
         }
       }
     }, 100);
+  };
+
+  /** Checklist jump link (D13 SS7): the card centred and flashed - without
+      ticking the row that sent us. On the facts page this is an in-page
+      scroll; from anywhere else it lands on the facts step first. */
+  const scrollToFactCard = (factId: string) => {
+    const card = document.getElementById(`fact-${factId}`);
+    if (!card) return;
+    card.focus({ preventScroll: true });
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    card.classList.add("flash");
+    setTimeout(() => card.classList.remove("flash"), 1600);
+  };
+
+  const handleJumpToFact = (factId: string) => {
+    setFlowStep("facts");
+    setTimeout(() => scrollToFactCard(factId), 120);
+  };
+
+  /** T5.3: Full detail signs off the whole statement in one declaration. */
+  const handleSignOffAll = () => {
+    if (!returnState || !persona) return;
+    let next = returnState;
+    for (const item of [...persona.facts, ...persona.taxPaid, ...persona.claims]) {
+      next = confirmFact(next, item.id);
+    }
+    commitWithUndo(next);
   };
 
   const handleUndoCorrection = (correctionId: string) => {
@@ -847,10 +999,62 @@ export default function WapsiPrototype() {
   };
 
   // 5. Commit the return — called by the staged FilingStep after its named steps.
-  const handleFileCommit = () => {
+  const handleFileCommit = async () => {
     if (!persona || !returnState) return;
 
-    localStorage.removeItem("wapsi_last_submission_id");
+    // T1.4 (policy §5.2: alert immediately, let the user retry). The POST happens FIRST and
+    // the return is stamped filed only after the server accepts it. The previous ordering
+    // stamped "Filed" optimistically and buried a failed POST in console.error — the user
+    // was told their return was in while nothing had reached the server.
+    const facts = persona.facts.map((f) => ({
+      kind: f.kind,
+      amountPaise: f.amount * 100,
+      // Asset-class metadata (T1.9b): lets the backend price s.111A/112A/112
+      // gains at their real rates. undefined keys drop out of the JSON.
+      assetClass: f.capitalGains?.assetClass,
+      holding: f.capitalGains?.holding
+    }));
+    const claims = persona.claims.map((c) => ({
+      section: c.section,
+      amountPaise: c.amount * 100
+    }));
+    const tdsCreditsPaise = persona.taxPaid.reduce((sum, t) => sum + t.amount, 0) * 100;
+    const ruleSetVersion = regime === "old" ? "2026-27-old" : "2026-27-new";
+    const idempotencyKey = stableIdempotencyKey({
+      personaId: persona.id,
+      assessmentYear: "2026-27",
+      ruleSetVersion,
+      facts,
+      claims,
+      tdsCreditsPaise,
+    });
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+
+    const res = await fetch(`${backendUrl}/api/v1/returns/submit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        idempotencyKey,
+        // The PAN is the cross-year join key (SS5.4); without it the ledger
+        // append failed async - observed live 2026-08-29 on Sunita's filing.
+        citizenReference: persona.pan || persona.id,
+        assessmentYear: "2026-27",
+        ruleSetVersion,
+        facts,
+        claims,
+        tdsCreditsPaise,
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`Filing submission failed: HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    if (data && data.submissionId) {
+      localStorage.setItem("wapsi_last_submission_id", data.submissionId);
+      window.dispatchEvent(new CustomEvent("wapsi_submitted", { detail: data.submissionId }));
+    }
+
+    // Only now — the server has the return — does the UI say so.
     setIsFiled(true);
     saveState({
       ...returnState,
@@ -893,51 +1097,6 @@ export default function WapsiPrototype() {
       }
     });
     setTimeout(() => setStampFired(true), 400);
-
-    // POST request to backend API
-    const facts = persona.facts.map((f) => ({
-      kind: f.kind,
-      amountPaise: f.amount * 100
-    }));
-
-    const claims = persona.claims.map((c) => ({
-      section: c.section,
-      amountPaise: c.amount * 100
-    }));
-
-    const tdsCreditsPaise = persona.taxPaid.reduce((sum, t) => sum + t.amount, 0) * 100;
-    const ruleSetVersion = regime === "old" ? "2026-27-old" : "2026-27-new";
-    const idempotencyKey = `idemp-${persona.id}-${Date.now()}`;
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
-
-    fetch(`${backendUrl}/api/v1/returns/submit`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        idempotencyKey,
-        assessmentYear: "2026-27",
-        ruleSetVersion,
-        facts,
-        claims,
-        tdsCreditsPaise,
-      }),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Filing submission to Spring Boot backend failed");
-        return res.json();
-      })
-      .then((data) => {
-        console.log("Filing submission accepted by backend:", data);
-        if (data && data.submissionId) {
-          localStorage.setItem("wapsi_last_submission_id", data.submissionId);
-          window.dispatchEvent(new CustomEvent("wapsi_submitted", { detail: data.submissionId }));
-        }
-      })
-      .catch((err) => {
-        console.error("Error submitting return to backend:", err);
-      });
 
     // Start automatic progression to Credited
     triggerTimelineProgress("filed_unverified");
@@ -1106,6 +1265,10 @@ export default function WapsiPrototype() {
       ...returnState,
       baselinePersona: addClaim(returnState.baselinePersona),
       persona: addClaim(returnState.persona),
+      // "Yes - claim this" IS the confirmation: the user just asserted it.
+      // Without this, a claim added after the board was ticked re-locked the
+      // filing gate with a row the user had already answered.
+      confirmedFactIds: [...returnState.confirmedFactIds, claim.id],
     });
   };
 
@@ -1211,12 +1374,10 @@ export default function WapsiPrototype() {
     <LazyMotion features={domMax} strict>
       <div className="service-shell flex-1 text-ink selection:bg-money/20 relative overflow-x-hidden min-h-dvh flex flex-col">
 
-        {/* --- JUDGE SANDBOX BAR --- */}
-        <JudgeSandboxBar
-          onEditFacts={() => setQuickEditActive(true)}
-          antigravityUi={antigravityUi}
-          onToggleAntigravityUi={() => setAntigravityUi(!antigravityUi)}
-        />
+        {/* Judge sandbox bar removed entirely (user directive 2026-08-29): tester
+            chrome is not part of the product. Quick Edit stays reachable via the
+            overview's "Edit Actual Figures"; the antigravity judge view is now
+            unreachable dead code (flagged, not deleted - see PLAN log). */}
 
         {antigravityUi ? (
           <InteractiveTaxDashboard onLogOut={handleLogOut} />
@@ -1232,11 +1393,62 @@ export default function WapsiPrototype() {
           toggleTheme={toggleTheme}
           setShowConsole={setShowConsole}
           onLogoClick={goHome}
+          showLanguage={step !== "onboarding"}
+          mode={step === "dashboard" && persona ? uiMode : undefined}
+          onModeChange={(mode) => {
+            if (!onboardingProfile) return;
+            const nextProfile = { ...onboardingProfile, mode };
+            setOnboardingProfile(nextProfile);
+            saveOnboardingProfile(nextProfile);
+            // T5.1: the switch follows the account when a session is live.
+            if (session) void pushModePreference(session.token, mode);
+          }}
         />
 
         {/* --- MAIN BODY --- */}
         <main id="main-content" className="flex-1 max-w-6xl mx-auto w-full px-4 py-8 md:px-6 md:py-10 relative">
           
+          {/* Phase 6, wired LAST per user directive: the assistant floats over the
+              finished dashboard. It acts through /api/agent and the same handlers
+              the UI uses; filing still ends at the human confirmation card. */}
+          {step === "dashboard" && persona && (
+            <AgentPanel
+              lang={lang}
+              t={t}
+              persona={persona}
+              regime={regime}
+              mode={uiMode}
+              sessionToken={session?.pan === persona.pan ? session.token : undefined}
+              onSetTheme={(next) => {
+                setTheme(next);
+                localStorage.setItem("wapsi_theme", next);
+              }}
+              onSetMode={(next) => {
+                if (!onboardingProfile) return;
+                const nextProfile = { ...onboardingProfile, mode: next };
+                setOnboardingProfile(nextProfile);
+                saveOnboardingProfile(nextProfile);
+              }}
+              onNavigate={(section) => {
+                if (section === "filing") {
+                  setFlowStep("filing");
+                } else if (section === "documents") {
+                  setActiveTab("statement");
+                } else if (section === "history") {
+                  setActiveTab("actions");
+                } else {
+                  setActiveTab("overview");
+                }
+              }}
+              onConfirmFiling={handleFileCommit}
+            />
+          )}
+
+          {/* Ambient motes on every page: slow, evenly multicoloured
+              (user directives 2026-08-29). OUTSIDE AnimatePresence. */}
+          <Motes />
+          <MiniBurstHost />
+
           <AnimatePresence mode="wait">
             
             {/* STEP 1: ONBOARDING */}
@@ -1293,6 +1505,8 @@ export default function WapsiPrototype() {
                   t={t}
                   otp={otp}
                   otpError={otpError}
+                  authNote={authNote}
+                  authBusy={authBusy}
                   mockCode="949494"
                   handleOtpChange={handleOtpChange}
                   onAutoFill={() => {
@@ -1317,19 +1531,11 @@ export default function WapsiPrototype() {
               >
                 
                 {/* ACTIVE PROFILE STRIP */}
-                <ProfileStrip persona={persona} lang={lang} t={t} onLogOut={handleLogOut} isRealMode={isRealMode} />
+                <ProfileStrip persona={persona} lang={lang} t={t} onLogOut={handleLogOut} isRealMode={isRealMode} onEditOnboarding={handleEditOnboarding} greeting={session?.pan === persona.pan ? session.personalisedMessage : undefined} />
 
-                {onboardingProfile && (!isRealMode || wizardCompleted) && (
-                  <PersonalizedDashboard
-                    profile={onboardingProfile}
-                    t={t}
-                    hasFiled={persona.refund.state !== "not_filed"}
-                    destination={dashboardDestination}
-                    onPrimaryAction={openPersonalizedDashboardDestination}
-                    onEdit={handleEditOnboarding}
-                    isRealMode={isRealMode}
-                  />
-                )}
+                {/* Portal chrome removed (user directive 2026-08-29): the D13
+                    case-file hero above is the cover; tabs are the nav; the
+                    Simple/Full seg lives on the tab bar like the prototype. */}
 
                 {/* RESTORED DRAFT BANNER — never silently resume */}
                 {restoredFrom && (
@@ -1350,6 +1556,14 @@ export default function WapsiPrototype() {
                     lang={lang}
                     t={t}
                     pan={persona.pan}
+                    initialEmploymentType={
+                      // T3.5: onboarding already asked; the wizard confirms instead of re-asking.
+                      onboardingProfile?.profession === "salaried" ? "salaried"
+                      : onboardingProfile?.profession === "self_employed" ? "freelancer"
+                      : onboardingProfile?.profession === "business_owner" ? "business"
+                      : onboardingProfile?.profession === "retired" ? "pension"
+                      : undefined
+                    }
                     onComplete={(updatedPersona, regime) => {
                       if (returnState) {
                         setReturnState({
@@ -1363,8 +1577,11 @@ export default function WapsiPrototype() {
                       setFlowStep("check"); // Take them directly to the Review & File step
                     }}
                     onCancel={() => {
+                      // Cancel closes the wizard and nothing else. It used to call
+                      // handleLogOut() - localStorage.clear() included - so "Cancel Flow"
+                      // silently destroyed the session and every onboarding answer
+                      // (SS4B round 1, finding C3).
                       setWizardCompleted(true);
-                      handleLogOut();
                     }}
                   />
                 ) : persona.refund.state === "not_filed" ? (
@@ -1405,7 +1622,29 @@ export default function WapsiPrototype() {
                             handleFactAmountChange={handleFactAmountChange}
                             handleClaimAmountChange={handleClaimAmountChange}
                             handleAddCustomIncome={handleAddCustomIncome}
+                            mode={uiMode}
+                            regime={regime}
+                            onSignOffAll={handleSignOffAll}
                           />
+                          {/* D13 single page (user directive 2026-08-29): the confirm
+                              checklist lives WITH the cards; jump links scroll in-page.
+                              The finish card stays on the check step - here the
+                              checklist feeds the same gate as the cards. */}
+                          {uiMode === "simple" && breakdown && (
+                            <BeforeFiling
+                              persona={persona}
+                              breakdown={breakdown}
+                              t={t}
+                              lang={lang}
+                              mode={uiMode}
+                              confirmedIds={returnState?.confirmedFactIds ?? []}
+                              onConfirmFact={handleConfirmFactQuiet}
+                              onSignOffAll={handleSignOffAll}
+                              onJumpToFact={scrollToFactCard}
+                              onProceed={() => setFlowStep("deductions")}
+                              showFinish={false}
+                            />
+                          )}
                           {(() => {
                             const totalItemsCount = persona.facts.length + persona.taxPaid.length + persona.claims.length;
                             const confirmedOrCorrectedCount = [
@@ -1430,7 +1669,7 @@ export default function WapsiPrototype() {
                                 <button
                                   disabled={isContinueDisabled}
                                   onClick={() => setFlowStep("deductions")}
-                                  className="flex-[2] rounded-xl bg-money px-6 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-money-deep disabled:bg-slate-200 disabled:text-ink-3 cursor-pointer disabled:cursor-not-allowed"
+                                  className="flex-[2] rounded-xl bg-navy px-6 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:opacity-90 disabled:bg-slate-200 disabled:text-ink-3 cursor-pointer disabled:cursor-not-allowed"
                                 >
                                   {t.common.continue}
                                 </button>
@@ -1460,7 +1699,7 @@ export default function WapsiPrototype() {
                             </button>
                             <button
                               onClick={() => setFlowStep("regime")}
-                              className="flex-[2] rounded-xl bg-money px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-money-deep"
+                              className="flex-[2] rounded-xl bg-navy px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:opacity-90"
                             >
                               {t.common.continue}
                             </button>
@@ -1482,18 +1721,27 @@ export default function WapsiPrototype() {
                       {flowStep === "check" && (
                         <div className="space-y-6">
                           <CheckScreen persona={persona} t={t} lang={lang} regime={regime} />
+                          {breakdown && (
+                            <BeforeFiling
+                              persona={persona}
+                              breakdown={breakdown}
+                              t={t}
+                              lang={lang}
+                              mode={uiMode}
+                              confirmedIds={returnState?.confirmedFactIds ?? []}
+                              onConfirmFact={handleConfirmFactQuiet}
+                              onSignOffAll={handleSignOffAll}
+                              onJumpToFact={handleJumpToFact}
+                              onProceed={() => setFlowStep("filing")}
+                              showChecklist={uiMode === "full"}
+                            />
+                          )}
                           <div className="flex gap-3">
                             <button
                               onClick={() => setFlowStep("regime")}
                               className="flex-1 border border-line text-ink-2 py-3 px-4 rounded-lg hover:bg-paper-2 transition-colors text-sm font-semibold"
                             >
                               {t.common.back}
-                            </button>
-                            <button
-                              onClick={() => setFlowStep("filing")}
-                              className="flex-[2] rounded-xl bg-money px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-money-deep"
-                            >
-                              {t.common.continue}
                             </button>
                           </div>
                         </div>
@@ -1549,6 +1797,8 @@ export default function WapsiPrototype() {
                           handleFixBank={handleFixBank}
                           onEditFacts={() => setQuickEditActive(true)}
                           regime={regime}
+                          mode={uiMode}
+                          serverFilings={session?.pan === persona.pan ? serverFilings : null}
                         />
                       )}
 
@@ -1567,6 +1817,9 @@ export default function WapsiPrototype() {
                           handleFactAmountChange={handleFactAmountChange}
                           handleClaimAmountChange={handleClaimAmountChange}
                           handleAddCustomIncome={handleAddCustomIncome}
+                          mode={uiMode}
+                          regime={regime}
+                          onSignOffAll={handleSignOffAll}
                         />
                       )}
 

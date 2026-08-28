@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="theme.js"></script>
+<title>Wapsi — Logo Concepts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+Devanagari:wght@600;700&display=swap">
+<style>
+:root{
+  --paper:#F2EFE4; --card:#FBF9F1; --grid:#D9D2B9;
+  --ink:#1C2233; --ink-2:#4A4E5C; --ink-3:#7C8090; --edge:#1C2233; --hair:#D9D2B9;
+  --in:#1A6FE0; --out:#DE4025; --keep:#149B67; --blue:#1361C7;
+  --shadow:4px 6px 0 rgba(28,34,51,.13);
+  --disp:'Space Grotesk',system-ui,sans-serif; --serif:'Source Serif 4',Georgia,serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace; --dev:'Noto Sans Devanagari',sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#12141A; --card:#1A1E27; --grid:#232833;
+  --ink:#E9ECF2; --ink-2:#B0B6C4; --ink-3:#7C8494; --edge:#333B4B; --hair:#282E3A;
+  --in:#7FA9D8; --out:#E08471; --keep:#77BC90; --blue:#7FA9D8;
+  --shadow:4px 6px 0 rgba(0,0,0,.45);
+}}
+:root[data-theme="dark"]{
+  --paper:#12141A; --card:#1A1E27; --grid:#232833;
+  --ink:#E9ECF2; --ink-2:#B0B6C4; --ink-3:#7C8494; --edge:#333B4B; --hair:#282E3A;
+  --in:#7FA9D8; --out:#E08471; --keep:#77BC90; --blue:#7FA9D8;
+  --shadow:4px 6px 0 rgba(0,0,0,.45);
+}
+*{box-sizing:border-box}
+body{margin:0;color:var(--ink);font-family:var(--serif);font-size:16px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;padding:0 24px 90px;
+  background:linear-gradient(var(--grid) 1px,transparent 1px) 0 0/100% 28px,
+             linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/28px 100%,var(--paper)}
+.wrap{max-width:1020px;margin:0 auto}
+header{padding:48px 0 20px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3)}
+h1{font-family:var(--disp);font-size:clamp(28px,5vw,42px);font-weight:700;letter-spacing:-.03em;margin:12px 0 8px}
+.lede{color:var(--ink-2);max-width:64ch;margin:0}
+.note{margin-top:18px;padding:13px 16px;border-left:4px solid var(--blue);
+  background:color-mix(in srgb,var(--blue) 12%,transparent);border-radius:2px;font-size:15px}
+
+.card{background:var(--card);border:1px solid var(--edge);box-shadow:var(--shadow);
+  border-radius:2px;padding:24px;margin-top:22px}
+.head{display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap;
+  border-bottom:1px dashed var(--hair);padding-bottom:12px;margin-bottom:18px}
+h2{font-family:var(--disp);font-size:21px;margin:0;font-weight:700}
+.tag{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.row{display:flex;gap:34px;align-items:center;flex-wrap:wrap}
+.spec{font-size:15px;color:var(--ink-2);max-width:46ch;flex:1 1 300px}
+.spec b{color:var(--ink)}
+.sizes{display:flex;gap:20px;align-items:flex-end}
+.sz{text-align:center}
+.sz .cap{font-family:var(--mono);font-size:9px;color:var(--ink-3);margin-top:7px;letter-spacing:.1em}
+.chip{display:inline-flex;align-items:center;justify-content:center;background:var(--ink);
+  border-radius:7px;padding:9px}
+.chip svg{display:block}
+.lockup{display:flex;align-items:center;gap:11px}
+.word{font-family:var(--disp);font-weight:700;font-size:27px;letter-spacing:-.025em}
+.word .dot{color:var(--keep)}
+</style>
+</head>
+<body><div class="wrap">
+
+<header>
+  <div class="eyebrow">Wapsi · वापसी · logo concepts</div>
+  <h1>Five marks, all built as vectors</h1>
+  <p class="lede">Every mark is pure SVG: it inherits <code>currentColor</code>, so it flips with
+  the theme; it stays crisp at 16&nbsp;px; and it can be nudged to the pixel. Each is shown at
+  display size, as a lockup, and at true favicon size — because a mark that dies at 16&nbsp;px is
+  not a logo, it is an illustration.</p>
+  <div class="note"><b>The idea underneath all five:</b> <b>वापसी</b> means <i>return</i>. That is
+  the whole product in one word — a tax <i>return</i>, and your money <i>coming back</i>. Every
+  mark below is some form of a line that turns around and comes home.</div>
+</header>
+
+<!-- 1 -->
+<div class="card">
+  <div class="head"><h2>1 · The Return</h2><span class="tag">recommended</span></div>
+  <div class="row">
+    <p class="spec">A single stroke leaves, turns, and comes back carrying the arrowhead. The gap
+    at the top is the year you wait; the arrowhead is the refund landing. <b>Simplest at 16&nbsp;px</b>
+    — one closed gesture, no interior detail to collapse. Reads as a "W" on second glance without
+    ever announcing it.</p>
+    <div class="sizes">
+      <div class="sz">
+        <svg width="76" height="76" viewBox="0 0 48 48" fill="none" aria-label="Wapsi">
+          <path d="M9 15 A15 15 0 1 1 9 33" stroke="var(--ink)" stroke-width="4.6"
+                stroke-linecap="round" fill="none"/>
+          <path d="M15 25.5 L8.5 33.5 L17 37" stroke="var(--keep)" stroke-width="4.6"
+                stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+        <div class="cap">76 px</div>
+      </div>
+      <div class="sz">
+        <div class="lockup">
+          <svg width="30" height="30" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+            <path d="M9 15 A15 15 0 1 1 9 33" stroke="var(--ink)" stroke-width="5"
+                  stroke-linecap="round" fill="none"/>
+            <path d="M15 25.5 L8.5 33.5 L17 37" stroke="var(--keep)" stroke-width="5"
+                  stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+          <span class="word">Wapsi</span>
+        </div>
+        <div class="cap">lockup</div>
+      </div>
+      <div class="sz">
+        <span class="chip">
+          <svg width="16" height="16" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+            <path d="M9 15 A15 15 0 1 1 9 33" stroke="var(--paper)" stroke-width="6"
+                  stroke-linecap="round" fill="none"/>
+            <path d="M15 25.5 L8.5 33.5 L17 37" stroke="var(--keep)" stroke-width="6"
+                  stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </span>
+        <div class="cap">16 px</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 2 -->
+<div class="card">
+  <div class="head"><h2>2 · The Split</h2><span class="tag">most honest</span></div>
+  <div class="row">
+    <p class="spec">The proportion bar from the product itself: what stays yours, what went to tax,
+    what comes back. The small green piece has broken rank and is returning. <b>This mark is a
+    data visualisation</b> — it states the thesis rather than decorating it. Weakest at 16&nbsp;px,
+    where the thin segment fuses; the favicon uses a two-part reduction.</p>
+    <div class="sizes">
+      <div class="sz">
+        <svg width="76" height="76" viewBox="0 0 48 48" aria-label="Wapsi">
+          <rect x="6" y="12" width="27" height="9" rx="2.5" fill="var(--in)"/>
+          <rect x="6" y="24" width="10" height="9" rx="2.5" fill="var(--out)"/>
+          <rect x="19" y="24" width="9" height="9" rx="2.5" fill="var(--keep)"/>
+          <path d="M33 28.5 L40 28.5 M37 25 L40.5 28.5 L37 32" stroke="var(--keep)"
+                stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+        <div class="cap">76 px</div>
+      </div>
+      <div class="sz">
+        <div class="lockup">
+          <svg width="30" height="30" viewBox="0 0 48 48" aria-hidden="true">
+            <rect x="6" y="12" width="27" height="9" rx="2.5" fill="var(--in)"/>
+            <rect x="6" y="24" width="10" height="9" rx="2.5" fill="var(--out)"/>
+            <rect x="19" y="24" width="9" height="9" rx="2.5" fill="var(--keep)"/>
+          </svg>
+          <span class="word">Wapsi</span>
+        </div>
+        <div class="cap">lockup</div>
+      </div>
+      <div class="sz">
+        <span class="chip">
+          <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
+            <rect x="7" y="13" width="34" height="9" rx="3" fill="var(--paper)"/>
+            <rect x="7" y="26" width="15" height="9" rx="3" fill="var(--keep)"/>
+          </svg>
+        </span>
+        <div class="cap">16 px</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 3 -->
+<div class="card">
+  <div class="head"><h2>3 · वा</h2><span class="tag">most Indian</span></div>
+  <div class="row">
+    <p class="spec">The Devanagari <b>वा</b> — the first syllable of वापसी — with its headline
+    (<i>shirorekha</i>) extended into the returning arrow. <b>Unmistakably of this country</b>,
+    which generic fintech blue never is. The risk is honest: it reads instantly to a Devanagari
+    reader and as an abstract glyph to everyone else.</p>
+    <div class="sizes">
+      <div class="sz">
+        <svg width="76" height="76" viewBox="0 0 48 48" aria-label="Wapsi">
+          <text x="9" y="35" font-family="'Noto Sans Devanagari',sans-serif" font-size="30"
+                font-weight="700" fill="var(--ink)">वा</text>
+          <path d="M40 12 L40 20 A6 6 0 0 1 34 26 L27 26 M31 22 L26.5 26 L31 30"
+                stroke="var(--keep)" stroke-width="2.8" fill="none"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div class="cap">76 px</div>
+      </div>
+      <div class="sz">
+        <div class="lockup">
+          <svg width="32" height="32" viewBox="0 0 48 48" aria-hidden="true">
+            <text x="9" y="35" font-family="'Noto Sans Devanagari',sans-serif" font-size="30"
+                  font-weight="700" fill="var(--ink)">वा</text>
+          </svg>
+          <span class="word">Wapsi</span>
+        </div>
+        <div class="cap">lockup</div>
+      </div>
+      <div class="sz">
+        <span class="chip">
+          <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
+            <text x="8" y="36" font-family="'Noto Sans Devanagari',sans-serif" font-size="32"
+                  font-weight="700" fill="var(--paper)">वा</text>
+          </svg>
+        </span>
+        <div class="cap">16 px</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 4 -->
+<div class="card">
+  <div class="head"><h2>4 · The Ledger</h2><span class="tag">most institutional</span></div>
+  <div class="row">
+    <p class="spec">Three ruled lines of an account book. The bottom rule refuses to end — it
+    hooks back on itself. <b>This is the append-only ledger drawn as a monogram</b>: entries stack
+    downward, and the correction returns. Quiet, official, and it survives a rubber stamp or an
+    embossed letterhead.</p>
+    <div class="sizes">
+      <div class="sz">
+        <svg width="76" height="76" viewBox="0 0 48 48" fill="none" aria-label="Wapsi">
+          <path d="M10 15 H38" stroke="var(--ink)" stroke-width="4" stroke-linecap="round"/>
+          <path d="M10 24 H30" stroke="var(--ink)" stroke-width="4" stroke-linecap="round"/>
+          <path d="M38 33 H16 A5 5 0 0 1 16 23" stroke="var(--keep)" stroke-width="4"
+                stroke-linecap="round" fill="none"/>
+        </svg>
+        <div class="cap">76 px</div>
+      </div>
+      <div class="sz">
+        <div class="lockup">
+          <svg width="30" height="30" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+            <path d="M10 15 H38" stroke="var(--ink)" stroke-width="4.4" stroke-linecap="round"/>
+            <path d="M10 24 H30" stroke="var(--ink)" stroke-width="4.4" stroke-linecap="round"/>
+            <path d="M38 33 H16 A5 5 0 0 1 16 23" stroke="var(--keep)" stroke-width="4.4"
+                  stroke-linecap="round" fill="none"/>
+          </svg>
+          <span class="word">Wapsi</span>
+        </div>
+        <div class="cap">lockup</div>
+      </div>
+      <div class="sz">
+        <span class="chip">
+          <svg width="16" height="16" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+            <path d="M10 15 H38" stroke="var(--paper)" stroke-width="6" stroke-linecap="round"/>
+            <path d="M38 32 H17 A6 6 0 0 1 17 20" stroke="var(--keep)" stroke-width="6"
+                  stroke-linecap="round" fill="none"/>
+          </svg>
+        </span>
+        <div class="cap">16 px</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 5 -->
+<div class="card">
+  <div class="head"><h2>5 · The Rupee Turn</h2><span class="tag">most literal</span></div>
+  <div class="row">
+    <p class="spec">The ₹ sign's two horizontals kept, its leg swung into a return arc. <b>Money,
+    coming back, in one glyph</b> — the least explaining required. Also the most conventional, and
+    ₹ marks are crowded in Indian fintech, so it wins recognition and loses distinctiveness.</p>
+    <div class="sizes">
+      <div class="sz">
+        <svg width="76" height="76" viewBox="0 0 48 48" fill="none" aria-label="Wapsi">
+          <path d="M15 13 H33 M15 20 H33" stroke="var(--ink)" stroke-width="4" stroke-linecap="round"/>
+          <path d="M27 13 C27 24 20 26 15 26" stroke="var(--ink)" stroke-width="4"
+                stroke-linecap="round" fill="none"/>
+          <path d="M15 26 C26 26 32 30 32 37 M36 33 L32 37.5 L27.5 34"
+                stroke="var(--keep)" stroke-width="4" stroke-linecap="round"
+                stroke-linejoin="round" fill="none"/>
+        </svg>
+        <div class="cap">76 px</div>
+      </div>
+      <div class="sz">
+        <div class="lockup">
+          <svg width="30" height="30" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+            <path d="M15 13 H33 M15 20 H33" stroke="var(--ink)" stroke-width="4.4" stroke-linecap="round"/>
+            <path d="M27 13 C27 24 20 26 15 26" stroke="var(--ink)" stroke-width="4.4"
+                  stroke-linecap="round" fill="none"/>
+            <path d="M15 26 C26 26 32 30 32 37" stroke="var(--keep)" stroke-width="4.4"
+                  stroke-linecap="round" fill="none"/>
+          </svg>
+          <span class="word">Wapsi</span>
+        </div>
+        <div class="cap">lockup</div>
+      </div>
+      <div class="sz">
+        <span class="chip">
+          <svg width="16" height="16" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+            <path d="M14 14 H34 M14 22 H34" stroke="var(--paper)" stroke-width="5.5" stroke-linecap="round"/>
+            <path d="M14 22 C28 22 33 28 33 38" stroke="var(--keep)" stroke-width="5.5"
+                  stroke-linecap="round" fill="none"/>
+          </svg>
+        </span>
+        <div class="cap">16 px</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="head"><h2>How I would choose</h2><span class="tag">opinion</span></div>
+  <p style="margin:0 0 10px">If you want the mark that <b>works hardest and breaks least</b>, take
+  <b>1 · The Return</b>. One stroke, one colour accent, legible at any size, and it never needs
+  explaining.</p>
+  <p style="margin:0 0 10px">If you want the mark that <b>says what the product believes</b>, take
+  <b>2 · The Split</b>. It is the only one that is literally a chart of the user's year — and this
+  product's whole argument is that a number should show its working.</p>
+  <p style="margin:0">If you want the mark that <b>could only be Indian</b>, take <b>3 · वा</b>.
+  Pair it with <b>1</b> as the favicon and you get both.</p>
+</div>
+
+</div></body>
+</html>

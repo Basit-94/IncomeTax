@@ -24,9 +24,32 @@
   },
   "marginalReliefEnabled": false,
   "slabs": [
-    { "upToPaise": 25000000, "rate": 0.00, "sourceCitation": "Income Tax Department, Salaried Individuals for AY 2026-27: https://www.incometax.gov.in/iec/foportal/help/individual/return-applicable-1" },
-    { "upToPaise": 50000000, "rate": 0.05, "sourceCitation": "Income Tax Department, Salaried Individuals for AY 2026-27: https://www.incometax.gov.in/iec/foportal/help/individual/return-applicable-1" },
-    { "upToPaise": 100000000, "rate": 0.20, "sourceCitation": "Income Tax Department, Salaried Individuals for AY 2026-27: https://www.incometax.gov.in/iec/foportal/help/individual/return-applicable-1" },
-    { "upToPaise": null, "rate": 0.30, "sourceCitation": "Income Tax Department, Salaried Individuals for AY 2026-27: https://www.incometax.gov.in/iec/foportal/help/individual/return-applicable-1" }
-  ]
+    {
+      "upToPaise": 25000000,
+      "rate": 0.0,
+      "sourceCitation": "Income Tax Department, Salaried Individuals for AY 2026-27: https://www.incometax.gov.in/iec/foportal/help/individual/return-applicable-1"
+    },
+    {
+      "upToPaise": 50000000,
+      "rate": 0.05,
+      "sourceCitation": "Income Tax Department, Salaried Individuals for AY 2026-27: https://www.incometax.gov.in/iec/foportal/help/individual/return-applicable-1"
+    },
+    {
+      "upToPaise": 100000000,
+      "rate": 0.2,
+      "sourceCitation": "Income Tax Department, Salaried Individuals for AY 2026-27: https://www.incometax.gov.in/iec/foportal/help/individual/return-applicable-1"
+    },
+    {
+      "upToPaise": null,
+      "rate": 0.3,
+      "sourceCitation": "Income Tax Department, Salaried Individuals for AY 2026-27: https://www.incometax.gov.in/iec/foportal/help/individual/return-applicable-1"
+    }
+  ],
+  "specialRates": {
+    "stcg111aRate": 0.2,
+    "ltcg112aRate": 0.125,
+    "ltcg112aExemptionPaise": 12500000,
+    "ltcg112Rate": 0.125,
+    "sourceCitation": "Finance (No. 2) Act 2024 rates effective 23-Jul-2024; cross-checked 2026-08-28: tax2win.in/guide/short-term-capital-gain-under-section-111a; calcphi.com/india/blog/section-111a; CBDT Budget-2024 FAQ (pib.gov.in PRID 2036604). AY 2026-27 transfers all post-date the change, so no transfer-date split is needed."
+  }
 }

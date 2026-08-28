@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { useTax, TaxFact } from '../context/TaxReturnContext';
 import { ItrVReceipt } from './ItrVReceipt';
+import { MockField, MockFill, MOCK } from "@/components/dev/mock-fill";
+import { LogoLink } from "./brand/logo";
 
 interface InteractiveTaxDashboardProps {
   onLogOut?: () => void;
@@ -46,7 +48,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
 
   const translations = {
     EN: {
-      eyebrow: "MEMBER OF DIGITAL INDIA INITIATIVE",
+      eyebrow: "INDEPENDENT PROTOTYPE — NOT A GOVERNMENT SITE",
       title: "Interactive Tax Dashboard",
       sub: "AY 2026-27 statutory ITR verification & reconciliation matrix.",
       confirm: "Confirm",
@@ -57,7 +59,10 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
       salary: "Gross Salary Income",
       consulting: "Freelance / Consulting",
       interest: "Savings & FD Interest",
-      other: "Other Incomes / Dividend",
+      // Capital gains fold in here at slab rates — a documented simplification (real
+      // s.111A/112A rates + sources live in lib/engine/constants.ts). Disclosed on the row
+      // because a professional must not assume special rates were applied.
+      other: "Other Income / Dividend / Capital Gains (slab rate — simplified)",
       tds: "Tax Deducted at Source (TDS)",
       ded80c: "Section 80C Investments",
       ded80d: "Section 80D Health Cover",
@@ -75,7 +80,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
       officialProofBtn: "Toggle Official Acknowledgment Preview (ITR-V)",
     },
     HI: {
-      eyebrow: "डिजिटल इंडिया पहल का सदस्य",
+      eyebrow: "स्वतंत्र प्रोटोटाइप — सरकारी साइट नहीं",
       title: "इंटरएक्टिव टैक्स डैशबोर्ड",
       sub: "निर्धारण वर्ष 2026-27 वैधानिक ITR सत्यापन और समाधान मैट्रिक्स।",
       confirm: "सत्यापित करें",
@@ -104,7 +109,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
       officialProofBtn: "आधिकारिक पावती पूर्वावलोकन टॉगल करें (ITR-V)",
     },
     TA: {
-      eyebrow: "டிஜிட்டல் இந்தியா திட்டத்தின் உறுப்பினர்",
+      eyebrow: "சுயாதீன முன்மாதிரி — அரசு தளம் அல்ல",
       title: "ஊடாடும் வரி டாஷ்போர்டு",
       sub: "மதிப்பீட்டு ஆண்டு 2026-27 சட்டப்பூர்வ ITR சரிபார்ப்பு & சமரச மேட்ரிக்ஸ்.",
       confirm: "உறுதிப்படுத்துக",
@@ -168,6 +173,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-6 py-4 shadow-sm print:hidden">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
+            <LogoLink size="sm" className="mb-1" />
             <span className="text-[10px] font-bold tracking-widest text-teal-800 uppercase block">
               {t.eyebrow}
             </span>
@@ -180,19 +186,18 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
 
           {/* Language & Actions Selector */}
           <div className="flex items-center gap-3">
-            <div className="bg-slate-100 p-0.5 rounded-lg flex border border-slate-200">
-              {(['EN', 'HI', 'TA'] as const).map((l) => (
-                <button
-                  key={l}
-                  onClick={() => setLang(l)}
-                  className={`px-3 py-1 text-xs font-bold rounded-md transition-colors cursor-pointer ${
-                    lang === l ? 'bg-white text-teal-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
-                  }`}
-                >
-                  {l === 'EN' ? 'English' : l === 'HI' ? 'हिंदी' : 'தமிழ்'}
-                </button>
-              ))}
-            </div>
+            {/* T0.4 house rule: language is a dropdown, never a slider. This view
+                carries only the three translated dictionaries it ships with. */}
+            <select
+              aria-label="Language"
+              value={lang}
+              onChange={(e) => setLang(e.target.value as 'EN' | 'HI' | 'TA')}
+              className="bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer"
+            >
+              <option value="EN">English</option>
+              <option value="HI">{"हिन्दी"}</option>
+              <option value="TA">{"தமிழ்"}</option>
+            </select>
 
             {/* Regime Switch Toggle */}
             <div className="bg-slate-100 p-0.5 rounded-lg flex border border-slate-200">
@@ -454,13 +459,16 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
                                     {t.disputeReasonLabel}
                                   </label>
-                                  <input
+                                  <MockField>
+                                    <input
                                     type="text"
                                     value={disputeReason}
                                     onChange={(e) => setDisputeReason(e.target.value)}
                                     placeholder={t.disputeReasonPlaceholder}
                                     className="w-full px-4 py-2.5 bg-white border border-slate-250 rounded-xl text-sm text-slate-700 focus:ring-2 focus:ring-teal-700 focus:outline-none transition-all"
                                   />
+                                    <MockFill onFill={() => setDisputeReason(MOCK.disputeReason)} />
+                                  </MockField>
                                 </div>
                               </div>
 

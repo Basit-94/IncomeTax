@@ -208,3 +208,27 @@ confirms itself, nothing settles. This is the single largest contributor to "it 
 4. **B5**, then **B6** re-run across instances
 5. UX: **U10**, **U3**, **U1/U2/U4/U5** as one visual-language pass
 6. **U6**, **U7**
+
+
+## Part C — §4B persona review, round 1 (2026-08-28, live app)
+
+> **Round-2 status (2026-08-28, all live-verified):** P1 ✅ (PAN chip) · P2 ✅ (tooltip was
+> clipped off-viewport, re-anchored) · P3 ✅ (visible disabled-reason) · P4 ✅ (confirmation
+> caption) · P5 ✅ (TDS-zero warning) · C1 ✅ · C2 ✅ · C3 ✅ · C4 ✅ · C5 ✅ (Escape + logout
+> reset). Remaining cosmetic: stray FILL beside the read-only PAN chip.
+
+Both agents harness-checked: real page text quoted, repro steps present, no invented scope.
+
+### Everyday filer, Simple mode — PASS with findings
+- **P1 · Identity re-asked after login** — wizard step 1 asks name + PAN while the header shows the logged-in PAN. Skip or pre-fill-and-collapse the identity step when known. · S2
+- **P2 · "Explain simply" speaker buttons do nothing visible** — audio-only or dead; they are the promised safety net beside 80C/80D/TDS labels. Add a visible state (or visible text) or remove. · S2
+- **P3 · Enabled Next buttons look disabled** — grey-on-grey; persona hesitated twice. Restyle the enabled state. · S3
+- **P4 · Employment question still reads as a re-ask** — pre-selection landed (T3.5) but the screen presents as a fresh question; caption it as confirmation ("From your earlier answer — change it if this is wrong"). · S3
+- **P5 · "ENTER 0 IF NONE" on TDS zeroes a salaried refund silently** — a first-timer entering 0 got "Comes back to you ₹0" with no warning, contradicting the landing promise. Warn when salaried + TDS 0, or derive TDS from salary meta. · S1
+
+### CA, Full detail — FAIL (dashboard shell)
+- **C1 · Interactive Tax Dashboard binds no data** — every row ₹0 / "AWAITING ACTION" for Rakesh; net tax ₹0; the promised slab/87A/cess trail never renders. · S1
+- **C2 · Capital gains absent from every surface** — no row in the fact matrix, no field in Quick Edit, no disclosure of the slab-simplification (T1.9's labelling never reaches the UI). · S1
+- **C3 · "Cancel Flow" wipes session + onboarding** — back to the language screen, everything lost. Must be a confirm-gated, scoped cancel. · S1
+- **C4 · Assessee shows literal "Taxpayer Name"** — logged-in persona's name never bound. · S2
+- **C5 · Quick Edit modal cannot be dismissed / banner button always disabled; "Review tools" produces nothing visible. · S2

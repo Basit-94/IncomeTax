@@ -3,14 +3,17 @@
 import React, { useRef } from 'react';
 import { useTax } from '../context/TaxReturnContext';
 
-export function ItrVReceipt() {
+export function ItrVReceipt(props?: { filedOn?: string }) {
   const { state, computation } = useTax();
   const activeRegime: 'NEW' | 'OLD' = state.selectedRegime;
   const result = activeRegime === 'NEW' ? computation.newRegime : computation.oldRegime;
   const receiptRef = useRef<HTMLDivElement>(null);
 
   const ackNumber = '202627082219483';
-  const filingDate = '26 August 2026';
+  // SS4B CA finding 2: the timeline said 14 July while this box said 26 August.
+  // The persona's filedOn is the single source; the constant is only the
+  // fallback for contexts with no persona date.
+  const filingDate = props?.filedOn ?? '26 August 2026';
   const isRefund = result.netPayableOrRefund < 0;
 
   const handlePrint = () => {
@@ -136,7 +139,7 @@ export function ItrVReceipt() {
             <p className="font-mono text-[10px] text-gray-400">
               SHA256: 4f9e2b810d7a4c9e8211b439c7f1a8e9903bc189d23e54b
             </p>
-            <p className="text-emerald-700 font-bold">✓ Digitally e-Verified via Aadhaar OTP</p>
+            <p className="text-emerald-700 font-bold">✓ e-Verified via one-time code (mock verification)</p>
           </div>
 
           <div className="text-right">

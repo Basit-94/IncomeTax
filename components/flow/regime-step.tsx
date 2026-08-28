@@ -124,7 +124,7 @@ export default function RegimeStep({ persona, t, lang, regime, onboardingProfile
       <div className="space-y-3">
         <button
           onClick={() => onChoose(recommended)}
-          className="w-full rounded-xl bg-money px-6 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-money-deep"
+          className="w-full rounded-xl bg-navy px-6 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:opacity-90"
         >
           {t.regime.acceptRecommendation}
         </button>

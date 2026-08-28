@@ -24,6 +24,8 @@ export const en = {
   dir: "ltr",
 
   common: {
+    modeSimple: "Simple",
+    modeDetailed: "Detailed",
     continue: "Continue",
     back: "Back",
     yesThatsRight: "Yes, that's right",
@@ -77,7 +79,7 @@ export const en = {
     honestyLink: "What's real here and what's made up",
     architectureLink: "Technical architecture",
     badge: "Simplified tax return, proven live",
-    brandTitle: "refund engine.",
+    brandTitle: "Your money, coming back.",
     lensCaption: "LENS / WAVEFORM SIMULATION v4.5.0",
   },
 
@@ -119,6 +121,10 @@ export const en = {
   },
 
   login: {
+    authVerifying: "Checking with the server\u2026",
+    authUnreachable: "The sign-in server could not be reached. Nothing you entered was lost \u2014 try again in a moment.",
+    authRejected: (detail: string) => `The server would not sign you in: ${detail}`,
+    signedInAs: "Signed in \u2014 session active",
     otpSentTo: (mobile: string) => `We sent a code to ${mobile}`,
     otpLabel: "The six-digit code",
     /** Answers the single most-cited complaint: OTP delay killed the session. */
@@ -146,6 +152,16 @@ export const en = {
 
     checkThis: "Check this — you don't have to fill it in",
     factMeaning: "This is a reported fact, not a tax rule. It feeds the calculation below.",
+    /** D13 margin-note voice: each kind of fact explains ITSELF, instead of one
+        boilerplate line repeated down the page. */
+    factMeaningByKind: {
+      salary: "Your employer reported this from the pay that reached you. It is the starting point of everything below.",
+      interest: "Banks report the interest your accounts earned once a year. Small amounts are still income.",
+      dividend: "The company registrar reported what your shares paid out. It counts as income in the year it was paid.",
+      capital_gains: "Your broker reported money from selling shares. What gets taxed is the gain, at rates that depend on what was sold and for how long you held it.",
+      rent: "Rent received is income; rent paid may reduce your tax. Either way it must match what the other side reported.",
+      other: "Reported income that fits no other bucket. It still feeds the calculation below.",
+    } as Record<string, string>,
     /** Rule 3: provenance is what makes "just confirm" psychologically possible. */
     reportedBy: (reporter: string, date: string) =>
       `${reporter} reported this to the department on ${date}`,
@@ -216,6 +232,8 @@ export const en = {
   },
 
   deductions: {
+    notAllowedNewRegime: "Not counted under the new regime \u2014 kept on your record.",
+    startedAtCap: (amount: string) => `We started this at the ${amount} cap \u2014 use \u201cHow much\u201d to set what you actually paid.`,
     heading: "Money you can claim",
     sub: "These don't happen by themselves. You say yes — but only if they're true.",
     claimedHeading: "Already in your return",
@@ -234,7 +252,7 @@ export const en = {
     skipIt: "No — skip this one",
     amountLabel: "How much",
     evidenceAttached: "Evidence attached",
-    evidenceMissing: "Evidence missing",
+    evidenceMissing: "No proof attached yet \u2014 fine for now. Keep the receipts; the department can ask for them later.",
     newRegimeNoEffect:
       "Under the new regime this claim changes nothing — it isn't allowed there.",
     oldRegimeSaves: (amount: string) =>
@@ -257,6 +275,10 @@ export const en = {
   },
 
   check: {
+    newRegimeClaimsZero: "Your claims are listed and safe \u2014 the new regime simply does not allow them, which is why this line is \u20b90.",
+    badgeReportedBy: (reporter: string) => `Reported by ${reporter}`,
+    badgeYouEntered: "You entered this",
+    badgeWeApplied: "We applied this for you",
     heading: "The whole return, on one page",
     sub: "Every number came from somewhere. Open any line to see exactly where.",
     grossIncome: "Everything that came in",
@@ -322,7 +344,17 @@ export const en = {
     errorCause: "The checking step failed because the sandbox fault switch is on.",
     errorAction:
       "Turn off 'Trigger API Gateway Timeout' in the reviewer drawer, then send again. Nothing was lost.",
+    errorCauseNetwork: "Your return did not reach the server.",
+    errorActionNetwork:
+      "Nothing was filed and nothing was lost. Check your connection, then send again.",
     retry: "Try sending again",
+  },
+
+  wizard: {
+    identityNextHint: "Enter your full name and the 10-character PAN to continue.",
+    employmentConfirmHint: "From your earlier answer \u2014 tap a different option if this changed.",
+    tdsZeroWarning:
+      "A salaried job almost always has tax already deducted — it is on your Form 16 or payslip. Entering 0 here usually means giving up your refund.",
   },
 
   timeline: {
@@ -385,6 +417,10 @@ export const en = {
   },
 
   dashboard: {
+    serverFilings: "On record at the server",
+    serverFilingsEmpty: "The LIVE backend holds no filings for this PAN yet \u2014 the acknowledgment above is part of the seeded story. File from this app and the real receipt lands here.",
+    greetingLabel: "Your sign-in phrase",
+    greetingWhy: "You chose this phrase when the account was created. A page that cannot show it is not us.",
     userDashboard: "User Dashboard",
     taxPrefills: "Tax Prefills (AIS/26AS)",
     pendingActions: "Pending Actions",
@@ -426,6 +462,7 @@ export const en = {
     switchToNewIfsc: (ifsc: string) => `Switch to the new code (${ifsc})`,
     personalized: {
       eyebrow: "Your dashboard",
+      headingFiled: "Your return is in — here is where it stands",
       heading: {
         file_return: "Let us get your return ready",
         check_refund: "Let us check what may come back",
@@ -512,6 +549,18 @@ export const en = {
       "12_to_25": "₹12 to ₹25 lakh",
       over_25: "More than ₹25 lakh",
     },
+    modeQuestion: "How much do you want to see?",
+    modeHelp: "This only sets where you start. You can switch at any time.",
+    modeOptions: {
+      simple: {
+        label: "Do it for me",
+        detail: "Plain words, one step at a time. We handle the rest.",
+      },
+      full: {
+        label: "Show me everything",
+        detail: "Every figure, every rule, every calculation, up front.",
+      },
+    },
     focusQuestion: "Which of these should we pay attention to?",
     focusHelp: "Choose all that sound like you. It is fine to choose not sure.",
     focusOptions: {
@@ -547,6 +596,77 @@ export const en = {
     tailoredRegimeClaims: "Claims checked before the regime choice",
     tailoredRegimeCompare: "Both regimes compared after the facts",
     tailoredIntent: (intent: string) => `First: ${intent}`,
+  },
+
+  checklist: {
+    divider: "Before you file",
+    itemBefore: "Confirm \u201c",
+    itemAfter: "\u201d \u2014 open the card if you are not sure.",
+    stdRow: "Confirm the standard deduction we applied on your behalf.",
+    noteLocked: "Tick every line above, then this button unlocks.",
+    noteReady: "Everything above stands confirmed. File when you are ready.",
+    fileBtn: "File this return",
+    lockedBtn: (n: number) => n === 1 ? "Tick 1 more line first" : `Tick ${n} more lines first`,
+  },
+
+  factCard: {
+    cardNo: (n: number, date: string) => `CARD ${String(n).padStart(2, "0")} \u00b7 REPORTED ${date}`,
+    whatThisMeans: "What this means",
+    readFirst: "Open \u201cwhat this means\u201d first \u2014 then confirm.",
+    readyToConfirm: "Read it? Confirm below.",
+  },
+
+  signoff: {
+    title: "Sign off",
+    declaration:
+      "I have read the figures above and checked them against the source documents. They are correct and complete.",
+    action: "Sign off on these figures",
+    signed: "Signed off \u2014 every figure above stands confirmed.",
+    hint: "One declaration covers everything above. Dispute any single figure with \u201cNo, this is wrong\u201d before signing.",
+  },
+
+  channels: {
+    sectionLabel: "The year at a glance",
+    earned: "You earned",
+    toTax: "Went to tax",
+    overpaid: "You overpaid",
+    stillToPay: "Still to pay",
+    stayed: "Never left you",
+    kept: "Tax you owed",
+    back: "Coming back to you",
+    yoursInEnd: "Yours in the end",
+    collected: "Already collected",
+    ofYear: "of the year's money",
+    sliceNote: "A slice too thin to see is drawn a little wider than its true share \u2014 the numbers beside it are exact.",
+    whereItWent: "Where every rupee you earned went",
+    earnedDesc: "Salary, interest and everything else, as reported by the people who paid you.",
+    toTaxDesc: "What you actually owed, after every deduction you are entitled to.",
+    backDesc: "Taken from your pay but never owed. This comes back to you.",
+    dueDesc: "Owed beyond what was already collected. This still has to be paid.",
+    howToRead: "How to read this: nothing here was invented by us. Every figure came from a document someone filed, or from something you entered yourself. The pencil notes explain what each one actually means \u2014 in plain words, not tax words.",
+    meterCap: "Tax you owed vs already collected",
+  },
+
+  agent: {
+    title: "Wapsi Assistant",
+    open: "Open the assistant",
+    close: "Close",
+    placeholder: "Ask me to check, explain, or file\u2026",
+    send: "Send",
+    thinking: "Working on it\u2026",
+    toolRan: "Did:",
+    confirmTitle: "Ready to file \u2014 confirm the figures",
+    confirmBody: "Nothing is filed until you confirm. This is what will be submitted:",
+    confirmTotalTax: "Total tax",
+    confirmRefund: "Refund due to you",
+    confirmDue: "Balance payable",
+    confirmTaxable: "Taxable income",
+    confirmButton: "Confirm and file",
+    cancelButton: "Cancel",
+    filingDismissed: "Okay \u2014 nothing was filed.",
+    error: "The assistant could not be reached. Your return was not touched \u2014 try again.",
+    intro: "I can check your return, explain any figure, run what-ifs, and prepare your filing. You always confirm before anything is filed.",
+    sample: "What would I save if I invested \u20b91,50,000 under 80C?",
   },
 
   footer: {

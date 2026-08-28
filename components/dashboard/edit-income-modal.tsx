@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { MockField, MockFill, MOCK } from "@/components/dev/mock-fill";
 
 interface EditIncomeModalProps {
   isOpen: boolean;
@@ -51,7 +52,8 @@ export function EditIncomeModal({
           <label className="text-xs font-bold text-gray-600 uppercase tracking-wider block">
             Update Your Self-Declared Amount (₹)
           </label>
-          <input
+          <MockField>
+            <input
             type="number"
             min="0"
             step="1000"
@@ -60,6 +62,8 @@ export function EditIncomeModal({
             placeholder="0"
             className="w-full px-4 py-3 text-lg font-semibold text-gray-900 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-700 focus:outline-none transition"
           />
+            <MockFill onFill={() => setAmountStr(String(MOCK.annualSalary))} />
+          </MockField>
         </div>
 
         {/* Input: Comment */}
@@ -67,13 +71,16 @@ export function EditIncomeModal({
           <label className="text-xs font-bold text-gray-600 uppercase tracking-wider block">
             Comment (Optional)
           </label>
-          <input
+          <MockField>
+            <input
             type="text"
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             placeholder="e.g. Revised final invoice / corrected bank deposit"
             className="w-full px-4 py-2.5 text-sm text-gray-800 border border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-700 focus:outline-none transition"
           />
+            <MockFill onFill={() => setComment(MOCK.note)} />
+          </MockField>
         </div>
 
         {/* Action Buttons */}

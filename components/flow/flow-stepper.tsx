@@ -32,6 +32,7 @@ export default function FlowStepper({ t, current, onJump }: FlowStepperProps) {
         <span className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-2">
           {t.flow.stepOf(n, FLOW_STEPS.length)}
         </span>
+
         <span className="text-right text-xs font-mono font-bold text-money">{labels[current]}</span>
       </div>
       <div className="flex gap-1.5" role="navigation" aria-label={t.flow.stepOf(n, FLOW_STEPS.length)}>
@@ -43,7 +44,7 @@ export default function FlowStepper({ t, current, onJump }: FlowStepperProps) {
             aria-current={name === current ? "step" : undefined}
             className={`h-2 flex-1 rounded-full transition-colors ${
               i < currentIndex
-                ? "bg-money cursor-pointer"
+                ? "bg-navy cursor-pointer"
                 : i === currentIndex
                 ? "bg-navy"
                 : "bg-line"

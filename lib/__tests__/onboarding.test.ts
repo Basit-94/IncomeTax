@@ -13,7 +13,7 @@ const completeDraft: OnboardingDraft = {
   lang: "en",
   intent: "file_return",
   profession: "salaried",
-  incomeBand: "8_to_12",
+  mode: "full",
   filingHistory: "never",
   focuses: ["salary", "not_sure"],
 };
@@ -29,16 +29,16 @@ describe("onboarding profile", () => {
     expect(createOnboardingProfile({ lang: "en" }, "en")).toBeNull();
     expect(createOnboardingProfile(completeDraft, "en")).toMatchObject({
       intent: "file_return",
-      incomeBand: "8_to_12",
+      mode: "full",
       focuses: ["salary", "not_sure"],
     });
   });
 
-  it("chooses guided explanations and claim review from the answers", () => {
+  it("the chosen mode decides guidance; deduction signals decide the regime lens", () => {
     const profile = createOnboardingProfile(
       {
         ...completeDraft,
-        filingHistory: "never",
+        mode: "simple",
         profession: "business_owner",
         focuses: ["business", "deductions"],
       },
@@ -51,9 +51,11 @@ describe("onboarding profile", () => {
     });
   });
 
-  it("keeps a returning salaried filer on the shorter compare-both path", () => {
+  it("an explicit full-detail choice wins even for a first-time filer", () => {
+    // v2 semantics: the user's stated mode IS the guidance level. filingHistory no longer
+    // overrides what the person explicitly asked for.
     const profile = createOnboardingProfile(
-      { ...completeDraft, filingHistory: "every_year", focuses: ["salary"] },
+      { ...completeDraft, mode: "full", filingHistory: "never", focuses: ["salary"] },
       "en",
     );
     expect(profile).not.toBeNull();
@@ -61,6 +63,26 @@ describe("onboarding profile", () => {
       guided: false,
       regimeLens: "compare_both",
     });
+  });
+
+  it("migrates a stored v1 profile instead of sending the user back through onboarding", () => {
+    // A v1 profile has an incomeBand and no mode. It must load as v2 with mode derived from
+    // the old guided heuristic — re-asking answered questions is what Phase 3 removes.
+    globalThis.localStorage.setItem(
+      "wapsi_onboarding_profile",
+      JSON.stringify({
+        version: 1,
+        lang: "en",
+        intent: "file_return",
+        profession: "salaried",
+        incomeBand: "8_to_12",
+        filingHistory: "never",
+        focuses: ["salary", "not_sure"],
+        completedAt: "2026-06-01T00:00:00.000Z",
+      }),
+    );
+    const migrated = loadOnboardingProfile();
+    expect(migrated).toMatchObject({ version: 2, mode: "simple", profession: "salaried" });
   });
 
   it("opens the filed dashboard on the surface that matches the stated intent", () => {

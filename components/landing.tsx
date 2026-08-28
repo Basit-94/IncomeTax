@@ -6,6 +6,7 @@ import { ChevronRight, Sparkles, Cpu, BookOpen } from "lucide-react";
 import type { Dict } from "../lib/i18n";
 import type { OnboardingProfile } from "../lib/onboarding";
 import { getPersonalization } from "../lib/onboarding";
+import { MockField, MockFill, MOCK } from "@/components/dev/mock-fill";
 
 interface LandingProps {
   t: Dict;
@@ -84,7 +85,8 @@ export default function Landing({
               {t.landing.panLabel}
             </label>
             <div className="relative">
-              <input
+              <MockField>
+                <input
                 type="text"
                 value={panInput}
                 onChange={(e) => handlePanInputChange(e.target.value)}
@@ -94,6 +96,8 @@ export default function Landing({
                   panInputError ? "border-alarm" : "border-line focus:border-money"
                 } rounded-xl px-4 py-3 text-center font-mono text-lg uppercase tracking-widest text-ink transition-colors focus:outline-none`}
               />
+                <MockFill onFill={() => handlePanInputChange(MOCK.pan)} />
+              </MockField>
             </div>
             {panInputError ? (
               <span className="block text-xs text-alarm mt-1.5 font-medium">
@@ -108,7 +112,7 @@ export default function Landing({
 
             <button
               type="submit"
-            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-money px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-money-deep"
+            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-navy px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:opacity-90"
           >
             <span>{primaryAction}</span>
             <ChevronRight size={16} />
@@ -122,33 +126,33 @@ export default function Landing({
             <div className="space-y-1.5">
               <button
                 type="button"
-                onClick={() => handlePanInputChange("DEMPS1111F")}
+                onClick={() => handlePanInputChange("DEMPS4417K")}
                 className="w-full text-left text-xs bg-paper border border-line rounded px-3 py-2 hover:border-money hover:bg-paper-2 transition flex justify-between items-center cursor-pointer"
               >
                 <div>
                   <span className="font-bold text-ink">Sunita Devi</span>
                 </div>
-                <span className="font-mono text-[11px] text-money font-semibold">DEMPS1111F</span>
+                <span className="font-mono text-[11px] text-money font-semibold">DEMPS4417K</span>
               </button>
               <button
                 type="button"
-                onClick={() => handlePanInputChange("DEMPR2222F")}
+                onClick={() => handlePanInputChange("DEMPK8823R")}
                 className="w-full text-left text-xs bg-paper border border-line rounded px-3 py-2 hover:border-money hover:bg-paper-2 transition flex justify-between items-center cursor-pointer"
               >
                 <div>
                   <span className="font-bold text-ink">Rakesh Kumar</span>
                 </div>
-                <span className="font-mono text-[11px] text-money font-semibold">DEMPR2222F</span>
+                <span className="font-mono text-[11px] text-money font-semibold">DEMPK8823R</span>
               </button>
               <button
                 type="button"
-                onClick={() => handlePanInputChange("DEMPP3333F")}
+                onClick={() => handlePanInputChange("DEMPS9052M")}
                 className="w-full text-left text-xs bg-paper border border-line rounded px-3 py-2 hover:border-money hover:bg-paper-2 transition flex justify-between items-center cursor-pointer"
               >
                 <div>
                   <span className="font-bold text-ink">Priya Sharma</span>
                 </div>
-                <span className="font-mono text-[11px] text-money font-semibold">DEMPP3333F</span>
+                <span className="font-mono text-[11px] text-money font-semibold">DEMPS9052M</span>
               </button>
             </div>
           </div>
@@ -186,7 +190,7 @@ export default function Landing({
               {[t.groups.moneyIn, t.groups.taxPaid, t.groups.deductionsClaimed].map((label, index) => (
                 <div key={label} className="fact-card flex items-center justify-between gap-4 p-4">
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className={`h-3 w-3 shrink-0 rounded-full ${index === 2 ? "bg-warn" : "bg-money"}`} aria-hidden="true" />
+                    <span className={`h-3 w-3 shrink-0 rounded-full ${index === 2 ? "bg-warn" : "bg-navy"}`} aria-hidden="true" />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold text-ink">{label}</p>
                       <p className="mt-1 text-xs text-ink-2">{t.groups.fromWhere}</p>

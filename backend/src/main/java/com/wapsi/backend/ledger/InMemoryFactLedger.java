@@ -7,10 +7,12 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.springframework.stereotype.Component;
-
-/** Small adapter for contract tests and local development; production uses PostgreSQL. */
-@Component
+/**
+ * Small adapter for contract tests and local development; production uses PostgreSQL.
+ *
+ * <p>Deliberately not a {@code @Component}: {@code PersistenceConfig} decides between this and
+ * {@link PostgresFactLedger}, and a stereotype here would create a second competing bean.
+ */
 public class InMemoryFactLedger implements FactLedger {
     private final Map<UUID, List<FactLedgerEvent>> events = new ConcurrentHashMap<>();
 

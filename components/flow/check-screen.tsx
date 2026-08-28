@@ -155,8 +155,15 @@ export default function CheckScreen({ persona, t, lang, regime }: CheckScreenPro
           label={t.check.deductionsLine}
           value={`− ${formatMoney(b.totalDeductions, lang)}`}
           tone="muted"
-          explain={t.check.explainDeductions}
+          explain={
+            regime === "new" && persona.claims.length > 0 && b.totalDeductions === 0
+              ? t.check.newRegimeClaimsZero
+              : t.check.explainDeductions
+          }
         >
+          {regime === "new" && persona.claims.length > 0 && b.totalDeductions === 0 && (
+            <p className="text-xs leading-relaxed text-ink-2">{t.check.newRegimeClaimsZero}</p>
+          )}
           {persona.claims.length > 0 ? (
             <div className="space-y-2">
               {persona.claims.map((c) => (

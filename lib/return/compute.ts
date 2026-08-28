@@ -24,7 +24,11 @@ function ageBandFor(persona: Persona): TaxInput["ageBand"] {
 /** Persona facts/claims/TDS reshaped for the engine. Pure. */
 export function taxInputFor(persona: Persona, regime: Regime): TaxInput {
   return {
-    facts: persona.facts.map((f) => ({ kind: f.kind, amount: f.amount })),
+    facts: persona.facts.map((f) => ({
+      kind: f.kind,
+      amount: f.amount,
+      capitalGains: f.capitalGains,
+    })),
     claims: persona.claims.map((c) => ({
       id: c.id,
       section: c.section,

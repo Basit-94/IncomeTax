@@ -6,6 +6,7 @@ import { X, Check } from "lucide-react";
 import type { Dict } from "../../lib/i18n";
 import type { Lang } from "../../lib/types";
 import { formatMoney } from "../../lib/money";
+import { MockField, MockFill, MOCK } from "@/components/dev/mock-fill";
 
 interface QuickEditModalProps {
   isOpen: boolean;
@@ -40,6 +41,17 @@ export function QuickEditModal({
       setLocalTds(tds);
     }
   }, [isOpen, salary, interest, tds]);
+
+  // A modal that only its own X can close becomes a trap the moment anything under it
+  // changes state (SS4B round 1, finding C5). Escape always works.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, onClose]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,7 +100,8 @@ export function QuickEditModal({
                 <label className="block text-xs font-bold uppercase tracking-wider text-ink-2">
                   Gross Salary Income (₹)
                 </label>
-                <input
+                <MockField>
+                  <input
                   type="number"
                   value={localSalary || ""}
                   onChange={(e) => setLocalSalary(Number(e.target.value))}
@@ -96,6 +109,8 @@ export function QuickEditModal({
                   min="0"
                   placeholder="e.g. 1200000"
                 />
+                  <MockFill onFill={() => setLocalSalary(MOCK.annualSalary)} />
+                </MockField>
                 <span className="block text-[0.68rem] text-ink-3">
                   Excluding standard deduction. Prefilled from Form 16.
                 </span>
@@ -105,7 +120,8 @@ export function QuickEditModal({
                 <label className="block text-xs font-bold uppercase tracking-wider text-ink-2">
                   Other Interest Income (₹)
                 </label>
-                <input
+                <MockField>
+                  <input
                   type="number"
                   value={localInterest || ""}
                   onChange={(e) => setLocalInterest(Number(e.target.value))}
@@ -113,6 +129,8 @@ export function QuickEditModal({
                   min="0"
                   placeholder="e.g. 15000"
                 />
+                  <MockFill onFill={() => setLocalInterest(MOCK.savingsInterest)} />
+                </MockField>
                 <span className="block text-[0.68rem] text-ink-3">
                   Interest earned from savings & FD accounts. Prefilled from AIS.
                 </span>
@@ -122,7 +140,8 @@ export function QuickEditModal({
                 <label className="block text-xs font-bold uppercase tracking-wider text-ink-2">
                   TDS Credits / Tax Paid (₹)
                 </label>
-                <input
+                <MockField>
+                  <input
                   type="number"
                   value={localTds || ""}
                   onChange={(e) => setLocalTds(Number(e.target.value))}
@@ -130,6 +149,8 @@ export function QuickEditModal({
                   min="0"
                   placeholder="e.g. 66000"
                 />
+                  <MockFill onFill={() => setLocalTds(MOCK.tdsDeducted)} />
+                </MockField>
                 <span className="block text-[0.68rem] text-ink-3">
                   Total tax withheld at source. Prefilled from 26AS.
                 </span>
@@ -146,7 +167,7 @@ export function QuickEditModal({
                 </button>
                 <button
                   type="submit"
-                  className="min-h-10 px-5 rounded-xl bg-money hover:bg-money-deep text-white text-sm font-bold flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+                  className="min-h-10 px-5 rounded-xl bg-navy hover:opacity-90 text-white text-sm font-bold flex items-center gap-1.5 shadow-sm transition cursor-pointer"
                 >
                   <Check size={16} />
                   <span>{t.common.saveAndGoOn}</span>

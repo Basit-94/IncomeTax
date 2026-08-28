@@ -14,11 +14,11 @@ interface TabBarProps {
 
 export default function TabBar({ t, activeTab, setActiveTab, noticeCount }: TabBarProps) {
   return (
-    <div className="border-b border-line flex space-x-6 text-sm font-semibold text-ink-2 print:hidden">
+    <div className="nav-d13 border-b-2 border-[color:var(--edge-color)] flex items-center gap-2 text-ink-2 print:hidden">
       <button 
         onClick={() => setActiveTab("overview")}
-        className={`pb-2.5 border-b-2 transition-colors flex items-center gap-1.5 ${
-          activeTab === "overview" ? "border-navy text-navy font-bold" : "border-transparent hover:text-ink hover:border-line"
+        className={`px-2.5 py-2 rounded-[3px] border transition-colors flex items-center gap-1.5 ${
+          activeTab === "overview" ? "border-[color:var(--edge-color)] bg-paper-2 text-ink" : "border-transparent hover:border-[color:var(--edge-color)] hover:text-ink"
         }`}
       >
         <Grid size={16} />
@@ -27,8 +27,8 @@ export default function TabBar({ t, activeTab, setActiveTab, noticeCount }: TabB
 
       <button 
         onClick={() => setActiveTab("statement")}
-        className={`pb-2.5 border-b-2 transition-colors flex items-center gap-1.5 ${
-          activeTab === "statement" ? "border-navy text-navy font-bold" : "border-transparent hover:text-ink hover:border-line"
+        className={`px-2.5 py-2 rounded-[3px] border transition-colors flex items-center gap-1.5 ${
+          activeTab === "statement" ? "border-[color:var(--edge-color)] bg-paper-2 text-ink" : "border-transparent hover:border-[color:var(--edge-color)] hover:text-ink"
         }`}
       >
         <FileText size={16} />
@@ -37,8 +37,8 @@ export default function TabBar({ t, activeTab, setActiveTab, noticeCount }: TabB
 
       <button 
         onClick={() => setActiveTab("actions")}
-        className={`pb-2.5 border-b-2 transition-colors flex items-center gap-1.5 relative ${
-          activeTab === "actions" ? "border-navy text-navy font-bold" : "border-transparent hover:text-ink hover:border-line"
+        className={`px-2.5 py-2 rounded-[3px] border transition-colors flex items-center gap-1.5 relative ${
+          activeTab === "actions" ? "border-[color:var(--edge-color)] bg-paper-2 text-ink" : "border-transparent hover:border-[color:var(--edge-color)] hover:text-ink"
         }`}
       >
         <ShieldAlert size={16} />
@@ -49,6 +49,7 @@ export default function TabBar({ t, activeTab, setActiveTab, noticeCount }: TabB
           </span>
         )}
       </button>
+
     </div>
   );
 }

@@ -24,3 +24,6 @@ video/**/*.wav
 
 .vercel
 .env*
+!.env.example
+
+.agent-transcripts/

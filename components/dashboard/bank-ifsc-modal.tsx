@@ -4,6 +4,7 @@ import { AnimatePresence, m } from "motion/react";
 import { Building2 } from "lucide-react";
 import type { Lang } from "../../lib/types";
 import { localize } from "../mock-i18n";
+import { MockField, MockFill, MOCK } from "@/components/dev/mock-fill";
 
 interface BankIfscModalProps {
   active: boolean;
@@ -52,7 +53,8 @@ export default function BankIfscModal({
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-mono uppercase text-ink-2 mb-1">{localize("IFSC Code", lang)}</label>
-                <input
+                <MockField>
+                  <input
                   type="text"
                   aria-label={localize("IFSC Code", lang)}
                   value={ifscInput}
@@ -62,6 +64,8 @@ export default function BankIfscModal({
                     ifscError ? "border-alarm animate-shake" : "border-line focus:border-money"
                   } text-base font-mono font-semibold tracking-wider px-3 py-2 rounded focus:outline-none uppercase`}
                 />
+                  <MockFill onFill={() => handleIfscInputChange(MOCK.ifsc)} />
+                </MockField>
                 {ifscError && (
                   <span className="block text-xs text-alarm mt-1 font-medium">
                     {ifscError}
@@ -79,7 +83,7 @@ export default function BankIfscModal({
               </button>
               <button
                 onClick={saveBankFix}
-                className="flex-1 bg-money hover:bg-money-deep text-paper py-2 rounded text-sm font-semibold transition-colors"
+                className="flex-1 bg-navy hover:opacity-90 text-paper py-2 rounded text-sm font-semibold transition-colors"
               >
                 {localize("Validate Bank Code", lang)}
               </button>

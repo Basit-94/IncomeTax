@@ -11,17 +11,55 @@
   "rebateMaximumPaise": 6000000,
   "cessRate": 0.04,
   "roundingPolicy": "HALF_UP_TO_WHOLE_PAISE",
-  "allowedClaimSections": ["80CCD(2)", "80CCD_2"],
+  "allowedClaimSections": [
+    "80CCD(2)",
+    "80CCD_2"
+  ],
   "claimCapsPaise": {},
   "basicExemptionByAgePaise": {},
   "marginalReliefEnabled": true,
   "slabs": [
-    { "upToPaise": 40000000, "rate": 0.00, "sourceCitation": "Income Tax Department, Budget 2026 FAQs, pp.63-65: https://www.incometaxindia.gov.in/documents/20117/15766092/FAQs-Budget-2026.pdf" },
-    { "upToPaise": 80000000, "rate": 0.05, "sourceCitation": "Income Tax Department, Budget 2026 FAQs, pp.63-65: https://www.incometaxindia.gov.in/documents/20117/15766092/FAQs-Budget-2026.pdf" },
-    { "upToPaise": 120000000, "rate": 0.10, "sourceCitation": "Income Tax Department, Budget 2026 FAQs, pp.63-65: https://www.incometaxindia.gov.in/documents/20117/15766092/FAQs-Budget-2026.pdf" },
-    { "upToPaise": 160000000, "rate": 0.15, "sourceCitation": "Income Tax Department, Budget 2026 FAQs, pp.63-65: https://www.incometaxindia.gov.in/documents/20117/15766092/FAQs-Budget-2026.pdf" },
-    { "upToPaise": 200000000, "rate": 0.20, "sourceCitation": "Income Tax Department, Budget 2026 FAQs, pp.63-65: https://www.incometaxindia.gov.in/documents/20117/15766092/FAQs-Budget-2026.pdf" },
-    { "upToPaise": 240000000, "rate": 0.25, "sourceCitation": "Income Tax Department, Budget 2026 FAQs, pp.63-65: https://www.incometaxindia.gov.in/documents/20117/15766092/FAQs-Budget-2026.pdf" },
-    { "upToPaise": null, "rate": 0.30, "sourceCitation": "Income Tax Department, Budget 2026 FAQs, pp.63-65: https://www.incometaxindia.gov.in/documents/20117/15766092/FAQs-Budget-2026.pdf" }
-  ]
+    {
+      "upToPaise": 40000000,
+      "rate": 0.0,
+      "sourceCitation": "Income Tax Department, Budget 2026 FAQs, pp.63-65: https://www.incometaxindia.gov.in/documents/20117/15766092/FAQs-Budget-2026.pdf"
+    },
+    {
+      "upToPaise": 80000000,
+      "rate": 0.05,
+      "sourceCitation": "Income Tax Department, Budget 2026 FAQs, pp.63-65: https://www.incometaxindia.gov.in/documents/20117/15766092/FAQs-Budget-2026.pdf"
+    },
+    {
+      "upToPaise": 120000000,
+      "rate": 0.1,
+      "sourceCitation": "Income Tax Department, Budget 2026 FAQs, pp.63-65: https://www.incometaxindia.gov.in/documents/20117/15766092/FAQs-Budget-2026.pdf"
+    },
+    {
+      "upToPaise": 160000000,
+      "rate": 0.15,
+      "sourceCitation": "Income Tax Department, Budget 2026 FAQs, pp.63-65: https://www.incometaxindia.gov.in/documents/20117/15766092/FAQs-Budget-2026.pdf"
+    },
+    {
+      "upToPaise": 200000000,
+      "rate": 0.2,
+      "sourceCitation": "Income Tax Department, Budget 2026 FAQs, pp.63-65: https://www.incometaxindia.gov.in/documents/20117/15766092/FAQs-Budget-2026.pdf"
+    },
+    {
+      "upToPaise": 240000000,
+      "rate": 0.25,
+      "sourceCitation": "Income Tax Department, Budget 2026 FAQs, pp.63-65: https://www.incometaxindia.gov.in/documents/20117/15766092/FAQs-Budget-2026.pdf"
+    },
+    {
+      "upToPaise": null,
+      "rate": 0.3,
+      "sourceCitation": "Income Tax Department, Budget 2026 FAQs, pp.63-65: https://www.incometaxindia.gov.in/documents/20117/15766092/FAQs-Budget-2026.pdf"
+    }
+  ],
+  "specialRates": {
+    "stcg111aRate": 0.2,
+    "ltcg112aRate": 0.125,
+    "ltcg112aExemptionPaise": 12500000,
+    "ltcg112Rate": 0.125,
+    "sourceCitation": "Finance (No. 2) Act 2024 rates effective 23-Jul-2024; cross-checked 2026-08-28: tax2win.in/guide/short-term-capital-gain-under-section-111a; calcphi.com/india/blog/section-111a; CBDT Budget-2024 FAQ (pib.gov.in PRID 2036604). AY 2026-27 transfers all post-date the change, so no transfer-date split is needed."
+  }
 }

@@ -28,7 +28,8 @@ public record RuleSetDocument(
         Set<String> allowedClaimSections,
         Map<String, Long> claimCapsPaise,
         Map<String, Long> basicExemptionByAgePaise,
-        boolean marginalReliefEnabled) {
+        boolean marginalReliefEnabled,
+        SpecialRatesDocument specialRates) {
 
     @JsonCreator
     public RuleSetDocument(
@@ -48,7 +49,8 @@ public record RuleSetDocument(
             @JsonProperty("allowedClaimSections") Set<String> allowedClaimSections,
             @JsonProperty("claimCapsPaise") Map<String, Long> claimCapsPaise,
             @JsonProperty("basicExemptionByAgePaise") Map<String, Long> basicExemptionByAgePaise,
-            @JsonProperty("marginalReliefEnabled") boolean marginalReliefEnabled) {
+            @JsonProperty("marginalReliefEnabled") boolean marginalReliefEnabled,
+            @JsonProperty("specialRates") SpecialRatesDocument specialRates) {
         this.id = id;
         this.assessmentYear = assessmentYear;
         this.regime = regime;
@@ -66,6 +68,7 @@ public record RuleSetDocument(
         this.claimCapsPaise = claimCapsPaise == null ? Map.of() : Map.copyOf(claimCapsPaise);
         this.basicExemptionByAgePaise = basicExemptionByAgePaise == null ? Map.of() : Map.copyOf(basicExemptionByAgePaise);
         this.marginalReliefEnabled = marginalReliefEnabled;
+        this.specialRates = specialRates;
     }
 
     public RuleSetDefinition toDefinition() {
@@ -90,6 +93,7 @@ public record RuleSetDocument(
                 basicExemptionByAgePaise.entrySet().stream().collect(java.util.stream.Collectors.toUnmodifiableMap(
                         Map.Entry::getKey,
                         entry -> Money.ofPaise(entry.getValue()))),
-                marginalReliefEnabled);
+                marginalReliefEnabled,
+                specialRates == null ? null : specialRates.toSpecialRates());
     }
 }

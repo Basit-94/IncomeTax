@@ -3,6 +3,7 @@
 import { CheckCircle2, AlertTriangle, ChevronRight } from "lucide-react";
 import type { Persona, Lang, BankAccount, Notice } from "../../lib/types";
 import { localize } from "../mock-i18n";
+import { MockField, MockFill, MOCK } from "@/components/dev/mock-fill";
 
 interface ActionsTabProps {
   persona: Persona;
@@ -120,20 +121,26 @@ export default function ActionsTab({
                     
                     <div className="space-y-2">
                       <div className="flex gap-2">
-                        <input 
+                        <MockField>
+                          <input 
                           type="text" 
                           placeholder={localize("Landlord Name", lang)} 
                           value={rentLandlordName}
                           onChange={(e) => setRentLandlordName(e.target.value)}
                           className="flex-1 text-xs border border-line p-2 rounded focus:outline-none focus:border-money"
                         />
-                        <input 
+                          <MockFill onFill={() => setRentLandlordName(MOCK.landlordName)} />
+                        </MockField>
+                        <MockField>
+                          <input 
                           type="text" 
                           placeholder={localize("Landlord PAN (10 Digits)", lang)} 
                           value={rentLandlordPan}
                           onChange={(e) => setRentLandlordPan(e.target.value.toUpperCase())}
                           className="flex-1 text-xs border border-line p-2 rounded focus:outline-none focus:border-money font-mono uppercase"
                         />
+                          <MockFill onFill={() => setRentLandlordPan(MOCK.landlordPan)} />
+                        </MockField>
                       </div>
                       
                       <div className="flex items-center justify-between gap-2">
@@ -153,7 +160,7 @@ export default function ActionsTab({
                         <button
                           onClick={saveRentClaim}
                           disabled={!rentFile}
-                          className="bg-money text-paper text-xs font-semibold py-1.5 px-4 rounded hover:bg-money-deep transition-colors disabled:opacity-50"
+                          className="bg-navy text-paper text-xs font-semibold py-1.5 px-4 rounded hover:opacity-90 transition-colors disabled:opacity-50"
                         >
                           {localize("Submit Receipt", lang)}
                         </button>

@@ -200,6 +200,8 @@ const rakesh: Persona = {
       label: "Money from selling shares",
       amount: 110000,
       kind: "capital_gains",
+      // Listed shares sold within the year, STT paid → STCG u/s 111A at 20%.
+      capitalGains: { assetClass: "equity_stt", holding: "short" },
       provenance: {
         reporter: "Meridian Securities Pvt Ltd",
         reporterKind: "broker",
@@ -283,7 +285,7 @@ const rakesh: Persona = {
         kind: "ais_mismatch",
         headline: "One figure doesn't match what your broker reported.",
         detail:
-          "Meridian Securities reported ₹1,10,000 from share sales. Your return doesn't show it. Until that's settled the refund stays where it is.",
+          "Meridian Securities reported ₹1,10,000 from share sales. The department's copy of your return does not show it yet — the figures here already include it, taxed at the short-term rate. Answering the notice clears the mismatch; until then the refund waits.",
         action: { label: "Look at what they reported", href: "/notices" },
         clearsInDays: 6,
         resolved: false,

@@ -52,10 +52,24 @@ export type IncomeKind =
   | "rent"
   | "other";
 
+/**
+ * Asset-class metadata on a capital_gains fact (T1.9b). Present → the engine
+ * applies the real special rates (s.111A / s.112A / s.112). Absent → slab
+ * treatment, which stays a labelled simplification for unclassified data.
+ * AY 2026-27 transfers all post-date 23-Jul-2024, so no transfer-date split.
+ */
+export interface CapitalGainsMeta {
+  /** "equity_stt": listed equity / equity MF with STT paid; "other": everything else. */
+  assetClass: "equity_stt" | "other";
+  holding: "short" | "long";
+}
+
 export interface Fact {
   id: string;
   kind: IncomeKind;
   amount: number;
+  /** Only meaningful on kind === "capital_gains". */
+  capitalGains?: CapitalGainsMeta;
   
   // Both en/hi/ta labels and titles/sources are supported for compatibility
   title?: string;

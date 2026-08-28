@@ -47,7 +47,10 @@ const INITIAL_STATE: TaxReturnState = {
     salary: { id: 'salary', label: 'Gross Salary Income', category: 'income', reportedAmount: 600000, userAmount: 600000, status: 'pending' },
     consulting: { id: 'consulting', label: 'Freelance / Consulting', category: 'income', reportedAmount: 0, userAmount: 0, status: 'pending' },
     interest: { id: 'interest', label: 'Savings & FD Interest', category: 'income', reportedAmount: 10000, userAmount: 10000, status: 'pending' },
-    other: { id: 'other', label: 'Other Incomes / Dividend', category: 'income', reportedAmount: 0, userAmount: 0, status: 'pending' },
+    // Capital gains fold in here and are taxed at slab rates - a documented simplification
+    // (see lib/engine/constants.ts for the real s.111A/112A rates and sources). The label
+    // discloses it because a professional reading this screen must not assume special rates.
+    other: { id: 'other', label: 'Other Income / Dividend / Capital Gains (slab rate - simplified)', category: 'income', reportedAmount: 0, userAmount: 0, status: 'pending' },
     tds: { id: 'tds', label: 'Tax Deducted at Source (TDS)', category: 'tax_paid', reportedAmount: 30000, userAmount: 30000, status: 'pending' },
     ded80c: { id: 'ded80c', label: 'Section 80C Investments', category: 'deduction', reportedAmount: 0, userAmount: 0, status: 'pending' },
     ded80d: { id: 'ded80d', label: 'Section 80D Health Insurance', category: 'deduction', reportedAmount: 0, userAmount: 0, status: 'pending' },

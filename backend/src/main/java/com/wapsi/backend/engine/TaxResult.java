@@ -10,6 +10,9 @@ public record TaxResult(
         Money totalDeductions,
         Money taxableIncome,
         List<TaxSlab> slabBreakdown,
+        /** Special-rate capital-gains buckets; empty when nothing was classified. */
+        List<SpecialRateLine> specialRate,
+        /** Slab tax + special-rate tax, before the s.87A rebate. */
         Money taxBeforeRebate,
         Money rebate87A,
         Money cess,
@@ -18,5 +21,6 @@ public record TaxResult(
         Money refundOrDue) {
     public TaxResult {
         slabBreakdown = List.copyOf(slabBreakdown);
+        specialRate = List.copyOf(specialRate);
     }
 }

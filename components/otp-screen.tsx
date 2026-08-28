@@ -14,6 +14,9 @@ interface OtpScreenProps {
   onAutoFill: () => void;
   onBack: () => void;
   onVerify: () => void;
+  /** Server-auth status line: verifying / unreachable / rejected detail. */
+  authNote?: string | null;
+  authBusy?: boolean;
 }
 
 export default function OtpScreen({
@@ -26,6 +29,8 @@ export default function OtpScreen({
   onAutoFill,
   onBack,
   onVerify,
+  authNote,
+  authBusy = false,
 }: OtpScreenProps) {
   return (
     <div className="surface-panel mx-auto mt-6 max-w-md space-y-8 p-6 text-center sm:mt-12 sm:p-8">
@@ -65,9 +70,14 @@ export default function OtpScreen({
           ))}
         </div>
 
-        {otpError && (
+        {otpError && !authNote && (
           <span className="block text-xs text-alarm font-medium">
             {t.login.incorrectCode}
+          </span>
+        )}
+        {authNote && (
+          <span className={`block text-xs font-medium ${otpError ? "text-alarm" : "text-ink-2"}`}>
+            {authNote}
           </span>
         )}
       </div>
@@ -103,9 +113,10 @@ export default function OtpScreen({
         </button>
         <button
           onClick={onVerify}
-          className="flex-1 bg-money hover:bg-money-deep text-paper py-3 px-4 rounded-lg transition-colors text-sm font-semibold"
+          disabled={authBusy}
+          className="flex-1 bg-navy hover:opacity-90 text-paper py-3 px-4 rounded-lg transition-colors text-sm font-semibold disabled:opacity-60"
         >
-          {t.login.verifyEnter}
+          {authBusy ? t.login.authVerifying : t.login.verifyEnter}
         </button>
       </div>
     </div>

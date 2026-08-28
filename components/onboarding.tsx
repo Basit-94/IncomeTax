@@ -11,13 +11,13 @@ import {
   type OnboardingDraft,
   type OnboardingFocus,
   type OnboardingFilingHistory,
-  type OnboardingIncomeBand,
+  type OnboardingMode,
   type OnboardingIntent,
   type OnboardingProfession,
   type OnboardingProfile,
 } from "../lib/onboarding";
 
-type Screen = "language" | "intent" | "situation" | "income" | "focus" | "ready";
+type Screen = "language" | "intent" | "situation" | "mode" | "focus" | "ready";
 
 interface OnboardingProps {
   lang: Lang;
@@ -43,14 +43,7 @@ const PROFESSIONS: OnboardingProfession[] = [
   "investor",
   "other",
 ];
-const INCOME_BANDS: OnboardingIncomeBand[] = [
-  "none",
-  "under_4",
-  "4_to_8",
-  "8_to_12",
-  "12_to_25",
-  "over_25",
-];
+const MODES: OnboardingMode[] = ["simple", "full"];
 const FILING_HISTORY: OnboardingFilingHistory[] = ["never", "once", "every_year"];
 const FOCUSES: OnboardingFocus[] = [
   "salary",
@@ -93,7 +86,7 @@ function ChoiceButton({
       </span>
       <span
         className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-          selected ? "border-money bg-money text-white" : "border-line text-transparent"
+          selected ? "border-navy bg-navy text-white" : "border-line text-transparent"
         }`}
         aria-hidden="true"
       >
@@ -132,7 +125,7 @@ export default function Onboarding({
 
   const personalization = previewProfile ? getPersonalization(previewProfile) : null;
   const questionNumber =
-    screen === "intent" ? 1 : screen === "situation" ? 2 : screen === "income" ? 3 : screen === "focus" ? 4 : 0;
+    screen === "intent" ? 1 : screen === "situation" ? 2 : screen === "mode" ? 3 : screen === "focus" ? 4 : 0;
   const canContinue =
     screen === "language"
       ? Boolean(draft.lang)
@@ -140,8 +133,8 @@ export default function Onboarding({
       ? Boolean(draft.intent)
       : screen === "situation"
       ? Boolean(draft.profession && draft.filingHistory)
-      : screen === "income"
-      ? Boolean(draft.incomeBand)
+      : screen === "mode"
+      ? Boolean(draft.mode)
       : screen === "focus"
       ? Boolean(draft.focuses && draft.focuses.length > 0)
       : Boolean(previewProfile);
@@ -150,8 +143,8 @@ export default function Onboarding({
     if (!canContinue) return;
     if (screen === "language") setScreen("intent");
     else if (screen === "intent") setScreen("situation");
-    else if (screen === "situation") setScreen("income");
-    else if (screen === "income") setScreen("focus");
+    else if (screen === "situation") setScreen("mode");
+    else if (screen === "mode") setScreen("focus");
     else if (screen === "focus") setScreen("ready");
     else if (previewProfile) onComplete(previewProfile);
   };
@@ -159,8 +152,8 @@ export default function Onboarding({
   const back = () => {
     if (screen === "intent") setScreen("language");
     else if (screen === "situation") setScreen("intent");
-    else if (screen === "income") setScreen("situation");
-    else if (screen === "focus") setScreen("income");
+    else if (screen === "mode") setScreen("situation");
+    else if (screen === "focus") setScreen("mode");
     else if (screen === "ready") setScreen("focus");
   };
 
@@ -210,7 +203,7 @@ export default function Onboarding({
               {[1, 2, 3, 4].map((item) => (
                 <span
                   key={item}
-                  className={`h-1.5 flex-1 rounded-full ${item <= questionNumber ? "bg-money" : "bg-line"}`}
+                  className={`h-1.5 flex-1 rounded-full ${item <= questionNumber ? "bg-navy" : "bg-line"}`}
                 />
               ))}
             </div>
@@ -302,22 +295,23 @@ export default function Onboarding({
             </div>
           )}
 
-          {screen === "income" && (
+          {screen === "mode" && (
             <div className="space-y-6">
               <div className="space-y-2">
                 <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
-                  {t.onboarding.incomeQuestion}
+                  {t.onboarding.modeQuestion}
                 </h1>
-                <p className="text-sm leading-relaxed text-ink-2">{t.onboarding.incomeHelp}</p>
+                <p className="text-sm leading-relaxed text-ink-2">{t.onboarding.modeHelp}</p>
               </div>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {INCOME_BANDS.map((band) => (
+              <div className="grid gap-3">
+                {MODES.map((mode) => (
                   <ChoiceButton
-                    key={band}
-                    selected={draft.incomeBand === band}
-                    onClick={() => updateDraft({ incomeBand: band })}
+                    key={mode}
+                    selected={draft.mode === mode}
+                    onClick={() => updateDraft({ mode })}
+                    detail={t.onboarding.modeOptions[mode].detail}
                   >
-                    {t.onboarding.incomeOptions[band]}
+                    {t.onboarding.modeOptions[mode].label}
                   </ChoiceButton>
                 ))}
               </div>
@@ -406,7 +400,7 @@ export default function Onboarding({
               type="button"
               onClick={next}
               disabled={!canContinue}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-money px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-money-deep disabled:cursor-not-allowed disabled:opacity-45"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-navy px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
             >
               {screen === "ready" ? t.onboarding.startPath : t.common.continue}
               <ChevronRight size={16} />

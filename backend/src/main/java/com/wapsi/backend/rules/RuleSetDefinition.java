@@ -26,5 +26,7 @@ public record RuleSetDefinition(
         Set<String> allowedClaimSections,
         Map<String, Money> claimCaps,
         Map<String, Money> basicExemptionByAge,
-        boolean marginalReliefEnabled) {
+        boolean marginalReliefEnabled,
+        /** Null = special capital-gains rates not modelled for this year (slab fallback). */
+        SpecialRates specialRates) {
 }

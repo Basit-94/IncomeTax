@@ -1,0 +1,323 @@
+/* Direction 13 stylesheet, copied from docs/design-directions/13-composite.html
+   (user directive 2026-08-29: "just copy the code"). Edits: theme plumbing
+   mapped to .dark-mode, fonts mapped to next/font variables, prototype-only
+   body padding removed. Everything else is verbatim. */
+
+/* ── light: graph paper on a desk, ink drifting over it ─────────── */
+:root{
+  --paper:#F2EFE4; --grid:#D9D2B9; --card:#FBF9F1; --card-2:#F4F1E6;
+  --ink:#1C2233; --ink-2:#4A4E5C; --ink-3:#7C8090;
+  --edge:#1C2233; --hair:#D9D2B9;
+  /* text shades — badges, stat numbers, legends, links. All clear 4.5:1 on the paper
+     and on their own tint, which is what stops them going brighter still. */
+  --blue:#1361C7; --blue-bg:#DEEAFB;
+  --amber:#8C5D08; --amber-bg:#FAEBCE;
+  --brick:#C6331D; --brick-bg:#FCE6E1;
+  --green:#107A50; --green-bg:#E0F2E8;
+  /* fill shades — bars, meters, pins, motes, and the big numerals. Nothing small is
+     set in these, so they can run brighter than the text shades. */
+  --in:#1A6FE0;   /* what you earned / what stays yours */
+  --out:#DE4025;  /* what went to tax */
+  --keep:#149B67; /* what comes back */
+  --shadow:4px 6px 0 rgba(28,34,51,.13);
+  --shadow-hi:6px 9px 0 rgba(28,34,51,.16);
+  --pin-a:#F5867A; --pin-b:#C6331D;
+  --veil:radial-gradient(130% 78% at 50% 4%,transparent 8%,color-mix(in srgb,#F2EFE4 62%,transparent) 46%,#F2EFE4 88%);
+  --motes-blend:multiply;
+  --disp:'Space Grotesk',system-ui,sans-serif; --serif:'Source Serif 4',Georgia,serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace; --hand:'Caveat',cursive;
+}
+.dark-mode{
+  --paper:#12141A; --grid:#232833; --card:#1A1E27; --card-2:#171B23;
+  --ink:#E9ECF2; --ink-2:#B0B6C4; --ink-3:#7C8494;
+  --edge:#333B4B; --hair:#282E3A;
+  --blue:#7FA9D8; --blue-bg:#1B2A3C;
+  --amber:#DFA855; --amber-bg:#2E2413;
+  --brick:#E08471; --brick-bg:#331F1B;
+  --green:#77BC90; --green-bg:#16281D;
+  --in:#7FA9D8; --out:#E08471; --keep:#77BC90;
+  --shadow:4px 6px 0 rgba(0,0,0,.45);
+  --shadow-hi:6px 9px 0 rgba(0,0,0,.55);
+  --pin-a:#F0897E; --pin-b:#B4523F;
+  --veil:radial-gradient(130% 78% at 50% 4%,transparent 8%,color-mix(in srgb,#12141A 62%,transparent) 46%,#12141A 88%);
+  --motes-blend:screen;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;background:var(--paper)}
+body{margin:0;color:var(--ink);font-family:var(--serif);font-size:17px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;background:transparent;
+  transition:color .3s}
+/* the graph paper is painted on a fixed layer so the motes can sit under it */
+.paper{position:fixed;inset:0;z-index:-2;background:
+  linear-gradient(var(--grid) 1px,transparent 1px) 0 0/100% 28px,
+  linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/28px 100%,
+  var(--paper);transition:background-color .3s}
+#sketch{position:fixed;inset:0;z-index:-1;pointer-events:none;mix-blend-mode:var(--motes-blend)}
+#sketch canvas{display:block}
+/* the confetti fires from the file button, so it has to sit above the panels */
+#pop{position:fixed;inset:0;z-index:70;pointer-events:none}
+#pop canvas{display:block}
+.veil{position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--veil)}
+
+h1,h2,h3,.disp{font-family:var(--disp)}
+.hand{font-family:var(--hand)}
+a{color:var(--blue)}
+
+/* ── nav + the view switch ──────────────────── */
+nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--paper) 92%,transparent);
+  border-bottom:2px solid var(--edge);backdrop-filter:blur(4px)}
+.nav-in{max-width:1080px;margin:0 auto;display:flex;gap:6px;padding:9px 20px;
+  align-items:center}
+.nav-links{display:flex;gap:4px;overflow-x:auto;white-space:nowrap;flex:1;min-width:0}
+.nav-in a{font-family:var(--disp);font-size:12.5px;font-weight:600;letter-spacing:.03em;
+  text-transform:uppercase;color:var(--ink-2);text-decoration:none;padding:6px 10px;
+  border-radius:3px;border:1px solid transparent}
+.nav-in a:hover,.nav-in a:focus-visible{border-color:var(--edge);color:var(--ink);outline:none}
+.switch{display:flex;align-items:center;gap:9px;flex-shrink:0}
+.switch .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-3);display:none}
+@media(min-width:720px){.switch .k{display:block}}
+.seg{display:flex;border:1.5px solid var(--edge);border-radius:4px;overflow:hidden;background:var(--card)}
+.seg button{font-family:var(--disp);font-size:11.5px;font-weight:600;letter-spacing:.04em;
+  border:0;background:transparent;color:var(--ink-2);padding:7px 11px;cursor:pointer;
+  transition:background .18s,color .18s;white-space:nowrap}
+.seg button:hover{background:var(--card-2)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.seg button:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
+
+/* what each view shows */
+:root[data-view="simple"] .pro{display:none!important}
+:root[data-view="full"] .lite{display:none!important}
+/* full detail drops the tap-to-confirm gate: it exists to make someone who cannot
+   read the trace read the plain words first. Anyone reading the trace has already done that. */
+:root[data-view="full"] .card{cursor:default}
+:root[data-view="full"] .confirmline{display:none}
+/* Full detail drops the plain-words margin notes too. A CA has the same information in
+   professional form — source links, section references, the line-by-line trace — so the note
+   is duplicated effort and pure vertical cost for them. */
+:root[data-view="full"] .margin{display:none}
+
+header.hero{max-width:1080px;margin:0 auto;padding:44px 24px 4px}
+.stamp{display:inline-block;font-family:var(--mono);font-size:12px;color:var(--ink-2);
+  border:1px solid var(--ink-2);padding:3px 8px;border-radius:2px;transform:rotate(-1.5deg)}
+h1.title{font-size:clamp(27px,4.6vw,40px);margin:14px 0 6px;line-height:1.14;font-weight:700}
+.sub{color:var(--ink-2);font-size:17.5px;max-width:58ch;margin:0}
+
+main{max-width:1080px;margin:0 auto;padding:0 24px}
+
+/* ── the three channels, at the absolute top ──── */
+.headline{margin-top:26px}
+.channels{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:760px){.channels{grid-template-columns:1fr}}
+.ch{position:relative;background:var(--card);border:1px solid var(--edge);box-shadow:var(--shadow);
+  border-radius:2px;padding:17px 18px 20px;overflow:hidden;
+  opacity:0;transform:translateY(14px);animation:rise .65s cubic-bezier(.2,.8,.2,1) forwards}
+.ch:nth-child(1){animation-delay:.10s} .ch:nth-child(2){animation-delay:.22s} .ch:nth-child(3){animation-delay:.34s}
+@keyframes rise{to{opacity:1;transform:none}}
+.ch::after{content:"";position:absolute;left:0;bottom:0;height:3px;background:var(--c,var(--in));
+  width:var(--fill,0);min-width:4px;transition:width 1.5s cubic-bezier(.2,.8,.2,1) .55s}
+.ch .k{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.ch .v{font-family:var(--mono);font-size:clamp(24px,3.4vw,30px);font-weight:700;margin-top:8px;
+  letter-spacing:-.025em;font-variant-numeric:tabular-nums;color:var(--c,var(--ink));line-height:1}
+.ch .pct{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-top:7px;letter-spacing:.04em}
+.ch .d{font-size:14px;color:var(--ink-2);margin-top:6px;line-height:1.45}
+
+/* one honest bar for the whole year */
+.split{margin-top:14px;background:var(--card);border:1px solid var(--edge);box-shadow:var(--shadow);
+  border-radius:2px;padding:15px 18px 16px}
+.split .cap{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:10px}
+.bar{display:flex;height:22px;border:1px solid var(--edge);border-radius:2px;overflow:hidden;background:var(--card-2)}
+.bar i{display:block;height:100%;width:0;transition:width 1.5s cubic-bezier(.2,.8,.2,1) .5s}
+.bar i.mine{background:var(--in)} .bar i.tax{background:var(--out)} .bar i.back{background:var(--keep)}
+.keys{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:11px}
+.key{font-size:14px;color:var(--ink-2);display:flex;align-items:baseline;gap:8px}
+.key i{width:9px;height:9px;border-radius:2px;flex-shrink:0;transform:translateY(0)}
+.key .amt-s{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink);font-weight:500}
+.key .p{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.footnote{font-size:13px;color:var(--ink-3);margin:10px 0 0;line-height:1.45}
+
+.thread{margin-top:22px;padding:14px 18px;background:var(--blue-bg);
+  border-left:4px solid var(--blue);border-radius:2px;font-size:15.5px}
+
+/* hand-drawn dividers */
+.divider{display:flex;align-items:center;gap:10px;margin:40px 0 20px}
+.divider .line{flex:1;height:1px;background:var(--grid)}
+.divider .label{font-family:var(--mono);font-size:11px;letter-spacing:.08em;
+  color:var(--ink-2);text-transform:uppercase}
+.divider svg path{stroke-dasharray:120;stroke-dashoffset:120;animation:draw 1.1s ease-out forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+
+/* ── pinned index cards, two to a row ───────── */
+.board{display:grid;grid-template-columns:1fr;gap:20px;align-items:start}
+@media(min-width:880px){.board{grid-template-columns:1fr 1fr}}
+.card{position:relative;background:var(--card);border:1px solid var(--edge);
+  box-shadow:var(--shadow);border-radius:2px;padding:24px 24px 20px;
+  cursor:pointer;opacity:0;transform:translateY(16px) rotate(var(--tilt,0deg));
+  transition:box-shadow .2s,border-color .2s}
+.card.in{opacity:1;transform:translateY(0) rotate(var(--tilt,0deg));
+  transition:opacity .55s,transform .55s cubic-bezier(.2,.85,.25,1),box-shadow .2s,border-color .2s}
+.card:hover{box-shadow:var(--shadow-hi)}
+.card:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+.card.ok{--tilt:0deg;border-color:var(--keep)}
+.pin{position:absolute;top:-10px;left:24px;width:18px;height:18px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,var(--pin-a),var(--pin-b));
+  box-shadow:0 2px 3px rgba(0,0,0,.35);transition:background .3s,transform .3s}
+.card.ok .pin{background:radial-gradient(circle at 35% 30%,var(--keep),#0C6540);transform:scale(1.12)}
+.no{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+.card h3{margin:2px 0 2px;font-size:21px}
+.card .who{color:var(--ink-2);font-size:14px;margin-bottom:12px}
+.badges{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px}
+.badge{font-family:var(--disp);font-weight:600;font-size:11.5px;letter-spacing:.04em;
+  text-transform:uppercase;padding:4px 9px;border-radius:20px;border:1.4px solid currentColor}
+.badge.rep{color:var(--blue);background:var(--blue-bg)}
+.badge.you{color:var(--green);background:var(--green-bg)}
+.badge.sys{color:var(--amber);background:var(--amber-bg)}
+.badge.dis{color:var(--brick);background:var(--brick-bg)}
+.amt{font-family:var(--mono);font-weight:700;font-size:25px;color:var(--ink);
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.margin{margin:14px 0 2px;background:var(--amber-bg);
+  border-left:4px solid var(--amber);border-radius:2px;font-size:15px;color:var(--ink)}
+.margin summary{list-style:none;cursor:pointer;padding:9px 14px;display:flex;
+  align-items:center;justify-content:space-between;gap:10px}
+.margin summary::-webkit-details-marker{display:none}
+.margin summary::after{content:"";width:7px;height:7px;flex-shrink:0;margin-right:3px;
+  border-right:2px solid var(--ink-2);border-bottom:2px solid var(--ink-2);
+  transform:translateY(-2px) rotate(45deg);transition:transform .22s,border-color .18s}
+.margin[open] summary::after{transform:translateY(2px) rotate(-135deg)}
+.margin summary:hover::after{border-color:var(--ink)}
+.margin summary:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
+.margin .hand{font-size:21px;color:var(--ink);line-height:1.1}
+.margin .mbody{padding:0 14px 11px;line-height:1.5}
+.margin[open] .mbody{animation:unfold .24s ease-out}
+@keyframes unfold{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+/* source links — only when you want the paper trail */
+.links{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px}
+.links button{font-family:var(--mono);font-size:11px;color:var(--blue);background:none;border:0;
+  padding:0;cursor:pointer;letter-spacing:.03em}
+.links button:hover{text-decoration:underline}
+.confirmline{margin-top:14px;font-family:var(--mono);font-size:11px;color:var(--ink-3);
+  letter-spacing:.06em;text-transform:uppercase}
+.card.ok .confirmline{color:var(--keep)}
+
+/* ── the working: arithmetic beside the read-outs ── */
+.work{display:grid;grid-template-columns:1fr;gap:20px;align-items:start}
+@media(min-width:980px){.work{grid-template-columns:1fr 330px}}
+.sheet{background:var(--card);border:1px solid var(--edge);box-shadow:var(--shadow);
+  border-radius:2px;padding:8px 0 6px}
+.tier{padding:20px 24px;border-bottom:1px dashed var(--hair)}
+.tier:last-child{border-bottom:none}
+.tier h3{margin:0 0 10px;font-size:18px}
+.stat-row{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0 2px}
+.stat{flex:1 1 150px;background:var(--card-2);border:1px solid var(--hair);border-radius:3px;padding:10px 12px}
+.stat .num{font-family:var(--mono);font-weight:700;font-size:19px;color:var(--blue);
+  display:block;font-variant-numeric:tabular-nums}
+.stat .lbl{font-size:12.5px;color:var(--ink-2)}
+.calc-row{display:flex;justify-content:space-between;gap:14px;padding:7px 0;font-size:15.5px;color:var(--ink-2)}
+.calc-row .v{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.calc-row.t{border-top:1px solid var(--hair);margin-top:6px;padding-top:11px;color:var(--ink);font-weight:600}
+.callout{margin:14px 0 2px;padding:12px 14px;border-radius:2px;font-size:15px}
+.callout.good{background:var(--green-bg);border-left:4px solid var(--keep)}
+
+/* the full trace — every step opens */
+.trace{width:100%;border-collapse:collapse;font-size:15px}
+.trace td{padding:9px 24px;border-bottom:1px solid var(--hair);color:var(--ink-2)}
+.trace td.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;
+  white-space:nowrap;color:var(--ink)}
+.trace tr.t td{border-top:1px solid var(--hair);color:var(--ink);font-weight:600}
+.trace tr.g td{border-top:2px solid var(--edge);font-size:18px;font-weight:700;color:var(--ink)}
+.trace tr.g td.n{color:var(--keep)}
+.trace tr.head-row{cursor:pointer}
+.trace tr.head-row:hover td{background:var(--card-2)}
+.trace tr.exp{display:none}
+.trace tr.exp.on{display:table-row}
+.trace tr.exp td{background:var(--card-2);font-family:var(--mono);font-size:12px;color:var(--ink-2);
+  padding:10px 24px 12px;line-height:1.6}
+.caret{display:inline-block;width:12px;color:var(--ink-3);font-family:var(--mono);font-size:10px;
+  transition:transform .25s}
+.trace tr.open .caret{transform:rotate(90deg)}
+.tracehead{padding:11px 24px;border-bottom:1px solid var(--hair);display:flex;
+  justify-content:space-between;gap:10px;flex-wrap:wrap;
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+
+/* right rail — the read-outs */
+.rail{background:var(--card);border:1px solid var(--edge);box-shadow:var(--shadow);border-radius:2px}
+/* SS9.3 fix: at two columns the tall rail spans both rows, and the trace fills
+   the left column directly under the short panel - no dead block between them. */
+@media(min-width:980px){.work .rail{grid-column:2;grid-row:1/span 2}.work .sheet.pro.trace-sheet{grid-column:1;order:0}}
+.ro{padding:18px 20px;border-bottom:1px dashed var(--hair)}
+.ro:last-child{border-bottom:0}
+.ro .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.ro .v{font-family:var(--mono);font-size:31px;font-weight:700;letter-spacing:-.025em;
+  font-variant-numeric:tabular-nums;margin-top:7px;line-height:1;color:var(--keep)}
+.ro .d{font-size:14px;color:var(--ink-2);margin-top:9px;line-height:1.5}
+.spark{width:100%;height:36px;margin-top:11px;display:block}
+.spark path{fill:none;stroke:var(--keep);stroke-width:1.8;stroke-linecap:round;
+  stroke-dasharray:400;stroke-dashoffset:400;animation:draw 1.4s ease-out .3s forwards}
+.spark circle{fill:var(--keep);opacity:0;animation:pop .4s ease-out 1.5s forwards}
+@keyframes pop{to{opacity:1}}
+.meter{height:9px;background:var(--card-2);border:1px solid var(--hair);border-radius:2px;
+  overflow:hidden;margin-top:11px;display:flex}
+.meter i{display:block;height:100%;width:0;transition:width 1.2s cubic-bezier(.2,.85,.25,1)}
+.meter i.a{background:var(--out)} .meter i.b{background:var(--keep)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:9px;font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.legend span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}
+.legend .a::before{background:var(--out)} .legend .b::before{background:var(--keep)}
+
+/* ── checklist + finish ─────────────────────── */
+.checklist{background:var(--card);border:1px solid var(--edge);box-shadow:var(--shadow);
+  border-radius:2px;padding:18px 24px}
+.check{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--hair);cursor:pointer}
+.check:last-child{border-bottom:none}
+.box{flex-shrink:0;width:19px;height:19px;border:2px solid var(--edge);border-radius:3px;
+  margin-top:3px;position:relative;transition:border-color .25s}
+.box svg{position:absolute;inset:-2px;width:19px;height:19px}
+.box path{fill:none;stroke:var(--keep);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:22;stroke-dashoffset:22;transition:stroke-dashoffset .35s cubic-bezier(.3,.8,.3,1)}
+.check.done .box{border-color:var(--keep)}
+.check.done .box path{stroke-dashoffset:0}
+.check.done .txt{color:var(--ink-3);text-decoration:line-through}
+#solo.done .txt{color:var(--ink);text-decoration:none}
+.txt{font-size:15.5px}
+.jump{color:var(--blue);text-decoration:none;border-bottom:1.5px solid color-mix(in srgb,var(--blue) 38%,transparent)}
+.jump:hover,.jump:focus-visible{border-bottom-color:var(--blue);outline:none}
+.jump:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:2px}
+.check.done .jump{color:var(--ink-3);border-bottom-color:transparent}
+.card{scroll-margin-top:78px}
+.card.flash{animation:flash 1.5s ease-out}
+@keyframes flash{0%,100%{box-shadow:var(--shadow)}
+  18%{box-shadow:0 0 0 3px var(--blue),var(--shadow)}
+  62%{box-shadow:0 0 0 3px var(--blue),var(--shadow)}}
+
+.finish{margin-top:20px;background:var(--card);border:1px solid var(--edge);box-shadow:var(--shadow);
+  border-radius:2px;padding:22px 24px;display:flex;justify-content:space-between;
+  align-items:center;gap:20px;flex-wrap:wrap}
+.finish .k{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-2)}
+.finish .big{font-family:var(--mono);font-size:clamp(34px,6.4vw,46px);font-weight:700;color:var(--keep);
+  font-variant-numeric:tabular-nums;letter-spacing:-.03em;line-height:1.1;margin-top:6px}
+.finish .note{font-size:13.5px;color:var(--ink-2);margin-top:7px}
+.file{font-family:var(--disp);font-weight:600;font-size:15px;background:var(--ink);color:var(--paper);
+  border:0;border-radius:3px;padding:16px 26px;cursor:pointer;position:relative;overflow:hidden;
+  transition:opacity .2s}
+.file:disabled{background:var(--hair);color:var(--ink-3);cursor:not-allowed}
+.file .pg{position:absolute;left:0;bottom:0;height:3px;background:var(--keep);width:0}
+footer{max-width:1080px;margin:0 auto;padding:22px 24px 40px;color:var(--ink-3);font-size:13px}
+.tag{position:fixed;left:12px;bottom:12px;z-index:60;font-family:var(--mono);font-size:10px;
+  letter-spacing:.14em;text-transform:uppercase;background:var(--ink);color:var(--paper);padding:7px 11px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}
+  .margin .mbody{opacity:1;transform:none}
+  .card,.ch{opacity:1;transform:rotate(var(--tilt,0deg))}
+  .card.flash{animation:none}
+  .divider svg path,.spark path{stroke-dashoffset:0}.spark circle{opacity:1}}
+@media(max-width:640px){.card{padding:20px 18px 18px}.tier{padding:16px 18px}
+  .trace td,.trace tr.exp td,.tracehead{padding-left:18px;padding-right:18px}}
+
+/* app adaptation: fonts come from next/font (layout.tsx), not the Google <link> */
+:root{
+  --disp: var(--font-grotesk), 'Space Grotesk', system-ui, "Noto Sans Devanagari", "Noto Sans Tamil", sans-serif;
+  --serif: var(--font-serif-d13), 'Source Serif 4', Georgia, "Noto Serif Devanagari", "Noto Sans Devanagari", "Noto Sans Tamil", serif;
+  --mono: var(--font-jb-mono), 'JetBrains Mono', ui-monospace, "Noto Sans Devanagari", "Noto Sans Tamil", monospace;
+  --hand: var(--font-caveat), 'Caveat', cursive;
+}
+/* app adaptation: sizes/AY differ per persona; the view gating is React state,
+   not the data-view attribute, so those rules simply never both apply. */

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Claim, IncomeKind } from "../../types";
 import { compareRegimes, computeTax } from "../tax";
-import type { TaxInput } from "../types";
+import type { TaxInput, TaxInputFact } from "../types";
 
 function input(
-  facts: { kind: IncomeKind; amount: number }[],
+  facts: TaxInputFact[],
   opts: Partial<TaxInput> = {},
 ): TaxInput {
   return {
@@ -134,7 +134,7 @@ describe("golden file: Priya", () => {
   });
 });
 
-describe("golden file: Rakesh (capital gains taxed at slab — TODO(verify))", () => {
+describe("golden file: Rakesh (UNCLASSIFIED capital gains at slab — the labelled fallback for facts without asset-class metadata; classified facts get real rates, see the T1.9b suite below)", () => {
   const facts = [
     { kind: "salary" as const, amount: 1_860_000 },
     { kind: "interest" as const, amount: 22_400 },
@@ -210,5 +210,89 @@ describe("property tests", () => {
     const b = computeTax(input([]));
     expect(b.totalTax).toBe(0);
     expect(b.effectiveRate).toBe(0);
+  });
+});
+
+describe("T1.9b: special capital-gains rates when facts carry asset-class metadata", () => {
+  const rakeshBase = [
+    { kind: "salary" as const, amount: 1_860_000 },
+    { kind: "interest" as const, amount: 22_400 },
+    { kind: "dividend" as const, amount: 9_150 },
+  ];
+
+  it("s.111A (equity STT, short): 20% flat, excluded from slab income", () => {
+    const b = computeTax(input(
+      [...rakeshBase, { kind: "capital_gains", amount: 110_000, capitalGains: { assetClass: "equity_stt", holding: "short" } }],
+      { tdsCredits: 286_840 },
+    ));
+    expect(b.specialRate).toEqual([
+      { section: "111A", gains: 110_000, exemptAmount: 0, taxable: 110_000, rate: 0.2, tax: 22_000 },
+    ]);
+    // slab pool loses the gain: 2,001,550 - 110,000 - 75,000 std
+    expect(b.slabTax).toBe(163_310);
+    expect(b.taxBeforeRebate).toBe(185_310);
+    // Rakesh's gain sits entirely inside the 20% slab band, so the special-rate
+    // treatment lands on the same totals the labelled slab simplification gave:
+    expect(b.totalTax).toBe(192_722);
+    expect(b.refundOrDue).toBe(94_118);
+    expect(b.taxableIncome).toBe(1_926_550);
+  });
+
+  it("s.112A (equity STT, long): 12.5% above the shared Rs 1.25L exemption", () => {
+    const b = computeTax(input([
+      { kind: "salary", amount: 1_000_000 },
+      { kind: "capital_gains", amount: 200_000, capitalGains: { assetClass: "equity_stt", holding: "long" } },
+    ]));
+    expect(b.specialRate).toEqual([
+      { section: "112A", gains: 200_000, exemptAmount: 125_000, taxable: 75_000, rate: 0.125, tax: 9_375 },
+    ]);
+    // slab portion (925,000) is fully rebated u/s 87A; the special tax is NOT
+    expect(b.rebate87A).toBe(32_500);
+    expect(b.taxAfterRebate).toBe(9_375);
+    expect(b.totalTax).toBe(9_375 + 375);
+  });
+
+  it("s.112A gains entirely under the exemption are tax-free", () => {
+    const b = computeTax(input([
+      { kind: "salary", amount: 1_000_000 },
+      { kind: "capital_gains", amount: 120_000, capitalGains: { assetClass: "equity_stt", holding: "long" } },
+    ]));
+    expect(b.specialRate[0].taxable).toBe(0);
+    expect(b.totalTax).toBe(0);
+  });
+
+  it("s.112 (other assets, long): 12.5% without indexation", () => {
+    const b = computeTax(input([
+      { kind: "other", amount: 500_000 },
+      { kind: "capital_gains", amount: 100_000, capitalGains: { assetClass: "other", holding: "long" } },
+    ]));
+    expect(b.specialRate).toEqual([
+      { section: "112", gains: 100_000, exemptAmount: 0, taxable: 100_000, rate: 0.125, tax: 12_500 },
+    ]);
+    expect(b.totalTax).toBe(12_500 + 500);
+  });
+
+  it("non-equity SHORT-term gains are slab income in law - identical to unclassified", () => {
+    const classified = computeTax(input([
+      { kind: "other", amount: 500_000 },
+      { kind: "capital_gains", amount: 100_000, capitalGains: { assetClass: "other", holding: "short" } },
+    ]));
+    const unclassified = computeTax(input([
+      { kind: "other", amount: 500_000 },
+      { kind: "capital_gains", amount: 100_000 },
+    ]));
+    expect(classified.specialRate).toEqual([]);
+    expect(classified.totalTax).toBe(unclassified.totalTax);
+    expect(classified.taxableIncome).toBe(unclassified.taxableIncome);
+  });
+
+  it("deductions offset slab income only - they cannot erode special-rate gains", () => {
+    const b = computeTax(input([
+      { kind: "salary", amount: 100_000 },
+      { kind: "capital_gains", amount: 110_000, capitalGains: { assetClass: "equity_stt", holding: "short" } },
+    ]));
+    // std deduction (75,000) eats into salary, never into the 111A gain
+    expect(b.specialRate[0].tax).toBe(22_000);
+    expect(b.totalTax).toBe(22_000 + Math.round(22_000 * 0.04));
   });
 });

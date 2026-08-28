@@ -7,6 +7,7 @@ import type { Dict } from "../../lib/i18n";
 import { formatMoney } from "../../lib/money";
 import { computeTax } from "../../lib/engine/tax";
 import { AnimatedAmount } from "../ui/animated-amount";
+import { MockField, MockFill, MOCK } from "@/components/dev/mock-fill";
 
 export interface UserTaxProfile {
   fullName: string;
@@ -23,6 +24,8 @@ export interface UserTaxProfile {
   section80C: number | "";
   section80D: number | "";
 }
+
+export type WizardEmployment = UserTaxProfile["employmentType"];
 
 export const BLANK_USER_PROFILE: UserTaxProfile = {
   fullName: "",
@@ -46,6 +49,8 @@ interface RealUserTaxWizardProps {
   pan?: string;
   onComplete: (persona: Persona, regime: "new" | "old") => void;
   onCancel: () => void;
+  /** From onboarding's profession answer, so the same question is not asked twice (T3.5). */
+  initialEmploymentType?: WizardEmployment;
 }
 
 export default function RealUserTaxWizard({
@@ -54,6 +59,7 @@ export default function RealUserTaxWizard({
   pan,
   onComplete,
   onCancel,
+  initialEmploymentType,
 }: RealUserTaxWizardProps) {
   const [wizardStep, setWizardStep] = useState<number>(1);
 
@@ -82,8 +88,11 @@ export default function RealUserTaxWizard({
     return {
       ...BLANK_USER_PROFILE,
       pan: pan || "",
+      // The onboarding answer carries over; the grid below stays visible as a confirmation,
+      // pre-selected — correcting is one tap, re-answering is zero.
+      employmentType: initialEmploymentType ?? BLANK_USER_PROFILE.employmentType,
     };
-  }, [pan]);
+  }, [pan, initialEmploymentType]);
 
   const [formData, setFormData] = useState<UserTaxProfile>(initialProfile);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
@@ -168,7 +177,10 @@ export default function RealUserTaxWizard({
           <Volume2 size={13} className="shrink-0" />
         </button>
         {isShowing && (
-          <div className="absolute left-0 top-6 z-40 bg-navy text-white text-xs p-3 rounded-xl shadow-xl w-64 leading-relaxed font-sans border border-money/25">
+          <div className="absolute right-0 top-6 z-40 bg-navy text-white text-xs p-3 rounded-xl shadow-xl w-64 max-w-[78vw] leading-relaxed font-sans border border-money/25">
+          {/* right-anchored: the speaker sits at the end of its label, so a left-anchored
+              64-wide panel ran off the viewport edge and read as "the button does nothing"
+              (SS4B round 1, finding P2 - the handler was never dead, the panel was invisible). */}
             <p>{text}</p>
             <button
               onClick={() => setActiveTooltip(null)}
@@ -411,7 +423,7 @@ export default function RealUserTaxWizard({
       <div className="mb-6">
         <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden border border-line">
           <div
-            className="bg-money h-full transition-all duration-300"
+            className="bg-navy h-full transition-all duration-300"
             style={{ width: `${(wizardStep / 4) * 100}%` }}
           />
         </div>
@@ -430,13 +442,16 @@ export default function RealUserTaxWizard({
               <label className="block text-xs font-bold uppercase tracking-wider text-ink-2">
                 Your Full Name (as on your PAN card)
               </label>
-              <input
+              <MockField>
+                <input
                 type="text"
                 placeholder="e.g. Ramesh Kumar"
                 value={formData.fullName}
                 onChange={(e) => updateField("fullName", e.target.value)}
                 className="w-full px-4 py-2.5 bg-paper-2 border border-line rounded-xl text-ink text-sm focus:border-money focus:outline-none"
               />
+                <MockFill onFill={() => updateField("fullName", MOCK.fullName)} />
+              </MockField>
             </div>
 
             <div className="space-y-1">
@@ -449,6 +464,17 @@ export default function RealUserTaxWizard({
                   "பான் (PAN) என்பது உங்கள் தனித்துவமான 10 இலக்க வரி கணக்கு எண். ஒவ்வொரு வரி செலுத்துபவருக்கும் இது தேவை."
                 )}
               </label>
+              <MockField>
+                {pan ? (
+                <div className="w-full px-4 py-2.5 bg-paper-2 border border-line rounded-xl flex items-center justify-between">
+                  {/* They proved this at login; asking again reads as the login not working
+                      (SS4B round 1, finding P1). Shown as a settled fact, not a question. */}
+                  <span className="text-ink font-mono tracking-widest text-sm">{formData.pan}</span>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-money flex items-center gap-1">
+                    <Check size={12} /> from your login
+                  </span>
+                </div>
+              ) : (
               <input
                 type="text"
                 maxLength={10}
@@ -457,14 +483,23 @@ export default function RealUserTaxWizard({
                 onChange={(e) => updateField("pan", e.target.value.toUpperCase())}
                 className="w-full px-4 py-2.5 bg-paper-2 border border-line rounded-xl text-ink uppercase text-sm font-mono tracking-widest focus:border-money focus:outline-none"
               />
+              )}
+                {/* No FILL next to a read-only chip — there is nothing to fill. */}
+                {!pan && <MockFill onFill={() => updateField("pan", MOCK.pan)} />}
+              </MockField>
             </div>
           </div>
 
-          <div className="pt-4 flex justify-end">
+          <div className="pt-4 flex flex-col items-end gap-1.5">
+            {(!formData.fullName.trim() || formData.pan.length !== 10) && (
+              <p className="text-[11px] text-ink-3">
+                {t.wizard.identityNextHint}
+              </p>
+            )}
             <button
               disabled={!formData.fullName.trim() || formData.pan.length !== 10}
               onClick={() => setWizardStep(2)}
-              className="px-5 py-2.5 bg-money hover:bg-money-deep text-white text-sm font-bold rounded-xl disabled:bg-slate-200 disabled:text-ink-3 transition flex items-center gap-1 cursor-pointer"
+              className="px-5 py-2.5 bg-navy hover:opacity-90 text-white text-sm font-bold rounded-xl disabled:bg-slate-200 disabled:text-ink-3 transition flex items-center gap-1 cursor-pointer"
             >
               <span>Next: How you earn</span>
               <ChevronRight size={16} />
@@ -478,7 +513,11 @@ export default function RealUserTaxWizard({
         <div className="space-y-5">
           <div>
             <h3 className="text-base font-bold text-navy">How do you earn your living?</h3>
-            <p className="text-xs text-ink-2">Select the option that matches your primary livelihood.</p>
+            <p className="text-xs text-ink-2">
+              {initialEmploymentType
+                ? t.wizard.employmentConfirmHint
+                : "Select the option that matches your primary livelihood."}
+            </p>
           </div>
 
           {/* Livings grid */}
@@ -550,13 +589,16 @@ export default function RealUserTaxWizard({
                     <label className="block text-xs font-bold text-ink-2">
                       Enter your annual Gross Salary (CTC) (₹)
                     </label>
-                    <input
+                    <MockField>
+                      <input
                       type="number"
                       placeholder="e.g. 800000"
                       value={formData.annualSalaryInput}
                       onChange={(e) => updateField("annualSalaryInput", e.target.value === "" ? "" : Number(e.target.value))}
                       className="w-full px-4 py-2.5 bg-paper border border-line rounded-xl text-ink font-mono text-sm focus:border-money focus:outline-none"
                     />
+                      <MockFill onFill={() => updateField("annualSalaryInput", MOCK.annualSalary)} />
+                    </MockField>
                   </div>
                 )}
 
@@ -565,13 +607,16 @@ export default function RealUserTaxWizard({
                     <label className="block text-xs font-bold text-ink-2">
                       How much money enters your bank account each month? (₹)
                     </label>
-                    <input
+                    <MockField>
+                      <input
                       type="number"
                       placeholder="e.g. 50000"
                       value={formData.monthlySalaryInput}
                       onChange={(e) => updateField("monthlySalaryInput", e.target.value === "" ? "" : Number(e.target.value))}
                       className="w-full px-4 py-2.5 bg-paper border border-line rounded-xl text-ink font-mono text-sm focus:border-money focus:outline-none"
                     />
+                      <MockFill onFill={() => updateField("monthlySalaryInput", MOCK.monthlySalary)} />
+                    </MockField>
                     <span className="block text-[10px] text-ink-3 mt-1">
                       We will automatically calculate your annual salary as ₹{((Number(formData.monthlySalaryInput) || 0) * 12).toLocaleString("en-IN")}
                     </span>
@@ -585,13 +630,16 @@ export default function RealUserTaxWizard({
                 <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider">
                   Total Freelance Receipts for the Year (₹)
                 </label>
-                <input
+                <MockField>
+                  <input
                   type="number"
                   placeholder="e.g. 600000"
                   value={formData.consultingIncome}
                   onChange={(e) => updateField("consultingIncome", e.target.value === "" ? "" : Number(e.target.value))}
                   className="w-full px-4 py-2.5 bg-paper border border-line rounded-xl text-ink font-mono text-sm focus:border-money focus:outline-none"
                 />
+                  <MockFill onFill={() => updateField("consultingIncome", MOCK.consultingIncome)} />
+                </MockField>
               </div>
             )}
 
@@ -600,13 +648,16 @@ export default function RealUserTaxWizard({
                 <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider">
                   Total Business Receipts/Sales for the Year (₹)
                 </label>
-                <input
+                <MockField>
+                  <input
                   type="number"
                   placeholder="e.g. 1500000"
                   value={formData.businessIncome}
                   onChange={(e) => updateField("businessIncome", e.target.value === "" ? "" : Number(e.target.value))}
                   className="w-full px-4 py-2.5 bg-paper border border-line rounded-xl text-ink font-mono text-sm focus:border-money focus:outline-none"
                 />
+                  <MockFill onFill={() => updateField("businessIncome", MOCK.businessIncome)} />
+                </MockField>
               </div>
             )}
 
@@ -615,13 +666,16 @@ export default function RealUserTaxWizard({
                 <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider">
                   Total Pension / Agricultural Earnings (₹)
                 </label>
-                <input
+                <MockField>
+                  <input
                   type="number"
                   placeholder="e.g. 350000"
                   value={formData.otherIncome}
                   onChange={(e) => updateField("otherIncome", e.target.value === "" ? "" : Number(e.target.value))}
                   className="w-full px-4 py-2.5 bg-paper border border-line rounded-xl text-ink font-mono text-sm focus:border-money focus:outline-none"
                 />
+                  <MockFill onFill={() => updateField("otherIncome", MOCK.otherIncome)} />
+                </MockField>
               </div>
             )}
           </div>
@@ -631,13 +685,16 @@ export default function RealUserTaxWizard({
             <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider">
               Do you have savings bank interest or FD interest? (₹) <span className="text-red-500 font-semibold">(Mandatory. Enter 0 if none)</span>
             </label>
-            <input
+            <MockField>
+              <input
               type="number"
               placeholder="Enter interest amount or 0"
               value={formData.savingsInterest}
               onChange={(e) => updateField("savingsInterest", e.target.value === "" ? "" : Number(e.target.value))}
               className="w-full px-4 py-2.5 bg-paper border border-line rounded-xl text-ink font-mono text-sm focus:border-money focus:outline-none"
             />
+              <MockFill onFill={() => updateField("savingsInterest", MOCK.savingsInterest)} />
+            </MockField>
           </div>
 
           <div className="pt-4 flex justify-between">
@@ -651,7 +708,7 @@ export default function RealUserTaxWizard({
             <button
               disabled={!isStep2Valid}
               onClick={() => setWizardStep(3)}
-              className="px-5 py-2.5 bg-money hover:bg-money-deep text-white text-sm font-bold rounded-xl transition flex items-center gap-1 cursor-pointer disabled:bg-slate-200 disabled:text-ink-3"
+              className="px-5 py-2.5 bg-navy hover:opacity-90 text-white text-sm font-bold rounded-xl transition flex items-center gap-1 cursor-pointer disabled:bg-slate-200 disabled:text-ink-3"
             >
               <span>Next: Taxes & Investments</span>
               <ChevronRight size={16} />
@@ -679,13 +736,21 @@ export default function RealUserTaxWizard({
                   "டிடிஎஸ் (TDS) என்பது நிறுவனங்கள் அல்லது வங்கிகள் உங்களுக்கு பணம் செலுத்துவதற்கு முன் பிடித்தம் செய்த தொகையாகும். இது கிரெடிட்டாக கணக்கிடப்படும்."
                 )}
               </label>
-              <input
+              <MockField>
+                <input
                 type="number"
                 placeholder="Enter TDS or 0"
                 value={formData.tdsDeducted}
                 onChange={(e) => updateField("tdsDeducted", e.target.value === "" ? "" : Number(e.target.value))}
                 className="w-full px-4 py-2.5 bg-paper-2 border border-line rounded-xl text-ink font-mono text-sm focus:border-money focus:outline-none"
               />
+                {formData.employmentType === "salaried" && formData.tdsDeducted === 0 && (
+                  <p className="mt-2 text-xs font-semibold text-warn bg-warn-soft border border-warn/30 rounded-lg px-3 py-2">
+                    {t.wizard.tdsZeroWarning}
+                  </p>
+                )}
+                <MockFill onFill={() => updateField("tdsDeducted", MOCK.tdsDeducted)} />
+              </MockField>
             </div>
 
             <div className="space-y-1">
@@ -698,13 +763,16 @@ export default function RealUserTaxWizard({
                   "செக்ஷன் 80C-ன் கீழ், நீங்கள் பிபிஎஃப், இஎல்எஸ்எஸ் அல்லது இபிஎஃப் ஆகியவற்றில் முதலீடு செய்வதன் மூலம் வரி விதிக்கக்கூடிய வருமானத்தை ₹1.5 லட்சம் வரை குறைக்கலாம்."
                 )}
               </label>
-              <input
+              <MockField>
+                <input
                 type="number"
                 placeholder="Enter Section 80C investments or 0"
                 value={formData.section80C}
                 onChange={(e) => updateField("section80C", e.target.value === "" ? "" : Number(e.target.value))}
                 className="w-full px-4 py-2.5 bg-paper-2 border border-line rounded-xl text-ink font-mono text-sm focus:border-money focus:outline-none"
               />
+                <MockFill onFill={() => updateField("section80C", MOCK.section80C)} />
+              </MockField>
             </div>
 
             <div className="space-y-1">
@@ -717,13 +785,16 @@ export default function RealUserTaxWizard({
                   "செக்ஷன் 80D என்பது உங்களுக்கோ அல்லது உங்கள் பெற்றோருக்கோ மருத்துவ காப்பீட்டு பாலிசிகளை வாங்குவதற்காக செலவழிக்கப்பட்ட பணத்திற்கான வரி விலக்கு ஆகும்."
                 )}
               </label>
-              <input
+              <MockField>
+                <input
                 type="number"
                 placeholder="Enter Section 80D premium or 0"
                 value={formData.section80D}
                 onChange={(e) => updateField("section80D", e.target.value === "" ? "" : Number(e.target.value))}
                 className="w-full px-4 py-2.5 bg-paper-2 border border-line rounded-xl text-ink font-mono text-sm focus:border-money focus:outline-none"
               />
+                <MockFill onFill={() => updateField("section80D", MOCK.section80D)} />
+              </MockField>
             </div>
           </div>
 
@@ -738,7 +809,7 @@ export default function RealUserTaxWizard({
             <button
               disabled={!isStep3Valid}
               onClick={() => setWizardStep(4)}
-              className="px-5 py-2.5 bg-money hover:bg-money-deep text-white text-sm font-bold rounded-xl transition flex items-center gap-1 cursor-pointer disabled:bg-slate-200 disabled:text-ink-3"
+              className="px-5 py-2.5 bg-navy hover:opacity-90 text-white text-sm font-bold rounded-xl transition flex items-center gap-1 cursor-pointer disabled:bg-slate-200 disabled:text-ink-3"
             >
               <span>Next: Optimize my tax</span>
               <ChevronRight size={16} />
@@ -786,7 +857,7 @@ export default function RealUserTaxWizard({
                     New Regime (AY 2026-27)
                   </span>
                   {newBreakdown.refundOrDue >= oldBreakdown.refundOrDue && (
-                    <span className="bg-money text-white text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded flex items-center gap-0.5 shrink-0">
+                    <span className="bg-navy text-white text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded flex items-center gap-0.5 shrink-0">
                       <Sparkles size={8} />
                       <span>Best Choice</span>
                     </span>
@@ -838,7 +909,7 @@ export default function RealUserTaxWizard({
                     Old Regime
                   </span>
                   {oldBreakdown.refundOrDue > newBreakdown.refundOrDue && (
-                    <span className="bg-money text-white text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded flex items-center gap-0.5 shrink-0">
+                    <span className="bg-navy text-white text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded flex items-center gap-0.5 shrink-0">
                       <Sparkles size={8} />
                       <span>Best Choice</span>
                     </span>
@@ -945,7 +1016,7 @@ export default function RealUserTaxWizard({
             </button>
             <button
               onClick={handleFinish}
-              className="px-6 py-3 bg-money hover:bg-money-deep text-white text-sm font-extrabold rounded-xl transition flex items-center gap-1.5 shadow-md cursor-pointer"
+              className="px-6 py-3 bg-navy hover:opacity-90 text-white text-sm font-extrabold rounded-xl transition flex items-center gap-1.5 shadow-md cursor-pointer"
             >
               <Check size={18} />
               <span>Confirm & Lock Selected Regime</span>

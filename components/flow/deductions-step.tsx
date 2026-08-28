@@ -5,6 +5,7 @@ import { Trash2, HelpCircle } from "lucide-react";
 import type { Persona, Lang } from "../../lib/types";
 import type { Dict } from "../../lib/i18n";
 import { formatMoney } from "../../lib/money";
+import { fireMiniBurst } from "../ambient/mini-burst";
 import { claimWorth, capFor } from "../../lib/return/compute";
 import { localize } from "../mock-i18n";
 
@@ -106,8 +107,13 @@ export default function DeductionsStep({
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => onAddClaim(question.section, question.defaultAmount)}
-                className="bg-money hover:bg-money-deep text-paper text-xs font-semibold py-2 px-3 rounded-lg transition-colors"
+                onClick={(e) => {
+                  // a little celebration per claim - rewarding, not noisy
+                  const r = e.currentTarget.getBoundingClientRect();
+                  fireMiniBurst(r.x + r.width / 2, r.y + r.height / 2);
+                  onAddClaim(question.section, question.defaultAmount);
+                }}
+                className="bg-navy hover:opacity-90 text-paper text-xs font-semibold py-2 px-3 rounded-lg transition-colors"
               >
                 {t.deductions.claimIt}
               </button>
@@ -154,6 +160,11 @@ export default function DeductionsStep({
                             : t.deductions.evidenceMissing}
                         </span>
                       </div>
+                      {/* SS4B F2: a figure the user never typed must say where it
+                          came from and how to change it. */}
+                      <p className="text-[0.7rem] leading-relaxed text-ink-3">
+                        {t.deductions.startedAtCap(formatMoney(claim.amount, lang))}
+                      </p>
                     </div>
                     <button
                       onClick={() => onRemoveClaim(claim.id)}

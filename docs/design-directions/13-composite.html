@@ -1,0 +1,899 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="theme.js"></script>
+<script>
+/* view mode runs before paint, same trick as theme.js — no flash of the wrong density */
+(function(){var K="wapsi-design-view";var v="simple";try{v=localStorage.getItem(K)||"simple"}catch(e){}
+ document.documentElement.setAttribute("data-view",v==="full"?"full":"simple")})();
+</script>
+<title>Direction 13 — Composite</title>
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500;700&family=Caveat:wght@600;700&display=swap">
+<style>
+/* ── light: graph paper on a desk, ink drifting over it ─────────── */
+:root{
+  --paper:#F2EFE4; --grid:#D9D2B9; --card:#FBF9F1; --card-2:#F4F1E6;
+  --ink:#1C2233; --ink-2:#4A4E5C; --ink-3:#7C8090;
+  --edge:#1C2233; --hair:#D9D2B9;
+  /* text shades — badges, stat numbers, legends, links. All clear 4.5:1 on the paper
+     and on their own tint, which is what stops them going brighter still. */
+  --blue:#1361C7; --blue-bg:#DEEAFB;
+  --amber:#8C5D08; --amber-bg:#FAEBCE;
+  --brick:#C6331D; --brick-bg:#FCE6E1;
+  --green:#107A50; --green-bg:#E0F2E8;
+  /* fill shades — bars, meters, pins, motes, and the big numerals. Nothing small is
+     set in these, so they can run brighter than the text shades. */
+  --in:#1A6FE0;   /* what you earned / what stays yours */
+  --out:#DE4025;  /* what went to tax */
+  --keep:#149B67; /* what comes back */
+  --shadow:4px 6px 0 rgba(28,34,51,.13);
+  --shadow-hi:6px 9px 0 rgba(28,34,51,.16);
+  --pin-a:#F5867A; --pin-b:#C6331D;
+  --veil:radial-gradient(130% 78% at 50% 4%,transparent 8%,color-mix(in srgb,#F2EFE4 62%,transparent) 46%,#F2EFE4 88%);
+  --motes-blend:multiply;
+  --disp:'Space Grotesk',system-ui,sans-serif; --serif:'Source Serif 4',Georgia,serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace; --hand:'Caveat',cursive;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#12141A; --grid:#232833; --card:#1A1E27; --card-2:#171B23;
+  --ink:#E9ECF2; --ink-2:#B0B6C4; --ink-3:#7C8494;
+  --edge:#333B4B; --hair:#282E3A;
+  --blue:#7FA9D8; --blue-bg:#1B2A3C;
+  --amber:#DFA855; --amber-bg:#2E2413;
+  --brick:#E08471; --brick-bg:#331F1B;
+  --green:#77BC90; --green-bg:#16281D;
+  --in:#7FA9D8; --out:#E08471; --keep:#77BC90;
+  --shadow:4px 6px 0 rgba(0,0,0,.45);
+  --shadow-hi:6px 9px 0 rgba(0,0,0,.55);
+  --pin-a:#F0897E; --pin-b:#B4523F;
+  --veil:radial-gradient(130% 78% at 50% 4%,transparent 8%,color-mix(in srgb,#12141A 62%,transparent) 46%,#12141A 88%);
+  --motes-blend:screen;
+}}
+:root[data-theme="dark"]{
+  --paper:#12141A; --grid:#232833; --card:#1A1E27; --card-2:#171B23;
+  --ink:#E9ECF2; --ink-2:#B0B6C4; --ink-3:#7C8494;
+  --edge:#333B4B; --hair:#282E3A;
+  --blue:#7FA9D8; --blue-bg:#1B2A3C;
+  --amber:#DFA855; --amber-bg:#2E2413;
+  --brick:#E08471; --brick-bg:#331F1B;
+  --green:#77BC90; --green-bg:#16281D;
+  --in:#7FA9D8; --out:#E08471; --keep:#77BC90;
+  --shadow:4px 6px 0 rgba(0,0,0,.45);
+  --shadow-hi:6px 9px 0 rgba(0,0,0,.55);
+  --pin-a:#F0897E; --pin-b:#B4523F;
+  --veil:radial-gradient(130% 78% at 50% 4%,transparent 8%,color-mix(in srgb,#12141A 62%,transparent) 46%,#12141A 88%);
+  --motes-blend:screen;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;background:var(--paper)}
+body{margin:0;color:var(--ink);font-family:var(--serif);font-size:17px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;padding-bottom:96px;background:transparent;
+  transition:color .3s}
+/* the graph paper is painted on a fixed layer so the motes can sit under it */
+.paper{position:fixed;inset:0;z-index:-2;background:
+  linear-gradient(var(--grid) 1px,transparent 1px) 0 0/100% 28px,
+  linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/28px 100%,
+  var(--paper);transition:background-color .3s}
+#sketch{position:fixed;inset:0;z-index:-1;pointer-events:none;mix-blend-mode:var(--motes-blend)}
+#sketch canvas{display:block}
+/* the confetti fires from the file button, so it has to sit above the panels */
+#pop{position:fixed;inset:0;z-index:70;pointer-events:none}
+#pop canvas{display:block}
+.veil{position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--veil)}
+
+h1,h2,h3,.disp{font-family:var(--disp)}
+.hand{font-family:var(--hand)}
+a{color:var(--blue)}
+
+/* ── nav + the view switch ──────────────────── */
+nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--paper) 92%,transparent);
+  border-bottom:2px solid var(--edge);backdrop-filter:blur(4px)}
+.nav-in{max-width:1080px;margin:0 auto;display:flex;gap:6px;padding:9px 20px;
+  align-items:center}
+.nav-links{display:flex;gap:4px;overflow-x:auto;white-space:nowrap;flex:1;min-width:0}
+.nav-in a{font-family:var(--disp);font-size:12.5px;font-weight:600;letter-spacing:.03em;
+  text-transform:uppercase;color:var(--ink-2);text-decoration:none;padding:6px 10px;
+  border-radius:3px;border:1px solid transparent}
+.nav-in a:hover,.nav-in a:focus-visible{border-color:var(--edge);color:var(--ink);outline:none}
+.switch{display:flex;align-items:center;gap:9px;flex-shrink:0}
+.switch .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-3);display:none}
+@media(min-width:720px){.switch .k{display:block}}
+.seg{display:flex;border:1.5px solid var(--edge);border-radius:4px;overflow:hidden;background:var(--card)}
+.seg button{font-family:var(--disp);font-size:11.5px;font-weight:600;letter-spacing:.04em;
+  border:0;background:transparent;color:var(--ink-2);padding:7px 11px;cursor:pointer;
+  transition:background .18s,color .18s;white-space:nowrap}
+.seg button:hover{background:var(--card-2)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.seg button:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
+
+/* what each view shows */
+:root[data-view="simple"] .pro{display:none!important}
+:root[data-view="full"] .lite{display:none!important}
+/* full detail drops the tap-to-confirm gate: it exists to make someone who cannot
+   read the trace read the plain words first. Anyone reading the trace has already done that. */
+:root[data-view="full"] .card{cursor:default}
+:root[data-view="full"] .confirmline{display:none}
+/* Full detail drops the plain-words margin notes too. A CA has the same information in
+   professional form — source links, section references, the line-by-line trace — so the note
+   is duplicated effort and pure vertical cost for them. */
+:root[data-view="full"] .margin{display:none}
+
+header.hero{max-width:1080px;margin:0 auto;padding:44px 24px 4px}
+.stamp{display:inline-block;font-family:var(--mono);font-size:12px;color:var(--ink-2);
+  border:1px solid var(--ink-2);padding:3px 8px;border-radius:2px;transform:rotate(-1.5deg)}
+h1.title{font-size:clamp(27px,4.6vw,40px);margin:14px 0 6px;line-height:1.14;font-weight:700}
+.sub{color:var(--ink-2);font-size:17.5px;max-width:58ch;margin:0}
+
+main{max-width:1080px;margin:0 auto;padding:0 24px}
+
+/* ── the three channels, at the absolute top ──── */
+.headline{margin-top:26px}
+.channels{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:760px){.channels{grid-template-columns:1fr}}
+.ch{position:relative;background:var(--card);border:1px solid var(--edge);box-shadow:var(--shadow);
+  border-radius:2px;padding:17px 18px 20px;overflow:hidden;
+  opacity:0;transform:translateY(14px);animation:rise .65s cubic-bezier(.2,.8,.2,1) forwards}
+.ch:nth-child(1){animation-delay:.10s} .ch:nth-child(2){animation-delay:.22s} .ch:nth-child(3){animation-delay:.34s}
+@keyframes rise{to{opacity:1;transform:none}}
+.ch::after{content:"";position:absolute;left:0;bottom:0;height:3px;background:var(--c,var(--in));
+  width:var(--fill,0);min-width:4px;transition:width 1.5s cubic-bezier(.2,.8,.2,1) .55s}
+.ch .k{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.ch .v{font-family:var(--mono);font-size:clamp(24px,3.4vw,30px);font-weight:700;margin-top:8px;
+  letter-spacing:-.025em;font-variant-numeric:tabular-nums;color:var(--c,var(--ink));line-height:1}
+.ch .pct{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-top:7px;letter-spacing:.04em}
+.ch .d{font-size:14px;color:var(--ink-2);margin-top:6px;line-height:1.45}
+
+/* one honest bar for the whole year */
+.split{margin-top:14px;background:var(--card);border:1px solid var(--edge);box-shadow:var(--shadow);
+  border-radius:2px;padding:15px 18px 16px}
+.split .cap{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:10px}
+.bar{display:flex;height:22px;border:1px solid var(--edge);border-radius:2px;overflow:hidden;background:var(--card-2)}
+.bar i{display:block;height:100%;width:0;transition:width 1.5s cubic-bezier(.2,.8,.2,1) .5s}
+.bar i.mine{background:var(--in)} .bar i.tax{background:var(--out)} .bar i.back{background:var(--keep)}
+.keys{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:11px}
+.key{font-size:14px;color:var(--ink-2);display:flex;align-items:baseline;gap:8px}
+.key i{width:9px;height:9px;border-radius:2px;flex-shrink:0;transform:translateY(0)}
+.key .amt-s{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink);font-weight:500}
+.key .p{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.footnote{font-size:13px;color:var(--ink-3);margin:10px 0 0;line-height:1.45}
+
+.thread{margin-top:22px;padding:14px 18px;background:var(--blue-bg);
+  border-left:4px solid var(--blue);border-radius:2px;font-size:15.5px}
+
+/* hand-drawn dividers */
+.divider{display:flex;align-items:center;gap:10px;margin:40px 0 20px}
+.divider .line{flex:1;height:1px;background:var(--grid)}
+.divider .label{font-family:var(--mono);font-size:11px;letter-spacing:.08em;
+  color:var(--ink-2);text-transform:uppercase}
+.divider svg path{stroke-dasharray:120;stroke-dashoffset:120;animation:draw 1.1s ease-out forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+
+/* ── pinned index cards, two to a row ───────── */
+.board{display:grid;grid-template-columns:1fr;gap:20px;align-items:start}
+@media(min-width:880px){.board{grid-template-columns:1fr 1fr}}
+.card{position:relative;background:var(--card);border:1px solid var(--edge);
+  box-shadow:var(--shadow);border-radius:2px;padding:24px 24px 20px;
+  cursor:pointer;opacity:0;transform:translateY(16px) rotate(var(--tilt,0deg));
+  transition:box-shadow .2s,border-color .2s}
+.card.in{opacity:1;transform:translateY(0) rotate(var(--tilt,0deg));
+  transition:opacity .55s,transform .55s cubic-bezier(.2,.85,.25,1),box-shadow .2s,border-color .2s}
+.card:hover{box-shadow:var(--shadow-hi)}
+.card:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+.card.ok{--tilt:0deg;border-color:var(--keep)}
+.pin{position:absolute;top:-10px;left:24px;width:18px;height:18px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,var(--pin-a),var(--pin-b));
+  box-shadow:0 2px 3px rgba(0,0,0,.35);transition:background .3s,transform .3s}
+.card.ok .pin{background:radial-gradient(circle at 35% 30%,var(--keep),#0C6540);transform:scale(1.12)}
+.no{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+.card h3{margin:2px 0 2px;font-size:21px}
+.card .who{color:var(--ink-2);font-size:14px;margin-bottom:12px}
+.badges{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px}
+.badge{font-family:var(--disp);font-weight:600;font-size:11.5px;letter-spacing:.04em;
+  text-transform:uppercase;padding:4px 9px;border-radius:20px;border:1.4px solid currentColor}
+.badge.rep{color:var(--blue);background:var(--blue-bg)}
+.badge.you{color:var(--green);background:var(--green-bg)}
+.badge.sys{color:var(--amber);background:var(--amber-bg)}
+.badge.dis{color:var(--brick);background:var(--brick-bg)}
+.amt{font-family:var(--mono);font-weight:700;font-size:25px;color:var(--ink);
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.margin{margin:14px 0 2px;background:var(--amber-bg);
+  border-left:4px solid var(--amber);border-radius:2px;font-size:15px;color:var(--ink)}
+.margin summary{list-style:none;cursor:pointer;padding:9px 14px;display:flex;
+  align-items:center;justify-content:space-between;gap:10px}
+.margin summary::-webkit-details-marker{display:none}
+.margin summary::after{content:"";width:7px;height:7px;flex-shrink:0;margin-right:3px;
+  border-right:2px solid var(--ink-2);border-bottom:2px solid var(--ink-2);
+  transform:translateY(-2px) rotate(45deg);transition:transform .22s,border-color .18s}
+.margin[open] summary::after{transform:translateY(2px) rotate(-135deg)}
+.margin summary:hover::after{border-color:var(--ink)}
+.margin summary:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
+.margin .hand{font-size:21px;color:var(--ink);line-height:1.1}
+.margin .mbody{padding:0 14px 11px;line-height:1.5}
+.margin[open] .mbody{animation:unfold .24s ease-out}
+@keyframes unfold{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+/* source links — only when you want the paper trail */
+.links{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px}
+.links button{font-family:var(--mono);font-size:11px;color:var(--blue);background:none;border:0;
+  padding:0;cursor:pointer;letter-spacing:.03em}
+.links button:hover{text-decoration:underline}
+.confirmline{margin-top:14px;font-family:var(--mono);font-size:11px;color:var(--ink-3);
+  letter-spacing:.06em;text-transform:uppercase}
+.card.ok .confirmline{color:var(--keep)}
+
+/* ── the working: arithmetic beside the read-outs ── */
+.work{display:grid;grid-template-columns:1fr;gap:20px;align-items:start}
+@media(min-width:980px){.work{grid-template-columns:1fr 330px}}
+.sheet{background:var(--card);border:1px solid var(--edge);box-shadow:var(--shadow);
+  border-radius:2px;padding:8px 0 6px}
+.tier{padding:20px 24px;border-bottom:1px dashed var(--hair)}
+.tier:last-child{border-bottom:none}
+.tier h3{margin:0 0 10px;font-size:18px}
+.stat-row{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0 2px}
+.stat{flex:1 1 150px;background:var(--card-2);border:1px solid var(--hair);border-radius:3px;padding:10px 12px}
+.stat .num{font-family:var(--mono);font-weight:700;font-size:19px;color:var(--blue);
+  display:block;font-variant-numeric:tabular-nums}
+.stat .lbl{font-size:12.5px;color:var(--ink-2)}
+.calc-row{display:flex;justify-content:space-between;gap:14px;padding:7px 0;font-size:15.5px;color:var(--ink-2)}
+.calc-row .v{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.calc-row.t{border-top:1px solid var(--hair);margin-top:6px;padding-top:11px;color:var(--ink);font-weight:600}
+.callout{margin:14px 0 2px;padding:12px 14px;border-radius:2px;font-size:15px}
+.callout.good{background:var(--green-bg);border-left:4px solid var(--keep)}
+
+/* the full trace — every step opens */
+.trace{width:100%;border-collapse:collapse;font-size:15px}
+.trace td{padding:9px 24px;border-bottom:1px solid var(--hair);color:var(--ink-2)}
+.trace td.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;
+  white-space:nowrap;color:var(--ink)}
+.trace tr.t td{border-top:1px solid var(--hair);color:var(--ink);font-weight:600}
+.trace tr.g td{border-top:2px solid var(--edge);font-size:18px;font-weight:700;color:var(--ink)}
+.trace tr.g td.n{color:var(--keep)}
+.trace tr.head-row{cursor:pointer}
+.trace tr.head-row:hover td{background:var(--card-2)}
+.trace tr.exp{display:none}
+.trace tr.exp.on{display:table-row}
+.trace tr.exp td{background:var(--card-2);font-family:var(--mono);font-size:12px;color:var(--ink-2);
+  padding:10px 24px 12px;line-height:1.6}
+.caret{display:inline-block;width:12px;color:var(--ink-3);font-family:var(--mono);font-size:10px;
+  transition:transform .25s}
+.trace tr.open .caret{transform:rotate(90deg)}
+.tracehead{padding:11px 24px;border-bottom:1px solid var(--hair);display:flex;
+  justify-content:space-between;gap:10px;flex-wrap:wrap;
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+
+/* right rail — the read-outs */
+.rail{background:var(--card);border:1px solid var(--edge);box-shadow:var(--shadow);border-radius:2px}
+/* SS9.3 fix: at two columns the tall rail spans both rows, and the trace fills
+   the left column directly under the short panel - no dead block between them. */
+@media(min-width:980px){.work .rail{grid-column:2;grid-row:1/span 2}.work .sheet.pro.trace-sheet{grid-column:1;order:0}}
+.ro{padding:18px 20px;border-bottom:1px dashed var(--hair)}
+.ro:last-child{border-bottom:0}
+.ro .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.ro .v{font-family:var(--mono);font-size:31px;font-weight:700;letter-spacing:-.025em;
+  font-variant-numeric:tabular-nums;margin-top:7px;line-height:1;color:var(--keep)}
+.ro .d{font-size:14px;color:var(--ink-2);margin-top:9px;line-height:1.5}
+.spark{width:100%;height:36px;margin-top:11px;display:block}
+.spark path{fill:none;stroke:var(--keep);stroke-width:1.8;stroke-linecap:round;
+  stroke-dasharray:400;stroke-dashoffset:400;animation:draw 1.4s ease-out .3s forwards}
+.spark circle{fill:var(--keep);opacity:0;animation:pop .4s ease-out 1.5s forwards}
+@keyframes pop{to{opacity:1}}
+.meter{height:9px;background:var(--card-2);border:1px solid var(--hair);border-radius:2px;
+  overflow:hidden;margin-top:11px;display:flex}
+.meter i{display:block;height:100%;width:0;transition:width 1.2s cubic-bezier(.2,.85,.25,1)}
+.meter i.a{background:var(--out)} .meter i.b{background:var(--keep)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:9px;font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.legend span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}
+.legend .a::before{background:var(--out)} .legend .b::before{background:var(--keep)}
+
+/* ── checklist + finish ─────────────────────── */
+.checklist{background:var(--card);border:1px solid var(--edge);box-shadow:var(--shadow);
+  border-radius:2px;padding:18px 24px}
+.check{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--hair);cursor:pointer}
+.check:last-child{border-bottom:none}
+.box{flex-shrink:0;width:19px;height:19px;border:2px solid var(--edge);border-radius:3px;
+  margin-top:3px;position:relative;transition:border-color .25s}
+.box svg{position:absolute;inset:-2px;width:19px;height:19px}
+.box path{fill:none;stroke:var(--keep);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:22;stroke-dashoffset:22;transition:stroke-dashoffset .35s cubic-bezier(.3,.8,.3,1)}
+.check.done .box{border-color:var(--keep)}
+.check.done .box path{stroke-dashoffset:0}
+.check.done .txt{color:var(--ink-3);text-decoration:line-through}
+#solo.done .txt{color:var(--ink);text-decoration:none}
+.txt{font-size:15.5px}
+.jump{color:var(--blue);text-decoration:none;border-bottom:1.5px solid color-mix(in srgb,var(--blue) 38%,transparent)}
+.jump:hover,.jump:focus-visible{border-bottom-color:var(--blue);outline:none}
+.jump:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:2px}
+.check.done .jump{color:var(--ink-3);border-bottom-color:transparent}
+.card{scroll-margin-top:78px}
+.card.flash{animation:flash 1.5s ease-out}
+@keyframes flash{0%,100%{box-shadow:var(--shadow)}
+  18%{box-shadow:0 0 0 3px var(--blue),var(--shadow)}
+  62%{box-shadow:0 0 0 3px var(--blue),var(--shadow)}}
+
+.finish{margin-top:20px;background:var(--card);border:1px solid var(--edge);box-shadow:var(--shadow);
+  border-radius:2px;padding:22px 24px;display:flex;justify-content:space-between;
+  align-items:center;gap:20px;flex-wrap:wrap}
+.finish .k{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-2)}
+.finish .big{font-family:var(--mono);font-size:clamp(34px,6.4vw,46px);font-weight:700;color:var(--keep);
+  font-variant-numeric:tabular-nums;letter-spacing:-.03em;line-height:1.1;margin-top:6px}
+.finish .note{font-size:13.5px;color:var(--ink-2);margin-top:7px}
+.file{font-family:var(--disp);font-weight:600;font-size:15px;background:var(--ink);color:var(--paper);
+  border:0;border-radius:3px;padding:16px 26px;cursor:pointer;position:relative;overflow:hidden;
+  transition:opacity .2s}
+.file:disabled{background:var(--hair);color:var(--ink-3);cursor:not-allowed}
+.file .pg{position:absolute;left:0;bottom:0;height:3px;background:var(--keep);width:0}
+footer{max-width:1080px;margin:0 auto;padding:22px 24px 40px;color:var(--ink-3);font-size:13px}
+.tag{position:fixed;left:12px;bottom:12px;z-index:60;font-family:var(--mono);font-size:10px;
+  letter-spacing:.14em;text-transform:uppercase;background:var(--ink);color:var(--paper);padding:7px 11px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}
+  .margin .mbody{opacity:1;transform:none}
+  .card,.ch{opacity:1;transform:rotate(var(--tilt,0deg))}
+  .card.flash{animation:none}
+  .divider svg path,.spark path{stroke-dashoffset:0}.spark circle{opacity:1}}
+@media(max-width:640px){.card{padding:20px 18px 18px}.tier{padding:16px 18px}
+  .trace td,.trace tr.exp td,.tracehead{padding-left:18px;padding-right:18px}}
+</style>
+</head>
+<body>
+
+<div class="paper"></div><div id="sketch"></div><div class="veil"></div><div id="pop"></div>
+
+<nav><div class="nav-in">
+  <div class="nav-links">
+    <a href="#top">Cover</a><a href="#facts">The facts</a><a href="#work">Working</a><a href="#checks">Before filing</a>
+  </div>
+  <div class="switch">
+    <span class="k">View</span>
+    <div class="seg" role="group" aria-label="How much detail to show">
+      <button type="button" id="vSimple" aria-pressed="true">Simple</button>
+      <button type="button" id="vFull" aria-pressed="false">Full detail</button>
+    </div>
+  </div>
+</div></nav>
+
+<header class="hero" id="top">
+  <span class="stamp">CASE 4471 · TAX YEAR 2026&ndash;27 · SALARIED</span>
+  <h1 class="title">Priya Sharma &mdash; salaried, one employer</h1>
+  <p class="sub">Here is your whole year in three numbers. Everything below explains where they came from.</p>
+</header>
+
+<main>
+
+  <!-- ── the three numbers, before anything else ──────────── -->
+  <section class="headline" aria-label="Your year in three numbers">
+    <div class="channels">
+      <div class="ch" style="--c:var(--in);--fill:100%">
+        <div class="k">You earned</div>
+        <div class="v" data-count="1243480">&#8377;0</div>
+        <div class="pct">the whole year</div>
+        <div class="d">Salary and bank interest, as reported by the people who paid you.</div>
+      </div>
+      <div class="ch" style="--c:var(--out);--fill:7.36%">
+        <div class="k">Went to tax</div>
+        <div class="v" data-count="91520">&#8377;0</div>
+        <div class="pct">7.4% of what you earned</div>
+        <div class="d">What you actually owed, after every deduction you are entitled to.</div>
+      </div>
+      <div class="ch" style="--c:var(--keep);--fill:0.51%">
+        <div class="k">You overpaid</div>
+        <div class="v" data-count="6400">&#8377;0</div>
+        <div class="pct">0.5% of what you earned</div>
+        <div class="d">Taken from your salary but never owed. This comes back to you.</div>
+      </div>
+    </div>
+
+    <div class="split">
+      <div class="cap">Where every rupee you earned went</div>
+      <div class="bar" role="img"
+           aria-label="Of ₹12,43,480 earned: ₹11,45,560 or 92.1% never left you, ₹91,520 or 7.4% was tax you owed, ₹6,400 or 0.5% was overpaid and is coming back.">
+        <i class="mine" data-w="92.13%"></i><i class="tax" data-w="7.36%"></i><i class="back" data-w="0.51%" style="min-width:7px"></i>
+      </div>
+      <div class="keys">
+        <span class="key"><i style="background:var(--in)"></i>Never left you <span class="amt-s">&#8377;11,45,560</span> <span class="p">92.1%</span></span>
+        <span class="key"><i style="background:var(--out)"></i>Tax you owed <span class="amt-s">&#8377;91,520</span> <span class="p">7.4%</span></span>
+        <span class="key"><i style="background:var(--keep)"></i>Coming back to you <span class="amt-s">&#8377;6,400</span> <span class="p">0.5%</span></span>
+      </div>
+      <p class="footnote">The refund slice is drawn a little wider than 0.5% so you can still see it.</p>
+    </div>
+  </section>
+
+  <div class="thread"><strong>How to read this:</strong> nothing here was invented by us. Every figure
+  came from a document someone filed, or from something you entered yourself. The pencil notes explain
+  what each one actually means &mdash; in plain words, not tax words. Switch to <b>Full detail</b> at the
+  top for the source documents and the line-by-line arithmetic.</div>
+
+  <div class="divider">
+    <svg width="70" height="18" viewBox="0 0 70 18" aria-hidden="true"><path d="M0 15 C 10 15, 15 4, 25 4 S 40 15, 50 15 S 60 3, 70 3" fill="none" stroke="var(--blue)" stroke-width="2"/></svg>
+    <span class="label">The facts &middot; 5 cards</span><div class="line"></div>
+  </div>
+
+  <section id="facts" class="board">
+
+    <article class="card" id="card-1" style="--tilt:-.4deg" tabindex="0">
+      <div class="pin"></div>
+      <div class="no">CARD 01 &middot; REPORTED 14 JUN 2026</div>
+      <h3>Salary received</h3>
+      <div class="who">Meridian Systems Pvt Ltd &middot; Form 16, Part B<span class="pro"> &middot; TAN BLRM09321F</span></div>
+      <div class="badges"><span class="badge rep">Reported by employer</span><span class="badge sys">Matches your bank&rsquo;s statement</span></div>
+      <div class="amt">&#8377;12,40,000</div>
+      <details class="margin">
+        <summary><span class="hand">what this is</span></summary>
+        <div class="mbody">Everything your employer paid you this year before anything was taken out &mdash; not what landed in your bank account.</div>
+      </details>
+      <div class="links pro"><button type="button">open Form 16 &#8599;</button><button type="button">this looks wrong &#8599;</button></div>
+      <div class="confirmline">Tap this card to confirm it</div>
+    </article>
+
+    <article class="card" id="card-2" style="--tilt:.35deg" tabindex="0">
+      <div class="pin"></div>
+      <div class="no">CARD 02 &middot; REPORTED 14 JUN 2026</div>
+      <h3>Tax already deducted</h3>
+      <div class="who">Meridian Systems Pvt Ltd &middot; the quarterly tax return your employer files<span class="pro"> &middot; TDS, Form 26AS</span></div>
+      <div class="badges"><span class="badge rep">Reported by employer</span></div>
+      <div class="amt">&#8377;97,920</div>
+      <details class="margin">
+        <summary><span class="hand">why it matters</span></summary>
+        <div class="mbody">Your employer already sent this to the government on your behalf, month by month. If it turns out to be more than you owed, the difference comes back to you.</div>
+      </details>
+      <div class="links pro"><button type="button">open the quarterly return &#8599;</button><button type="button">this looks wrong &#8599;</button></div>
+      <div class="confirmline">Tap this card to confirm it</div>
+    </article>
+
+    <article class="card" id="card-3" style="--tilt:-.25deg" tabindex="0">
+      <div class="pin"></div>
+      <div class="no">CARD 03 &middot; REPORTED 02 JUN 2026</div>
+      <h3>Interest on savings</h3>
+      <div class="who">State Bank &middot; the yearly statement your bank files &middot; a/c xxxx-4417</div>
+      <div class="badges"><span class="badge rep">Reported by bank</span><span class="badge dis">This looks wrong</span></div>
+      <div class="amt">&#8377;3,480</div>
+      <details class="margin">
+        <summary><span class="hand">plain words</span></summary>
+        <div class="mbody">Interest your bank paid you counts as income too. Small, but it has to be declared. If the account was closed part-way through the year, this figure may be too high.</div>
+      </details>
+      <div class="links pro"><button type="button">open the bank statement &#8599;</button><button type="button">see your note on this &#8599;</button></div>
+      <div class="confirmline">Tap this card to confirm it</div>
+    </article>
+
+    <article class="card" id="card-4" style="--tilt:.3deg" tabindex="0">
+      <div class="pin"></div>
+      <div class="no">CARD 04 &middot; APPLIED AUTOMATICALLY</div>
+      <h3>Standard deduction</h3>
+      <div class="who">Statutory<span class="pro"> &middot; rule set AY2026&ndash;27 &middot; s.16(ia)</span></div>
+      <div class="badges"><span class="badge sys">We applied this for you</span></div>
+      <div class="amt">&#8377;75,000</div>
+      <details class="margin">
+        <summary><span class="hand">you didn&rsquo;t ask for this</span></summary>
+        <div class="mbody">Every salaried person gets it, automatically, with no paperwork and no proof. We put it in because leaving it out would mean you pay more than you have to.</div>
+      </details>
+      <div class="links pro"><button type="button">read the provision &#8599;</button></div>
+      <div class="confirmline">Tap this card to confirm it</div>
+    </article>
+
+    <article class="card" id="card-5" style="--tilt:-.35deg" tabindex="0">
+      <div class="pin"></div>
+      <div class="no">CARD 05 &middot; ENTERED BY YOU, 21 JUN 2026</div>
+      <h3>Life insurance &amp; provident fund</h3>
+      <div class="who">Section 80C &mdash; insurance &amp; provident fund &middot; you told us this &middot; no proof attached</div>
+      <div class="badges"><span class="badge you">You entered this</span><span class="badge dis">Proof missing</span></div>
+      <div class="amt">&#8377;1,50,000</div>
+      <details class="margin">
+        <summary><span class="hand">keep the receipts</span></summary>
+        <div class="mbody">Money you put into insurance or provident fund is taken off your taxable income. You don&rsquo;t have to upload proof to file &mdash; but keep it, in case you&rsquo;re asked later.</div>
+      </details>
+      <div class="links pro"><button type="button">attach proof &#8599;</button><button type="button">read the provision &#8599;</button></div>
+      <div class="confirmline">Tap this card to confirm it</div>
+    </article>
+
+  </section>
+
+  <div class="divider">
+    <svg width="70" height="18" viewBox="0 0 70 18" aria-hidden="true"><path d="M0 4 C 10 4, 15 15, 25 15 S 40 4, 50 4 S 60 16, 70 16" fill="none" stroke="var(--amber)" stroke-width="2"/></svg>
+    <span class="label">The working</span><div class="line"></div>
+  </div>
+
+  <section id="work" class="work">
+
+    <div class="sheet">
+      <div class="tier">
+        <h3>What you were paid, and what you can set against it</h3>
+        <div class="stat-row">
+          <div class="stat"><span class="num">&#8377;12,43,480</span><span class="lbl">everything counted as income</span></div>
+          <div class="stat"><span class="num">&#8377;2,25,000</span><span class="lbl">deductions you are entitled to</span></div>
+          <div class="stat"><span class="num">&#8377;10,18,480</span><span class="lbl">what you are actually taxed on</span></div>
+        </div>
+      </div>
+
+      <!-- simple: the arithmetic in four lines -->
+      <div class="tier lite">
+        <h3>The arithmetic</h3>
+        <div class="calc-row"><span>Tax at slab rates</span><span class="v">&#8377;88,000</span></div>
+        <div class="calc-row"><span>Health &amp; education surcharge, 4% of the tax</span><span class="v">&#8377;3,520</span></div>
+        <div class="calc-row t"><span>Total tax owed</span><span class="v">&#8377;91,520</span></div>
+        <div class="calc-row"><span>Already paid on your behalf</span><span class="v">&minus;&#8377;97,920</span></div>
+        <div class="callout good"><b>You overpaid by &#8377;6,400.</b> That comes back to you — and we will tell you the moment it moves, rather than promise a window we cannot source. Switch to <b>Full detail</b> to see every step of this
+          calculation and the rule it came from.</div>
+      </div>
+    </div>
+
+    <!-- full detail: the whole trace, every step opens -->
+    <div class="sheet pro trace-sheet">
+      <div class="tracehead"><span>Computation trace &middot; engine v2.1 &middot; rule set AY2026&ndash;27</span><span>click a row to open it</span></div>
+      <table class="trace"><tbody id="trace">
+        <tr class="head-row"><td><span class="caret">&#9656;</span> Gross income</td><td class="n">&#8377;12,43,480</td></tr>
+        <tr class="exp"><td colspan="2">salary 12,40,000 + savings interest 3,480 &nbsp;·&nbsp; both from cards 01 and 03 above, neither entered by us</td></tr>
+        <tr class="head-row"><td><span class="caret">&#9656;</span> Deductions applied</td><td class="n">&minus;&#8377;2,25,000</td></tr>
+        <tr class="exp"><td colspan="2">standard deduction 75,000, applied automatically under s.16(ia) &nbsp;+&nbsp; 80C 1,50,000, entered by you on 21 Jun, proof not attached</td></tr>
+        <tr class="t"><td>Taxable income</td><td class="n">&#8377;10,18,480</td></tr>
+        <tr class="head-row"><td><span class="caret">&#9656;</span> Tax at slab rates</td><td class="n">&#8377;88,000</td></tr>
+        <tr class="exp"><td colspan="2">computed across the AY2026&ndash;27 new-regime slab table &nbsp;·&nbsp; held in whole paise throughout, rounded half-up only at the end</td></tr>
+        <tr class="head-row"><td><span class="caret">&#9656;</span> Health &amp; education surcharge</td><td class="n">&#8377;3,520</td></tr>
+        <tr class="exp"><td colspan="2">4% of the tax above &nbsp;·&nbsp; 88,000 × 0.04 &nbsp;·&nbsp; charged on the tax, not on your income</td></tr>
+        <tr class="t"><td>Total tax owed</td><td class="n">&#8377;91,520</td></tr>
+        <tr class="head-row"><td><span class="caret">&#9656;</span> Tax already paid for you</td><td class="n">&minus;&#8377;97,920</td></tr>
+        <tr class="exp"><td colspan="2">deducted from your salary each month by Meridian Systems and paid to the government quarterly &nbsp;·&nbsp; card 02 above</td></tr>
+        <tr class="g"><td>Refund due to you</td><td class="n">&#8377;6,400</td></tr>
+      </tbody></table>
+    </div>
+
+    <!-- the read-outs -->
+    <aside class="rail">
+      <div class="ro">
+        <div class="k">Refund due</div>
+        <div class="v" id="railAmt">&#8377;0</div>
+        <div class="d">You paid more than you owed. Every line traces back to the document it came from.</div>
+        <svg class="spark" viewBox="0 0 280 36" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M2 31 L46 28 L90 23 L134 25 L178 16 L222 11 L272 5"/>
+          <circle cx="272" cy="5" r="3.6"/>
+        </svg>
+      </div>
+      <div class="ro pro">
+        <div class="k">Owed vs paid</div>
+        <div class="meter"><i class="a" id="mA"></i><i class="b" id="mB"></i></div>
+        <div class="legend"><span class="a">Owed &#8377;91,520</span><span class="b">Overpaid &#8377;6,400</span></div>
+        <div class="d">Of the &#8377;97,920 taken from your salary, 93.5% was genuinely owed.</div>
+      </div>
+      <div class="ro pro">
+        <div class="k">Which regime is better</div>
+        <div class="d" style="margin-top:9px">
+          New regime &mdash; refund <strong>&#8377;6,400</strong><br>
+          Old regime &mdash; refund &#8377;4,180<br>
+          <span style="color:var(--keep)">The new regime leaves you &#8377;2,220 better off.</span>
+          <div class="links" style="margin-top:8px"><button type="button">show both calculations &#8599;</button></div>
+        </div>
+      </div>
+      <div class="ro lite">
+        <div class="k">One figure is in question</div>
+        <div class="d" style="margin-top:8px">You marked the savings interest as wrong. You can still
+          file &mdash; your note goes with the return, and nothing is overwritten.</div>
+      </div>
+    </aside>
+
+  </section>
+
+  <div class="divider">
+    <svg width="70" height="18" viewBox="0 0 70 18" aria-hidden="true"><path d="M0 9 C 12 9, 12 2, 24 2 S 36 16, 48 16 S 60 9, 70 9" fill="none" stroke="var(--brick)" stroke-width="2"/></svg>
+    <span class="label">Before you file</span><div class="line"></div>
+  </div>
+
+  <section id="checks">
+    <div class="checklist lite" id="list">
+      <div class="check" data-i="0"><div class="box"><svg viewBox="0 0 19 19" aria-hidden="true"><path d="M4 10 l3.6 3.6 L15.5 5.5"/></svg></div>
+        <div class="txt">Confirm your <a class="jump" href="#card-1"><b>salary</b></a> matches the Form 16 your employer gave you.</div></div>
+      <div class="check" data-i="1"><div class="box"><svg viewBox="0 0 19 19" aria-hidden="true"><path d="M4 10 l3.6 3.6 L15.5 5.5"/></svg></div>
+        <div class="txt">Confirm the <a class="jump" href="#card-2"><b>tax already deducted</b></a> &mdash; this is what decides your refund.</div></div>
+      <div class="check" data-i="2"><div class="box"><svg viewBox="0 0 19 19" aria-hidden="true"><path d="M4 10 l3.6 3.6 L15.5 5.5"/></svg></div>
+        <div class="txt">Check the <a class="jump" href="#card-3"><b>savings interest</b></a>. If your account closed mid-year, say it looks wrong.</div></div>
+      <div class="check" data-i="3"><div class="box"><svg viewBox="0 0 19 19" aria-hidden="true"><path d="M4 10 l3.6 3.6 L15.5 5.5"/></svg></div>
+        <div class="txt">Confirm the <a class="jump" href="#card-4"><b>standard deduction</b></a> we applied on your behalf.</div></div>
+      <div class="check" data-i="4"><div class="box"><svg viewBox="0 0 19 19" aria-hidden="true"><path d="M4 10 l3.6 3.6 L15.5 5.5"/></svg></div>
+        <div class="txt">Confirm your <a class="jump" href="#card-5"><b>80C claim</b></a> &mdash; and keep the receipts somewhere safe.</div></div>
+    </div>
+
+    <div class="checklist pro">
+      <div class="check" id="solo">
+        <div class="box"><svg viewBox="0 0 19 19" aria-hidden="true"><path d="M4 10 l3.6 3.6 L15.5 5.5"/></svg></div>
+        <div class="txt">I have read the computation trace and checked it against the source documents.
+          The figures above are correct and complete.</div>
+      </div>
+    </div>
+
+    <div class="finish">
+      <div>
+        <div class="k">Refund due</div>
+        <div class="big" id="amt">&#8377;0</div>
+        <div class="note" id="fnote">Pin all five cards above, then this button unlocks.</div>
+      </div>
+      <button class="file" id="file" disabled>Pin all five cards first<span class="pg"></span></button>
+    </div>
+  </section>
+
+</main>
+
+<footer>Sample data throughout &mdash; every identifier is synthetic and this filing goes nowhere.
+Refund timing is illustrative, not a service commitment. Corrections are written as new entries;
+nothing on this board is ever overwritten.</footer>
+<div class="tag">Direction 13 &mdash; Composite &middot; 12 + 6 + 5</div>
+
+<script>
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ── view switch: same page, two densities ─────────────────── */
+(function(){
+  const KEY='wapsi-design-view', root=document.documentElement;
+  const bs={simple:document.getElementById('vSimple'), full:document.getElementById('vFull')};
+  function set(v){
+    root.setAttribute('data-view',v);
+    bs.simple.setAttribute('aria-pressed', v==='simple');
+    bs.full.setAttribute('aria-pressed', v==='full');
+    try{ localStorage.setItem(KEY,v); }catch(e){}
+    document.dispatchEvent(new CustomEvent('viewchange'));
+  }
+  bs.simple.addEventListener('click',()=>set('simple'));
+  bs.full.addEventListener('click',()=>set('full'));
+  set(root.getAttribute('data-view')==='full'?'full':'simple');
+})();
+
+/* ── theme-aware colours, shared by both canvases ──────────── */
+function rgbOf(name){
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const d = document.createElement('span'); d.style.color=v; document.body.appendChild(d);
+  const m = getComputedStyle(d).color.match(/\d+/g); d.remove();
+  return m ? m.slice(0,3).map(Number) : [128,128,128];
+}
+let COL = {in:[53,97,142], out:[168,73,59], keep:[62,107,79]};
+function readTheme(){ COL = {in:rgbOf('--in'), out:rgbOf('--out'), keep:rgbOf('--keep')}; }
+function watchTheme(){
+  readTheme();
+  new MutationObserver(readTheme).observe(document.documentElement,
+    {attributes:true, attributeFilter:['data-theme']});
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTheme);
+}
+
+/* ── money drifting over the paper, behind everything ──────── */
+const PARTNER = {in:[78,155,255], out:[255,107,74], keep:[53,211,146]};
+new p5((s) => {
+  let motes=[], W, H;
+  function spawn(x){
+    /* lanes carry the real proportions: 92% stays, 7% goes to tax, 0.5% comes back.
+       the returning lane is over-sampled so it is visible at all. */
+    const r = Math.random();
+    const lane = r < .74 ? 'in' : (r < .93 ? 'out' : 'keep');
+    /* tn mixes each mote toward its lane's burst-palette partner (azure / coral
+       / mint), so every lane reads as a colour family, not one flat hue - the
+       proportions still tell the truth (T7.2, DESIGN SS9.4). */
+    return {x, y:Math.random()*H*.45, lane, tn:Math.random()*.85, sp:.45+Math.random()*1.3,
+            a:22+Math.random()*58, r:.9+Math.random()*1.6, ph:Math.random()*6.28};
+  }
+  s.setup = () => {
+    const c = s.createCanvas(window.innerWidth, window.innerHeight);
+    c.parent('sketch'); W=s.width; H=s.height; watchTheme();
+    const n = reduce ? 45 : 220;
+    for (let i=0;i<n;i++) motes.push(spawn(s.random(W)));
+    s.noStroke();
+  };
+  s.draw = () => {
+    s.clear();
+    const t = s.frameCount * (reduce ? 0 : .006);
+    for (const p of motes){
+      const target = p.lane==='out' ? H*.74 : p.lane==='keep' ? H*.54 : H*.32;
+      p.y += (target-p.y)*.006 + Math.sin(t*2+p.ph)*.22;
+      p.x += reduce ? 0 : p.sp;
+      if (p.x > W+10){ p.x=-10; p.y=Math.random()*H*.45; }
+      const b = COL[p.lane], pt = PARTNER[p.lane];
+      const c = [0,1,2].map(i => b[i] + (pt[i]-b[i]) * p.tn);
+      s.fill(c[0],c[1],c[2],p.a);       s.circle(p.x,p.y,p.r*2);
+      s.fill(c[0],c[1],c[2],p.a*.24);   s.circle(p.x-p.sp*6,p.y,p.r*1.2);
+    }
+  };
+  s.windowResized = () => { s.resizeCanvas(window.innerWidth,window.innerHeight); W=s.width; H=s.height; };
+});
+
+/* ── the celebration, on its own layer above the panels ────── */
+let burst = () => {};
+new p5((s) => {
+  let conf=[], H;
+  s.setup = () => {
+    const c = s.createCanvas(window.innerWidth, window.innerHeight);
+    c.parent('pop'); H=s.height; s.noStroke(); s.noLoop();
+  };
+  s.draw = () => {
+    s.clear();
+    for (let i=conf.length-1;i>=0;i--){
+      const q = conf[i];
+      q.vy += .14; q.vx *= .992; q.x += q.vx; q.y += q.vy; q.rot += q.vr; q.life -= 1;
+      if (q.y > H+40 || q.life <= 0){ conf.splice(i,1); continue; }
+      s.push(); s.translate(q.x,q.y); s.rotate(q.rot);
+      s.fill(q.c[0],q.c[1],q.c[2], Math.min(242,q.life*3.4));
+      s.rect(-q.w/2,-q.h/2,q.w,q.h); s.pop();
+    }
+    if (!conf.length) s.noLoop();   /* idle canvas costs nothing once it has settled */
+  };
+  /* built around all three brand hues rather than the blue alone, each with a lighter
+     partner, plus gold for warmth between them. Fixed values: this layer does not blend,
+     so it stays bright on cream paper and on the dark board alike. */
+  const CONFETTI = [[26,111,224],[78,155,255],    /* blue    · azure */
+                    [222,64,37], [255,107,74],    /* red     · coral */
+                    [20,155,103],[53,211,146],    /* green   · mint  */
+                    [232,163,23]];                /* gold            */
+  const shade = c => c.map(v => Math.max(0, Math.min(255, Math.round(v * (.88 + Math.random()*.34)))));
+  burst = (x,y) => {
+    if (reduce) return;
+    for (let i=0;i<170;i++){
+      const ang = -Math.PI/2 + (Math.random()-.5)*2.1, sp = 4+Math.random()*12;
+      const streamer = Math.random() < .28;       /* a few long ribbons among the flakes */
+      conf.push({x, y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp,
+                 rot:Math.random()*6.28, vr:(Math.random()-.5)*.42,
+                 w: streamer ? 2+Math.random()*2.5 : 4+Math.random()*6,
+                 h: streamer ? 11+Math.random()*9 : 4+Math.random()*7,
+                 c: shade(CONFETTI[(Math.random()*CONFETTI.length)|0]),
+                 life:72+Math.random()*62});
+    }
+    s.loop();
+  };
+  s.windowResized = () => { s.resizeCanvas(window.innerWidth,window.innerHeight); H=s.height;
+                            if(conf.length) s.redraw(); };
+});
+
+/* ── count-ups: visible work reads as trustworthy ──────────── */
+const fmt = n => '₹' + Math.round(n).toLocaleString('en-IN');
+function countUp(el, target){
+  const v = target !== undefined ? target : +el.dataset.count;
+  if (reduce){ el.textContent = fmt(v); return; }
+  const dur = 1500, t0 = performance.now();
+  const tick = t => { const k = Math.min(1,(t-t0)/dur);
+    el.textContent = fmt(v*(1-Math.pow(1-k,3)));
+    if (k<1) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+}
+const countIO = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting){ countUp(e.target); countIO.unobserve(e.target); }
+}), {threshold:.4});
+document.querySelectorAll('[data-count]').forEach(el => countIO.observe(el));
+
+/* the year bar fills once it is on screen */
+new IntersectionObserver((es,o) => es.forEach(e => {
+  if (!e.isIntersecting) return; o.unobserve(e.target);
+  e.target.querySelectorAll('i').forEach(i => i.style.width = i.dataset.w);
+}), {threshold:.3}).observe(document.querySelector('.bar'));
+
+/* ── cards arrive, and pin on tap ──────────────────────────── */
+const cards  = [...document.querySelectorAll('.card')];
+const checks = [...document.querySelectorAll('#list .check')];
+const solo   = document.getElementById('solo');
+const fileBtn = document.getElementById('file');
+const fnote   = document.getElementById('fnote');
+
+const cardIO = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting){ e.target.classList.add('in'); cardIO.unobserve(e.target); }
+}), {threshold:.15});
+cards.forEach((c,i) => { c.style.transitionDelay = (i%2)*80+'ms'; cardIO.observe(c); });
+
+const isFull = () => document.documentElement.getAttribute('data-view') === 'full';
+
+function refresh(){
+  if (fileBtn.dataset.done) return;
+  const left = cards.length - cards.filter(c => c.classList.contains('ok')).length;
+  const signed = solo.classList.contains('done');
+  const gated = isFull() ? !signed : left > 0;
+  fileBtn.disabled = gated;
+  fileBtn.firstChild.nodeValue = isFull()
+    ? (gated ? 'Sign off first' : 'File this return')
+    : (gated ? `Pin ${left} more card${left>1?'s':''}` : 'File this return');
+  fnote.textContent = isFull()
+    ? (gated
+        ? 'Every figure above opens to the document and the rule behind it. Sign off when you are satisfied.'
+        : 'Signed off. Filing takes a few seconds.')
+    : (gated
+        ? 'Pin all five cards above, then this button unlocks.'
+        : 'You have read and confirmed every figure. Filing takes a few seconds.');
+}
+document.addEventListener('viewchange', refresh);
+
+function line(c){
+  c.querySelector('.confirmline').textContent =
+    c.classList.contains('ok') ? 'Pinned — tap again to unpin'
+    : !c.dataset.read ? 'Tap to see what this means'
+    : 'Tap again to confirm it';
+}
+function toggleCard(c, i){
+  if (isFull()) return;   /* nothing to gate — the trace is the check */
+  const note = c.querySelector('details.margin');
+  /* you cannot pin what you have not read: the first tap opens the explanation.
+     once read, it stays read — collapsing it again to save space must not re-lock the card. */
+  if (note && !c.dataset.read){ note.open = true; c.dataset.read = '1'; line(c); return; }
+  c.classList.toggle('ok');
+  checks[i].classList.toggle('done', c.classList.contains('ok'));
+  line(c);
+  refresh();
+}
+cards.forEach((c,i) => {
+  /* the source links are their own controls — clicking one must not pin the card */
+  c.querySelectorAll('.links button').forEach(b => b.addEventListener('click', e => e.stopPropagation()));
+  /* nor must the note's own handle: it toggles itself, natively */
+  const note = c.querySelector('details.margin');
+  if (note){
+    note.querySelector('summary').addEventListener('click', e => e.stopPropagation());
+    note.addEventListener('toggle', () => { if (note.open) c.dataset.read = '1'; line(c); });
+  }
+  line(c);
+  c.addEventListener('click', () => toggleCard(c,i));
+  c.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggleCard(c,i); }
+  });
+});
+/* the checklist is a second door to the same state */
+checks.forEach((ch,i) => ch.addEventListener('click', () => toggleCard(cards[i], i)));
+
+/* a checklist term is a pointer to the card it is about */
+document.querySelectorAll('.jump').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();     /* must not tick the line it sits in */
+    const card = document.querySelector(a.getAttribute('href'));
+    if (!card) return;
+    /* open the note first so the layout has settled before we aim at it */
+    const note = card.querySelector('details.margin');
+    if (note && !isFull()){ note.open = true; card.dataset.read = '1'; line(card); }
+    /* focus follows the link, or the browser scrolls back to the anchor we just left */
+    card.focus({preventScroll:true});
+    card.scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block:'center'});
+    card.classList.remove('flash');
+    void card.offsetWidth;                        /* restart the animation */
+    card.classList.add('flash');
+    setTimeout(() => card.classList.remove('flash'), 1600);
+  });
+});
+
+/* full detail signs off once, on its own line — no per-card gate */
+solo.addEventListener('click', () => { solo.classList.toggle('done'); refresh(); });
+
+/* ── the read-outs animate when the working comes into view ── */
+new IntersectionObserver((es,o) => es.forEach(e => {
+  if (!e.isIntersecting) return; o.unobserve(e.target);
+  document.getElementById('mA').style.width = '93.5%';
+  document.getElementById('mB').style.width = '6.5%';
+  countUp(document.getElementById('railAmt'), 6400);
+}), {threshold:.35}).observe(document.querySelector('.rail'));
+
+new IntersectionObserver((es,o) => es.forEach(e => {
+  if (!e.isIntersecting) return; o.unobserve(e.target);
+  countUp(document.getElementById('amt'), 6400);
+}), {threshold:.5}).observe(document.querySelector('.finish'));
+
+/* ── the trace opens a step at a time ──────────────────────── */
+document.querySelectorAll('#trace .head-row').forEach(row => {
+  row.addEventListener('click', () => {
+    const next = row.nextElementSibling;
+    if (!next || !next.classList.contains('exp')) return;
+    row.classList.toggle('open'); next.classList.toggle('on');
+  });
+});
+
+/* ── filing: weight proportional to the stakes, then confetti ── */
+fileBtn.addEventListener('click', () => {
+  if (fileBtn.disabled || fileBtn.dataset.done) return;
+  fileBtn.dataset.done = '1';
+  const pg = fileBtn.querySelector('.pg'), t0 = performance.now(), d = 1900;
+  fileBtn.firstChild.nodeValue = 'Filing…';
+  const step = t => {
+    const k = Math.min(1,(t-t0)/d); pg.style.width = k*100+'%';
+    if (k<1) requestAnimationFrame(step);
+    else {
+      fileBtn.firstChild.nodeValue = 'Filed — refund in 2–5 weeks';
+      fnote.textContent = 'Reference WPS-2026-4471. We will email you when the refund is on its way.';
+      const r = fileBtn.getBoundingClientRect();
+      burst(r.left + r.width/2, r.top + r.height/2);
+    }
+  };
+  requestAnimationFrame(step);
+});
+
+refresh();
+</script>
+</body>
+</html>

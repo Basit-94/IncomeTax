@@ -17,7 +17,11 @@ public record SubmissionRequest(
         claims = List.copyOf(Objects.requireNonNullElse(claims, List.of()));
     }
 
-    public record FactRequest(String kind, long amountPaise) {
+    /** assetClass/holding classify capital_gains for s.111A/112A/112 (T1.9b); null = slab. */
+    public record FactRequest(String kind, long amountPaise, String assetClass, String holding) {
+        public FactRequest(String kind, long amountPaise) {
+            this(kind, amountPaise, null, null);
+        }
     }
 
     public record ClaimRequest(String section, long amountPaise) {

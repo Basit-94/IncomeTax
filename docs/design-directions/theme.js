@@ -42,7 +42,16 @@
       ".theme-toggle:hover{background:rgba(128,128,128,.3)}" +
       ".theme-toggle:active{transform:translateY(1px)}" +
       ".theme-toggle:focus-visible{outline:2px solid currentColor;outline-offset:3px}" +
-      "@media(prefers-reduced-motion:reduce){.theme-toggle{transition:none}}";
+      "@media(prefers-reduced-motion:reduce){.theme-toggle{transition:none}}" +
+      /* Scrollbars: standard property + WebKit fallback. Translucent grey, not a
+         token — the 13 directions have 13 palettes, and rgba(128,128,128) reads
+         correctly over every one of them in both light and dark. */
+      "*{scrollbar-width:thin;scrollbar-color:rgba(128,128,128,.55) transparent}" +
+      "::-webkit-scrollbar{width:10px;height:10px}" +
+      "::-webkit-scrollbar-track{background:transparent}" +
+      "::-webkit-scrollbar-thumb{background:rgba(128,128,128,.45);border-radius:6px}" +
+      "::-webkit-scrollbar-thumb:hover{background:rgba(128,128,128,.7)}" +
+      "::-webkit-scrollbar-corner{background:transparent}";
     document.head.appendChild(css);
 
     function label() {

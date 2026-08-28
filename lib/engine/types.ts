@@ -3,7 +3,7 @@
  * Money is whole rupees (integer `number`), matching lib/types.ts.
  */
 
-import type { Claim, IncomeKind } from "../types";
+import type { CapitalGainsMeta, Claim, IncomeKind } from "../types";
 
 export type Regime = "new" | "old";
 
@@ -13,6 +13,11 @@ export type AgeBand = "below_60" | "60_to_80" | "above_80";
 export interface TaxInputFact {
   kind: IncomeKind;
   amount: number;
+  /**
+   * Asset-class metadata for capital_gains facts. Present → the special rates
+   * (s.111A/112A/112) apply; absent → slab treatment (labelled simplification).
+   */
+  capitalGains?: CapitalGainsMeta;
 }
 
 export interface TaxInput {
@@ -38,13 +43,32 @@ export interface SlabSlice {
   tax: number; // integer rupees for this slice
 }
 
+/** Tax on one special-rate capital-gains bucket (s.111A / s.112A / s.112). */
+export interface SpecialRateItem {
+  section: "111A" | "112A" | "112";
+  /** Total gains routed to this section, rupees. */
+  gains: number;
+  /** Portion exempt (s.112A's ₹1.25L threshold); 0 elsewhere. */
+  exemptAmount: number;
+  /** gains − exemptAmount. */
+  taxable: number;
+  rate: number;
+  tax: number;
+}
+
 export interface TaxBreakdown {
   grossIncome: number;
   standardDeduction: number;
   /** Chapter VI-A style claim deductions actually ALLOWED under the regime. */
   totalDeductions: number;
+  /** Slab-taxable income PLUS taxable special-rate gains. */
   taxableIncome: number;
   slabBreakdown: SlabSlice[];
+  /** Slab-only tax before rebate — what slabBreakdown's slices sum to. */
+  slabTax: number;
+  /** Special-rate capital-gains buckets; empty when no fact carries asset-class metadata. */
+  specialRate: SpecialRateItem[];
+  /** Slab tax + special-rate tax, before the s.87A rebate. */
   taxBeforeRebate: number;
   rawTax: number;
   /** s.87A rebate + marginal relief combined effect, integer rupees. */

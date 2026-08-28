@@ -28,14 +28,38 @@ public final class TaxEngine {
         boolean hasSalary = input.facts().stream().anyMatch(fact -> "salary".equals(fact.kind()));
         long standardDeductionPaise = hasSalary ? rules.standardDeduction().paise() : 0L;
         long totalDeductionsPaise = allowedClaimsPaise(rules, input);
-        long taxablePaise = Math.max(0L,
-                Math.subtractExact(Math.subtractExact(grossPaise, standardDeductionPaise), totalDeductionsPaise));
 
-        List<TaxSlab> slices = materializeSlabs(rules, input.ageBand(), taxablePaise);
-        long taxBeforeRebatePaise = slices.stream()
+        // Classified capital gains leave the slab pool and are priced per-section
+        // (T1.9b). Deductions offset slab income only — they cannot erode
+        // s.111A/112A/112 gains, matching the Act. A rule set without special
+        // rates keeps everything at slab, the labelled simplification.
+        List<SpecialRateLine> specialLines = specialRateLines(rules, input);
+        long specialGainsPaise = specialLines.stream()
+                .mapToLong(line -> line.gains().paise())
+                .reduce(0L, Math::addExact);
+        long specialTaxablePaise = specialLines.stream()
+                .mapToLong(line -> line.taxable().paise())
+                .reduce(0L, Math::addExact);
+        long specialTaxPaise = specialLines.stream()
+                .mapToLong(line -> line.tax().paise())
+                .reduce(0L, Math::addExact);
+
+        long slabTaxablePaise = Math.max(0L,
+                Math.subtractExact(
+                        Math.subtractExact(
+                                Math.subtractExact(grossPaise, specialGainsPaise),
+                                standardDeductionPaise),
+                        totalDeductionsPaise));
+        long taxablePaise = Math.addExact(slabTaxablePaise, specialTaxablePaise);
+
+        List<TaxSlab> slices = materializeSlabs(rules, input.ageBand(), slabTaxablePaise);
+        long slabTaxPaise = slices.stream()
                 .mapToLong(TaxSlab::taxPaise)
                 .reduce(0L, Math::addExact);
-        long rebatePaise = rebatePaise(rules, taxablePaise, taxBeforeRebatePaise);
+        // s.87A (incl. marginal relief) applies to the slab portion only — the
+        // rebate is not available against special-rate gains.
+        long rebatePaise = rebatePaise(rules, slabTaxablePaise, slabTaxPaise);
+        long taxBeforeRebatePaise = Math.addExact(slabTaxPaise, specialTaxPaise);
         long taxAfterRebatePaise = Math.subtractExact(taxBeforeRebatePaise, rebatePaise);
         long cessPaise = roundToWholeRupeePaise(taxAfterRebatePaise, rules.cessRate());
         long totalTaxPaise = Math.addExact(taxAfterRebatePaise, cessPaise);
@@ -47,12 +71,63 @@ public final class TaxEngine {
                 Money.ofPaise(totalDeductionsPaise),
                 Money.ofPaise(taxablePaise),
                 slices,
+                specialLines,
                 Money.ofPaise(taxBeforeRebatePaise),
                 Money.ofPaise(rebatePaise),
                 Money.ofPaise(cessPaise),
                 Money.ofPaise(totalTaxPaise),
                 input.tdsCredits(),
                 Money.ofPaise(refundOrDuePaise));
+    }
+
+    /** "111A", "112A", "112", or null for slab treatment. Non-equity STCG is slab income in law. */
+    private static String specialSectionFor(TaxFact fact) {
+        if (!"capital_gains".equals(fact.kind()) || fact.assetClass() == null || fact.holding() == null) {
+            return null;
+        }
+        if ("equity_stt".equals(fact.assetClass())) {
+            return "short".equals(fact.holding()) ? "111A" : "112A";
+        }
+        return "long".equals(fact.holding()) ? "112" : null;
+    }
+
+    private List<SpecialRateLine> specialRateLines(RuleSetDefinition rules, TaxInput input) {
+        if (rules.specialRates() == null) return List.of();
+        long sum111a = 0L, sum112a = 0L, sum112 = 0L;
+        for (TaxFact fact : input.facts()) {
+            String section = specialSectionFor(fact);
+            if (section == null) continue;
+            switch (section) {
+                case "111A" -> sum111a = Math.addExact(sum111a, fact.amount().paise());
+                case "112A" -> sum112a = Math.addExact(sum112a, fact.amount().paise());
+                default -> sum112 = Math.addExact(sum112, fact.amount().paise());
+            }
+        }
+        var rates = rules.specialRates();
+        List<SpecialRateLine> lines = new ArrayList<>();
+        if (sum111a > 0) {
+            lines.add(line("111A", sum111a, 0L, rates.stcg111aRate()));
+        }
+        if (sum112a > 0) {
+            // The exemption is annual and shared across all s.112A gains.
+            long exemptPaise = Math.min(sum112a, rates.ltcg112aExemption().paise());
+            lines.add(line("112A", sum112a, exemptPaise, rates.ltcg112aRate()));
+        }
+        if (sum112 > 0) {
+            lines.add(line("112", sum112, 0L, rates.ltcg112Rate()));
+        }
+        return lines;
+    }
+
+    private SpecialRateLine line(String section, long gainsPaise, long exemptPaise, BigDecimal rate) {
+        long taxablePaise = gainsPaise - exemptPaise;
+        return new SpecialRateLine(
+                section,
+                Money.ofPaise(gainsPaise),
+                Money.ofPaise(exemptPaise),
+                Money.ofPaise(taxablePaise),
+                rate,
+                Money.ofPaise(roundToWholeRupeePaise(taxablePaise, rate)));
     }
 
     private long allowedClaimsPaise(RuleSetDefinition rules, TaxInput input) {

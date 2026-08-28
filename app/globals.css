@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./d13.css";
 
 @font-face {
   font-family: DIN;
@@ -31,11 +32,11 @@
   --color-money: var(--primary-accent);
   --color-money-deep: var(--primary-accent-deep);
   --color-money-soft: var(--accent-soft-bg);
-  --color-warn: #9a5a00;
-  --color-warn-deep: #754300;
-  --color-warn-soft: #fff3d8;
-  --color-alarm: #b42318;
-  --color-alarm-soft: #fde9e7;
+  --color-warn: var(--warn-color);
+  --color-warn-deep: var(--warn-deep-color);
+  --color-warn-soft: var(--warn-soft-color);
+  --color-alarm: var(--alarm-color);
+  --color-alarm-soft: var(--alarm-soft-color);
   --color-navy: var(--text-color);
   --color-navy-light: var(--primary-accent);
   --color-navy-dark: var(--navy-dark-override);
@@ -45,55 +46,132 @@
   --color-slate-200: var(--slate-200-override);
   --color-slate-300: var(--slate-300-override);
   --color-slate-700: var(--slate-700-override);
-  --font-sans: DIN, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Devanagari", "Noto Sans Tamil", sans-serif;
+  /* Direction 13 faces (DESIGN.md SS4). Grotesk leads the sans stack for
+     headings/buttons/badges; the serif is applied to body copy in @layer base;
+     JetBrains Mono carries every number. Noto fallbacks keep hi/ta glyphs. */
+  --font-sans: var(--font-grotesk), DIN, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Devanagari", "Noto Sans Tamil", sans-serif;
+  --font-serif: var(--font-serif-d13), Georgia, "Noto Serif Devanagari", "Noto Sans Devanagari", "Noto Sans Tamil", serif;
+  --font-mono: var(--font-jb-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, "Noto Sans Devanagari", "Noto Sans Tamil", monospace;
+  --font-caveat-stack: var(--font-caveat), "Segoe Script", cursive;
+  /* D13 shape language: crisp index-card corners instead of soft pills. */
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 4px;
+  --radius-2xl: 6px;
+  --radius-3xl: 8px;
   --text-hero: 3.8rem;
   --text-hero--line-height: 1.04;
   --text-hero--letter-spacing: -0.03em;
   --radius-card: var(--card-radius);
+  --color-flow-in: var(--flow-in);
+  --color-flow-out: var(--flow-out);
+  --color-flow-keep: var(--flow-keep);
 }
 
 @layer base {
+  /* Direction 13 "graph paper on a desk" - DESIGN.md SS2.1 + SS2.3.
+     Text shades pass 4.5:1 on the card and on their own tints; fill shades
+     (--flow-*) are 3:1 and reserved for bars/motes/large bold numerals. */
   :root {
-    --bg-color: #f3f7f8;
-    --surface-color: #ffffff;
-    --input-color: #fbfdfd;
-    --text-color: #163047;
-    --muted-color: #536d7b;
-    --subtle-color: #78909c;
-    --border-color: #d3e1e4;
-    --accent-soft-bg: #e2f2ef;
+    --bg-color: #F2EFE4;
+    --surface-color: #FBF9F1;
+    --input-color: #F4F1E6;
+    --text-color: #1C2233;
+    --muted-color: #4A4E5C;
+    --subtle-color: #7C8090;
+    --border-color: #D9D2B9;
+    --edge-color: #1C2233;
+    --grid-color: #D9D2B9;
+    --accent-soft-bg: #DEEAFB;
+    --white-override: #FBF9F1;
+    --slate-50-override: #F4F1E6;
+    --slate-100-override: #EFEBDD;
+    --slate-200-override: #E4DEC9;
+    --slate-300-override: #A9A28A;
+    --slate-700-override: #1C2233;
+    --navy-dark-override: #1C2233;
+    --card-radius: 4px;
+    /* D13 SS2.3: blue is the accent and link colour; green is reserved for
+       confirmed / coming-back semantics (use --d13-green / --flow-keep). */
+    --primary-accent: #1361C7;
+    --primary-accent-deep: #0F4FA3;
+    --primary-accent-soft: #DEEAFB;
+    --warn-color: #8C5D08;
+    --warn-deep-color: #6E4906;
+    --warn-soft-color: #FAEBCE;
+    --alarm-color: #C6331D;
+    --alarm-soft-color: #FCE6E1;
+    --shadow-d13: 4px 6px 0 rgba(28, 34, 51, 0.13);
+    --shadow-d13-hi: 6px 9px 0 rgba(28, 34, 51, 0.16);
+    /* SS2.3 TEXT shades - 4.5:1 on the card AND on their own tint. */
+    --d13-blue: #1361C7;
+    --d13-blue-bg: #DEEAFB;
+    --d13-brick: #C6331D;
+    --d13-brick-bg: #FCE6E1;
+    --d13-green: #107A50;
+    --d13-green-bg: #E0F2E8;
+    --d13-amber: #8C5D08;
+    --d13-amber-bg: #FAEBCE;
+    /* Direction-13 FILL shades (DESIGN.md SS2.3): bars, meters, motes, and
+       numerals >=24px bold ONLY - never small text (3:1 gate, not 4.5:1). */
+    --flow-in: #1A6FE0;
+    --flow-out: #DE4025;
+    --flow-keep: #149B67;
+  }
+
+  .dark-mode {
+    --bg-color: #12141A;
+    --surface-color: #1A1E27;
+    --input-color: #171B23;
+    --text-color: #E9ECF2;
+    --muted-color: #B0B6C4;
+    --subtle-color: #7C8494;
+    --border-color: #282E3A;
+    --edge-color: #333B4B;
+    --grid-color: #232833;
+    --accent-soft-bg: #1B2A3C;
+    --white-override: #1A1E27;
+    --slate-50-override: #171B23;
+    --slate-100-override: #1E2330;
+    --slate-200-override: #2A3140;
+    --slate-300-override: #55607A;
+    --slate-700-override: #E9ECF2;
+    --navy-dark-override: #0D0F14;
+    --primary-accent: #7FA9D8;
+    --primary-accent-deep: #A5C4E4;
+    --primary-accent-soft: #1B2A3C;
+    --warn-color: #DFA855;
+    --warn-deep-color: #EDC286;
+    --warn-soft-color: #2E2413;
+    --alarm-color: #E08471;
+    --alarm-soft-color: #331F1B;
+    --shadow-d13: 4px 6px 0 rgba(0, 0, 0, 0.45);
+    --shadow-d13-hi: 6px 9px 0 rgba(0, 0, 0, 0.55);
+    --d13-blue: #7FA9D8;
+    --d13-blue-bg: #1B2A3C;
+    --d13-brick: #E08471;
+    --d13-brick-bg: #331F1B;
+    --d13-green: #77BC90;
+    --d13-green-bg: #16281D;
+    --d13-amber: #DFA855;
+    --d13-amber-bg: #2E2413;
+    --flow-in: #7FA9D8;
+    --flow-out: #E08471;
+    --flow-keep: #77BC90;
+  }
+
+  /* U8: the ITR-V replica is a picture of a PRINTED form. Paper stays white in
+     both themes - a dark "printout" reads as broken, and it printed wrong too.
+     The scoped overrides pin every remapped token back to its light value. */
+  .printable-sheet {
+    background-color: #ffffff !important;
     --white-override: #ffffff;
     --slate-50-override: #f7fafb;
     --slate-100-override: #eef4f5;
     --slate-200-override: #dce8ea;
     --slate-300-override: #9eb2b9;
     --slate-700-override: #163047;
-    --navy-dark-override: #10283c;
-    --card-radius: 16px;
-    --primary-accent: #0f766e;
-    --primary-accent-deep: #0b5f59;
-    --primary-accent-soft: #e2f2ef;
-  }
-
-  .dark-mode {
-    --bg-color: #12232e;
-    --surface-color: #1b313d;
-    --input-color: #203a47;
-    --text-color: #edf7f6;
-    --muted-color: #b0c9ca;
-    --subtle-color: #86a3a7;
-    --border-color: #3a5962;
-    --accent-soft-bg: #214a48;
-    --white-override: #1b313d;
-    --slate-50-override: #18303c;
-    --slate-100-override: #203a47;
-    --slate-200-override: #2d4a54;
-    --slate-300-override: #66828a;
-    --slate-700-override: #edf7f6;
-    --navy-dark-override: #0d1b24;
-    --primary-accent: #61c7b9;
-    --primary-accent-deep: #8ae0d3;
-    --primary-accent-soft: #214a48;
   }
 
   html {
@@ -104,11 +182,36 @@
 
   body {
     min-width: 320px;
-    background-color: var(--color-paper);
+    /* The graph paper lives on the fixed .paper layer (d13.css), under the motes. */
+    background-color: transparent;
     color: var(--color-ink);
-    font-family: var(--font-sans);
+    /* Body reads as a document: the serif carries running copy (SS4)... */
+    font-family: var(--font-serif);
     -webkit-font-smoothing: antialiased;
     text-wrap: pretty;
+  }
+
+  /* ...while headings, controls and labels speak Grotesk. */
+  h1, h2, h3, h4, h5, h6,
+  button,
+  summary,
+  th,
+  legend,
+  nav {
+    font-family: var(--font-sans);
+  }
+
+  /* U5, as a blanket rule: a column of rupees is never ragged. */
+  .font-mono,
+  .tabular,
+  code,
+  kbd {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The pencil voice - margin-note labels only. */
+  .pencil {
+    font-family: var(--font-caveat-stack);
   }
 
   button,
@@ -147,33 +250,19 @@
 
 @layer components {
   .service-shell {
-    background:
-      linear-gradient(180deg, rgb(255 255 255 / 0.6), transparent 22rem),
-      var(--color-paper);
+    /* Transparent so the body's graph paper (and the motes beneath it) shows. */
+    background: transparent;
   }
 
+  /* D13 index cards: card surface, ink edge, hard offset shadow, crisp corner. */
   .surface-panel {
     background: var(--color-paper-2);
-    border: 1px solid var(--color-line);
+    border: 1px solid color-mix(in srgb, var(--edge-color) 80%, transparent);
     border-radius: var(--card-radius);
-    box-shadow: 0 14px 35px rgb(22 48 71 / 0.06);
+    box-shadow: var(--shadow-d13);
   }
 
-  .fact-card {
-    background: var(--color-paper-2);
-    border: 1px solid var(--color-line);
-    border-radius: var(--card-radius);
-    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
-  }
-
-  .fact-card:hover {
-    border-color: color-mix(in srgb, var(--color-money) 45%, var(--color-line));
-    box-shadow: 0 10px 24px rgb(22 48 71 / 0.07);
-  }
-
-  .fact-card[data-confirmed="true"] {
-    border-color: color-mix(in srgb, var(--color-money) 58%, var(--color-line));
-  }
+  /* .fact-card is only a JS hook now; the verbatim d13 .card carries the look. */
 
   .provenance-badge {
     display: inline-flex;
@@ -181,11 +270,13 @@
     align-items: center;
     gap: 0.35rem;
     border: 1px solid color-mix(in srgb, var(--color-money) 24%, var(--color-line));
-    border-radius: 999px;
+    border-radius: 3px;
     background: var(--color-money-soft);
     color: var(--color-ink-2);
     padding: 0.3rem 0.6rem;
-    font-size: 0.72rem;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.02em;
     line-height: 1.2;
   }
 
@@ -209,10 +300,38 @@
 
   .disclosure {
     border: 1px solid var(--color-line);
-    border-radius: 12px;
+    border-radius: 4px;
     background: var(--color-slate-50);
   }
 }
+
+  /* app-specific helpers that d13.css does not define */
+  .cap {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--subtle-color);
+  }
+  .stamp-chip {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted-color);
+    border: 1px solid var(--muted-color);
+    padding: 3px 8px;
+    border-radius: 2px;
+  }
+  .nav-d13 {
+    font-family: var(--font-sans);
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+  .pencil {
+    font-family: var(--font-caveat-stack);
+  }
 
 @keyframes skeleton-shimmer {
   0% { background-position: 200% 0; }
@@ -265,4 +384,32 @@
     height: auto !important;
     display: block !important;
   }
+}
+
+/* ── Scrollbars follow the theme instead of shipping the browser's grey. ─────
+   Standard property first (Firefox, Chrome 121+); WebKit pseudo-elements carry
+   Safari and older Chromium. Both read the same custom properties that
+   .dark-mode redefines, so light and dark are one rule set. Applied via * so
+   inner scrollables (traces, dropdowns) are themed too. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--subtle-color) var(--bg-color);
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-color);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--subtle-color);
+  border-radius: 6px;
+  border: 2px solid var(--bg-color);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-color);
+}
+::-webkit-scrollbar-corner {
+  background: var(--bg-color);
 }

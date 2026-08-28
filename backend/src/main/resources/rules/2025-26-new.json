@@ -1,0 +1,53 @@
+{
+  "id": "2025-26-new-v1",
+  "assessmentYear": "2025-26",
+  "regime": "new",
+  "effectiveFrom": "2025-04-01",
+  "effectiveTo": "2026-03-31",
+  "sourceCitation": "Finance (No. 2) Act, 2024 rates for FY 2024-25 / AY 2025-26. Cross-checked 2026-08-28: Tax2win, Income Tax Slabs FY 2024-25 (https://tax2win.in/guide/income-tax-slabs); TaxBuddy, Updated Income Tax Slabs FY 2024-25 New Regime (https://www.taxbuddy.com/blog/income-tax-slabs-fy-2024-25-new-regime); Business Standard, Budget 2024 new income tax slabs (https://www.business-standard.com/amp/finance/personal-finance/budget-2024-new-income-tax-slabs-announced-middle-class-gets-no-relief-124072300581_1.html)",
+  "supersededBy": "2026-27-new-v1",
+  "standardDeductionPaise": 7500000,
+  "nilTaxThresholdPaise": 70000000,
+  "rebateMaximumPaise": 2500000,
+  "cessRate": 0.04,
+  "roundingPolicy": "HALF_UP_TO_WHOLE_PAISE",
+  "allowedClaimSections": [
+    "80CCD(2)",
+    "80CCD_2"
+  ],
+  "claimCapsPaise": {},
+  "basicExemptionByAgePaise": {},
+  "marginalReliefEnabled": true,
+  "slabs": [
+    {
+      "upToPaise": 30000000,
+      "rate": 0.0,
+      "sourceCitation": "Cross-checked 2026-08-28: Tax2win, Income Tax Slabs FY 2024-25 (https://tax2win.in/guide/income-tax-slabs); TaxBuddy, Updated Income Tax Slabs FY 2024-25 New Regime (https://www.taxbuddy.com/blog/income-tax-slabs-fy-2024-25-new-regime); Business Standard, Budget 2024 new income tax slabs (https://www.business-standard.com/amp/finance/personal-finance/budget-2024-new-income-tax-slabs-announced-middle-class-gets-no-relief-124072300581_1.html)"
+    },
+    {
+      "upToPaise": 70000000,
+      "rate": 0.05,
+      "sourceCitation": "Cross-checked 2026-08-28: Tax2win, Income Tax Slabs FY 2024-25 (https://tax2win.in/guide/income-tax-slabs); TaxBuddy, Updated Income Tax Slabs FY 2024-25 New Regime (https://www.taxbuddy.com/blog/income-tax-slabs-fy-2024-25-new-regime); Business Standard, Budget 2024 new income tax slabs (https://www.business-standard.com/amp/finance/personal-finance/budget-2024-new-income-tax-slabs-announced-middle-class-gets-no-relief-124072300581_1.html)"
+    },
+    {
+      "upToPaise": 100000000,
+      "rate": 0.1,
+      "sourceCitation": "Cross-checked 2026-08-28: Tax2win, Income Tax Slabs FY 2024-25 (https://tax2win.in/guide/income-tax-slabs); TaxBuddy, Updated Income Tax Slabs FY 2024-25 New Regime (https://www.taxbuddy.com/blog/income-tax-slabs-fy-2024-25-new-regime); Business Standard, Budget 2024 new income tax slabs (https://www.business-standard.com/amp/finance/personal-finance/budget-2024-new-income-tax-slabs-announced-middle-class-gets-no-relief-124072300581_1.html)"
+    },
+    {
+      "upToPaise": 120000000,
+      "rate": 0.15,
+      "sourceCitation": "Cross-checked 2026-08-28: Tax2win, Income Tax Slabs FY 2024-25 (https://tax2win.in/guide/income-tax-slabs); TaxBuddy, Updated Income Tax Slabs FY 2024-25 New Regime (https://www.taxbuddy.com/blog/income-tax-slabs-fy-2024-25-new-regime); Business Standard, Budget 2024 new income tax slabs (https://www.business-standard.com/amp/finance/personal-finance/budget-2024-new-income-tax-slabs-announced-middle-class-gets-no-relief-124072300581_1.html)"
+    },
+    {
+      "upToPaise": 150000000,
+      "rate": 0.2,
+      "sourceCitation": "Cross-checked 2026-08-28: Tax2win, Income Tax Slabs FY 2024-25 (https://tax2win.in/guide/income-tax-slabs); TaxBuddy, Updated Income Tax Slabs FY 2024-25 New Regime (https://www.taxbuddy.com/blog/income-tax-slabs-fy-2024-25-new-regime); Business Standard, Budget 2024 new income tax slabs (https://www.business-standard.com/amp/finance/personal-finance/budget-2024-new-income-tax-slabs-announced-middle-class-gets-no-relief-124072300581_1.html)"
+    },
+    {
+      "upToPaise": null,
+      "rate": 0.3,
+      "sourceCitation": "Cross-checked 2026-08-28: Tax2win, Income Tax Slabs FY 2024-25 (https://tax2win.in/guide/income-tax-slabs); TaxBuddy, Updated Income Tax Slabs FY 2024-25 New Regime (https://www.taxbuddy.com/blog/income-tax-slabs-fy-2024-25-new-regime); Business Standard, Budget 2024 new income tax slabs (https://www.business-standard.com/amp/finance/personal-finance/budget-2024-new-income-tax-slabs-announced-middle-class-gets-no-relief-124072300581_1.html)"
+    }
+  ]
+}

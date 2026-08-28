@@ -110,6 +110,28 @@ export const OLD_REGIME_CLAIM_CAPS: Readonly<Record<string, number>> = {
   "80TTA": 10_000,
 };
 
+/* ------------------------------------------- special capital-gains rates -- */
+/*
+ * Finance (No. 2) Act 2024, effective 23 Jul 2024 — regime-independent.
+ * Sources (researched + cross-checked 2026-08-28):
+ *   tax2win.in/guide/short-term-capital-gain-under-section-111a;
+ *   calcphi.com/india/blog/section-111a; CBDT Budget-2024 FAQ (pib.gov.in PRID 2036604).
+ * AY 2026-27 transfers all post-date 23-Jul-2024, so the pre-change 15%/10%
+ * rates cannot arise and no transfer-date model is needed.
+ */
+
+/** s.111A — STCG on STT-paid listed equity / equity MF. */
+export const STCG_111A_RATE = 0.2;
+
+/** s.112A — LTCG on STT-paid listed equity / equity MF, above the exemption. */
+export const LTCG_112A_RATE = 0.125;
+
+/** s.112A exemption: first ₹1.25 lakh of such LTCG in the year is tax-free. */
+export const LTCG_112A_EXEMPTION = 125_000;
+
+/** s.112 — other long-term capital gains, without indexation. */
+export const LTCG_112_RATE = 0.125;
+
 /* ------------------------------------------------------------------ common -- */
 
 /** Health and education cess on tax-after-rebate. */
@@ -135,7 +157,11 @@ export const CONSTANTS_2026_27 = {
 /**
  * KNOWN GAPS deliberately not modelled in v1:
  * - Surcharge (10/15/25/37%) on high incomes — absent entirely.
- * - Special capital-gains rates (111A/112 etc.) — capital_gains taxed at slab.
+ * - Special capital-gains rates are IMPLEMENTED (T1.9b, 2026-08-28) for facts that carry
+ *   asset-class metadata (`capitalGains: { assetClass, holding }`) — see the constants
+ *   above. A capital_gains fact WITHOUT metadata is still taxed at slab: that remains a
+ *   labelled simplification for unclassified data (e.g. wizard-entered lump sums), and
+ *   every affected figure must say so.
  * - s.234A/B/C interest and s.234F fee on late filing.
  * - Rebate/marginal relief under the OLD regime's own interaction rules.
  */

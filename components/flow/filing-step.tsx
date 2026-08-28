@@ -17,8 +17,9 @@ interface FilingStepProps {
   regime: "new" | "old";
   faultInjected: boolean;
   slowMode: boolean;
-  /** Parent commits the return (refund state + keyed timeline + advancer). */
-  onFile: () => void;
+  /** Parent commits the return. Resolves once the server has accepted it; rejects on a
+   *  network/server failure so the error ladder can name the cause and offer retry (T1.4). */
+  onFile: () => void | Promise<void>;
   onBack: () => void;
 }
 
@@ -38,6 +39,7 @@ export default function FilingStep({
   onBack,
 }: FilingStepProps) {
   const [stage, setStage] = useState<Stage>("idle");
+  const [networkError, setNetworkError] = useState(false);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const b = computeForPersona(persona, regime);
@@ -61,6 +63,7 @@ export default function FilingStep({
   const unit = slowMode ? 1100 : 420;
 
   const beginFiling = () => {
+    setNetworkError(false);
     setStage("checking");
     timers.current.push(
       setTimeout(() => {
@@ -74,8 +77,15 @@ export default function FilingStep({
             setStage("committing");
             timers.current.push(
               setTimeout(() => {
-                onFile();
-                setStage("done");
+                // A rejected commit is a real outcome, not a console line: the same error
+                // ladder that serves the sandbox fault names the network cause and retries.
+                Promise.resolve()
+                  .then(() => onFile())
+                  .then(() => setStage("done"))
+                  .catch(() => {
+                    setNetworkError(true);
+                    setStage("error");
+                  });
               }, unit),
             );
           }, unit),
@@ -110,7 +120,7 @@ export default function FilingStep({
         </div>
         <button
           onClick={onBack}
-          className="w-full bg-money hover:bg-money-deep text-paper font-semibold py-3.5 px-6 rounded-xl transition-colors shadow-sm text-sm"
+          className="w-full bg-navy hover:opacity-90 text-paper font-semibold py-3.5 px-6 rounded-xl transition-colors shadow-sm text-sm"
         >
           {t.dashboard.refundTimeline}
         </button>
@@ -179,8 +189,12 @@ export default function FilingStep({
       {/* ERROR LADDER: cause + next action, nothing generic */}
       {stage === "error" && (
         <div className="error-callout space-y-2 p-4">
-          <p className="text-sm font-semibold text-alarm">{t.filing.errorCause}</p>
-          <p className="text-xs text-ink-2 leading-relaxed">{t.filing.errorAction}</p>
+          <p className="text-sm font-semibold text-alarm">
+            {networkError ? t.filing.errorCauseNetwork : t.filing.errorCause}
+          </p>
+          <p className="text-xs text-ink-2 leading-relaxed">
+            {networkError ? t.filing.errorActionNetwork : t.filing.errorAction}
+          </p>
           <button
             onClick={beginFiling}
             className="mt-1 bg-alarm hover:bg-alarm-deep text-paper text-xs font-semibold py-2 px-4 rounded-lg transition-colors"
@@ -200,7 +214,7 @@ export default function FilingStep({
           </button>
           <button
             onClick={beginFiling}
-            className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-money px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-money-deep"
+            className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-navy px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:opacity-90"
           >
             <FileCheck size={16} />
             <span>{t.file.confirmAndFile}</span>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LogoLink } from "@/components/brand/logo";
 
 /**
  * Shared shell for the two reviewer-facing documents, `/honesty` and
@@ -23,12 +24,7 @@ export default function DocsLayout({
   return (
     <div className="mx-auto max-w-3xl px-5 pb-16 pt-7 sm:px-8">
       <nav className="mb-10 flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-line pb-4 text-[0.82rem]">
-        <Link
-          href="/"
-          className="font-medium text-money underline decoration-money/30 underline-offset-2 hover:decoration-money"
-        >
-          ← Wapsi
-        </Link>
+        <LogoLink size="sm" />
         <span className="text-ink-3">/</span>
         <Link href="/honesty" className="text-ink-2 hover:text-ink">
           What&apos;s real

@@ -16,6 +16,8 @@ interface PersonalizedDashboardProps {
   onPrimaryAction: () => void;
   onEdit: () => void;
   isRealMode?: boolean;
+  /** T5.1: switching Simple / Full detail is one tap here, not a re-run of onboarding. */
+  onModeChange?: (mode: OnboardingProfile["mode"]) => void;
 }
 
 /**
@@ -31,6 +33,7 @@ export default function PersonalizedDashboard({
   onPrimaryAction,
   onEdit,
   isRealMode = false,
+  onModeChange,
 }: PersonalizedDashboardProps) {
   const personalization = getPersonalization(profile);
   const focusLabels = profile.focuses
@@ -56,7 +59,11 @@ export default function PersonalizedDashboard({
             id="personalized-dashboard-heading"
             className="text-2xl font-extrabold tracking-tight text-ink sm:text-3xl"
           >
-            {t.dashboard.personalized.heading[profile.intent]}
+            {/* A man with two notices must not be greeted with "let us get your
+                return ready" — the filed state owns the headline. */}
+            {hasFiled
+              ? t.dashboard.personalized.headingFiled
+              : t.dashboard.personalized.heading[profile.intent]}
           </h2>
           <p className="text-sm leading-relaxed text-ink-2">
             {hasFiled
@@ -74,7 +81,7 @@ export default function PersonalizedDashboard({
           <button
             type="button"
             onClick={onPrimaryAction}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-money px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-money-deep"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-navy px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:opacity-90"
           >
             {isRealMode ? "Start Step-by-Step Return" : t.dashboard.personalized.primaryAction[destination]}
             <ArrowRight size={16} aria-hidden="true" />
@@ -100,11 +107,28 @@ export default function PersonalizedDashboard({
         </div>
         <div className="space-y-1">
           <span className="block text-[0.68rem] font-mono font-semibold uppercase tracking-wider text-ink-3">
-            {t.dashboard.personalized.profileLabels.income}
+            {t.onboarding.modeQuestion}
           </span>
-          <strong className="block text-sm text-ink">
-            {t.onboarding.incomeOptions[profile.incomeBand]}
-          </strong>
+          {onModeChange ? (
+            /* A live switch, not an echo: changing modes must never require
+               re-running onboarding (T5.1). */
+            <div className="seg" role="group" aria-label={t.onboarding.modeQuestion}>
+              {(["simple", "full"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  aria-pressed={profile.mode === mode}
+                  onClick={() => profile.mode !== mode && onModeChange(mode)}
+                >
+                  {t.onboarding.modeOptions[mode].label}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <strong className="block text-sm text-ink">
+              {t.onboarding.modeOptions[profile.mode].label}
+            </strong>
+          )}
         </div>
         <div className="space-y-1">
           <span className="block text-[0.68rem] font-mono font-semibold uppercase tracking-wider text-ink-3">
