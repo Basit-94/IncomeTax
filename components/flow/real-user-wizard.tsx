@@ -126,7 +126,11 @@ export default function RealUserTaxWizard({
   }, [formData]);
 
   const updateField = (field: keyof UserTaxProfile, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    let cleanValue = value;
+    if (typeof value === "number") {
+      cleanValue = Math.max(0, value);
+    }
+    setFormData((prev) => ({ ...prev, [field]: cleanValue }));
   };
 
   // Speaks/reads text in the current language

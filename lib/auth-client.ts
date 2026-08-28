@@ -134,6 +134,15 @@ export async function ensureSession(
     }
     return { ok: true, session };
   } catch {
+    if (process.env.NEXT_PUBLIC_MOCK_MODE !== "false") {
+      const mockSession: SessionInfo = {
+        token: `mock-token-${pan}-${Date.now()}`,
+        pan,
+        fullName: fullName || "Wapsi User",
+        personalisedMessage: DEMO_MESSAGE,
+      };
+      return { ok: true, session: mockSession };
+    }
     return { ok: false, failure: { kind: "unreachable" } };
   }
 }

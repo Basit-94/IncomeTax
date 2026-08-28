@@ -28,8 +28,8 @@ public class AuthConfig {
     public static final String MOCK_CODE = "949494";
 
     @Bean
-    public PasswordHasher passwordHasher() {
-        return new PasswordHasher();
+    public PasswordHasher passwordHasher(@Value("${wapsi.otp.mode:fixed}") String mode) {
+        return "random".equalsIgnoreCase(mode) ? new PasswordHasher() : new PasswordHasher(1000);
     }
 
     @Bean

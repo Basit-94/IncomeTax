@@ -529,13 +529,26 @@ export default function WapsiPrototype() {
 
   // Handle OTP digit inputs
   const handleOtpChange = (val: string, index: number) => {
-    if (isNaN(Number(val))) return;
+    // If the value looks like a full OTP paste (6 digits)
+    const digitsOnly = val.replace(/\D/g, "");
+    if (digitsOnly.length === 6) {
+      setOtp(digitsOnly.split(""));
+      setOtpError(false);
+      // focus the last box
+      const lastInput = document.getElementById("otp-5");
+      lastInput?.focus();
+      return;
+    }
+
+    const char = val.slice(-1);
+    if (char !== "" && isNaN(Number(char))) return;
+
     const newOtp = [...otp];
-    newOtp[index] = val;
+    newOtp[index] = char;
     setOtp(newOtp);
 
     // auto focus next box
-    if (val !== "" && index < 5) {
+    if (char !== "" && index < 5) {
       const nextInput = document.getElementById(`otp-${index + 1}`);
       nextInput?.focus();
     }
