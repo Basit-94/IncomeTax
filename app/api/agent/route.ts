@@ -76,6 +76,40 @@ async function backendGet(path: string, token: string | undefined): Promise<unkn
   if (!token) {
     return { error: "The user is not signed in, so this cannot be read. Ask them to sign in first." };
   }
+
+  // If in mock/standalone mode, return mock resources immediately
+  if (token.startsWith("mock-") || process.env.NEXT_PUBLIC_MOCK_MODE !== "false") {
+    if (path.startsWith("/api/v1/history")) {
+      return [
+        {
+          id: "filing-2025",
+          assessmentYear: "2025-26",
+          status: "processed",
+          totalTax: 120000,
+          filedAt: "2025-07-15T10:30:00Z",
+        }
+      ];
+    }
+    if (path.startsWith("/api/v1/documents")) {
+      return [
+        {
+          id: "doc-form16",
+          name: "Form 16 (Salary Certificate)",
+          type: "form16",
+          year: "2026-27",
+          uploadedAt: "2026-05-10T09:00:00Z",
+        },
+        {
+          id: "doc-capgains",
+          name: "Capital Gains Statement (Brokerage)",
+          type: "capital_gains_statement",
+          year: "2026-27",
+          uploadedAt: "2026-05-12T14:20:00Z",
+        }
+      ];
+    }
+  }
+
   const base = process.env.AGENT_BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
   try {
     const res = await fetch(`${base}${path}`, {
