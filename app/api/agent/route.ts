@@ -269,9 +269,16 @@ async function callGemini(
   system: string,
   contents: { role: string; parts: GeminiPart[] }[],
 ): Promise<{ parts: GeminiPart[] } | { error: string }> {
-  const key = process.env.GEMINI_API_KEY;
+  let key = process.env.GEMINI_API_KEY;
   if (!key || key.includes("REPLACE_ME")) {
     return { error: "GEMINI_API_KEY is not configured on the server." };
+  }
+  key = key.trim();
+  if (key.startsWith('"') && key.endsWith('"')) {
+    key = key.slice(1, -1);
+  }
+  if (key.startsWith("'") && key.endsWith("'")) {
+    key = key.slice(1, -1);
   }
   const model = process.env.AGENT_MODEL || "gemini-3.5-flash";
   const maxTokens = Number(process.env.AGENT_MAX_TOKENS_PER_REPLY || 4096);
