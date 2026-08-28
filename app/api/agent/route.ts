@@ -265,43 +265,78 @@ interface GeminiPart {
   functionResponse?: { name: string; response: Record<string, unknown> };
 }
 
-async function callGemini(
+async function tryCallGemini(
+  rawKey: string | undefined,
+  model: string,
   system: string,
   contents: { role: string; parts: GeminiPart[] }[],
 ): Promise<{ parts: GeminiPart[] } | { error: string }> {
-  let key = process.env.GEMINI_API_KEY;
-  if (!key || key.includes("REPLACE_ME")) {
-    return { error: "GEMINI_API_KEY is not configured on the server." };
+  if (!rawKey || rawKey.includes("REPLACE_ME")) {
+    return { error: "API key is not configured." };
   }
-  key = key.trim();
+
+  let key = rawKey.trim();
   if (key.startsWith('"') && key.endsWith('"')) {
     key = key.slice(1, -1);
   }
   if (key.startsWith("'") && key.endsWith("'")) {
     key = key.slice(1, -1);
   }
-  const model = process.env.AGENT_MODEL || "gemini-3.5-flash";
+
   const maxTokens = Number(process.env.AGENT_MAX_TOKENS_PER_REPLY || 4096);
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: system }] },
-        contents,
-        tools: [{ functionDeclarations: functionDeclarations() }],
-        generationConfig: { maxOutputTokens: maxTokens, temperature: 0.2 },
-      }),
-    },
-  );
-  if (!res.ok) {
-    const body = await res.text();
-    return { error: `Model call failed: HTTP ${res.status} ${body.slice(0, 300)}` };
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: system }] },
+          contents,
+          tools: [{ functionDeclarations: functionDeclarations() }],
+          generationConfig: { maxOutputTokens: maxTokens, temperature: 0.2 },
+        }),
+      },
+    );
+    if (!res.ok) {
+      const body = await res.text();
+      return { error: `Model call failed: HTTP ${res.status} ${body.slice(0, 300)}` };
+    }
+    const data = await res.json();
+    const parts: GeminiPart[] = data?.candidates?.[0]?.content?.parts ?? [];
+    return { parts };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : String(err) };
   }
-  const data = await res.json();
-  const parts: GeminiPart[] = data?.candidates?.[0]?.content?.parts ?? [];
-  return { parts };
+}
+
+async function callGemini(
+  system: string,
+  contents: { role: string; parts: GeminiPart[] }[],
+): Promise<{ parts: GeminiPart[] } | { error: string }> {
+  const primaryKey = process.env.GEMINI_API_KEY;
+  const fallbackKey = process.env.GEMINI_FALLBACK_API_KEY;
+  const primaryModel = process.env.AGENT_MODEL || "gemini-3.5-flash";
+  const fallbackModel = process.env.AGENT_FALLBACK_MODEL || "gemini-1.5-flash";
+
+  let result = await tryCallGemini(primaryKey, primaryModel, system, contents);
+
+  if ("error" in result) {
+    // If the primary call failed, try the fallback configuration
+    const activeKey = fallbackKey || primaryKey;
+    const activeModel = fallbackKey ? primaryModel : fallbackModel;
+
+    if (fallbackKey || fallbackModel !== primaryModel) {
+      result = await tryCallGemini(activeKey, activeModel, system, contents);
+
+      // If that also failed and we have both key & model fallbacks, try the combination
+      if ("error" in result && fallbackKey && fallbackModel !== primaryModel) {
+        result = await tryCallGemini(fallbackKey, fallbackModel, system, contents);
+      }
+    }
+  }
+
+  return result;
 }
 
 /* --------------------------------------------------------------- transcript -- */
