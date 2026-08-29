@@ -45,6 +45,8 @@ export const asDict: Dict = {
     light: "লাইট",
     dark: "ডাৰ্ক",
     sandbox: "ৰিভিউ টুল",
+    /** WCAG 2.4.1: lets a keyboard user jump past the header chrome. */
+    skipToContent: "মূল বিষয়বস্তুলৈ যাওক",
   },
 
   validate: {
@@ -122,6 +124,10 @@ export const asDict: Dict = {
     mockCodeLabel: "মক ক'ড",
     autoFill: "মোৰ হৈ ভৰাই দিয়ক",
     verifyEnter: "সত্যাপন কৰি ভিতৰলৈ যাওক",
+    /** Screen-reader labels for the six single-digit OTP boxes. */
+    otpGroupLabel: "ছয় অংকৰ সত্যাপন ক'ড",
+    otpDigitLabel: (position: number, total: number) =>
+      `অংক ${position}, মুঠ ${total}ৰ ভিতৰত`,
     draftRestored: (time: string) =>
       `${time}-ত ছেভ হোৱা আপোনাৰ খচৰা ঘূৰাই অনা হ'ল। একো হেৰোৱা নাই।`,
   },

@@ -42,6 +42,8 @@ export const pa: Dict = {
     light: "ਲਾਈਟ",
     dark: "ਡਾਰਕ",
     sandbox: "ਰਿਵਿਊ ਟੂਲ",
+    /** WCAG 2.4.1: lets a keyboard user jump past the header chrome. */
+    skipToContent: "ਮੁੱਖ ਸਮੱਗਰੀ ਉੱਤੇ ਜਾਓ",
   },
 
   validate: {
@@ -119,6 +121,10 @@ export const pa: Dict = {
     mockCodeLabel: "ਮੌਕ ਕੋਡ",
     autoFill: "ਮੇਰੇ ਲਈ ਭਰ ਦਿਓ",
     verifyEnter: "ਤਸਦੀਕ ਕਰੋ ਤੇ ਅੰਦਰ ਜਾਓ",
+    /** Screen-reader labels for the six single-digit OTP boxes. */
+    otpGroupLabel: "ਛੇ ਅੰਕਾਂ ਦਾ ਤਸਦੀਕ ਕੋਡ",
+    otpDigitLabel: (position: number, total: number) =>
+      `ਅੰਕ ${position}, ਕੁੱਲ ${total} ਵਿੱਚੋਂ`,
     draftRestored: (time: string) =>
       `ਤੁਹਾਡਾ ${time} ਵਾਲਾ ਡਰਾਫਟ ਵਾਪਸ ਲਿਆਂਦਾ ਗਿਆ। ਕੁਝ ਵੀ ਨਹੀਂ ਗੁਆਚਿਆ।`,
   },

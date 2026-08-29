@@ -42,6 +42,8 @@ export const ta: Dict = {
     light: "வெளிச்சம்",
     dark: "இருள்",
     sandbox: "மதிப்பாய்வு கருவிகள்",
+    /** WCAG 2.4.1: lets a keyboard user jump past the header chrome. */
+    skipToContent: "முதன்மை உள்ளடக்கத்திற்குச் செல்",
   },
 
   validate: {
@@ -120,6 +122,10 @@ export const ta: Dict = {
     mockCodeLabel: "மாதிரி குறியீடு",
     autoFill: "எனக்காக நிரப்பு",
     verifyEnter: "சரிபார்த்து உள்ளே செல்",
+    /** Screen-reader labels for the six single-digit OTP boxes. */
+    otpGroupLabel: "ஆறு இலக்க சரிபார்ப்புக் குறியீடு",
+    otpDigitLabel: (position: number, total: number) =>
+      `இலக்கம் ${position}, மொத்தம் ${total}`,
     draftRestored: (time: string) => `உங்கள் சேமித்த வரைவு ${time} அளவில் மீட்டெடுக்கப்பட்டது. எதுவும் இழக்கப்படவில்லை.`,
   },
 

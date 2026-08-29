@@ -48,12 +48,24 @@ export default function OtpScreen({
 
       {/* Passcode Boxes */}
       <div className="space-y-4">
-        <div className="flex justify-center space-x-2">
+        {/* dir="ltr": a digit sequence reads left-to-right in every language, so the
+            boxes must keep their order even when <html dir="rtl"> (Urdu, Kashmiri,
+            Sindhi) — otherwise the code renders reversed. */}
+        <div
+          dir="ltr"
+          role="group"
+          aria-label={t.login.otpGroupLabel}
+          className="flex justify-center space-x-2"
+        >
           {otp.map((digit, idx) => (
             <input
               key={idx}
               id={`otp-${idx}`}
               type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete={idx === 0 ? "one-time-code" : "off"}
+              aria-label={t.login.otpDigitLabel(idx + 1, otp.length)}
               maxLength={1}
               value={digit}
               onChange={(e) => handleOtpChange(e.target.value, idx)}
@@ -70,16 +82,22 @@ export default function OtpScreen({
           ))}
         </div>
 
-        {otpError && !authNote && (
-          <span className="block text-xs text-alarm font-medium">
-            {t.login.incorrectCode}
-          </span>
-        )}
-        {authNote && (
-          <span className={`block text-xs font-medium ${otpError ? "text-alarm" : "text-ink-2"}`}>
-            {authNote}
-          </span>
-        )}
+        {/* WCAG 4.1.3: both live regions stay mounted so the async auth text is
+            announced when it appears, instead of arriving with the region. */}
+        <div className="space-y-1">
+          <div role="status" aria-live="polite">
+            {authNote && !otpError && (
+              <span className="block text-xs font-medium text-ink-2">{authNote}</span>
+            )}
+          </div>
+          <div role="alert">
+            {otpError && (
+              <span className="block text-xs text-alarm font-medium">
+                {authNote ?? t.login.incorrectCode}
+              </span>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="bg-paper-2 border border-line rounded-lg p-4 space-y-2 text-left">
@@ -92,7 +110,11 @@ export default function OtpScreen({
         </p>
         <div className="pt-2 flex justify-between items-center">
           <span className="text-[0.75rem] font-mono text-ink-3">
-            {t.login.mockCodeLabel}: <strong className="text-money">{mockCode}</strong>
+            {t.login.mockCodeLabel}:{" "}
+            {/* Same reason as the boxes: a code is LTR content in an RTL locale. */}
+            <strong dir="ltr" className="inline-block text-money">
+              {mockCode}
+            </strong>
           </span>
           <button
             onClick={onAutoFill}

@@ -64,7 +64,7 @@ export default function LanguageMenu({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={`${label}: ${current.english}`}
-        className="flex cursor-pointer items-center gap-1.5 rounded-full border border-line bg-paper-2 px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-paper"
+        className="flex min-h-[44px] cursor-pointer items-center gap-1.5 rounded-full border border-line bg-paper-2 px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-paper"
       >
         <Globe size={13} className="text-ink-2" aria-hidden="true" />
         <span dir={isRtl(current.code) ? "rtl" : "ltr"}>{current.native}</span>

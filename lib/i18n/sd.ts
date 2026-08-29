@@ -45,6 +45,8 @@ export const sd: Dict = {
     light: "لائيٽ",
     dark: "ڊارڪ",
     sandbox: "جائزي جا اوزار",
+    /** WCAG 2.4.1: lets a keyboard user jump past the header chrome. */
+    skipToContent: "مکيہ مواد ڏانهن وڃو",
   },
 
   validate: {
@@ -122,6 +124,10 @@ export const sd: Dict = {
     mockCodeLabel: "نموني وارو ڪوڊ",
     autoFill: "منهنجي لاءِ ڀري ڇڏيو",
     verifyEnter: "تصديق ڪريو ۽ اندر وڃو",
+    /** Screen-reader labels for the six single-digit OTP boxes. */
+    otpGroupLabel: "ڇهن انگن وارو تصديقي ڪوڊ",
+    otpDigitLabel: (position: number, total: number) =>
+      `انگ ${position}، ڪل ${total} مان`,
     draftRestored: (time: string) =>
       `توهان جو ${time} وارو مسودو واپس آندو ويو۔ ڪجهه به نه ويو آهي۔`,
   },

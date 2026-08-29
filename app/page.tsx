@@ -1404,6 +1404,11 @@ export default function WapsiPrototype() {
           <InteractiveTaxDashboard onLogOut={handleLogOut} />
         ) : (
           <>
+            {/* WCAG 2.4.1: first focusable element, so a keyboard user can bypass
+                the header chrome. Hidden until focused (see .skip-link). */}
+            <a href="#main-content" className="skip-link">
+              {t.shell.skipToContent}
+            </a>
             {/* --- PORTAL HEADER --- */}
         <PortalHeader
           lang={lang}

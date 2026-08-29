@@ -42,6 +42,8 @@ export const ne: Dict = {
     light: "उज्यालो",
     dark: "अँध्यारो",
     sandbox: "समीक्षा उपकरण",
+    /** WCAG 2.4.1: lets a keyboard user jump past the header chrome. */
+    skipToContent: "मुख्य सामग्रीमा जानुहोस्",
   },
 
   validate: {
@@ -118,6 +120,10 @@ export const ne: Dict = {
     mockCodeLabel: "नमूना कोड",
     autoFill: "मेरा लागि भरिदेऊ",
     verifyEnter: "प्रमाणित गरेर भित्र जानुहोस्",
+    /** Screen-reader labels for the six single-digit OTP boxes. */
+    otpGroupLabel: "छ अंकको प्रमाणीकरण कोड",
+    otpDigitLabel: (position: number, total: number) =>
+      `अंक ${position}, जम्मा ${total} मध्ये`,
     draftRestored: (time: string) => `${time} बजेको तपाईंको ड्राफ्ट फिर्ता ल्याइयो। केही पनि हराएन।`,
   },
 

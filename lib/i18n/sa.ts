@@ -44,6 +44,8 @@ export const sa: Dict = {
     light: "उज्ज्वलम्",
     dark: "श्यामम्",
     sandbox: "समीक्षा-साधनानि",
+    /** WCAG 2.4.1: lets a keyboard user jump past the header chrome. */
+    skipToContent: "मुख्यविषयं प्रति गच्छतु",
   },
 
   validate: {
@@ -120,6 +122,10 @@ export const sa: Dict = {
     mockCodeLabel: "नमूना-कोड्",
     autoFill: "मम कृते पूरयतु",
     verifyEnter: "सत्यापय्य अन्तः गच्छतु",
+    /** Screen-reader labels for the six single-digit OTP boxes. */
+    otpGroupLabel: "षडङ्कीयः सत्यापनसङ्केतः",
+    otpDigitLabel: (position: number, total: number) =>
+      `अङ्कः ${position}, समग्रं ${total}`,
     draftRestored: (time: string) => `${time} समयस्य भवतः प्रारूपं प्रत्यानीतम्। किमपि न नष्टम्।`,
   },
 

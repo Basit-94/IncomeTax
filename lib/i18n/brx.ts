@@ -47,6 +47,8 @@ export const brx: Dict = {
     light: "लाइट",
     dark: "डार्क",
     sandbox: "रिभिउ टुल",
+    /** WCAG 2.4.1: lets a keyboard user jump past the header chrome. */
+    skipToContent: "गुबै जायगाथिंआव थां",
   },
 
   validate: {
@@ -124,6 +126,10 @@ export const brx: Dict = {
     mockCodeLabel: "मक क'ड",
     autoFill: "आंनि थाखाय सोना हो",
     verifyEnter: "रोखा खालामना सिं हाबो",
+    /** Screen-reader labels for the six single-digit OTP boxes. */
+    otpGroupLabel: "द अंकनि रोखा क'ड",
+    otpDigitLabel: (position: number, total: number) =>
+      `अंक ${position}, गासै ${total} निफ्राय`,
     draftRestored: (time: string) =>
       `नोंनि ड्राफ्टखौ ${time}-निफ्राय लाबोफिननाय जाबाय। जेबो गोमाखै।`,
   },

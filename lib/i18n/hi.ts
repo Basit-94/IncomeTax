@@ -45,6 +45,8 @@ export const hi: Dict = {
     light: "लाइट",
     dark: "डार्क",
     sandbox: "रिव्यू टूल",
+    /** WCAG 2.4.1: lets a keyboard user jump past the header chrome. */
+    skipToContent: "मुख्य सामग्री पर जाएँ",
   },
 
   validate: {
@@ -121,6 +123,10 @@ export const hi: Dict = {
     mockCodeLabel: "मॉक कोड",
     autoFill: "मेरे लिए भर दें",
     verifyEnter: "सत्यापित करें और अंदर जाएँ",
+    /** Screen-reader labels for the six single-digit OTP boxes. */
+    otpGroupLabel: "छह अंकों का सत्यापन कोड",
+    otpDigitLabel: (position: number, total: number) =>
+      `अंक ${position}, कुल ${total} में से`,
     draftRestored: (time: string) => `आपका पूर्व-सहेजा ड्राफ़्ट ${time} बजे का लौटा दिया गया। कुछ नहीं गया।`,
   },
 

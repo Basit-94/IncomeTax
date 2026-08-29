@@ -44,6 +44,8 @@ export const mai: Dict = {
     light: "इजोत",
     dark: "अन्हार",
     sandbox: "समीक्षा उपकरण",
+    /** WCAG 2.4.1: lets a keyboard user jump past the header chrome. */
+    skipToContent: "मुख्य सामग्री पर जाउ",
   },
 
   validate: {
@@ -120,6 +122,10 @@ export const mai: Dict = {
     mockCodeLabel: "नमूना कोड",
     autoFill: "हमरा लेल भरि दिअ",
     verifyEnter: "सत्यापित करू आ भीतर जाउ",
+    /** Screen-reader labels for the six single-digit OTP boxes. */
+    otpGroupLabel: "छह अंकक सत्यापन कोड",
+    otpDigitLabel: (position: number, total: number) =>
+      `अंक ${position}, कुल ${total} मे सँ`,
     draftRestored: (time: string) => `${time} बजेक अहाँक ड्राफ्ट घुरा देल गेल। किछु नहि हराएल।`,
   },
 

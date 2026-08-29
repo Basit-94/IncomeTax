@@ -49,6 +49,8 @@ export const en = {
     light: "Light",
     dark: "Dark",
     sandbox: "Review tools",
+    /** WCAG 2.4.1: lets a keyboard user jump past the header chrome. */
+    skipToContent: "Skip to main content",
   },
 
   /**
@@ -140,6 +142,10 @@ export const en = {
     mockCodeLabel: "Mock code",
     autoFill: "Fill it in for me",
     verifyEnter: "Verify and go in",
+    /** Screen-reader labels for the six single-digit OTP boxes. */
+    otpGroupLabel: "Six-digit verification code",
+    otpDigitLabel: (position: number, total: number) =>
+      `Digit ${position} of ${total}`,
     /** Shown when a saved draft was found and reopened. */
     draftRestored: (time: string) => `Your draft was restored from ${time}. Nothing was lost.`,
   },

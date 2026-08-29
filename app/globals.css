@@ -79,7 +79,7 @@
     --input-color: #F4F1E6;
     --text-color: #1C2233;
     --muted-color: #4A4E5C;
-    --subtle-color: #7C8090;
+    --subtle-color: #646878;
     --border-color: #D9D2B9;
     --edge-color: #1C2233;
     --grid-color: #D9D2B9;
@@ -126,7 +126,7 @@
     --input-color: #171B23;
     --text-color: #E9ECF2;
     --muted-color: #B0B6C4;
-    --subtle-color: #7C8494;
+    --subtle-color: #8890A0;
     --border-color: #282E3A;
     --edge-color: #333B4B;
     --grid-color: #232833;
@@ -306,6 +306,25 @@
 }
 
   /* app-specific helpers that d13.css does not define */
+  /* WCAG 2.4.1: off-screen until focused, then parked over the header. */
+  .skip-link {
+    position: fixed;
+    left: -9999px;
+    top: 0;
+    z-index: 100;
+    padding: 12px 18px;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-color);
+    background: var(--surface-color);
+    border: 1px solid var(--edge-color);
+    border-radius: var(--card-radius);
+  }
+  .skip-link:focus {
+    left: 8px;
+    top: 8px;
+  }
   .cap {
     font-family: var(--font-mono);
     font-size: 10px;

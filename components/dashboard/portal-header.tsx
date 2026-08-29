@@ -53,8 +53,10 @@ export default function PortalHeader({
       <div className="px-4 py-4 max-w-6xl mx-auto w-full space-y-3">
         {/* Row 1: brand left, the Simple/Detailed switch in the top-right corner
             (user-annotated position, 2026-08-29). */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center space-x-3">
+        {/* WCAG 1.4.10: the row wraps at 320px so the switch drops onto its own
+            line instead of pushing the page wider than the viewport. */}
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+          <div className="flex min-w-0 items-center space-x-3">
             <button
               onClick={onLogoClick}
               className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left bg-transparent border-0 p-0 cursor-pointer"
@@ -69,11 +71,12 @@ export default function PortalHeader({
           </div>
 
           {mode && onModeChange && (
-            <div className="seg shrink-0" role="group" aria-label={t.onboarding.modeQuestion}>
+            <div className="seg ms-auto" role="group" aria-label={t.onboarding.modeQuestion}>
               {(["simple", "full"] as const).map((m) => (
                 <button
                   key={m}
                   type="button"
+                  className="min-h-[44px] min-w-[44px]"
                   aria-pressed={mode === m}
                   onClick={() => mode !== m && onModeChange(m)}
                 >
@@ -85,7 +88,7 @@ export default function PortalHeader({
         </div>
 
         {/* Row 2: the remaining controls, right-aligned */}
-        <div className="flex items-center space-x-3 justify-end">
+        <div className="flex flex-wrap items-center gap-3 justify-end">
           {showLanguage && (
             <LanguageMenu lang={lang} onChange={changeLang} label={t.shell.language} />
           )}
@@ -93,7 +96,7 @@ export default function PortalHeader({
           {/* Theme Toggler */}
           <button
             onClick={toggleTheme}
-            className="p-1.5 bg-paper-2 border border-line rounded text-ink-2 hover:bg-slate-200 transition-colors flex items-center gap-1.5 text-xs font-mono cursor-pointer"
+            className="min-h-[44px] px-3 py-1.5 bg-paper-2 border border-line rounded text-ink-2 hover:bg-slate-200 transition-colors flex items-center gap-1.5 text-xs font-mono cursor-pointer"
             aria-label={theme === "dark" ? t.shell.light : t.shell.dark}
           >
             {theme === "dark" ? (
@@ -112,7 +115,7 @@ export default function PortalHeader({
           {/* Reviewer Settings Gear */}
           <button
             onClick={() => setShowConsole(!showConsole)}
-            className="p-1.5 bg-paper-2 border border-line rounded text-ink-2 hover:bg-slate-200 transition-colors flex items-center gap-1.5 text-xs font-mono cursor-pointer"
+            className="min-h-[44px] px-3 py-1.5 bg-paper-2 border border-line rounded text-ink-2 hover:bg-slate-200 transition-colors flex items-center gap-1.5 text-xs font-mono cursor-pointer"
           >
             <Settings size={14} className={showConsole ? "animate-spin" : ""} />
             <span>{t.shell.sandbox}</span>

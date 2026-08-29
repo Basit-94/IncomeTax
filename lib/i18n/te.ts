@@ -43,6 +43,8 @@ export const te: Dict = {
     light: "వెలుతురు",
     dark: "చీకటి",
     sandbox: "సమీక్ష సాధనాలు",
+    /** WCAG 2.4.1: lets a keyboard user jump past the header chrome. */
+    skipToContent: "ప్రధాన కంటెంట్‌కు వెళ్లండి",
   },
 
   validate: {
@@ -122,6 +124,10 @@ export const te: Dict = {
     mockCodeLabel: "నమూనా కోడ్",
     autoFill: "నా కోసం నింపండి",
     verifyEnter: "ధృవీకరించి లోపలికి వెళ్లండి",
+    /** Screen-reader labels for the six single-digit OTP boxes. */
+    otpGroupLabel: "ఆరు అంకెల ధృవీకరణ కోడ్",
+    otpDigitLabel: (position: number, total: number) =>
+      `అంకె ${position}, మొత్తం ${total}`,
     draftRestored: (time: string) =>
       `${time} నాటి మీ డ్రాఫ్ట్ తిరిగి తెచ్చాం. ఏదీ పోలేదు.`,
   },

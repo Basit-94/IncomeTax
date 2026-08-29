@@ -1,11 +1,12 @@
 "use client";
 
+import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
-import { m } from "motion/react";
-import { ChevronRight, Sparkles, Cpu, BookOpen } from "lucide-react";
+import { ChevronRight, Cpu, BookOpen } from "lucide-react";
 import type { Dict } from "../lib/i18n";
 import type { OnboardingProfile } from "../lib/onboarding";
 import { getPersonalization } from "../lib/onboarding";
+import { PERSONAS } from "../lib/personas";
 import { MockField, MockFill, MOCK } from "@/components/dev/mock-fill";
 
 interface LandingProps {
@@ -17,6 +18,17 @@ interface LandingProps {
   onboardingProfile: OnboardingProfile | null;
   onEditOnboarding: () => void;
 }
+
+/** D13 index cards are never perfectly square to the desk. */
+const TILTS = ["-.4deg", ".35deg", "-.25deg"];
+
+/** The three reviewer sign-ins, in act order. Names and PANs come from the
+    persona data, so nothing here is a hard-coded English string. */
+const REVIEWER_IDS = ["sunita", "rakesh", "priya"] as const;
+
+const PAN_INPUT_ID = "landing-pan";
+const PAN_HELP_ID = "landing-pan-help";
+const PAN_ERROR_ID = "landing-pan-error";
 
 export default function Landing({
   t,
@@ -32,147 +44,172 @@ export default function Landing({
     ? t.onboarding.intentCta[onboardingProfile.intent]
     : t.landing.check;
 
+  /* Same rise the fact cards use: the class lands on the next frame so the
+     card animates in instead of appearing already settled. */
+  const [risen, setRisen] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setRisen(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
   return (
-    <div className="grid items-start gap-10 py-5 lg:grid-cols-12 lg:items-center lg:py-10">
-      {/* SINGLE COLUMN: TITLE, SUBTITLE, FORM, CITIZENS LIST */}
-      <div className="z-10 space-y-8 text-left lg:col-span-12">
-        {/* HERO BLOCK */}
-        <div className="space-y-4">
-          <span className="text-[11px] font-mono text-money bg-money-soft border border-money/20 px-2.5 py-0.5 rounded uppercase tracking-[0.12em] font-semibold">
-            {t.landing.badge}
-          </span>
-          <h1 className="font-sans text-5xl font-extrabold leading-none tracking-tight text-ink sm:text-6xl">
-            {t.landing.brandTitle}
-          </h1>
-          <h2 className="max-w-2xl font-sans text-2xl font-bold leading-tight tracking-tight text-ink sm:text-3xl">
-            {t.landing.question}
-          </h2>
-          <p className="text-base text-ink-2 leading-relaxed max-w-xl">
-            {t.landing.subtext}
+    <div className="mx-auto w-full max-w-3xl space-y-6 py-4 lg:py-8">
+      {/* D13 cover: the headline sits directly on the graph paper, no card box. */}
+      <header className="space-y-3 text-start">
+        <span className="stamp-chip -rotate-[1.5deg]">{t.landing.badge}</span>
+        <h1 className="font-sans text-4xl font-bold leading-[1.06] tracking-tight text-ink sm:text-5xl lg:text-[52px]">
+          {t.landing.brandTitle}
+        </h1>
+        <h2 className="max-w-[34ch] font-sans text-xl font-bold leading-tight tracking-tight text-ink sm:text-2xl">
+          {t.landing.question}
+        </h2>
+        {/* The blue aside: how to read this page, in plain words. */}
+        <p className="thread max-w-[58ch]">{t.landing.subtext}</p>
+      </header>
+
+      {onboardingProfile && personalization && (
+        <div className="recovery-callout flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1 text-start">
+            <span className="cap block">{t.onboarding.tailoredBadge}</span>
+            <p className="pencil m-0 text-[21px] leading-tight text-ink">
+              {t.onboarding.tailoredIntent(t.onboarding.intentOptions[onboardingProfile.intent].label)}
+            </p>
+            <p className="m-0 text-[13.5px] leading-relaxed text-ink-2">
+              {personalization.guided ? t.onboarding.tailoredGuided : t.onboarding.tailoredQuick}.{" "}
+              {personalization.regimeLens === "check_claims"
+                ? t.onboarding.tailoredRegimeClaims
+                : t.onboarding.tailoredRegimeCompare}
+              .
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onEditOnboarding}
+            className="inline-flex min-h-11 shrink-0 items-center justify-center px-2 text-sm font-semibold text-money hover:underline"
+          >
+            {t.onboarding.changeAnswers}
+          </button>
+        </div>
+      )}
+
+      {/* The one thing this page asks for. Upright and stable — the tilted
+          cards below are the optional detour, not the main path. */}
+      <form onSubmit={handlePanSubmit} className="surface-panel max-w-md space-y-5 p-5 text-start sm:p-6">
+        <div>
+          <label
+            htmlFor={PAN_INPUT_ID}
+            className="mb-2 block font-mono text-xs font-semibold uppercase tracking-wider text-ink-2"
+          >
+            {t.landing.panLabel}
+          </label>
+          <MockField>
+            <input
+              id={PAN_INPUT_ID}
+              type="text"
+              value={panInput}
+              onChange={(e) => handlePanInputChange(e.target.value)}
+              maxLength={10}
+              placeholder={t.landing.panPlaceholder}
+              inputMode="text"
+              autoCapitalize="characters"
+              autoComplete="off"
+              spellCheck={false}
+              aria-invalid={panInputError ? true : undefined}
+              aria-describedby={panInputError ? `${PAN_ERROR_ID} ${PAN_HELP_ID}` : PAN_HELP_ID}
+              className={`min-h-12 w-full rounded-lg border bg-paper-3 px-4 py-3 text-center font-mono text-lg uppercase tracking-widest text-ink transition-colors ${
+                panInputError ? "border-alarm" : "border-line focus:border-money"
+              }`}
+            />
+            <MockFill onFill={() => handlePanInputChange(MOCK.pan)} />
+          </MockField>
+          {panInputError && (
+            <p id={PAN_ERROR_ID} role="alert" className="m-0 mt-1.5 text-xs font-medium text-alarm">
+              {panInputError}
+            </p>
+          )}
+          <p id={PAN_HELP_ID} className="m-0 mt-1.5 text-[0.72rem] leading-snug text-ink-3">
+            {t.landing.panHelp}
           </p>
         </div>
 
-        {onboardingProfile && personalization && (
-          <div className="recovery-callout flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-mono font-semibold uppercase tracking-wider text-money">
-                {t.onboarding.tailoredBadge}
-              </p>
-              <p className="text-sm font-semibold text-ink">
-                {t.onboarding.tailoredIntent(t.onboarding.intentOptions[onboardingProfile.intent].label)}
-              </p>
-              <p className="text-xs leading-relaxed text-ink-2">
-                {personalization.guided ? t.onboarding.tailoredGuided : t.onboarding.tailoredQuick}. {personalization.regimeLens === "check_claims" ? t.onboarding.tailoredRegimeClaims : t.onboarding.tailoredRegimeCompare}.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onEditOnboarding}
-              className="shrink-0 text-xs font-semibold text-money hover:underline"
-            >
-              {t.onboarding.changeAnswers}
-            </button>
-          </div>
-        )}
-
-        {/* DIRECT PAN LOGIN FORM */}
-        <form 
-          onSubmit={handlePanSubmit}
-          className="surface-panel max-w-md space-y-5 p-5 sm:p-6"
+        <button
+          type="submit"
+          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-navy px-4 py-3 font-sans text-sm font-bold text-white shadow-sm transition hover:opacity-90"
         >
-          <div>
-            <label className="mb-2 block text-xs font-mono font-semibold uppercase tracking-wider text-ink-2">
-              {t.landing.panLabel}
-            </label>
-            <div className="relative">
-              <MockField>
-                <input
-                type="text"
-                value={panInput}
-                onChange={(e) => handlePanInputChange(e.target.value)}
-                maxLength={10}
-                placeholder={t.landing.panPlaceholder}
-                className={`w-full bg-paper-3 border ${
-                  panInputError ? "border-alarm" : "border-line focus:border-money"
-                } rounded-xl px-4 py-3 text-center font-mono text-lg uppercase tracking-widest text-ink transition-colors focus:outline-none`}
-              />
-                <MockFill onFill={() => handlePanInputChange(MOCK.pan)} />
-              </MockField>
-            </div>
-            {panInputError ? (
-              <span className="block text-xs text-alarm mt-1.5 font-medium">
-                {panInputError}
-              </span>
-            ) : (
-              <span className="block text-[0.7rem] text-ink-3 mt-1.5">
-                {t.landing.panHelp}
-              </span>
-            )}
-          </div>
+          <span>{primaryAction}</span>
+          <ChevronRight size={16} aria-hidden="true" className="rtl:rotate-180" />
+        </button>
+      </form>
 
-            <button
-              type="submit"
-            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-navy px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:opacity-90"
-          >
-            <span>{primaryAction}</span>
-            <ChevronRight size={16} />
-          </button>
-
-          {/* Quick Mock Login Options for Judge */}
-          <div className="border-t border-line/60 pt-4 mt-2 text-left space-y-2">
-            <span className="block text-[0.7rem] font-mono text-ink-3 uppercase tracking-wider">
-              Reviewer Quick Mock Logins (Click to autofill):
-            </span>
-            <div className="space-y-1.5">
-              <button
-                type="button"
-                onClick={() => handlePanInputChange("DEMPS4417K")}
-                className="w-full text-left text-xs bg-paper border border-line rounded px-3 py-2 hover:border-money hover:bg-paper-2 transition flex justify-between items-center cursor-pointer"
-              >
-                <div>
-                  <span className="font-bold text-ink">Sunita Devi</span>
-                </div>
-                <span className="font-mono text-[11px] text-money font-semibold">DEMPS4417K</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handlePanInputChange("DEMPK8823R")}
-                className="w-full text-left text-xs bg-paper border border-line rounded px-3 py-2 hover:border-money hover:bg-paper-2 transition flex justify-between items-center cursor-pointer"
-              >
-                <div>
-                  <span className="font-bold text-ink">Rakesh Kumar</span>
-                </div>
-                <span className="font-mono text-[11px] text-money font-semibold">DEMPK8823R</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handlePanInputChange("DEMPS9052M")}
-                className="w-full text-left text-xs bg-paper border border-line rounded px-3 py-2 hover:border-money hover:bg-paper-2 transition flex justify-between items-center cursor-pointer"
-              >
-                <div>
-                  <span className="font-bold text-ink">Priya Sharma</span>
-                </div>
-                <span className="font-mono text-[11px] text-money font-semibold">DEMPS9052M</span>
-              </button>
-            </div>
-          </div>
-        </form>
-
-
-
-        {/* Subfooter route links */}
-        <div className="flex items-center space-x-6 pt-6 border-t border-line/60 max-w-md">
-          <Link href="/architecture" className="flex items-center gap-1 text-xs font-mono text-ink-2 hover:text-money hover:underline">
-            <Cpu size={12} />
-            <span>{t.landing.architectureLink}</span>
-          </Link>
-          <Link href="/honesty" className="flex items-center gap-1 text-xs font-mono text-ink-2 hover:text-money hover:underline">
-            <BookOpen size={12} />
-            <span>{t.landing.honestyLink}</span>
-          </Link>
-        </div>
+      {/* ── the reviewer detour: three people you can be ─────────────── */}
+      <div className="divider">
+        <svg width="70" height="18" viewBox="0 0 70 18" aria-hidden="true">
+          <path
+            d="M0 15 C 10 15, 15 4, 25 4 S 40 15, 50 15 S 60 3, 70 3"
+            fill="none"
+            stroke="var(--blue)"
+            strokeWidth="2"
+          />
+        </svg>
+        <span className="label">{t.landing.orTryAs}</span>
+        <div className="line" />
       </div>
 
+      <section aria-label={t.landing.orTryAs} className="grid gap-5 sm:grid-cols-3">
+        {REVIEWER_IDS.map((id, i) => {
+          const person = PERSONAS[id];
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => handlePanInputChange(person.pan)}
+              className={`card ${risen ? "in" : ""} block w-full text-start`}
+              style={{ "--tilt": TILTS[i % TILTS.length] } as CSSProperties}
+            >
+              <span className="pin" aria-hidden="true" />
+              <span className="no block">{t.personas[id].phase}</span>
+              <span className="mt-1 block font-sans text-[19px] font-bold leading-tight text-ink">
+                {person.name}
+              </span>
+              <span className="who block font-mono">{person.pan}</span>
+              <span className="pencil block text-[19px] leading-tight text-ink">
+                {t.personas[id].action}
+              </span>
+            </button>
+          );
+        })}
+      </section>
+
+      <div className="divider" aria-hidden="true">
+        <div className="line" />
+        <svg width="46" height="10" viewBox="0 0 46 10" aria-hidden="true">
+          <path
+            d="M2 6 C 10 2, 18 9, 26 5 S 40 4, 44 6"
+            fill="none"
+            stroke="var(--subtle-color)"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className="line" />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-6">
+        <Link
+          href="/architecture"
+          className="inline-flex min-h-11 items-center gap-1.5 font-mono text-xs text-ink-2 hover:text-money hover:underline"
+        >
+          <Cpu size={12} aria-hidden="true" />
+          <span>{t.landing.architectureLink}</span>
+        </Link>
+        <Link
+          href="/honesty"
+          className="inline-flex min-h-11 items-center gap-1.5 font-mono text-xs text-ink-2 hover:text-money hover:underline"
+        >
+          <BookOpen size={12} aria-hidden="true" />
+          <span>{t.landing.honestyLink}</span>
+        </Link>
+      </div>
     </div>
   );
 }

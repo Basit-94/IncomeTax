@@ -6,7 +6,7 @@
 /* ── light: graph paper on a desk, ink drifting over it ─────────── */
 :root{
   --paper:#F2EFE4; --grid:#D9D2B9; --card:#FBF9F1; --card-2:#F4F1E6;
-  --ink:#1C2233; --ink-2:#4A4E5C; --ink-3:#7C8090;
+  --ink:#1C2233; --ink-2:#4A4E5C; --ink-3:#646878;
   --edge:#1C2233; --hair:#D9D2B9;
   /* text shades — badges, stat numbers, legends, links. All clear 4.5:1 on the paper
      and on their own tint, which is what stops them going brighter still. */
@@ -29,7 +29,7 @@
 }
 .dark-mode{
   --paper:#12141A; --grid:#232833; --card:#1A1E27; --card-2:#171B23;
-  --ink:#E9ECF2; --ink-2:#B0B6C4; --ink-3:#7C8494;
+  --ink:#E9ECF2; --ink-2:#B0B6C4; --ink-3:#8890A0;
   --edge:#333B4B; --hair:#282E3A;
   --blue:#7FA9D8; --blue-bg:#1B2A3C;
   --amber:#DFA855; --amber-bg:#2E2413;
@@ -114,7 +114,7 @@ main{max-width:1080px;margin:0 auto;padding:0 24px}
   opacity:0;transform:translateY(14px);animation:rise .65s cubic-bezier(.2,.8,.2,1) forwards}
 .ch:nth-child(1){animation-delay:.10s} .ch:nth-child(2){animation-delay:.22s} .ch:nth-child(3){animation-delay:.34s}
 @keyframes rise{to{opacity:1;transform:none}}
-.ch::after{content:"";position:absolute;left:0;bottom:0;height:3px;background:var(--c,var(--in));
+.ch::after{content:"";position:absolute;inset-inline-start:0;bottom:0;height:3px;background:var(--c,var(--in));
   width:var(--fill,0);min-width:4px;transition:width 1.5s cubic-bezier(.2,.8,.2,1) .55s}
 .ch .k{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
 .ch .v{font-family:var(--mono);font-size:clamp(24px,3.4vw,30px);font-weight:700;margin-top:8px;
@@ -138,7 +138,7 @@ main{max-width:1080px;margin:0 auto;padding:0 24px}
 .footnote{font-size:13px;color:var(--ink-3);margin:10px 0 0;line-height:1.45}
 
 .thread{margin-top:22px;padding:14px 18px;background:var(--blue-bg);
-  border-left:4px solid var(--blue);border-radius:2px;font-size:15.5px}
+  border-inline-start:4px solid var(--blue);border-radius:2px;font-size:15.5px}
 
 /* hand-drawn dividers */
 .divider{display:flex;align-items:center;gap:10px;margin:40px 0 20px}
@@ -160,7 +160,7 @@ main{max-width:1080px;margin:0 auto;padding:0 24px}
 .card:hover{box-shadow:var(--shadow-hi)}
 .card:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
 .card.ok{--tilt:0deg;border-color:var(--keep)}
-.pin{position:absolute;top:-10px;left:24px;width:18px;height:18px;border-radius:50%;
+.pin{position:absolute;top:-10px;inset-inline-start:24px;width:18px;height:18px;border-radius:50%;
   background:radial-gradient(circle at 35% 30%,var(--pin-a),var(--pin-b));
   box-shadow:0 2px 3px rgba(0,0,0,.35);transition:background .3s,transform .3s}
 .card.ok .pin{background:radial-gradient(circle at 35% 30%,var(--keep),#0C6540);transform:scale(1.12)}
@@ -177,7 +177,7 @@ main{max-width:1080px;margin:0 auto;padding:0 24px}
 .amt{font-family:var(--mono);font-weight:700;font-size:25px;color:var(--ink);
   font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .margin{margin:14px 0 2px;background:var(--amber-bg);
-  border-left:4px solid var(--amber);border-radius:2px;font-size:15px;color:var(--ink)}
+  border-inline-start:4px solid var(--amber);border-radius:2px;font-size:15px;color:var(--ink)}
 .margin summary{list-style:none;cursor:pointer;padding:9px 14px;display:flex;
   align-items:center;justify-content:space-between;gap:10px}
 .margin summary::-webkit-details-marker{display:none}
@@ -217,7 +217,7 @@ main{max-width:1080px;margin:0 auto;padding:0 24px}
 .calc-row .v{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .calc-row.t{border-top:1px solid var(--hair);margin-top:6px;padding-top:11px;color:var(--ink);font-weight:600}
 .callout{margin:14px 0 2px;padding:12px 14px;border-radius:2px;font-size:15px}
-.callout.good{background:var(--green-bg);border-left:4px solid var(--keep)}
+.callout.good{background:var(--green-bg);border-inline-start:4px solid var(--keep)}
 
 /* the full trace — every step opens */
 .trace{width:100%;border-collapse:collapse;font-size:15px}
@@ -300,7 +300,7 @@ main{max-width:1080px;margin:0 auto;padding:0 24px}
   border:0;border-radius:3px;padding:16px 26px;cursor:pointer;position:relative;overflow:hidden;
   transition:opacity .2s}
 .file:disabled{background:var(--hair);color:var(--ink-3);cursor:not-allowed}
-.file .pg{position:absolute;left:0;bottom:0;height:3px;background:var(--keep);width:0}
+.file .pg{position:absolute;inset-inline-start:0;bottom:0;height:3px;background:var(--keep);width:0}
 footer{max-width:1080px;margin:0 auto;padding:22px 24px 40px;color:var(--ink-3);font-size:13px}
 .tag{position:fixed;left:12px;bottom:12px;z-index:60;font-family:var(--mono);font-size:10px;
   letter-spacing:.14em;text-transform:uppercase;background:var(--ink);color:var(--paper);padding:7px 11px}

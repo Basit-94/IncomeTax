@@ -41,7 +41,7 @@ export default function Disclaimer() {
           {t.footer.notAffiliated}
         </p>
         <Link
-          className="shrink-0 font-medium text-money underline decoration-money/30 underline-offset-2 hover:decoration-money"
+          className="inline-flex min-h-[44px] shrink-0 items-center font-medium text-money underline decoration-money/30 underline-offset-2 hover:decoration-money"
           href="/honesty"
         >
           {t.footer.honestyLink}

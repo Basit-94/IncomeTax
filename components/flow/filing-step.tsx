@@ -102,6 +102,11 @@ export default function FilingStep({
         <m.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
           <CheckCircle2 size={48} className="text-money mx-auto" />
         </m.div>
+        {/* WCAG 4.1.3: the success screen replaces the form, so the outcome is
+            announced rather than left to the user to discover. */}
+        <p role="status" aria-live="polite" className="sr-only">
+          {t.filing.stepFiled} {t.filing.ackHeading}
+        </p>
         <div className="space-y-2">
           <h2 className="text-3xl font-extrabold tracking-tight text-ink">{t.filing.stepFiled}</h2>
           <p className="text-base font-bold text-ink">{t.filing.ackHeading}</p>
@@ -130,6 +135,23 @@ export default function FilingStep({
 
   return (
     <div className="space-y-6 max-w-md mx-auto">
+      {/* WCAG 4.1.3: both regions are mounted from the idle state onwards, so each
+          named stage and any failure is announced when its text arrives. sr-only
+          keeps them out of the flow, so the visible layout is unchanged. */}
+      <p role="status" aria-live="polite" className="sr-only">
+        {stage === "checking"
+          ? t.filing.stepChecking
+          : stage === "sealing" || stage === "committing"
+          ? t.filing.stepSealing
+          : ""}
+      </p>
+      <p role="alert" className="sr-only">
+        {stage === "error"
+          ? `${networkError ? t.filing.errorCauseNetwork : t.filing.errorCause} ${
+              networkError ? t.filing.errorActionNetwork : t.filing.errorAction
+            }`
+          : ""}
+      </p>
       <div className="space-y-1">
         <p className="text-sm font-semibold text-money">{t.flow.file}</p>
         <h2 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">{t.filing.heading}</h2>

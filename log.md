@@ -1971,3 +1971,87 @@ INTENT: (1) landing.tsx — delete the right-column skeleton preview panel (Chec
 cards / 2-of-3 callout), widen left column to lg:col-span-12. (2) overview-tab.tsx — Refund
 Timeline surface-panel becomes a <details> dropdown (summary = existing mono heading + chevron,
 closed by default), mirroring the calc-trail disclosure pattern.
+
+## 2026-08-29 - ux4g-design skill + UX4G/GIGW audit (user directive)
+INTENT: create .claude/skills/ux4g-design/SKILL.md capturing UX4G (MeitY/NeGD design system for
+Indian govt services) + GIGW 3.0 (WCAG 2.1 AA, 88 mandatory checkpoints) as an actionable review
+standard, then audit Wapsi against it and REPORT gaps only - no UI changes without go-ahead.
+SOURCING RULE: exact UX4G token values (hex, type scale, spacing) are NOT web-reachable - Storybook
+is a JS shell and the handbook is a PDF behind a download. Those are marked UNVERIFIED in the skill
+rather than guessed. Verified and cited: UX4G design constraints (low-literacy, VLE kiosks, 2G,
+22 scheduled languages), Material icons at 24px, GIGW 3.0 = WCAG 2.1 AA minimum. WCAG criteria
+themselves are quoted from the published normative standard.
+
+## 2026-08-29 - UX4G/GIGW audit COMPLETE (measured, no code changes by me)
+FAILURES (7 confirmed by live measurement):
+ 1 RTL reverses OTP digit order - Urdu: DOM 949494, on-screen left-to-right 494949, box otp-0 not
+   leftmost. Regression from my own dir=rtl work. -> fix agent
+ 2 PAN input has no programmatic label - visible <label>YOUR PAN</label> has no for=, input has no
+   id/aria-label/wrapper (1.3.1, 3.3.2 A). -> landing agent (owns landing.tsx)
+ 3 All six OTP inputs unlabelled; no autocomplete=one-time-code, no inputmode=numeric, type=text
+   (1.3.1/3.3.2 A, 1.3.5 AA). -> fix agent
+ 4 No skip link (2.4.1 A); target <main id=main-content> already exists at page.tsx:1430. -> fix agent
+ 5 --subtle-color #7C8090 -> --color-ink-3 measures 3.41:1 on --color-paper #f2efe4 and 3.73:1 on
+   paper-2; needs 4.5 (1.4.3 AA). 11 visible elements incl .cap, .confirmline, mono record ids,
+   footer. -> fix agent. Disabled Continue btn and .sr-only correctly EXCLUDED as exempt.
+ 6 Reflow 320px: dashboard scrollWidth 331 > 320; .seg Simple/Detailed toggle right edge 337px,
+   not in a scroller (1.4.10 AA). -> fix agent (sent via SendMessage)
+ 7 Zero aria-live/role=status/role=alert on entire dashboard (4.1.3 AA). -> fix agent (SendMessage)
+ minor: footer link 21px high (under WCAG 2.2 24px floor), header buttons 30px (under 44px kiosk
+   target); two H1s per page.
+PASSES (measured, not assumed): 1.4.3 elsewhere; 2.4.7 focus visible - solid 2.4px outline on real
+ Tab (my first automated check reported 27 failures, FALSE POSITIVE from programmatic .focus() not
+ matching :focus-visible - retested and corrected); 1.4.12 text spacing - only .sr-only clipped;
+ heading order no skipped levels; 4.1.2 custom controls correct (checklist rows role=checkbox +
+ aria-checked + tabindex=0); 1.4.1 colour never sole carrier; 3.1.1/3.1.2 lang+dir update on switch;
+ 3.3.4 Error Prevention PASSES - review screen shows figures, file gated on all confirmations,
+ corrections available. That is the critical one for a tax product.
+NOT COVERED (stated honestly): real assistive-tech pass, full keyboard-only journey, dark-mode
+ contrast sweep, explicit 200pct browser zoom.
+
+## 2026-08-29 - d13.css RTL logical-property fix (mine; no agent owned this file)
+FINDING (raised by landing agent, then confirmed by my own measurement in Urdu): d13.css used
+hardcoded physical directions, so RTL locales (ur/ks/sd) rendered accents on the wrong side.
+Measured before: .pin 25px from card LEFT edge / 216px from right while card was right-aligned;
+.thread border-left 4px, border-right 0 with text-align start (=right in RTL).
+CHANGED app/d13.css - 6 declarations to logical properties:
+  .thread border-left -> border-inline-start; .pin left:24px -> inset-inline-start:24px;
+  .margin border-left -> border-inline-start; .callout.good border-left -> border-inline-start;
+  .ch::after left:0 -> inset-inline-start:0; .file .pg left:0 -> inset-inline-start:0.
+  (.tag left:12px deliberately left alone - fixed-position dev badge.)
+VERIFIED after, live: RTL pin now 26px from RIGHT edge, thread border-right 4px / left 0.
+LTR REGRESSION CHECK: pin 25px from left, border-left 4px - identical to before. In LTR these
+logical properties compute to the same physical ones, so D13 fidelity is unchanged. Backup at
+/tmp/d13.css.bak.
+ALSO VERIFIED landing agent output: PAN input now has accessible label 'Your PAN' via
+label[for]/id, aria-describedby, autocapitalize=characters (audit finding 2 CLOSED). Persona cards
+render as real D13 index cards (pin, tilt, mono phase, pencil action); 3-up at >=640px, stacked
+below - correct responsive behaviour, not a bug.
+
+## 2026-08-29 - Audit fixes VERIFIED INDEPENDENTLY (my own measurements, not agent-reported)
+tsc 0 errors; vitest exit 0 (97 pass).
+ 1 RTL OTP: html dir=rtl, container dir attr + computed = ltr; DOM 949494 and left-to-right
+   on-screen 949494 IDENTICAL (was 494949); leftmost box = otp-0; visual order otp-0..otp-5.
+   Screenshot shows 9 4 9 4 9 4. CLOSED - this was my own regression.
+ 2 OTP inputs: aria-label rendered in Urdu (hindsa 1, kul 6 mein se), inputmode=numeric,
+   autocomplete=one-time-code on otp-0. CLOSED.
+ 3 Contrast: my own sweep on the dashboard (excluding .sr-only and disabled controls as exempt)
+   now returns 0 failures, was 7. Token --subtle-color/#ink-3 #7C8090 -> #646878 light,
+   #7C8494 -> #8890A0 dark, synced across globals.css AND d13.css. Agent went 4 units darker than
+   my brief and justified it by measurement: #686C7C still failed at 4.43 on --warn-soft #FAEBCE,
+   a harder background than paper, which my brief had not accounted for. Accepted. CLOSED.
+ 4 Skip link: first element in DOM, translated (Urdu: markazi mawad par jayen). CLOSED.
+ 5 Touch targets: seg 46px tall measured; header + footer controls raised to 44. CLOSED.
+ 6 Reflow 320: fresh layout gives htmlScrollWidth 320 == clientWidth 320, zero content elements
+   overflowing, seg right edge 304 (was 337). NOTE: a mid-session re-measure showed 331 - traced to
+   4 position:fixed decorative layers (.paper, 2 mote canvases, .veil) not yet re-laid-out after live
+   viewport emulation; body.scrollWidth was 320 throughout. Artifact, NOT a regression. CLOSED.
+ 7 Live regions: OTP screen 0 -> 2 (role=status polite + role=alert, both pre-mounted and empty).
+   PARTIAL - see gaps.
+ d13.css: my 6 logical-property changes and the agent value change coexist; verified both present.
+REMAINING GAPS (honest):
+ - dashboard flow steps 1-4 still have 0 live regions (nothing async announces there).
+ - filing SUCCESS announcement never exercised: Spring Boot backend is down on this machine, so the
+   commit always takes the network-failure branch. Error path observed; success path code-only.
+ - two h1 per page (portal header h1 + page h1) - structural, not a WCAG failure.
+ - 5 languages still stubs: gu kok ks mni sat.
