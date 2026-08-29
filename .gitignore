@@ -15,12 +15,9 @@ loadtest/results/
 # Machine-local Claude Code permissions, not project config
 .claude/settings.local.json
 
-# Vendored HyperFrames clone — third-party tool, not our source
-video/hyperframes/
-
-# Rendered video output (large binaries; sources are committed instead)
-video/**/*.mp4
-video/**/*.wav
+# Video work — hyperframes projects, renders, captures and generated frame HTML
+# (base64-embedded fonts make these large). Kept on disk, out of the repo.
+video/
 
 .vercel
 .env*

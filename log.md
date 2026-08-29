@@ -2072,3 +2072,29 @@ VERIFIED LIVE (dev server had hung on :3000 - killed PID 11856 and restarted):
  - reduced motion (matchMedia stubbed to reduce): NO flash class, but focus still moves and value
    still fills (DEMPS4417K) - the accessible behaviour survives the motion opt-out.
  - tsc 0 errors. No green used; accent is D13 blue.
+
+## 2026-08-29 - Wapsi launch video RENDERED (hyperframes, product-launch-video route)
+DELIVERED: video/wapsi-launch/renders/video.mp4 - 1920x1080, h264 + aac stereo, 30fps, 7.90s, 2.9MB.
+SOURCE: C:/Editing/Bank/Export/launch video.wav (7.90s, pre-recorded VO, staged as audio/vo.wav).
+ Transcribed with whisper small.en + word timestamps; base model misheard 'Wapsi'->'Papsi' and
+ 'first tax'->'first class' - corrected before anything went on screen.
+ROUTE: product-launch-video in NO-CAPTURE mode (user chose invented graphics only). Preset
+ cobalt-grid, brand-remixed onto Wapsi tokens (ink #1C2233, accent #1361C7, Space Grotesk +
+ JetBrains Mono). storyboard: no, flow: automation.
+STRUCTURE: 2 frames. 01 (0-4.2s) buries the sentence 'Filing your taxes in India.' under 30 real
+ tax-jargon chips, density tripling on the word 'intimidating' at 1.78. 02 (4.2-7.9s) sweeps them
+ out and lands Wapsi + वापसी. Cut at 4.20 sits in the 0.28s breath between 'citizens.' and 'So'.
+FIXES I MADE AT THE GATE:
+ - VO was NOT attached after assemble (voice track 10: 0). Added <audio id=vo> manually; the id is
+   load-bearing - an id-less <audio> is never mixed and the render would have been SILENT.
+ - check failed 4 errors: content_overlap/text_occluded on the buried sentence. That IS the design;
+   declared it with data-layout-allow-overlap/-occlusion rather than changing the art.
+ - contrast FAIL on #wapsi02-legal (the INDEPENDENT PROTOTYPE disclaimer) 3.35:1 - caused by
+   rgba(...,0.78) alpha. Made it solid #4A4E5C and 13px->18px. The legally load-bearing line was
+   the one thing in the piece that was unreadable.
+ - my own storyboard spec said ~15px chips; frame-01 worker correctly overrode to 38-52px (below
+   frame.md legibility floor at 1920x1080). Propagated the correction to frame 02 mid-flight or the
+   seam would have popped. Storyboard updated to record as-built values.
+GATES: lint 0/0; check PASSED; 7 snapshots + contact sheet inspected; render artifact validated.
+KNOWN GAPS: no captions (not signed in to HeyGen, local TTS/BGM deps missing, so no audio_meta.json
+ to build caption timings from - add at YouTube upload). No BGM by the same constraint.
