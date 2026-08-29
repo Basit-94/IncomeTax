@@ -14,9 +14,9 @@ import type { Lang } from "../../lib/types";
  * task, one control" rule in docs/DESIGN.md. Onboarding used to carry a second one, which
  * meant the same job was offered twice on the same screen.
  *
- * Languages without a dictionary are listed but disabled, with the reason shown. Hiding them
- * would misrepresent what the product supports; enabling them would show someone machine-guessed
- * tax vocabulary, which is worse than English they can at least recognise as foreign.
+ * All 23 languages carry dictionaries. Beyond English, Hindi and Tamil they are
+ * model-generated translations awaiting native review (T0.5) — the menu footer says so,
+ * because hiding that would misrepresent what the product supports.
  */
 export default function LanguageMenu({
   lang,
@@ -108,8 +108,9 @@ export default function LanguageMenu({
             );
           })}
           <p className="border-t border-line px-2.5 pb-1 pt-2 text-[10px] leading-snug text-ink-3">
-            Languages marked <span className="font-mono uppercase">soon</span> are listed but not
-            translated yet. Tax wording has to be right, so it needs a human translator.
+            Beyond English, Hindi and Tamil these are machine translations, still being
+            reviewed by human translators. Tax wording has to be right — if something reads
+            wrongly in your language, trust the English.
           </p>
         </div>
       )}

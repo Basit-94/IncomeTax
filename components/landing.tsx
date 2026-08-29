@@ -34,8 +34,8 @@ export default function Landing({
 
   return (
     <div className="grid items-start gap-10 py-5 lg:grid-cols-12 lg:items-center lg:py-10">
-      {/* LEFT COLUMN: TITLE, SUBTITLE, FORM, CITIZENS LIST */}
-      <div className="z-10 space-y-8 text-left lg:col-span-7">
+      {/* SINGLE COLUMN: TITLE, SUBTITLE, FORM, CITIZENS LIST */}
+      <div className="z-10 space-y-8 text-left lg:col-span-12">
         {/* HERO BLOCK */}
         <div className="space-y-4">
           <span className="text-[11px] font-mono text-money bg-money-soft border border-money/20 px-2.5 py-0.5 rounded uppercase tracking-[0.12em] font-semibold">
@@ -173,41 +173,6 @@ export default function Landing({
         </div>
       </div>
 
-      {/* RIGHT COLUMN: a quiet preview of the evidence-led flow */}
-      <div className="hidden lg:col-span-5 lg:block">
-        <div className="surface-panel relative overflow-hidden p-7">
-          <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-money-soft blur-3xl" aria-hidden="true" />
-          <div className="relative space-y-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-money">{t.shell.productName}</p>
-                <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-ink">{t.file.checkThis}</h2>
-              </div>
-              <span className="rounded-full border border-money/25 bg-money-soft px-3 py-1 text-xs font-semibold text-money">{t.flow.facts}</span>
-            </div>
-
-            <div className="space-y-3">
-              {[t.groups.moneyIn, t.groups.taxPaid, t.groups.deductionsClaimed].map((label, index) => (
-                <div key={label} className="fact-card flex items-center justify-between gap-4 p-4">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className={`h-3 w-3 shrink-0 rounded-full ${index === 2 ? "bg-warn" : "bg-navy"}`} aria-hidden="true" />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-ink">{label}</p>
-                      <p className="mt-1 text-xs text-ink-2">{t.groups.fromWhere}</p>
-                    </div>
-                  </div>
-                  <span className="skeleton h-4 w-20 shrink-0 rounded-full" aria-hidden="true" />
-                </div>
-              ))}
-            </div>
-
-            <div className="recovery-callout p-4 text-sm leading-relaxed text-ink-2">
-              <span className="font-bold text-ink">{t.flow.confirmedCount(2, 3)}</span>
-              <span className="ml-1">{t.file.subheading}</span>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

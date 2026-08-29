@@ -12,7 +12,31 @@
  * paise; this is a prototype and the shortcut is disclosed on /honesty.
  */
 
-export type Lang = "en" | "hi" | "ta";
+export type Lang =
+  | "en"
+  | "hi"
+  | "ta"
+  // The remaining Eighth-Schedule languages, in the order of lib/i18n/languages.ts.
+  | "as"
+  | "bn"
+  | "brx"
+  | "doi"
+  | "gu"
+  | "kn"
+  | "ks"
+  | "kok"
+  | "mai"
+  | "ml"
+  | "mni"
+  | "mr"
+  | "ne"
+  | "or"
+  | "pa"
+  | "sa"
+  | "sat"
+  | "sd"
+  | "te"
+  | "ur";
 
 export type PersonaId = "sunita" | "rakesh" | "priya";
 

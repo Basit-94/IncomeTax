@@ -1,4 +1,5 @@
 ﻿import type { Lang } from "../lib/types";
+import { EXTRA_MOCK } from "../lib/i18n/mock-extra";
 
 export const LOCALIZED_MOCK_STRINGS: Record<string, Record<string, string>> = {
   "Your pay last year": {
@@ -338,5 +339,6 @@ export const LOCALIZED_MOCK_STRINGS: Record<string, Record<string, string>> = {
 export const localize = (str: string | undefined, lang: Lang): string => {
   if (!str) return "";
   if (lang === "en") return str;
-  return LOCALIZED_MOCK_STRINGS[str.trim()]?.[lang] ?? str;
+  const key = str.trim();
+  return LOCALIZED_MOCK_STRINGS[key]?.[lang] ?? EXTRA_MOCK[lang]?.[key] ?? str;
 };

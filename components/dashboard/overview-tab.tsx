@@ -2,7 +2,7 @@
 
 import React from "react";
 import { m } from "motion/react";
-import { Building2, Check, AlertTriangle } from "lucide-react";
+import { Building2, Check, AlertTriangle, ChevronDown } from "lucide-react";
 import type { Persona, Lang, BankAccount } from "../../lib/types";
 import { REFUND_SEQUENCE } from "../../lib/types";
 import type { Dict } from "../../lib/i18n";
@@ -292,10 +292,12 @@ export default function OverviewTab({
 
 
           {refund.state !== "not_filed" && (
-            <div className="surface-panel space-y-6 p-5">
-              <h3 className="text-xs font-mono uppercase tracking-wider text-ink-2 border-b border-line pb-2 font-bold">
+            <details className="surface-panel group p-5">
+              <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-mono uppercase tracking-wider text-ink-2 font-bold [&::-webkit-details-marker]:hidden">
                 {t.dashboard.refundTimeline}
-              </h3>
+                <ChevronDown size={14} className="transition-transform group-open:rotate-180" aria-hidden="true" />
+              </summary>
+              <div className="space-y-6 border-t border-line mt-2 pt-4">
 
               {refund.cohortWindowDays && (
                 <p className="text-[0.7rem] text-ink-2 leading-relaxed bg-paper-2 border border-line rounded-lg p-3">
@@ -351,7 +353,8 @@ export default function OverviewTab({
                   );
                 })}
               </div>
-            </div>
+              </div>
+            </details>
           )}
 
         </div>

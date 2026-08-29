@@ -154,7 +154,7 @@ export default function ActionsTab({
                           htmlFor="rent-receipt-upload"
                           className="bg-paper border border-line text-xs font-semibold py-1.5 px-3 rounded hover:bg-paper-2 cursor-pointer text-ink-2"
                         >
-                          {rentFile ? (lang === "en" ? `Selected: ${rentFile.substring(0, 12)}...` : lang === "hi" ? `चयनित: ${rentFile.substring(0, 12)}...` : `தேர்வு செய்யப்பட்டது: ${rentFile.substring(0, 12)}...`) : localize("Select PDF/JPG", lang)}
+                          {rentFile ? (lang === "hi" ? `चयनित: ${rentFile.substring(0, 12)}...` : lang === "ta" ? `தேர்வு செய்யப்பட்டது: ${rentFile.substring(0, 12)}...` : `Selected: ${rentFile.substring(0, 12)}...`) : localize("Select PDF/JPG", lang)}
                         </label>
 
                         <button

@@ -1935,3 +1935,39 @@ Next.js docs read per AGENTS.md before this work: node_modules/next/dist/docs/01
 - **Round decision:** both verdicts PASS on round 1; all actionable findings fixed and
   self-verified live. Pages LOCKED for this round; a formal round-2 re-run is available on
   request (cap 3).
+
+## 2026-08-29 — Audit of other dev's commits (f626338..a5b4361, Abdul Basit Siddiqui, 8 commits)
+INTENT: read-only audit per user request; no repo changes.
+VERIFIED: tsc 0 errors; vitest 97/97; backend suite 103/103 via javac harness after fetching
+HikariCP-6.3.0.jar from Maven Central into ~/.m2 (jar existed nowhere on machine; PersistenceConfig
+now imports it — harness cp.txt needs it appended, PLAN SS2 doc update pending). Their surefire
+reports + fat jar in target/ are Aug-25 stale: backend changes were committed untested here.
+GOOD: 87A rebate eligibility fix (total taxable income, both engines, parity kept; legacy 7L->12L);
+ageBand end-to-end (page.tsx -> SubmissionRequest telescoping ctor -> rules JSON keys match);
+PasswordHasher(1000) demo-gated + compat-safe (hash self-describes iterations); OTP paste UX;
+Gemini fallback chain + forced final reply.
+FINDINGS: (1) HIGH ensureSession early-returns fabricated mock-token when NEXT_PUBLIC_MOCK_MODE!=false
+and .env ships true -> real sign-in path (SS4B-audited deliverable) is dead code by default; header
+comment now false. (2) HIGH agent backendGet returns hardcoded fake 2025-26 filing + 2 fake docs when
+mock mode on OR token mock- -> agent fabricates history even for real sessions (OR should at most be
+AND); violates no-fabrication rule. (3) MED no-Maven build broken w/o Hikari jar (fixed locally, doc
+pending). (4) LOW dead catch-block mock fallback in ensureSession. (5) LOW scale evidence doc measured
+on PGSimpleDataSource, code now Hikari 25/node x3. (6) LOW IFSC isDemo now prefix-only. (7) NOTE agent
+prompt now gives 80C/80D optimization advice — product-stance change for user to own. (8) NOTE no
+regression test added for rebate fix (suggest: slab under threshold + LTCG over -> rebate 0).
+RESULT: reported to user; no fixes applied (not requested).
+
+## 2026-08-29 — All 23 languages (user directive: implement all; audit findings left untouched)
+INTENT: add the 20 missing Eighth-Schedule dictionaries (as bn brx doi gu kn ks kok mai ml mni mr
+ne or pa sa sat sd te ur), each lib/i18n/<code>.ts typed Dict + <code>Mock persona-string table;
+wire Lang union (types.ts), DICTS/LANGS/isLang (index.ts), translated flags + honest note
+(languages.ts), locale map with en-IN fallback (money.ts), localize() fallback via new
+lib/i18n/mock-extra.ts (mock-i18n.ts), menu footnote copy (language-menu.tsx). Translations are
+model-generated pending native review — disclosed in file headers and the menu, per hi.ts precedent.
+RTL: ks sd ur. Digits/acronyms stay Latin. No other files touched.
+
+## 2026-08-29 — Element-picks: landing preview panel removed; refund timeline collapsible
+INTENT: (1) landing.tsx — delete the right-column skeleton preview panel (Check this / 3 skeleton
+cards / 2-of-3 callout), widen left column to lg:col-span-12. (2) overview-tab.tsx — Refund
+Timeline surface-panel becomes a <details> dropdown (summary = existing mono heading + chevron,
+closed by default), mirroring the calc-trail disclosure pattern.

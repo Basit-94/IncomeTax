@@ -19,11 +19,36 @@
 
 import type { Lang } from "./types";
 
-/** BCP-47 tags. Indian English rather than en-US — the vocabulary differs. */
+/**
+ * BCP-47 tags. Indian English rather than en-US — the vocabulary differs.
+ * Chrome's recognizer covers the bigger languages here (bn, te, mr, gu, kn,
+ * ml, pa, ur, …); for the ones it doesn't, the tag is still the correct
+ * request and the engine degrades to an error the caller already shows.
+ */
 const RECOGNITION_LOCALE: Record<Lang, string> = {
   en: "en-IN",
   hi: "hi-IN",
   ta: "ta-IN",
+  as: "as-IN",
+  bn: "bn-IN",
+  brx: "brx-IN",
+  doi: "doi-IN",
+  gu: "gu-IN",
+  kn: "kn-IN",
+  ks: "ks-IN",
+  kok: "kok-IN",
+  mai: "mai-IN",
+  ml: "ml-IN",
+  mni: "mni-IN",
+  mr: "mr-IN",
+  ne: "ne-NP",
+  or: "or-IN",
+  pa: "pa-IN",
+  sa: "sa-IN",
+  sat: "sat-IN",
+  sd: "sd-IN",
+  te: "te-IN",
+  ur: "ur-IN",
 };
 
 /* -- minimal structural types for the bit of the API we touch -------------- */

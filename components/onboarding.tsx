@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, ShieldCheck } from "lucide-react";
-import { LANG_NATIVE, type Dict } from "../lib/i18n";
+import { LANGS, LANG_NATIVE, type Dict } from "../lib/i18n";
 import type { Lang } from "../lib/types";
 import {
   createOnboardingProfile,
@@ -27,7 +27,7 @@ interface OnboardingProps {
   onComplete: (profile: OnboardingProfile) => void;
 }
 
-const LANGUAGES: Lang[] = ["en", "hi", "ta"];
+const LANGUAGES: Lang[] = LANGS;
 const INTENTS: OnboardingIntent[] = [
   "file_return",
   "check_refund",

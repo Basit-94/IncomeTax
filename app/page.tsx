@@ -6,7 +6,8 @@ import { LazyMotion, domMax, m, AnimatePresence } from "motion/react";
 import { PERSONAS, TODAY, findPersonaByPan } from "../lib/personas";
 import type { Persona, PersonaId, Lang, IncomeFact, BankAccount, Notice, RefundState, TimelineKey } from "../lib/types";
 import { REFUND_SEQUENCE } from "../lib/types";
-import { dict } from "../lib/i18n";
+import { dict, isLang } from "../lib/i18n";
+import { isRtl } from "../lib/i18n/languages";
 import { mulberry32, pick } from "../lib/rng";
 import { validatePan, validateIfsc } from "../lib/validate";
 import {
@@ -277,8 +278,8 @@ export default function WapsiPrototype() {
     setOnboardingProfile(savedOnboarding);
     setOnboardingDraft(savedOnboardingDraft);
 
-    if (savedLang && (savedLang === "en" || savedLang === "hi" || savedLang === "ta")) {
-      setLang(savedLang as Lang);
+    if (savedLang && isLang(savedLang)) {
+      setLang(savedLang);
     } else if (savedOnboarding) {
       setLang(savedOnboarding.lang);
     }
@@ -343,6 +344,12 @@ export default function WapsiPrototype() {
   useEffect(() => {
     document.documentElement.classList.toggle("dark-mode", theme === "dark");
   }, [theme]);
+
+  // Urdu, Kashmiri and Sindhi read right-to-left; everything else here is LTR.
+  useEffect(() => {
+    document.documentElement.dir = isRtl(lang) ? "rtl" : "ltr";
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   // Handle browser back button: goes to onboarding (home) if in dashboard/landing
   useEffect(() => {
