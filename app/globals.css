@@ -352,6 +352,18 @@
     font-family: var(--font-caveat-stack);
   }
 
+/* Same .flash jump idiom as the fact cards (d13.css .card.flash), scoped to the
+   PAN field: the input carries no resting shadow, so the ring decays to nothing
+   instead of back to var(--shadow). Reduced motion drops it via the global
+   animation reset below. */
+#landing-pan.flash {
+  animation: pan-flash 800ms ease-out;
+}
+@keyframes pan-flash {
+  0%, 55% { box-shadow: 0 0 0 3px var(--blue); }
+  100% { box-shadow: 0 0 0 3px transparent; }
+}
+
 @keyframes skeleton-shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }

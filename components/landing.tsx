@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { ChevronRight, Cpu, BookOpen } from "lucide-react";
 import type { Dict } from "../lib/i18n";
@@ -51,6 +51,31 @@ export default function Landing({
     const id = requestAnimationFrame(() => setRisen(true));
     return () => cancelAnimationFrame(id);
   }, []);
+
+  /* A reviewer card fills the field above it, outside the eye's landing zone.
+     Same jump idiom as scrollToFactCard: bring the target into view, flash it,
+     and move focus there — which also announces the new value to a screen
+     reader, since the change happened nowhere near the user's cursor. */
+  const panRef = useRef<HTMLInputElement>(null);
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fillPanFromPersona = (pan: string) => {
+    handlePanInputChange(pan);
+    const el = panRef.current;
+    if (!el) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.focus({ preventScroll: true });
+    const box = el.getBoundingClientRect();
+    if (box.top < 0 || box.bottom > window.innerHeight) {
+      el.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
+    }
+    if (reduced) return;
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+    el.classList.remove("flash");
+    void el.offsetWidth; /* restart the ring when a second card is clicked */
+    el.classList.add("flash");
+    flashTimer.current = setTimeout(() => el.classList.remove("flash"), 900);
+  };
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 py-4 lg:py-8">
@@ -105,6 +130,7 @@ export default function Landing({
           <MockField>
             <input
               id={PAN_INPUT_ID}
+              ref={panRef}
               type="text"
               value={panInput}
               onChange={(e) => handlePanInputChange(e.target.value)}
@@ -162,7 +188,7 @@ export default function Landing({
             <button
               key={id}
               type="button"
-              onClick={() => handlePanInputChange(person.pan)}
+              onClick={() => fillPanFromPersona(person.pan)}
               className={`card ${risen ? "in" : ""} block w-full text-start`}
               style={{ "--tilt": TILTS[i % TILTS.length] } as CSSProperties}
             >

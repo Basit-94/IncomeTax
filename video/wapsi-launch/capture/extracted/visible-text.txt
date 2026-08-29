@@ -1,0 +1,16 @@
+VOICEOVER (recorded, verbatim, 7.90s — audio/vo.wav)
+
+"Income tax filing in India has always been intimidating and that confuses
+everyday citizens. So this is Wapsi, a citizen-first tax intelligence platform
+built for the people of India."
+
+BEAT 1 — the problem   0.00 - 3.92s
+BEAT 2 — the answer    4.20 - 7.78s
+
+Product positioning (from the product itself, not scraped):
+- Wapsi is Hindi for "return" / "coming back" — the pun the whole product rests on.
+- The promise: your money, coming back.
+- The method: it does not ask a citizen to fill forms. It shows what was already
+  reported about them and asks them to confirm it.
+- Independent prototype. Not affiliated with the Income Tax Department, CBDT,
+  or the Government of India.

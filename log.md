@@ -2055,3 +2055,20 @@ REMAINING GAPS (honest):
    commit always takes the network-failure branch. Error path observed; success path code-only.
  - two h1 per page (portal header h1 + page h1) - structural, not a WCAG failure.
  - 5 languages still stubs: gu kok ks mni sat.
+
+## 2026-08-29 - Persona card -> PAN field highlight (user ask; agent built, I verified live)
+CHANGE: components/landing.tsx fillPanFromPersona() + app/globals.css #landing-pan.flash /
+ @keyframes pan-flash. Card click fills the PAN, moves focus to the input (announces the new value
+ to a screen reader - the change happens far below the cursor), scrolls into view only when
+ off-screen, and flashes a 3px cobalt ring decaying over 800ms. Reuses the existing .flash jump
+ idiom (d13.css .card.flash) rather than a second mechanism; scoped to #landing-pan because the
+ input has no resting shadow to return to.
+VERIFIED LIVE (dev server had hung on :3000 - killed PID 11856 and restarted):
+ - click Rakesh card -> value DEMPK8823R (correct), flash class on, animationName pan-flash 0.8s,
+   box-shadow rgb(19,97,199) = #1361C7 D13 blue, document.activeElement === input.
+   NOTE: reading value in the same tick as the click shows the OLD value - React had not
+   re-rendered. After a tick it reads correctly. Not a bug; my first read was premature.
+ - after ~1s: flash class removed, box-shadow none - fully decays, no residue.
+ - reduced motion (matchMedia stubbed to reduce): NO flash class, but focus still moves and value
+   still fills (DEMPS4417K) - the accessible behaviour survives the motion opt-out.
+ - tsc 0 errors. No green used; accent is D13 blue.
