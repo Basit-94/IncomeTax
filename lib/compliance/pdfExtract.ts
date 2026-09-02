@@ -16,10 +16,26 @@
 /** Structural PAN format: five letters, four digits, one letter. */
 export const PAN_RE = /[A-Z]{5}[0-9]{4}[A-Z]{1}/;
 
-export const GROSS_SALARY_RE =
-  /(?:Gross Salary|Salary u\/s 17\(1\))[\s:]+(?:₹|Rs\.?)?\s*([0-9,]+)/i;
+/**
+ * The rupee sign, as it can actually turn up in a PDF's bytes.
+ *
+ * decodeLatin1 below is byte-for-byte by design, so a UTF-8 "₹" (E2 82 B9)
+ * arrives as the three characters "â¹" and never equals a literal U+20B9
+ * in a pattern. Matching only the literal would mean any document that spells
+ * the amount with the symbol reads as unparseable — the one case the symbol is
+ * there to make clearer. Both spellings are accepted, plus "Rs"/"Rs.".
+ */
+const RUPEE_SIGN = "(?:₹|\\u00e2\\u0082\\u00b9|Rs\\.?)?";
 
-export const TDS_RE = /(?:Total Tax Deducted|TDS)[\s:]+(?:₹|Rs\.?)?\s*([0-9,]+)/i;
+export const GROSS_SALARY_RE = new RegExp(
+  `(?:Gross Salary|Salary u/s 17\\(1\\))[\\s:]+${RUPEE_SIGN}\\s*([0-9,]+)`,
+  "i",
+);
+
+export const TDS_RE = new RegExp(
+  `(?:Total Tax Deducted|TDS)[\\s:]+${RUPEE_SIGN}\\s*([0-9,]+)`,
+  "i",
+);
 
 export interface ExtractedFields {
   pan?: string;

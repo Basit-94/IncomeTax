@@ -622,6 +622,12 @@ export interface TaxDerived {
   /** Positive = refund due to the citizen. */
   netRefund: number;
   isPayable: boolean;
+  /**
+   * The net position is exactly nil — the state a cleared Challan 280 leaves
+   * the return in. Distinct from isPayable === false, which is otherwise read
+   * as "a refund is due"; here nothing is owed in either direction.
+   */
+  isSettled: boolean;
   /** Total of every cleared Challan 280 under s.140A. */
   selfAssessmentPaid: number;
   cass: CassAssessment;
@@ -667,6 +673,7 @@ export function deriveTaxReturn(state: TaxReturnState): TaxDerived {
     netPayable: Math.max(0, net),
     netRefund: Math.max(0, -net),
     isPayable: net > 0,
+    isSettled: net === 0,
     selfAssessmentPaid: active.selfAssessmentPaid,
     cass,
     progress,

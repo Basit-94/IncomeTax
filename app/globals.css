@@ -1,15 +1,16 @@
 @import "tailwindcss";
 @import "./d13.css";
 
-@font-face {
-  font-family: DIN;
-  src: url(../fonts/DINish[slnt,wdth,wght].woff2) format("woff2");
-  font-variation-settings: "wdth" 112;
-  font-weight: 100 900;
-  font-stretch: 50% 125%;
-  font-style: oblique 0deg 12deg;
-  font-display: swap;
-}
+/* There was a @font-face for a variable font called DIN here, pointing at
+   fonts/DINish[slnt,wdth,wght].woff2. That file was never a font: its first
+   bytes are eight newlines followed by `<!DOCTYPE html>`, and it is a 305 KB
+   saved copy of GitHub's "Page not found" page — the download URL was wrong. So
+   every visitor fetched 305 KB of HTML, the browser rejected it (`OTS parsing
+   error: invalid sfntVersion: 168430090`, which is 0x0A0A0A0A — the newlines),
+   and no glyph ever came from it. Nothing was lost by removing it: DIN sat
+   second in --font-sans behind var(--font-grotesk), and Space Grotesk is loaded
+   through next/font in app/layout.tsx, so the fallback was unreachable even if
+   the file had been valid. See log.md, 2026-09-02. */
 
 /* Wapsi service tokens. Light is the default because a financial review needs
    high contrast, paper-like surfaces and less visual noise than the old portal. */
@@ -49,7 +50,7 @@
   /* Direction 13 faces (DESIGN.md SS4). Grotesk leads the sans stack for
      headings/buttons/badges; the serif is applied to body copy in @layer base;
      JetBrains Mono carries every number. Noto fallbacks keep hi/ta glyphs. */
-  --font-sans: var(--font-grotesk), DIN, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Devanagari", "Noto Sans Tamil", sans-serif;
+  --font-sans: var(--font-grotesk), system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Devanagari", "Noto Sans Tamil", sans-serif;
   --font-serif: var(--font-serif-d13), Georgia, "Noto Serif Devanagari", "Noto Sans Devanagari", "Noto Sans Tamil", serif;
   --font-mono: var(--font-jb-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, "Noto Sans Devanagari", "Noto Sans Tamil", monospace;
   --font-caveat-stack: var(--font-caveat), "Segoe Script", cursive;

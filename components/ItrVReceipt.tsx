@@ -75,7 +75,7 @@ function ackNumberFrom(hashHex: string): string {
 }
 
 export function ItrVReceipt(props?: { filedOn?: string }) {
-  const { state, active, netRefund, netPayable, isPayable } = useTax();
+  const { state, active, netRefund, netPayable, isPayable, isSettled } = useTax();
   const receiptRef = useRef<HTMLDivElement>(null);
   const [hash, setHash] = useState<string>("");
 
@@ -315,7 +315,14 @@ export function ItrVReceipt(props?: { filedOn?: string }) {
               )}
               <tr className="bg-teal-50 text-sm font-extrabold text-teal-950">
                 <td className="p-2.5">
-                  {isPayable ? "Net tax payable" : "Net refund due"}
+                  {/* Three outcomes. A challan settles the return at exactly nil,
+                      and an acknowledgement that calls that a refund due is a
+                      document stating money is owed back when none is. */}
+                  {isPayable
+                    ? "Net tax payable"
+                    : isSettled
+                      ? "Nothing further payable"
+                      : "Net refund due"}
                 </td>
                 <td className="p-2.5 text-right">
                   <Rupees value={isPayable ? netPayable : netRefund} />

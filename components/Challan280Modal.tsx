@@ -272,73 +272,76 @@ export function Challan280Modal({ open, onClose, onPaid }: Challan280ModalProps)
                   ))}
                 </div>
 
-                <AnimatePresence mode="wait">
-                  {method === "UPI" ? (
-                    <m.div
-                      key="upi"
-                      layout
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={spring}
-                      className="flex flex-col items-center gap-4 rounded-2xl border border-slate-200 p-6"
-                    >
-                      <div className="rounded-xl border-4 border-slate-900 bg-white p-3">
-                        <QRCodeSVG value={deepLink} size={168} level="M" />
-                      </div>
-                      <div className="text-center">
-                        <p className="text-xs font-semibold text-slate-700">
-                          Scan with any UPI app to pay{" "}
-                          <Rupees value={amountDue} className="font-bold" />
-                        </p>
-                        <p
-                          className={`mt-1 text-xs font-mono tabular-nums ${
-                            secondsLeft <= 30 ? "text-rose-600 font-bold" : "text-slate-500"
-                          }`}
-                          role="timer"
-                          aria-live="off"
-                        >
-                          {secondsLeft > 0
-                            ? `Request valid for ${mmss(secondsLeft)}`
-                            : "Request expired — reopen to generate a new one"}
-                        </p>
-                      </div>
-                    </m.div>
-                  ) : (
-                    <m.div
-                      key="netbanking"
-                      layout
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={spring}
-                      className="space-y-2 rounded-2xl border border-slate-200 p-6"
-                    >
-                      <label
-                        htmlFor="challan-bank"
-                        className="block text-[10px] font-bold uppercase tracking-wider text-slate-500"
-                      >
-                        Select your bank
-                      </label>
-                      <select
-                        id="challan-bank"
-                        value={bank}
-                        onChange={(e) => setBank(e.target.value)}
-                        className="w-full cursor-pointer rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-700"
-                      >
-                        {NET_BANKING_BANKS.map((b) => (
-                          <option key={b.code} value={b.code}>
-                            {b.name}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="pt-1 text-xs text-slate-500">
-                        You would be redirected to your bank&apos;s net-banking login. No
-                        redirect happens in this prototype.
+                {/*
+                  A plain conditional, not AnimatePresence. `mode="wait"` keeps
+                  the outgoing panel mounted until its exit animation finishes,
+                  so if the frame loop is stalled — a backgrounded tab, a
+                  throttled client, a motion feature bundle that never loads —
+                  `method` flips to NET_BANKING while the UPI QR stays on screen.
+                  The pay button is live throughout, so the payment would be
+                  recorded against a bank the citizen never chose while they were
+                  looking at a QR code. What a payment record says must match what
+                  was on screen when it was made.
+                */}
+                {method === "UPI" ? (
+                  <m.div
+                    key="upi"
+                    layout
+                    transition={spring}
+                    className="flex flex-col items-center gap-4 rounded-2xl border border-slate-200 p-6"
+                  >
+                    <div className="rounded-xl border-4 border-slate-900 bg-white p-3">
+                      <QRCodeSVG value={deepLink} size={168} level="M" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs font-semibold text-slate-700">
+                        Scan with any UPI app to pay{" "}
+                        <Rupees value={amountDue} className="font-bold" />
                       </p>
-                    </m.div>
-                  )}
-                </AnimatePresence>
+                      <p
+                        className={`mt-1 text-xs font-mono tabular-nums ${
+                          secondsLeft <= 30 ? "text-rose-600 font-bold" : "text-slate-500"
+                        }`}
+                        role="timer"
+                        aria-live="off"
+                      >
+                        {secondsLeft > 0
+                          ? `Request valid for ${mmss(secondsLeft)}`
+                          : "Request expired — reopen to generate a new one"}
+                      </p>
+                    </div>
+                  </m.div>
+                ) : (
+                  <m.div
+                    key="netbanking"
+                    layout
+                    transition={spring}
+                    className="space-y-2 rounded-2xl border border-slate-200 p-6"
+                  >
+                    <label
+                      htmlFor="challan-bank"
+                      className="block text-[10px] font-bold uppercase tracking-wider text-slate-500"
+                    >
+                      Select your bank
+                    </label>
+                    <select
+                      id="challan-bank"
+                      value={bank}
+                      onChange={(e) => setBank(e.target.value)}
+                      className="w-full cursor-pointer rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-700"
+                    >
+                      {NET_BANKING_BANKS.map((b) => (
+                        <option key={b.code} value={b.code}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="pt-1 text-xs text-slate-500">
+                      You would be redirected to your bank&apos;s net-banking login. No
+                      redirect happens in this prototype.
+                    </p>
+                  </m.div>
+                )}
 
                 <button
                   onClick={simulateSuccess}

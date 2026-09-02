@@ -295,6 +295,42 @@ describe("self-assessment tax u/s 140A", () => {
     expect(undone.selfAssessmentPayments).toHaveLength(0);
     expect(deriveTaxReturn(undone).netPayable).toBe(10_400);
   });
+
+  it("reports a cleared return as settled, not as a refund of zero", () => {
+    // isPayable === false is not the same statement as "a refund is due". A
+    // challan lands the return on exactly nil, and a screen that reads
+    // "net refund due ₹0" there tells the citizen money is coming back.
+    const payable = sync(INITIAL_STATE, { salary: 1_285_000 });
+    expect(deriveTaxReturn(payable).isSettled).toBe(false);
+
+    const paid = taxReducer(payable, {
+      type: "ADD_SELF_ASSESSMENT_PAYMENT",
+      payment: {
+        challanNo: "04217",
+        bsrCode: "0510308",
+        amount: 10_400,
+        date: "2026-07-14",
+        majorHead: "0021 — Income Tax (other than companies)",
+        minorHead: "300 — Self-Assessment Tax u/s 140A",
+        method: "UPI",
+      },
+    });
+
+    const settled = deriveTaxReturn(paid);
+    expect(settled.isSettled).toBe(true);
+    expect(settled.isPayable).toBe(false);
+    expect(settled.netPayable).toBe(0);
+    expect(settled.netRefund).toBe(0);
+  });
+
+  it("is not settled when an actual refund is due", () => {
+    const refund = sync(INITIAL_STATE, { salary: 1_275_000, tds_salary: 30_000 });
+    const derived = deriveTaxReturn(refund);
+
+    expect(derived.netRefund).toBe(30_000);
+    expect(derived.isPayable).toBe(false);
+    expect(derived.isSettled).toBe(false);
+  });
 });
 
 describe("s.139(9) auto-reconcile into a revised return u/s 139(5)", () => {

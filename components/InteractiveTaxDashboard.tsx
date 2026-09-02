@@ -91,6 +91,12 @@ interface Dictionary {
   recommended: string;
   netRefund: string;
   netPayable: string;
+  /**
+   * Shown when the net position is exactly zero — which is what a cleared
+   * Challan 280 produces. Neither "payable" nor "refund due" is true there, and
+   * "refund due ₹0" reads as a promise of money that is not coming.
+   */
+  netSettled: string;
   disputeInputLabel: string;
   disputeCodeLabel: string;
   disputeReasonLabel: string;
@@ -124,6 +130,7 @@ const TRANSLATIONS: Record<Lang, Dictionary> = {
     recommended: "Recommended",
     netRefund: "Net refund due",
     netPayable: "Net tax payable",
+    netSettled: "Nothing further to pay",
     disputeInputLabel: "The correct amount (₹)",
     disputeCodeLabel: "What is wrong with this entry?",
     disputeReasonLabel: "Anything you want on the record",
@@ -154,6 +161,7 @@ const TRANSLATIONS: Record<Lang, Dictionary> = {
     recommended: "अनुशंसित",
     netRefund: "शुद्ध वापसी देय",
     netPayable: "शुद्ध कर देय",
+    netSettled: "अब कुछ भी देय नहीं",
     disputeInputLabel: "सही राशि (₹)",
     disputeCodeLabel: "इस प्रविष्टि में क्या गलत है?",
     disputeReasonLabel: "रिकॉर्ड के लिए कोई टिप्पणी",
@@ -198,6 +206,7 @@ const TRANSLATIONS: Record<Lang, Dictionary> = {
     recommended: "பரிந்துரைக்கப்படுகிறது",
     netRefund: "நிகர வரி திரும்பப்பெறுதல்",
     netPayable: "நிகர வரி செலுத்த வேண்டியது",
+    netSettled: "இனி செலுத்த வேண்டியது இல்லை",
     disputeInputLabel: "சரியான தொகை (₹)",
     disputeCodeLabel: "இந்தப் பதிவில் என்ன தவறு?",
     disputeReasonLabel: "பதிவுக்காக ஏதேனும் குறிப்பு",
@@ -240,10 +249,11 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
     state,
     dispatch,
     computation,
-    active,
     netPayable,
     netRefund,
     isPayable,
+    isSettled,
+    selfAssessmentPaid,
     progress,
     canUndo,
   } = useTax();
@@ -260,6 +270,19 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
 
   const t = TRANSLATIONS[lang];
   const activeRegime = state.selectedRegime;
+
+  /**
+   * Three positions, not two. A cleared challan lands the return on exactly nil,
+   * and describing that as a refund due of ₹0 tells the citizen money is coming
+   * back when none is. Derived once so the summary card, the dock and the
+   * data-position test hook can never disagree with each other.
+   */
+  const positionKey = isPayable ? "payable" : isSettled ? "settled" : "refund";
+  const positionLabel = isPayable
+    ? t.netPayable
+    : isSettled
+      ? t.netSettled
+      : t.netRefund;
 
   // Which regime to recommend, and by how much. Compared on total liability
   // rather than net position, because TDS is identical under both.
@@ -393,6 +416,8 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
             instead of snapping when a dispute changes the total. */}
         <m.section
           layout
+          data-testid="net-position"
+          data-position={positionKey}
           transition={springTransition}
           className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6 print:hidden"
         >
@@ -403,21 +428,29 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
             <div className="flex items-baseline gap-2 flex-wrap">
               <m.div
                 layout
-                key={isPayable ? "payable" : "refund"}
-                initial={{ opacity: 0, y: -4 }}
+                key={positionKey}
+                /* initial={false}, not `initial={{ opacity: 0 }}`: the key changes
+                   whenever the position flips, so an opacity-gated enter would
+                   leave the headline figure at opacity 0 for as long as the frame
+                   loop is stalled. This is the number the whole screen exists to
+                   show — it renders at its final value and animates only as an
+                   enhancement. */
+                initial={false}
                 animate={{ opacity: 1, y: 0 }}
                 transition={springTransition}
               >
                 <Rupees
                   value={isPayable ? netPayable : netRefund}
                   className={`text-4xl font-extrabold tracking-tight ${
-                    isPayable ? "text-amber-700" : "text-emerald-700"
+                    isPayable
+                      ? "text-amber-700"
+                      : isSettled
+                        ? "text-slate-700"
+                        : "text-emerald-700"
                   }`}
                 />
               </m.div>
-              <span className="text-sm font-semibold text-slate-500">
-                {isPayable ? t.netPayable : t.netRefund}
-              </span>
+              <span className="text-sm font-semibold text-slate-500">{positionLabel}</span>
             </div>
             <p className="text-xs text-slate-400 font-mono">
               PAN: <span className="font-bold text-slate-700">{state.pan}</span> · Assessee:{" "}
@@ -440,314 +473,321 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
           </div>
         </m.section>
 
-        <AnimatePresence mode="wait">
-          {showItrV ? (
-            <m.div
-              key="itr-v-preview"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              transition={springTransition}
-              className="space-y-4"
-            >
-              <div className="flex justify-end print:hidden">
-                <button
-                  onClick={() => setShowItrV(false)}
-                  className="px-4 py-2 border border-slate-350 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-lg transition cursor-pointer"
-                >
-                  ← Back to the reconciliation matrix
-                </button>
-              </div>
-              <ItrVReceipt />
-            </m.div>
-          ) : (
-            <m.div
-              key="reconciliation-matrix"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="space-y-6"
-            >
-              {/* The s.139(9) notice renders only when declared income is short of
-                  what the reporters filed; otherwise it returns null. */}
-              <DefectiveNoticeCard />
+        {/*
+          A plain conditional, not AnimatePresence. This swap decides whether the
+          whole return is on screen, and `mode="wait"` makes that decision wait on
+          an exit animation: the outgoing branch stays mounted until its exit
+          completes, so anything that stops the frame loop — a tab opened in the
+          background, a throttled client, a motion feature bundle that fails to
+          load under LazyMotion — leaves the incoming branch unmounted and the
+          outgoing one pinned at `opacity: 0`. That is a blank tax return with no
+          way out of it. Both branches now render at their final values and the
+          crossfade is gone; whether a citizen can see their own figures must not
+          depend on an animation finishing.
+        */}
+        {showItrV ? (
+          <m.div key="itr-v-preview" layout transition={springTransition} className="space-y-4">
+            <div className="flex justify-end print:hidden">
+              <button
+                onClick={() => setShowItrV(false)}
+                className="px-4 py-2 border border-slate-350 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-lg transition cursor-pointer"
+              >
+                ← Back to the reconciliation matrix
+              </button>
+            </div>
+            <ItrVReceipt />
+          </m.div>
+        ) : (
+          <m.div
+            key="reconciliation-matrix"
+            layout
+            transition={springTransition}
+            className="space-y-6"
+          >
+            {/* The s.139(9) notice renders only when declared income is short of
+                what the reporters filed; otherwise it returns null. */}
+            <DefectiveNoticeCard />
 
-              <AuditRiskRadar />
+            <AuditRiskRadar />
 
-              <PdfIngestionDropzone />
+            <PdfIngestionDropzone />
 
-              <div className="flex items-center justify-between px-2 pt-2">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">
-                  Fact confirmation matrix
-                </h3>
-                <span className="text-xs text-slate-400 font-mono tabular-nums">
-                  {progress.confirmed} confirmed · {progress.disputed} disputed ·{" "}
-                  {progress.pending} pending
-                </span>
-              </div>
+            <div className="flex items-center justify-between px-2 pt-2">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">
+                Fact confirmation matrix
+              </h3>
+              <span className="text-xs text-slate-400 font-mono tabular-nums">
+                {progress.confirmed} confirmed · {progress.disputed} disputed ·{" "}
+                {progress.pending} pending
+              </span>
+            </div>
 
-              <div className="grid gap-4">
-                {facts.map((fact) => {
-                  const isEditing = editingFactId === fact.id;
-                  const localizedLabel = t.labels[fact.id] ?? fact.label;
-                  const isConfirmed = fact.status === "CONFIRMED";
-                  const isDisputed = fact.status === "DISPUTED";
+            <div className="grid gap-4">
+              {facts.map((fact) => {
+                const isEditing = editingFactId === fact.id;
+                const localizedLabel = t.labels[fact.id] ?? fact.label;
+                const isConfirmed = fact.status === "CONFIRMED";
+                const isDisputed = fact.status === "DISPUTED";
 
-                  return (
+                return (
+                  <m.div
+                    layout
+                    key={fact.id}
+                    data-fact-id={fact.id}
+                    data-fact-status={fact.status}
+                    transition={springTransition}
+                    className={`bg-white rounded-2xl border transition-colors duration-200 overflow-hidden shadow-xs ${
+                      isConfirmed
+                        ? "border-emerald-500/60"
+                        : isDisputed
+                          ? "border-amber-500/60"
+                          : "border-slate-200/80 hover:border-slate-300"
+                    }`}
+                  >
                     <m.div
                       layout
-                      key={fact.id}
-                      transition={springTransition}
-                      className={`bg-white rounded-2xl border transition-colors duration-200 overflow-hidden shadow-xs ${
-                        isConfirmed
-                          ? "border-emerald-500/60"
-                          : isDisputed
-                            ? "border-amber-500/60"
-                            : "border-slate-200/80 hover:border-slate-300"
-                      }`}
+                      className="p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4"
                     >
-                      <m.div
-                        layout
-                        className="p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4"
-                      >
-                        <div className="space-y-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span
-                              className={`h-2.5 w-2.5 rounded-full shrink-0 ${
-                                fact.category === "income"
-                                  ? "bg-teal-700"
-                                  : fact.category === "tax_paid"
-                                    ? "bg-indigo-600"
-                                    : "bg-emerald-600"
-                              }`}
-                            />
-                            <h4 className="font-extrabold text-slate-900 text-sm">
-                              {localizedLabel}
-                            </h4>
-                            <span
-                              className={`text-[9px] font-mono px-2 py-0.5 rounded uppercase font-semibold border ${
-                                isConfirmed
-                                  ? "bg-emerald-100 text-emerald-800 border-emerald-200"
-                                  : isDisputed
-                                    ? "bg-amber-100 text-amber-800 border-amber-200"
-                                    : "bg-slate-100 text-slate-500 border-slate-200"
-                              }`}
-                            >
-                              {isConfirmed ? t.confirmed : isDisputed ? t.modified : t.pending}
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span
+                            className={`h-2.5 w-2.5 rounded-full shrink-0 ${
+                              fact.category === "income"
+                                ? "bg-teal-700"
+                                : fact.category === "tax_paid"
+                                  ? "bg-indigo-600"
+                                  : "bg-emerald-600"
+                            }`}
+                          />
+                          <h4 className="font-extrabold text-slate-900 text-sm">
+                            {localizedLabel}
+                          </h4>
+                          <span
+                            className={`text-[9px] font-mono px-2 py-0.5 rounded uppercase font-semibold border ${
+                              isConfirmed
+                                ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                                : isDisputed
+                                  ? "bg-amber-100 text-amber-800 border-amber-200"
+                                  : "bg-slate-100 text-slate-500 border-slate-200"
+                            }`}
+                          >
+                            {isConfirmed ? t.confirmed : isDisputed ? t.modified : t.pending}
+                          </span>
+                          {fact.statement && (
+                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 border border-slate-200 uppercase">
+                              {fact.statement}
                             </span>
-                            {fact.statement && (
-                              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 border border-slate-200 uppercase">
-                                {fact.statement}
-                              </span>
-                            )}
-                          </div>
-
-                          <p className="text-xs text-slate-500 leading-normal max-w-xl">
-                            {CATEGORY_BLURB[fact.category]}
-                            {fact.reportedBy && fact.reportedBy !== "—" && (
-                              <>
-                                {" "}
-                                Reported by{" "}
-                                <span className="font-semibold text-slate-700">
-                                  {fact.reportedBy}
-                                </span>
-                                .
-                              </>
-                            )}
-                          </p>
-
-                          {isDisputed && fact.feedbackCode && (
-                            <p className="text-[11px] text-amber-800">
-                              <span className="font-bold">{fact.feedbackCode}</span> —{" "}
-                              {AIS_FEEDBACK_LABELS[fact.feedbackCode]}
-                              {fact.disputeReason ? ` · ${fact.disputeReason}` : ""}
-                            </p>
                           )}
                         </div>
 
-                        <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-4 shrink-0">
-                          <div className="text-left md:text-right">
-                            <span className="text-[10px] font-mono text-slate-400 block uppercase">
-                              {t.reportedByDept} / {t.yourFigure}
-                            </span>
-                            <div className="flex items-center gap-1.5 flex-wrap md:justify-end">
-                              {fact.declaredAmount !== fact.reportedAmount && (
-                                <Rupees
-                                  value={fact.reportedAmount}
-                                  strike
-                                  className="text-xs font-semibold text-slate-400"
-                                />
-                              )}
+                        <p className="text-xs text-slate-500 leading-normal max-w-xl">
+                          {CATEGORY_BLURB[fact.category]}
+                          {fact.reportedBy && fact.reportedBy !== "—" && (
+                            <>
+                              {" "}
+                              Reported by{" "}
+                              <span className="font-semibold text-slate-700">
+                                {fact.reportedBy}
+                              </span>
+                              .
+                            </>
+                          )}
+                        </p>
+
+                        {isDisputed && fact.feedbackCode && (
+                          <p className="text-[11px] text-amber-800">
+                            <span className="font-bold">{fact.feedbackCode}</span> —{" "}
+                            {AIS_FEEDBACK_LABELS[fact.feedbackCode]}
+                            {fact.disputeReason ? ` · ${fact.disputeReason}` : ""}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-4 shrink-0">
+                        <div className="text-left md:text-right">
+                          <span className="text-[10px] font-mono text-slate-400 block uppercase">
+                            {t.reportedByDept} / {t.yourFigure}
+                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap md:justify-end">
+                            {fact.declaredAmount !== fact.reportedAmount && (
                               <Rupees
-                                value={fact.declaredAmount}
-                                className={`text-lg font-extrabold tracking-tight ${
-                                  isDisputed ? "text-amber-700" : "text-slate-950"
-                                }`}
+                                value={fact.reportedAmount}
+                                strike
+                                className="text-xs font-semibold text-slate-400"
                               />
-                            </div>
-                          </div>
-
-                          <div className="flex gap-2">
-                            {!isConfirmed && (
-                              <button
-                                onClick={() =>
-                                  dispatch({ type: "CONFIRM_FACT", factId: fact.id })
-                                }
-                                className="px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-xs font-bold rounded-lg transition-colors cursor-pointer"
-                              >
-                                {t.confirm}
-                              </button>
                             )}
-
-                            <button
-                              onClick={() => (isEditing ? closeDrawer() : openDispute(fact))}
-                              className="px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
-                            >
-                              <Sliders size={12} />
-                              <span>{t.flag}</span>
-                            </button>
-
-                            {(isDisputed || isConfirmed) && (
-                              <button
-                                onClick={() => handleReset(fact.id)}
-                                className="px-2.5 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 text-xs font-bold rounded-lg transition-colors cursor-pointer"
-                                title={t.reset}
-                                aria-label={t.reset}
-                              >
-                                <RefreshCw size={12} />
-                              </button>
-                            )}
+                            <Rupees
+                              value={fact.declaredAmount}
+                              className={`text-lg font-extrabold tracking-tight ${
+                                isDisputed ? "text-amber-700" : "text-slate-950"
+                              }`}
+                            />
                           </div>
                         </div>
-                      </m.div>
 
-                      {/* Dispute drawer. `layout` on the card above means the rows
-                          below slide rather than jump when this opens. */}
-                      <AnimatePresence initial={false}>
-                        {isEditing && (
-                          <m.div
-                            key="drawer"
-                            layout
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={springTransition}
-                            className="border-t border-slate-200/80 bg-slate-50/60 overflow-hidden"
+                        <div className="flex gap-2">
+                          {!isConfirmed && (
+                            <button
+                              data-action="confirm"
+                              onClick={() =>
+                                dispatch({ type: "CONFIRM_FACT", factId: fact.id })
+                              }
+                              className="px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                            >
+                              {t.confirm}
+                            </button>
+                          )}
+
+                          <button
+                            data-action="dispute"
+                            onClick={() => (isEditing ? closeDrawer() : openDispute(fact))}
+                            className="px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
                           >
-                            <div className="p-5 md:p-6 space-y-4 max-w-3xl">
-                              <div className="grid sm:grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                  <label
-                                    htmlFor={`amount-${fact.id}`}
-                                    className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block"
-                                  >
-                                    {t.disputeInputLabel}
-                                  </label>
-                                  <input
-                                    id={`amount-${fact.id}`}
-                                    type="number"
-                                    min="0"
-                                    inputMode="numeric"
-                                    value={draft.amount}
-                                    onChange={(e) =>
-                                      setDraft((d) => ({ ...d, amount: e.target.value }))
-                                    }
-                                    className="w-full px-4 py-2.5 bg-white border border-slate-250 rounded-xl text-sm font-mono tabular-nums font-semibold text-slate-900 focus:ring-2 focus:ring-teal-700 focus:outline-none transition-all"
-                                  />
-                                  <p className="text-[11px] text-slate-500">
-                                    Nothing is committed until you save. The department
-                                    keeps <Rupees value={fact.reportedAmount} /> on its side
-                                    of the row either way.
-                                  </p>
-                                </div>
+                            <Sliders size={12} />
+                            <span>{t.flag}</span>
+                          </button>
 
-                                <div className="space-y-1.5">
-                                  <label
-                                    htmlFor={`code-${fact.id}`}
-                                    className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block"
-                                  >
-                                    {t.disputeCodeLabel}
-                                  </label>
-                                  <select
-                                    id={`code-${fact.id}`}
-                                    value={draft.feedbackCode}
-                                    onChange={(e) =>
-                                      setDraft((d) => ({
-                                        ...d,
-                                        feedbackCode: e.target.value as AISFeedbackCode,
-                                      }))
-                                    }
-                                    className="w-full px-4 py-2.5 bg-white border border-slate-250 rounded-xl text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-teal-700 focus:outline-none transition-all cursor-pointer"
-                                  >
-                                    {DISPUTE_FEEDBACK_CODES.map((code) => (
-                                      <option key={code} value={code}>
-                                        {code} — {AIS_FEEDBACK_LABELS[code]}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <p className="text-[11px] text-slate-500">
-                                    {AIS_FEEDBACK_HELP[draft.feedbackCode]}
-                                  </p>
-                                </div>
+                          {(isDisputed || isConfirmed) && (
+                            <button
+                              onClick={() => handleReset(fact.id)}
+                              className="px-2.5 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                              title={t.reset}
+                              aria-label={t.reset}
+                            >
+                              <RefreshCw size={12} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </m.div>
+
+                    {/* Dispute drawer. `layout` on the card above means the rows
+                        below slide rather than jump when this opens. */}
+                    <AnimatePresence initial={false}>
+                      {isEditing && (
+                        <m.div
+                          key="drawer"
+                          layout
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={springTransition}
+                          className="border-t border-slate-200/80 bg-slate-50/60 overflow-hidden"
+                        >
+                          <div className="p-5 md:p-6 space-y-4 max-w-3xl">
+                            <div className="grid sm:grid-cols-2 gap-4">
+                              <div className="space-y-1.5">
+                                <label
+                                  htmlFor={`amount-${fact.id}`}
+                                  className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block"
+                                >
+                                  {t.disputeInputLabel}
+                                </label>
+                                <input
+                                  id={`amount-${fact.id}`}
+                                  type="number"
+                                  min="0"
+                                  inputMode="numeric"
+                                  value={draft.amount}
+                                  onChange={(e) =>
+                                    setDraft((d) => ({ ...d, amount: e.target.value }))
+                                  }
+                                  className="w-full px-4 py-2.5 bg-white border border-slate-250 rounded-xl text-sm font-mono tabular-nums font-semibold text-slate-900 focus:ring-2 focus:ring-teal-700 focus:outline-none transition-all"
+                                />
+                                <p className="text-[11px] text-slate-500">
+                                  Nothing is committed until you save. The department
+                                  keeps <Rupees value={fact.reportedAmount} /> on its side
+                                  of the row either way.
+                                </p>
                               </div>
 
                               <div className="space-y-1.5">
                                 <label
-                                  htmlFor={`reason-${fact.id}`}
+                                  htmlFor={`code-${fact.id}`}
                                   className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block"
                                 >
-                                  {t.disputeReasonLabel}
+                                  {t.disputeCodeLabel}
                                 </label>
-                                <MockField>
-                                  <input
-                                    id={`reason-${fact.id}`}
-                                    type="text"
-                                    value={draft.reason}
-                                    onChange={(e) =>
-                                      setDraft((d) => ({ ...d, reason: e.target.value }))
-                                    }
-                                    placeholder={t.disputeReasonPlaceholder}
-                                    className="w-full px-4 py-2.5 bg-white border border-slate-250 rounded-xl text-sm text-slate-700 focus:ring-2 focus:ring-teal-700 focus:outline-none transition-all"
-                                  />
-                                  <MockFill
-                                    onFill={() =>
-                                      setDraft((d) => ({ ...d, reason: MOCK.disputeReason }))
-                                    }
-                                  />
-                                </MockField>
-                              </div>
-
-                              <div className="flex gap-2 justify-end pt-1">
-                                <button
-                                  onClick={closeDrawer}
-                                  className="px-3.5 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 transition cursor-pointer"
+                                <select
+                                  id={`code-${fact.id}`}
+                                  value={draft.feedbackCode}
+                                  onChange={(e) =>
+                                    setDraft((d) => ({
+                                      ...d,
+                                      feedbackCode: e.target.value as AISFeedbackCode,
+                                    }))
+                                  }
+                                  className="w-full px-4 py-2.5 bg-white border border-slate-250 rounded-xl text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-teal-700 focus:outline-none transition-all cursor-pointer"
                                 >
-                                  Cancel
-                                </button>
-                                <button
-                                  onClick={() => handleReset(fact.id)}
-                                  className="px-3.5 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 transition cursor-pointer"
-                                >
-                                  {t.reset}
-                                </button>
-                                <button
-                                  onClick={() => commitDispute(fact.id)}
-                                  className="px-4 py-2 bg-teal-800 hover:bg-teal-900 text-white text-xs font-bold rounded-lg transition cursor-pointer"
-                                >
-                                  {t.recalc}
-                                </button>
+                                  {DISPUTE_FEEDBACK_CODES.map((code) => (
+                                    <option key={code} value={code}>
+                                      {code} — {AIS_FEEDBACK_LABELS[code]}
+                                    </option>
+                                  ))}
+                                </select>
+                                <p className="text-[11px] text-slate-500">
+                                  {AIS_FEEDBACK_HELP[draft.feedbackCode]}
+                                </p>
                               </div>
                             </div>
-                          </m.div>
-                        )}
-                      </AnimatePresence>
-                    </m.div>
-                  );
-                })}
-              </div>
-            </m.div>
-          )}
-        </AnimatePresence>
+
+                            <div className="space-y-1.5">
+                              <label
+                                htmlFor={`reason-${fact.id}`}
+                                className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block"
+                              >
+                                {t.disputeReasonLabel}
+                              </label>
+                              <MockField>
+                                <input
+                                  id={`reason-${fact.id}`}
+                                  type="text"
+                                  value={draft.reason}
+                                  onChange={(e) =>
+                                    setDraft((d) => ({ ...d, reason: e.target.value }))
+                                  }
+                                  placeholder={t.disputeReasonPlaceholder}
+                                  className="w-full px-4 py-2.5 bg-white border border-slate-250 rounded-xl text-sm text-slate-700 focus:ring-2 focus:ring-teal-700 focus:outline-none transition-all"
+                                />
+                                <MockFill
+                                  onFill={() =>
+                                    setDraft((d) => ({ ...d, reason: MOCK.disputeReason }))
+                                  }
+                                />
+                              </MockField>
+                            </div>
+
+                            <div className="flex gap-2 justify-end pt-1">
+                              <button
+                                onClick={closeDrawer}
+                                className="px-3.5 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 transition cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => handleReset(fact.id)}
+                                className="px-3.5 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 transition cursor-pointer"
+                              >
+                                {t.reset}
+                              </button>
+                              <button
+                                data-action="save-dispute"
+                                onClick={() => commitDispute(fact.id)}
+                                className="px-4 py-2 bg-teal-800 hover:bg-teal-900 text-white text-xs font-bold rounded-lg transition cursor-pointer"
+                              >
+                                {t.recalc}
+                              </button>
+                            </div>
+                          </div>
+                        </m.div>
+                      )}
+                    </AnimatePresence>
+                  </m.div>
+                );
+              })}
+            </div>
+          </m.div>
+        )}
       </main>
 
       {/* Calculation dock */}
@@ -759,7 +799,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
             </div>
             <div>
               <span className="text-[10px] font-mono tracking-wider text-slate-400 uppercase block">
-                {isPayable ? t.netPayable : t.netRefund}
+                {positionLabel}
               </span>
               <div className="flex items-baseline gap-1.5 flex-wrap">
                 <m.div layout transition={springTransition}>
@@ -771,9 +811,11 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                 <span className="text-xs text-slate-400 font-mono">
                   {isPayable
                     ? "outstanding u/s 140A"
-                    : active.totalTaxesPaid > 0
-                      ? "credit against taxes already paid"
-                      : "nothing due either way"}
+                    : isSettled
+                      ? selfAssessmentPaid > 0
+                        ? "cleared by challan u/s 140A"
+                        : "nothing due either way"
+                      : "credit against taxes already paid"}
                 </span>
               </div>
             </div>
@@ -811,42 +853,45 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
               The CTA is the rule, not a label. A return filed with tax
               outstanding is defective u/s 139(9), so while the net position is
               payable the only route forward is the challan.
+
+              NOT wrapped in AnimatePresence, deliberately. `mode="wait"` holds
+              the outgoing button mounted until its exit animation finishes, so
+              anything that stalls the frame loop — a background tab, a throttled
+              or reduced-motion client, a slow feature bundle — leaves the WRONG
+              primary action on screen: "Pay outstanding tax" while the citizen
+              is actually owed a refund, opening a challan for tax that is not
+              due. Which action is offered is a statutory question and must not
+              depend on an animation completing. `layout` still eases the swap
+              when frames are running; when they are not, the button is simply
+              correct and unanimated.
             */}
-            <AnimatePresence mode="wait" initial={false}>
-              {isPayable ? (
-                <m.button
-                  key="pay"
-                  layout
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={springTransition}
-                  onClick={() => setChallanOpen(true)}
-                  className="px-5 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold rounded-xl transition cursor-pointer inline-flex items-center gap-2"
-                >
-                  <Banknote size={14} />
-                  {t.payNow}
-                </m.button>
-              ) : (
-                <m.button
-                  key="file"
-                  layout
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={springTransition}
-                  onClick={() => setShowItrV(true)}
-                  className="px-5 py-3 bg-teal-600 hover:bg-teal-500 text-white text-xs font-extrabold rounded-xl transition cursor-pointer inline-flex items-center gap-2"
-                >
-                  {answered === progress.total ? (
-                    <CheckCheck size={14} />
-                  ) : (
-                    <ArrowRight size={14} />
-                  )}
-                  {t.continueToFile}
-                </m.button>
-              )}
-            </AnimatePresence>
+            {isPayable ? (
+              <m.button
+                key="pay"
+                layout
+                transition={springTransition}
+                onClick={() => setChallanOpen(true)}
+                className="px-5 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold rounded-xl transition cursor-pointer inline-flex items-center gap-2"
+              >
+                <Banknote size={14} />
+                {t.payNow}
+              </m.button>
+            ) : (
+              <m.button
+                key="file"
+                layout
+                transition={springTransition}
+                onClick={() => setShowItrV(true)}
+                className="px-5 py-3 bg-teal-600 hover:bg-teal-500 text-white text-xs font-extrabold rounded-xl transition cursor-pointer inline-flex items-center gap-2"
+              >
+                {answered === progress.total ? (
+                  <CheckCheck size={14} />
+                ) : (
+                  <ArrowRight size={14} />
+                )}
+                {t.continueToFile}
+              </m.button>
+            )}
           </div>
         </div>
       </footer>

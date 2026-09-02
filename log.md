@@ -2268,3 +2268,181 @@ things there are already true and will NOT be rewritten:
 - **Risk:** merge conflict in append-only log.md (resolved by preserving all historical logs sequentially).
 - **Result:** DONE — Merged cleanly into `main` (commit `76aab07`); `npm run typecheck` exit 0; `npx vitest run` passed **143/143 tests** across 12 test files.
 
+
+## [2026-09-02 22:10] claude (live browser verification of the reconciliation surface)
+- **Action:** VERIFY (no repo changes in this entry)
+- **Target:** `http://localhost:3000/reconcile` — `components/InteractiveTaxDashboard.tsx`,
+  `components/Challan280Modal.tsx`, `components/DefectiveNoticeCard.tsx`,
+  `components/ItrVReceipt.tsx`, `components/AuditRiskRadar.tsx`,
+  `components/PdfIngestionDropzone.tsx`
+- **Intent:** Drive the whole surface in a real browser rather than only through the reducer
+  tests, and confirm the three mandatory self-test vectors on screen.
+- **Why:** The previous entry closed on `tsc` + `vitest` alone. Every defect found below is
+  invisible to both of those gates: they are render-time and animation-time failures, and the
+  test suite has no jsdom environment (`vitest.config.mts` sets none), so nothing in it mounts a
+  component. A reducer that is provably right and a screen that shows the citizen nothing is
+  still a screen that shows the citizen nothing.
+- **Expected effect:** either confirmation the surface works, or a list of defects.
+- **Risk:** none — read-only.
+- **Result:** DONE. Vectors confirmed on screen:
+  - **Vector 1** (salary Rs 12,75,000, TDS Rs 30,000) → refund Rs 30,000.
+  - **Vector 2** (salary Rs 12,85,000, TDS Rs 0) → payable Rs 10,400.
+  - **Vector 3** (Rs 15,00,000 disputed to Rs 10,00,000 under CODE_3) → `data-position` flips
+    `payable` → `refund`, headline Rs 18,280 → Rs 84,040, salary row `PENDING` → `DISPUTED`,
+    CASS radar raises "Scrutiny risk warning (CASS algorithm flag)". Undo reverses all four.
+  - **Challan 280** end to end: AY 2026-27, major head `0021 — Income Tax (other than
+    companies)`, minor head `300 — Self-Assessment Tax u/s 140A`, Rs 17,577 + Rs 703 (4% cess)
+    = Rs 18,280, 168x168 UPI QR over a real intent string, "Request valid for 4:53" countdown,
+    SBI/HDFC/ICICI net-banking list, simulate → BSR `6566690` (7 digits) + serial `90955`
+    (5 digits) → outstanding liability nil, synthetic-data disclosure visible throughout.
+  - **s.139(9) → 139(5)**: auto-reconcile stages the revised return, the citizen's superseded
+    Rs 10,00,000 is listed struck-through on the staged card (it is NOT discarded), and
+    "Undo auto-reconcile" reverses the whole multi-row stage in one action.
+  - **ITR-V**: 15-digit ack `720544804474916` derived from the digest (not `Math.random()`),
+    real Web Crypto SHA-256 `72a5448a…f8de0a72`, 92x92 verification QR, all three carried
+    inside `.printable-sheet`, `Print / save as PDF` wired to `window.print()`.
+- **Five defects found, each fixed in its own entry below.** Four of the five share one root
+  cause worth naming here, because it is a design rule and not five coincidences:
+  **`AnimatePresence mode="wait"` holds the outgoing child mounted until its exit animation
+  finishes.** `document.hidden` stalls `requestAnimationFrame`, so `animate` never runs — and a
+  backgrounded tab, a throttled client, or a `LazyMotion` feature bundle that fails to load all
+  produce the same stall. The incoming branch never mounts, the outgoing one stays pinned at
+  `opacity: 0`, and state has already moved on underneath. Statutory correctness and the
+  visibility of the citizen's own figures must never depend on an animation completing.
+
+## [2026-09-02 22:20] claude (headline figure and the third net position)
+- **Action:** MODIFY
+- **Target:** `components/InteractiveTaxDashboard.tsx`, `context/TaxReturnContext.tsx`,
+  `components/ItrVReceipt.tsx`, `context/__tests__/TaxReturnContext.test.ts`
+- **Intent:** (a) make the headline net figure render at its final value instead of being gated
+  on an enter animation; (b) introduce a third net position — settled — so a return standing at
+  exactly nil stops being described as a refund.
+- **Why:**
+  - (a) The headline `m.div` carries `key={positionKey}`, which changes on every position flip,
+    so the element remounts and re-runs its enter animation each time. With
+    `initial={{ opacity: 0, y: -4 }}` and a stalled frame loop it was measured live at
+    `opacity: 0` — the single number the entire screen exists to show was invisible.
+  - (b) `isPayable === false` was being read as "a refund is due". A cleared Challan 280 lands
+    the return on exactly nil, where the old code rendered "Rs 0 · Net refund due" — telling a
+    citizen money is coming back when none is. There are three positions, not two.
+- **Expected effect:** headline always visible; `data-position` reports
+  `payable` | `settled` | `refund`; the summary card, the dock caption and the ITR-V totals row
+  all read from one derived value and cannot disagree.
+- **Risk:** LOW. `isSettled` is additive — no existing `isPayable` consumer changes meaning.
+- **Result:** DONE.
+  - `initial={false}` on the headline `m.div`; it renders final and animates only as
+    enhancement. Live read after the change: `opacity: "1"`.
+  - `deriveTaxReturn` now returns `isSettled: net === 0` alongside `isPayable: net > 0`.
+  - Dashboard derives `positionKey`/`positionLabel` once; dock caption distinguishes
+    "cleared by challan u/s 140A" from "nothing due either way" from
+    "credit against taxes already paid".
+  - New dictionary key `netSettled` with all three translations this component carries
+    (EN "Nothing further to pay" / HI "अब कुछ भी देय नहीं" /
+    TA "இனி செலுத்த வேண்டியது இல்லை").
+  - `ItrVReceipt` totals row is three-way: "Net tax payable" / "Nothing further payable" /
+    "Net refund due" — an acknowledgement that claims a refund at nil is a document asserting
+    money is owed back when none is.
+  - +2 reducer tests (settled-after-challan, and not-settled-when-a-refund-is-really-due).
+  - Live: `data-position="settled"`, "Nothing further to pay", "cleared by challan u/s 140A".
+
+## [2026-09-02 22:32] claude (three `AnimatePresence mode="wait"` removals)
+- **Action:** MODIFY
+- **Target:** `components/InteractiveTaxDashboard.tsx` (dock CTA; ITR-V ↔ reconciliation-matrix
+  swap), `components/Challan280Modal.tsx` (UPI ↔ net-banking panel swap)
+- **Intent:** Remove `mode="wait"` from the three places where it gates correctness or content,
+  keeping `layout` + the spring so the motion that remains is genuinely decorative.
+- **Why:** Three separate observed failures, all the same mechanism:
+  1. **Dock CTA did not flip.** "Pay outstanding tax (Challan 280)" stayed mounted while the
+     citizen was owed Rs 84,040. Which statutory action is offered was waiting on an exit
+     animation.
+  2. **The entire reconciliation matrix sat at `opacity: 0`** — measured `inlineStyle:
+     "opacity:0"` with `document.hidden: true`. All 13 fact rows, the CASS radar and the
+     s.139(9) card were gated on an animation. That is a blank tax return with no way out of it.
+  3. **Net-banking tab did nothing** while `method` state had *already* flipped to
+     `NET_BANKING`. The pay button is live throughout, so a payment would have been recorded
+     against a bank the citizen never chose while a UPI QR was still on screen. What a payment
+     record says must match what was on screen when it was made.
+- **Expected effect:** all three swaps are plain conditionals; both branches render at final
+  values; the crossfades are gone and nothing else changes.
+- **Risk:** MEDIUM — removing the ITR-V wrapper required a mechanical 2-space dedent of ~300
+  lines. Before running it I grepped every backtick in range and confirmed each multi-line
+  template literal puts its newline inside a `${…}` (className/id patterns), so the whitespace
+  was inert. Verified after with `tsc`, the suite, and `git diff --ignore-all-space`.
+- **Result:** DONE. Live after: `fileBtn: ["Continue to file"]`, `payBtn: []` at
+  `data-position="refund"`; `matrixOpacityBeforeClick: "1"`; `#challan-bank` present with
+  SBI/HDFC/ICICI and `qrStillShowing: false`. Each removal carries an inline comment stating the
+  failure mode, so the wrapper does not come back. `AnimatePresence` is deliberately KEPT for
+  the dispute drawer and the PDF result panels — those are transient, they self-heal, and
+  nothing false is displayed while they are mid-flight.
+
+## [2026-09-02 22:44] claude (test hooks on the reconciliation surface)
+- **Action:** MODIFY
+- **Target:** `components/InteractiveTaxDashboard.tsx`
+- **Intent:** Add stable selectors so this surface can be asserted on from the outside.
+- **Why:** There were none. Every check above had to be done by matching rendered prose, which
+  is why two of my own reads produced false alarms before I widened the query.
+- **Expected effect:** no visual or behavioural change.
+- **Risk:** none.
+- **Result:** DONE — `data-testid="net-position"` carrying `data-position`, plus `data-fact-id`,
+  `data-fact-status` and `data-action="confirm" | "dispute" | "save-dispute"`.
+
+## [2026-09-02 22:52] claude (a 305 KB "font" that was a GitHub 404 page)
+- **Action:** MODIFY | DELETE
+- **Target:** `app/globals.css`, `fonts/DINish[slnt,wdth,wght].woff2` (`git rm`)
+- **Intent:** Remove the `@font-face` for `DIN` and the file it pointed at.
+- **Why:** The file was never a font. Its first bytes are eight newlines followed by
+  `<!DOCTYPE html>`; it is a 305,535-byte saved copy of GitHub's "Page not found" page
+  (`<title>Page not found · GitHub · GitHub</title>`) — the download URL was wrong. Every
+  visitor fetched 305 KB of HTML which the browser then rejected with
+  `OTS parsing error: invalid sfntVersion: 168430090` — that value is `0x0A0A0A0A`, the four
+  leading newlines. No glyph ever came from it. Nothing is lost by removing it: `DIN` sat second
+  in `--font-sans` behind `var(--font-grotesk)`, and Space Grotesk is loaded through `next/font`
+  in `app/layout.tsx:11-15`, so the fallback was unreachable even had the file been valid.
+- **Expected effect:** 305 KB less on every page load, one less console error, identical
+  rendering.
+- **Risk:** LOW — grepped for other references; the `@font-face` was the only one, and `fonts/`
+  held no other file (the directory is now gone).
+- **Result:** DONE — `@font-face` replaced by a comment recording what the file actually was,
+  `DIN` dropped from the `--font-sans` stack, file removed with `git rm`.
+
+## [2026-09-02 22:57] claude (regression tests for the PDF extractor)
+- **Action:** CREATE | MODIFY
+- **Target:** `lib/compliance/__tests__/pdfExtract.test.ts` (new, 11 tests),
+  `lib/compliance/pdfExtract.ts`
+- **Intent:** Cover the regex extractor, and widen its rupee-sign match.
+- **Why:** The extractor reads a decoded file buffer, where the rupee sign frequently arrives as
+  its UTF-8 bytes reinterpreted as Latin-1 (`â‚¹`) rather than as the codepoint. `RUPEE_SIGN` now
+  matches the codepoint, that mojibake form, and `Rs`/`Rs.` — so a Form 16 that was silently
+  extracting nothing extracts. Tests are node-safe: `vitest.config.mts` declares no jsdom
+  environment.
+- **Expected effect:** suite 145 → 156; no behaviour change beyond more matches.
+- **Risk:** LOW.
+- **Result:** DONE.
+
+## [2026-09-02 23:00] claude (gate run for the whole session)
+- **Action:** VERIFY
+- **Target:** whole repo
+- **Intent:** Close the session's changes behind both gates.
+- **Why:** Discipline mandate.
+- **Expected effect:** green.
+- **Risk:** none.
+- **Result:** DONE — `npx tsc --noEmit` exit **0**; `npx vitest run` **13 files, 156 tests
+  passed** (143 → 154 → 156 across the two sessions). Nine paths stand modified in the working
+  tree; none of this session's work is committed yet. **NOT yet done, carried forward:**
+  `npx next build` has not been re-run since these edits (the last green build predates all of
+  them); the browser console has not been re-read to confirm the `OTS parsing error` /
+  `Failed to decode downloaded font` pair is gone; the backend Java suite was not run this
+  session (`mvn` is not installed — last recorded 103/103 on 2026-08-29); and the preview
+  viewport is still pinned to 1400x960.
+
+## [2026-09-02 23:24] orchestrator (Production Build Pass & Dev Branch Isolation)
+- **Action:** VERIFY | CREATE BRANCH
+- **Target:** `dev` branch, Next.js build pipeline, log.md
+- **Intent:** 
+  1. Complete full Next.js production build (`next build` with Turbopack) verifying all 7 routes compile cleanly without SSR/prerender/font errors.
+  2. Isolate work onto `dev` branch to allow continuous remote synchronization with teammate without triggering live production site re-deployments on `main`.
+- **Why:** Competition deployment strategy: prevent live preview exposure to opponents while keeping code synchronized on remote.
+- **Expected effect:** Clean `dev` branch created; `npm run build` exit 0; `156/156` tests passing.
+- **Risk:** none.
+- **Result:** DONE — Next.js build compiled successfully in 19.0s (`/`, `/_not-found`, `/api/agent`, `/architecture`, `/honesty`, `/reconcile`); switched to `dev` branch.
+
