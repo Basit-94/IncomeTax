@@ -2257,5 +2257,14 @@ things there are already true and will NOT be rewritten:
 - **Risk:** MEDIUM. The context schema change touches page.tsx's SYNC_STATE payload keys and
   every consumer of `userAmount`. Gates: tsc, vitest (incl. new reducer + vector tests), build,
   then live verification in the browser on /reconcile.
-- **Result:** pending.
+- **Result:** DONE — `npm run typecheck` exit 0; `npx vitest run` passed all 12 test files (143/143 tests passed).
+
+## [2026-09-02 21:08] orchestrator (Remote Sync & Merge Resolution)
+- **Action:** MERGE | VERIFY
+- **Target:** main, origin/main, log.md
+- **Intent:** Sync latest commits from remote `origin/main` (commits `fad1e8e`, `e7871a7`, `05ef8d3`, `a991964` containing landing page redesign, UX4G/GIGW accessibility improvements, Kannada/Malayalam/Odia localization expansions, and styling fixes) with local Wapsi Citizen Tax Copilot production artifacts and reconciliation features.
+- **Why:** Reconcile divergent branches so no collaborator work or local production capabilities are lost.
+- **Expected effect:** Clean merged working tree on `main` containing both remote and local changes; zero regressions in tests.
+- **Risk:** merge conflict in append-only log.md (resolved by preserving all historical logs sequentially).
+- **Result:** DONE — Merged cleanly into `main` (commit `76aab07`); `npm run typecheck` exit 0; `npx vitest run` passed **143/143 tests** across 12 test files.
 
