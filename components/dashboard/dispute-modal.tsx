@@ -6,6 +6,28 @@ import { AlertTriangle, Sparkles, Volume2, VolumeX } from "lucide-react";
 import type { Persona } from "../../lib/types";
 import type { Dict } from "../../lib/i18n";
 import { MockField, MockFill, MOCK } from "@/components/dev/mock-fill";
+import { formatMoney } from "../../lib/money";
+import { AIS_FEEDBACK_LABELS } from "../../lib/compliance/aisFeedback";
+import type { AISFeedbackCode } from "../../lib/compliance/aisFeedback";
+
+/**
+ * The CBDT AIS feedback code each plain-language choice maps to. The citizen
+ * picks in their own words; the code is what the department can act on, and
+ * it travels with the correction into the ledger and the reconciliation
+ * surface so every screen names the same reason.
+ */
+const CHOICE_CODE: Record<"different" | "fraud" | "joint" | "duplicate", AISFeedbackCode> = {
+  different: "CODE_3",
+  fraud: "CODE_5",
+  joint: "CODE_4",
+  duplicate: "CODE_5",
+};
+
+const TDS_REASON_CODE: Record<string, AISFeedbackCode> = {
+  "Amount differs from Form 26AS/AIS": "CODE_3",
+  "Deducted on wrong PAN": "CODE_4",
+  "Duplicate TDS entry": "CODE_5",
+};
 
 interface DisputeModalProps {
   active: boolean;
@@ -16,6 +38,8 @@ interface DisputeModalProps {
   isSpeechListening: boolean;
   setDisputeAmount: (v: string) => void;
   setDisputeReason: (v: string) => void;
+  /** The CBDT code implied by the citizen's choice; written onto the correction. */
+  setDisputeFeedbackCode: (code: AISFeedbackCode) => void;
   toggleSpeechMock: () => void;
   saveDispute: () => void;
   onClose: () => void;
@@ -34,6 +58,7 @@ export default function DisputeModal({
   isSpeechListening,
   setDisputeAmount,
   setDisputeReason,
+  setDisputeFeedbackCode,
   toggleSpeechMock,
   saveDispute,
   onClose,
@@ -50,6 +75,7 @@ export default function DisputeModal({
   useEffect(() => {
     if (active) {
       setCorrectionChoice("different");
+      setDisputeFeedbackCode("CODE_3");
       // Set reason default based on target type
       if (disputeTarget === "tax") {
         setDisputeReason("Amount differs from Form 26AS/AIS");
@@ -59,6 +85,7 @@ export default function DisputeModal({
 
   const handleChoiceChange = (choice: "different" | "fraud" | "joint" | "duplicate") => {
     setCorrectionChoice(choice);
+    setDisputeFeedbackCode(CHOICE_CODE[choice]);
     if (choice === "fraud" || choice === "duplicate") {
       setDisputeAmount("0");
       setDisputeReason(
@@ -131,7 +158,10 @@ export default function DisputeModal({
                       </label>
                       <select
                         value={disputeReason}
-                        onChange={(e) => setDisputeReason(e.target.value)}
+                        onChange={(e) => {
+                          setDisputeReason(e.target.value);
+                          setDisputeFeedbackCode(TDS_REASON_CODE[e.target.value] ?? "CODE_3");
+                        }}
                         className="w-full px-3 py-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-700 focus:outline-none"
                       >
                         <option value="Amount differs from Form 26AS/AIS">
@@ -178,6 +208,14 @@ export default function DisputeModal({
                           </button>
                         ))}
                       </div>
+                      {/* The department's vocabulary for the choice, so the
+                          citizen sees the code that will go on their AIS
+                          feedback — the same code the reconciliation matrix
+                          and the copilot use. */}
+                      <p className="mt-2 text-[0.68rem] font-mono text-ink-3">
+                        AIS feedback {CHOICE_CODE[correctionChoice]} —{" "}
+                        {AIS_FEEDBACK_LABELS[CHOICE_CODE[correctionChoice]]}
+                      </p>
                     </div>
 
                     {/* Amount input for different/joint choices */}
@@ -225,7 +263,7 @@ export default function DisputeModal({
                 )}
 
                 {/* Plain-Language Advisory advisory mismatch card */}
-                {parsedAmount < reportedAmount && (
+                {disputeAmount.trim() !== "" && parsedAmount < reportedAmount && (
                   <div className="bg-warn-soft/40 border border-warn/30 p-4 rounded-xl space-y-2">
                     <span className="text-xs font-bold text-warn uppercase tracking-wider flex items-center gap-1.5">
                       <AlertTriangle size={14} />
@@ -233,13 +271,13 @@ export default function DisputeModal({
                     </span>
                     <div className="text-xs text-ink-2 space-y-1 font-medium leading-relaxed">
                       <p>
-                        You are reporting: <strong className="text-ink">₹{parsedAmount.toLocaleString("en-IN")}</strong>
+                        You are reporting: <strong className="font-mono tabular-nums text-ink">{formatMoney(parsedAmount)}</strong>
                       </p>
                       <p>
-                        {reporterName || "Department source"} reported: <strong className="text-ink">₹{reportedAmount.toLocaleString("en-IN")}</strong>
+                        {reporterName || "Department source"} reported: <strong className="font-mono tabular-nums text-ink">{formatMoney(reportedAmount)}</strong>
                       </p>
                       <p className="mt-2 text-ink">
-                        We will file your return using your corrected figure (₹{parsedAmount.toLocaleString("en-IN")}).
+                        We will file your return using your corrected figure (<span className="font-mono tabular-nums">{formatMoney(parsedAmount)}</span>).
                         However, if your employer/bank filed extra TDS under your PAN, contact them to revise their quarterly return so you don't receive a tax clarification notice later.
                       </p>
                     </div>

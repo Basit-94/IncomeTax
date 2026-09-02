@@ -189,7 +189,7 @@ export default function OverviewTab({
                 )}
                 <div className="flex items-center justify-between text-xs border-t border-dashed border-line pt-2 font-bold text-navy">
                   <span>{t.check.taxableIncome}</span>
-                  <span>{formatMoney(breakdown.taxableIncome, lang)}</span>
+                  <span className="font-mono tabular-nums">{formatMoney(breakdown.taxableIncome, lang)}</span>
                 </div>
               </div>
 
@@ -219,7 +219,7 @@ export default function OverviewTab({
               {breakdown.specialRate.length > 0 && (
                 <div className="space-y-2 border-b border-line pb-3">
                   <span className="block font-bold text-ink mb-1">
-                    Capital gains at special rates ({formatMoney(breakdown.specialRate.reduce((s, i) => s + i.tax, 0), lang)})
+                    Capital gains at special rates (<span className="font-mono tabular-nums">{formatMoney(breakdown.specialRate.reduce((s, i) => s + i.tax, 0), lang)}</span>)
                   </span>
                   <div className="space-y-1.5 pl-3">
                     {breakdown.specialRate.map((item) => (

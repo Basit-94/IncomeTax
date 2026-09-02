@@ -1,3 +1,10 @@
+# Project context
+
+Read `docs/CONTEXT.md` first. It is the single current description of the product, the two state
+models and the bridge between them, the engine rules, the personas, the copilot, the storage keys, the
+test hooks and the verification protocol — so no agent has to audit the codebase to get oriented.
+Keep it current when a contract changes, and append what you did to `log.md`.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know

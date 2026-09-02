@@ -13,6 +13,7 @@
  */
 
 import type { CustomPersonaId, IncomeFact, Lang, Persona, PersonaId } from "../types";
+import type { AISFeedbackCode } from "../compliance/aisFeedback";
 
 /** What the citizen is asserting about a fact: its figure, or that it exists at all. */
 export type CorrectionField = "amount" | "existence";
@@ -33,6 +34,12 @@ export interface Correction {
   next: number | boolean;
   /** The citizen's own words for why the prefill is wrong. */
   reason: string;
+  /**
+   * The CBDT AIS feedback code the citizen chose, when the dispute UI offered
+   * one. Older saved corrections omit it; the reconciliation surface infers a
+   * code from the reason and the figure in that case.
+   */
+  feedbackCode?: AISFeedbackCode;
   /** ISO timestamp of when the correction was made. */
   at: string;
   /** True once the citizen took it back. Kept in history regardless. */
@@ -112,13 +119,22 @@ export function effectivePersona(state: ReturnState): Persona {
   };
 }
 
-/** Append a correction and recompute the effective persona. Pure. */
+/**
+ * Append a correction and recompute the effective persona. Pure.
+ *
+ * A corrected fact is no longer a confirmed one: "yes, that's right" and "no,
+ * this is wrong" are mutually exclusive answers, so the id leaves
+ * confirmedFactIds. Without this a card confirmed and then corrected wore both
+ * badges and lost its undo, and the reconciliation surface was told the row
+ * was confirmed at a figure the citizen had just rejected.
+ */
 export function applyCorrection(state: ReturnState, correction: Correction): ReturnState {
   const entry: Correction = { ...correction, reverted: false };
   const corrections = [...state.corrections, entry];
   return {
     ...state,
     corrections,
+    confirmedFactIds: state.confirmedFactIds.filter((id) => id !== correction.factId),
     persona: effectivePersona({ ...state, corrections }),
   };
 }

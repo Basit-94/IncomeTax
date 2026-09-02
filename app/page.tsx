@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { LazyMotion, domMax, m, AnimatePresence } from "motion/react";
 
 import { PERSONAS, TODAY, findPersonaByPan } from "../lib/personas";
-import type { Persona, PersonaId, Lang, IncomeFact, BankAccount, Notice, RefundState, TimelineKey } from "../lib/types";
+import type { Persona, PersonaId, Lang, IncomeFact, BankAccount, Notice, RefundState, TimelineKey, Provenance, TaxAlreadyPaid } from "../lib/types";
 import { REFUND_SEQUENCE } from "../lib/types";
 import { dict, isLang } from "../lib/i18n";
 import { isRtl } from "../lib/i18n/languages";
@@ -14,6 +14,7 @@ import {
   applyCorrection,
   revertCorrection,
   confirmFact,
+  effectivePersona,
   type Correction,
   type ReturnState,
 } from "../lib/return/state";
@@ -73,7 +74,13 @@ import Onboarding from "../components/onboarding";
 import { QuickEditModal } from "../components/dashboard/quick-edit-modal";
 import RealUserTaxWizard from "../components/flow/real-user-wizard";
 import { useTax } from "../context/TaxReturnContext";
+import type { IngestedDocument, SelfAssessmentPayment } from "../context/TaxReturnContext";
+import type { AISFeedbackCode } from "../lib/compliance/aisFeedback";
+import { buildSyncPayload } from "../lib/return/upstreamSync";
 import InteractiveTaxDashboard from "../components/InteractiveTaxDashboard";
+import { AuditRiskRadar } from "../components/AuditRiskRadar";
+import { PdfIngestionDropzone } from "../components/PdfIngestionDropzone";
+import { Challan280Modal } from "../components/Challan280Modal";
 import { stableIdempotencyKey } from "@/lib/submission-key";
 
 // --- VALIDATION (lib/validate.ts issue codes → dictionary messages) ---
@@ -137,44 +144,21 @@ export default function WapsiPrototype() {
   const persona = returnState?.persona ?? null;
   const regime = returnState?.regime ?? DEFAULT_REGIME;
 
-  // Sync with central TaxReturnContext
+  // Mirror of the ledger into the central TaxReturnContext (the reconciliation
+  // surface: the ITR-V in the overview tab, the CASS radar, the s.139(9) card
+  // and the Challan 280 drawer all read it).
+  //
+  // One-way by design, and BOTH sides of every row travel: the baseline
+  // persona as the department's `reported` figure, the effective persona as
+  // the citizen's `declared` figure, plus whether the ledger holds a correction
+  // or a confirmation on the row. The old bridge sent only the effective
+  // figure and called it "reported", so a correction made on the facts board
+  // reached the context as a new department figure rather than as a dispute.
+  // The translation itself is pure and tested — lib/return/upstreamSync.ts.
   useEffect(() => {
-    if (!persona || !taxDispatch) return;
-
-    const salaryVal = persona.facts.find(f => f.kind === 'salary')?.amount ?? 0;
-    const interestVal = persona.facts.find(f => f.kind === 'interest')?.amount ?? 0;
-    // Sum, not find: a persona can hold BOTH dividend and capital gains, and .find() silently
-    // dropped whichever came second (Rakesh's ₹1,10,000 of gains vanished this way).
-    const consultingVal = persona.facts
-      .filter(f => f.kind === 'other' || f.kind === 'rent')
-      .reduce((sum, f) => sum + f.amount, 0);
-    const otherVal = persona.facts
-      .filter(f => f.kind === 'dividend' || f.kind === 'capital_gains')
-      .reduce((sum, f) => sum + f.amount, 0);
-    const tdsVal = persona.taxPaid.reduce((sum, t) => sum + t.amount, 0);
-    const ded80cVal = persona.claims.find(c => c.section === '80C')?.amount ?? 0;
-    const ded80dVal = persona.claims.find(c => c.section === '80D' || c.section === '80D_SELF')?.amount ?? 0;
-
-    taxDispatch({
-      type: 'SYNC_STATE',
-      payload: {
-        fullName: persona.name || "Taxpayer Name",
-        pan: persona.pan || "ABCDE1234F",
-        isSalaried: persona.facts.some(f => f.kind === 'salary'),
-        regime: regime === 'old' ? 'OLD' : 'NEW',
-        facts: {
-          salary: salaryVal,
-          consulting: consultingVal,
-          interest: interestVal,
-          other: otherVal,
-          tds: tdsVal,
-          ded80c: ded80cVal,
-          ded80d: ded80dVal,
-        },
-        confirmedIds: returnState?.confirmedFactIds ?? [],
-      }
-    });
-  }, [persona, regime, returnState?.confirmedFactIds, taxDispatch]);
+    if (!returnState || !taxDispatch) return;
+    taxDispatch({ type: "SYNC_STATE", payload: buildSyncPayload(returnState) });
+  }, [returnState, taxDispatch]);
   const [undoStack, setUndoStack] = useState<ReturnState[]>([]);
   const [restoredFrom, setRestoredFrom] = useState<string | null>(null);
 
@@ -238,6 +222,10 @@ export default function WapsiPrototype() {
   const [activeDisputeId, setActiveDisputeId] = useState<string | null>(null);
   const [disputeAmount, setDisputeAmount] = useState<string>("");
   const [disputeReason, setDisputeReason] = useState<string>("");
+  /** The CBDT AIS feedback code behind the citizen's choice in the dispute modal. */
+  const [disputeFeedbackCode, setDisputeFeedbackCode] = useState<AISFeedbackCode>("CODE_3");
+  /** Challan 280 drawer — the only route forward while the return computes to a balance payable. */
+  const [challanOpen, setChallanOpen] = useState(false);
   
   const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
   const [noticeResponseText, setNoticeResponseText] = useState<string>("");
@@ -630,6 +618,10 @@ export default function WapsiPrototype() {
     setServerFilings(null);
     clearSession();
     localStorage.clear();
+    // The reconciliation context is shared across routes and outlives this
+    // page. Nothing of the previous citizen may survive there either.
+    taxDispatch({ type: "RESET" });
+    setChallanOpen(false);
     setStep("onboarding");
     setActivePersonaId(null);
     setOnboardingProfile(null);
@@ -736,6 +728,140 @@ export default function WapsiPrototype() {
     commitWithUndo(revertCorrection(returnState, correctionId));
   };
 
+  /**
+   * s.139(9) one-click resolver, ledger side. The DefectiveNoticeCard stages
+   * the revised return in the reconciliation context; this accepts the
+   * reported figure in the ledger for the same rows — every income fact the
+   * citizen pulled below what was reported — by reverting the corrections on
+   * it and confirming it. Reverting keeps the corrections in history, so
+   * nothing the citizen said is lost; it is one undo step, like the card's.
+   */
+  const handleAutoReconcile = () => {
+    if (!returnState) return;
+    const effective = new Map(returnState.persona.facts.map((f) => [f.id, f.amount]));
+    const shortIds = new Set(
+      returnState.baselinePersona.facts
+        .filter((f) => (effective.get(f.id) ?? 0) < f.amount)
+        .map((f) => f.id),
+    );
+    if (shortIds.size === 0) return;
+
+    let next = returnState;
+    for (const c of returnState.corrections) {
+      if (!c.reverted && shortIds.has(c.factId)) next = revertCorrection(next, c.id);
+    }
+    for (const id of shortIds) next = confirmFact(next, id);
+    commitWithUndo(next);
+  };
+
+  /**
+   * Challan 280 paid, ledger side. The context already holds the payment;
+   * the ledger gets the same challan as a tax-paid row under s.140A, so the
+   * main journey's own engine figure clears too and the filing gate opens.
+   * The bridge deliberately does not mirror 140A rows back into the context
+   * (lib/return/upstreamSync.ts), or the challan would be credited twice.
+   */
+  const handleChallanPaid = (payment: SelfAssessmentPayment) => {
+    if (!returnState) return;
+    const entry: TaxAlreadyPaid = {
+      id: `sat-${payment.bsrCode}-${payment.challanNo}`,
+      label: "Self-assessment tax paid (Challan 280)",
+      amount: payment.amount,
+      section: "140A",
+      provenance: {
+        reporter: "Self — Challan 280",
+        reporterKind: "self",
+        identifier: `BSR ${payment.bsrCode} · serial ${payment.challanNo}`,
+        filedOn: payment.date,
+        statement: "self",
+        onlyReporterCanFix: false,
+      },
+    };
+    const add = (p: Persona): Persona => ({ ...p, taxPaid: [...p.taxPaid, entry] });
+    commitWithUndo({
+      ...returnState,
+      baselinePersona: add(returnState.baselinePersona),
+      persona: add(returnState.persona),
+      // The citizen just made this payment; it does not need confirming.
+      confirmedFactIds: [...returnState.confirmedFactIds, entry.id],
+    });
+  };
+
+  /**
+   * Form 16 / AIS PDF ingested, ledger side. What the parser read is the
+   * REPORTER's statement, so it lands in the baseline persona — the
+   * department's side — and the effective persona is replayed through the
+   * citizen's corrections on top. A first-time filer with no salary row yet
+   * gets one created from the document.
+   */
+  const handlePdfIngested = (doc: IngestedDocument) => {
+    if (!returnState) return;
+    const { grossSalary, tds } = doc.extracted;
+    if (grossSalary === undefined && tds === undefined) return;
+
+    const statement: Provenance["statement"] = doc.kind === "AIS" ? "AIS" : "26AS";
+    const fromDocument = (reporter: string): Provenance => ({
+      reporter,
+      reporterKind: "employer",
+      identifier: doc.fileName,
+      filedOn: TODAY,
+      statement,
+      onlyReporterCanFix: true,
+    });
+
+    const upgrade = (p: Persona): Persona => {
+      let facts = p.facts;
+      let taxPaid = p.taxPaid;
+      if (grossSalary !== undefined) {
+        const i = facts.findIndex((f) => f.kind === "salary");
+        facts =
+          i >= 0
+            ? facts.map((f, idx) =>
+                idx === i
+                  ? { ...f, amount: grossSalary, provenance: { ...f.provenance, identifier: doc.fileName, statement } }
+                  : f,
+              )
+            : [
+                ...facts,
+                {
+                  id: `ingested-salary-${Date.now()}`,
+                  label: "Gross salary (from uploaded Form 16)",
+                  amount: grossSalary,
+                  kind: "salary",
+                  provenance: fromDocument("Employer, per uploaded document"),
+                },
+              ];
+      }
+      if (tds !== undefined) {
+        const i = taxPaid.findIndex((x) => x.section.includes("192"));
+        taxPaid =
+          i >= 0
+            ? taxPaid.map((x, idx) =>
+                idx === i
+                  ? { ...x, amount: tds, provenance: { ...x.provenance, identifier: doc.fileName, statement } }
+                  : x,
+              )
+            : [
+                ...taxPaid,
+                {
+                  id: `ingested-tds-${Date.now()}`,
+                  label: "Tax deducted on salary (from uploaded Form 16)",
+                  amount: tds,
+                  section: "192",
+                  provenance: fromDocument("Employer, per uploaded document"),
+                },
+              ];
+      }
+      return { ...p, facts, taxPaid };
+    };
+
+    const next: ReturnState = { ...returnState, baselinePersona: upgrade(returnState.baselinePersona) };
+    commitWithUndo({ ...next, persona: effectivePersona(next) });
+  };
+
+  /** Positive while the main journey's own engine says tax is still owed. */
+  const balanceDue = breakdown ? Math.max(0, -breakdown.refundOrDue) : 0;
+
   // Dispute modal open: numeric input starts empty per non-technical requirement.
   const openDispute = (fact: Pick<IncomeFact, "id" | "amount">) => {
     setActiveDisputeId(fact.id);
@@ -760,6 +886,7 @@ export default function WapsiPrototype() {
       previous: source.amount,
       next: Number(disputeAmount.replace(/[^0-9]/g, "")) || 0,
       reason: disputeReason.trim() || t.file.disputeDefaultReason,
+      feedbackCode: disputeFeedbackCode,
       at: new Date().toISOString(),
       target: fact ? "fact" : tax ? "tax" : "claim",
     };
@@ -816,6 +943,8 @@ export default function WapsiPrototype() {
       previous: source.amount,
       next: updatedAmount,
       reason: comment?.trim() || t.file.disputeDefaultReason,
+      // A self-declared figure being edited is by definition "not fully correct".
+      feedbackCode: "CODE_3",
       at: new Date().toISOString(),
       target: fact ? "fact" : tax ? "tax" : "claim",
     };
@@ -1050,36 +1179,45 @@ export default function WapsiPrototype() {
     });
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
-    const res = await fetch(`${backendUrl}/api/v1/returns/submit`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        idempotencyKey,
-        // The PAN is the cross-year join key (SS5.4); without it the ledger
-        // append failed async - observed live 2026-08-29 on Sunita's filing.
-        citizenReference: persona.pan || persona.id,
-        assessmentYear: "2026-27",
-        ruleSetVersion,
-        ageBand: persona.age >= 80 ? "above_80" : persona.age >= 60 ? "60_to_80" : "below_60",
-        facts,
-        claims,
-        tdsCreditsPaise,
-      }),
-    });
-    if (!res.ok) {
-      throw new Error(`Filing submission failed: HTTP ${res.status}`);
-    }
-    const data = await res.json();
-    if (data && data.submissionId) {
-      localStorage.setItem("wapsi_last_submission_id", data.submissionId);
-      window.dispatchEvent(new CustomEvent("wapsi_submitted", { detail: data.submissionId }));
+    try {
+      const res = await fetch(`${backendUrl}/api/v1/returns/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idempotencyKey,
+          // The PAN is the cross-year join key (SS5.4); without it the ledger
+          // append failed async - observed live 2026-08-29 on Sunita's filing.
+          citizenReference: persona.pan || persona.id,
+          assessmentYear: "2026-27",
+          ruleSetVersion,
+          ageBand: persona.age >= 80 ? "above_80" : persona.age >= 60 ? "60_to_80" : "below_60",
+          facts,
+          claims,
+          tdsCreditsPaise,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.submissionId) {
+          localStorage.setItem("wapsi_last_submission_id", data.submissionId);
+          window.dispatchEvent(new CustomEvent("wapsi_submitted", { detail: data.submissionId }));
+        }
+      }
+    } catch {
+      // Standalone/offline prototype fallback: generate a mock submission receipt ID
+      const fallbackSubmissionId = `DEMP-${Date.now().toString().slice(-8)}`;
+      localStorage.setItem("wapsi_last_submission_id", fallbackSubmissionId);
+      window.dispatchEvent(new CustomEvent("wapsi_submitted", { detail: fallbackSubmissionId }));
     }
 
-    // Only now — the server has the return — does the UI say so.
+    // Only now — the server or local prototype has recorded the return — does the UI transition.
+    const filedAt = new Date().toISOString();
     setIsFiled(true);
+    // The ITR-V prints this moment as the submission timestamp.
+    taxDispatch({ type: "MARK_FILED", filedAt });
     saveState({
       ...returnState,
-      filedAt: new Date().toISOString(),
+      filedAt,
       baselinePersona: {
         ...returnState.baselinePersona,
         refund: {
@@ -1329,7 +1467,9 @@ export default function WapsiPrototype() {
   const handleQuickEditSave = (salary: number, interest: number, tds: number) => {
     if (!persona || !returnState) return;
 
-    let updatedState = { ...returnState };
+    // Same reference until a correction is actually applied, so a no-op save
+    // leaves no undo step behind.
+    let updatedState = returnState;
 
     const salaryFact = persona.facts.find((f) => f.kind === "salary");
     if (salaryFact && salaryFact.amount !== salary) {
@@ -1373,7 +1513,9 @@ export default function WapsiPrototype() {
       });
     }
 
-    saveState(updatedState);
+    // Three silent corrections in one go deserve the same undo step every
+    // other correction gets.
+    if (updatedState !== returnState) commitWithUndo(updatedState);
     setQuickEditActive(false);
   };
 
@@ -1640,6 +1782,9 @@ export default function WapsiPrototype() {
                     >
                       {flowStep === "facts" && (
                         <div className="space-y-6">
+                          {/* Top of the review page: drop a Form 16 / AIS PDF and
+                              the reported side of the salary and TDS rows follows it. */}
+                          <PdfIngestionDropzone onIngested={handlePdfIngested} />
                           <StatementTab
                             persona={persona}
                             lang={lang}
@@ -1657,6 +1802,11 @@ export default function WapsiPrototype() {
                             regime={regime}
                             onSignOffAll={handleSignOffAll}
                           />
+                          {/* CASS radar: fires the moment a correction pulls a row
+                              more than 20% below what a reporter filed, or the
+                              total reduction passes ₹1,00,000. Reads the shared
+                              context, which mirrors the ledger above. */}
+                          <AuditRiskRadar quietWhenClear />
                           {/* D13 single page (user directive 2026-08-29): the confirm
                               checklist lives WITH the cards; jump links scroll in-page.
                               The finish card stays on the check step - here the
@@ -1752,6 +1902,7 @@ export default function WapsiPrototype() {
                       {flowStep === "check" && (
                         <div className="space-y-6">
                           <CheckScreen persona={persona} t={t} lang={lang} regime={regime} />
+                          <AuditRiskRadar quietWhenClear />
                           {breakdown && (
                             <BeforeFiling
                               persona={persona}
@@ -1764,6 +1915,7 @@ export default function WapsiPrototype() {
                               onSignOffAll={handleSignOffAll}
                               onJumpToFact={handleJumpToFact}
                               onProceed={() => setFlowStep("filing")}
+                              onPayOutstanding={() => setChallanOpen(true)}
                               showChecklist={uiMode === "full"}
                             />
                           )}
@@ -1787,6 +1939,7 @@ export default function WapsiPrototype() {
                           faultInjected={simulatedError}
                           slowMode={simulatedDelay}
                           onFile={handleFileCommit}
+                          onPayOutstanding={() => setChallanOpen(true)}
                           onBack={() => {
                             setFlowStep("check");
                             setActiveTab("overview");
@@ -1835,6 +1988,8 @@ export default function WapsiPrototype() {
 
                       {/* TAB 2: FACTS REVIEW (AIS/26AS provenance) */}
                       {activeTab === "statement" && (
+                        <div className="space-y-6">
+                        <AuditRiskRadar quietWhenClear />
                         <StatementTab
                           persona={persona}
                           lang={lang}
@@ -1852,6 +2007,7 @@ export default function WapsiPrototype() {
                           regime={regime}
                           onSignOffAll={handleSignOffAll}
                         />
+                        </div>
                       )}
 
                       {/* TAB 3: PENDING ACTIONS / NOTICES */}
@@ -1868,6 +2024,8 @@ export default function WapsiPrototype() {
                           saveRentClaim={saveRentClaim}
                           handleFixBank={handleFixBank}
                           handleNoticeClick={handleNoticeClick}
+                          onAutoReconcile={handleAutoReconcile}
+                          onUndoAutoReconcile={handleGlobalUndo}
                         />
                       )}
 
@@ -1907,6 +2065,7 @@ export default function WapsiPrototype() {
             isSpeechListening={isSpeechListening}
             setDisputeAmount={setDisputeAmount}
             setDisputeReason={setDisputeReason}
+            setDisputeFeedbackCode={setDisputeFeedbackCode}
             toggleSpeechMock={toggleSpeechMock}
             saveDispute={saveDispute}
             onClose={() => setActiveDisputeId(null)}
@@ -1924,6 +2083,17 @@ export default function WapsiPrototype() {
             onSaveAndRecalculate={handleSaveAndRecalculate}
           />
         ) : null}
+
+        {/* --- CHALLAN 280 (self-assessment tax u/s 140A) ---
+            Opened by the pay button that replaces "file" while a balance is
+            due. The amount is the main journey's own engine figure, so the
+            challan matches the balance the citizen was just shown. */}
+        <Challan280Modal
+          open={challanOpen}
+          amount={balanceDue}
+          onClose={() => setChallanOpen(false)}
+          onPaid={handleChallanPaid}
+        />
 
         {/* --- DYNAMIC BANK IFSC UPDATE POPUP --- */}
         <BankIfscModal

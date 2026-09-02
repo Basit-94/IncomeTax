@@ -61,13 +61,15 @@ export interface TaxBreakdown {
   standardDeduction: number;
   /** Chapter VI-A style claim deductions actually ALLOWED under the regime. */
   totalDeductions: number;
-  /** Slab-taxable income PLUS taxable special-rate gains. */
+  /** Slab-taxable income PLUS the whole of any special-rate gains (total income). */
   taxableIncome: number;
   slabBreakdown: SlabSlice[];
   /** Slab-only tax before rebate — what slabBreakdown's slices sum to. */
   slabTax: number;
   /** Special-rate capital-gains buckets; empty when no fact carries asset-class metadata. */
   specialRate: SpecialRateItem[];
+  /** The s.112A slice that attracts no tax (up to ₹1.25 lakh); still part of total income. */
+  specialExemptTotal: number;
   /** Slab tax + special-rate tax, before the s.87A rebate. */
   taxBeforeRebate: number;
   rawTax: number;

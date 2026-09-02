@@ -1,273 +1,462 @@
-# Wapsi — Living Plan
+# Wapsi — Agentic Pivot Plan
 
-**Owner:** orchestrator (only the orchestrator edits this file; spawned agents append to `log.md` and report back).
-**Seeded:** 2026-08-25 from `docs/AUDIT.md`, after critiquing the PDF's eleven-point plan and `docs/PROTOTYPE.md` §8.
-
----
-
-## A. Verdicts on the two prior plans
-
-### A.1 The reference PDF's eleven-point plan
-
-| # | Point | Verdict | Reasoning |
-|---|---|---|---|
-| 1 | Atomic payment + challan transaction | **REFRAME** | No real payments exist in a zero-network prototype; the *principle* survives as "every consequential wait is modelled as named states, never a binary success/error." Applied to filing submission and refund movement instead of challans. |
-| 2 | Server-side autosave | **REFRAME** | Correct problem (never lose work), wrong layer — there is no server. Becomes local persistence of the full return state, versioned, with a visible "restored your draft from HH:MM" on resume and undo of corrections. |
-| 3 | Circuit breakers / graceful degradation | **KEEP (minimal)** | Already partly built (sandbox dependency-failure toggles). Keep the *degrade-don't-fail* behaviour: stale prefill shown "as of <date>" rather than blocked. No new infrastructure. |
-| 4 | Validate at point of entry | **KEEP** | `lib/validate.ts` already encodes the right philosophy (issue codes, incomplete ≠ error). Wire it and extend it; nothing knowable-at-entry may be rejected at submit. |
-| 5 | Retire emSigner → eSign | **DROP** | No signing exists and none should be simulated as if real. Mock verification stays explicitly labelled mock; the real-world eSign argument lives on `/honesty`/`/architecture` as prose. |
-| 6 | Rewrite error messages, add loading states | **KEEP** | Every error must say what happened, which item caused it, what to do next. Loading skeletons wherever layout is predictable. Directly implements PDF finding #5 ("fail with information"). |
-| 7 | Schema version as contract | **REFRAME** | The "schema" we control is our persisted return format. Versioned save format with forward-migration on load; a corrupt/incompatible draft is repaired or honestly discarded with explanation, never silently reset. |
-| 8 | Legible refund status machine | **KEEP** | Already designed (`REFUND_SEQUENCE`, holds-with-actions). Fix the drift bug (page.tsx advances through its own shortened list skipping `in_queue`/`determined`) and make cohort framing ("returns filed in your week…") visible. |
-| 9 | Public API / intermediary ecosystem | **DROP** | Multi-year policy engineering; meaningless without a government on the other end. Recorded so it isn't silently lost — it belongs in the writeup, not the build. |
-| 10 | Default to a completed return, on a phone | **KEEP** | This *is* the simplification thesis (confirm, don't compose). Mobile-first already true; deepen it. |
-| 11 | Single source of truth + radical transparency | **KEEP (reframed scope)** | One canonical fact store inside the app (not four views that disagree); transparency delivered by `/architecture` + `/honesty`, which must be re-baselined to match reality after rebuild (audit §6.3). |
-
-### A.2 PROTOTYPE.md §8 remaining-work list
-
-| # | Item | Verdict | Reasoning |
-|---|---|---|---|
-| 1 | Deploy to Vercel | **DROP (for this mission)** | Submission-logistics concern predating the rebuild; no deployment target in this environment. Revisit if asked. |
-| 2 | Split into real routes | **KEEP** | Now justified by architecture, not judging axes: acts become routes (`/file`, `/notices`, `/refund`), enabling SSR for shell content and deep-linkable states. Also the precondition for decomposing page.tsx. |
-| 3 | Seed randomness; soften Aadhaar strings | **KEEP** | Two `Math.random()` sites contradict the seeded-RNG discipline and `/honesty`. Use `lib/rng.ts` (currently dead). Remove/replace the two Aadhaar-assertion strings. |
-| 4 | Wire zod to PAN/IFSC inputs | **KEEP** | Via `lib/validate.ts` (single source), replacing page.tsx's duplicate schemas with hardcoded English errors — which also fixes an i18n regression. |
-| 5 | Decide animejs | **DROP** | Uninstall-or-wire decision resolved: wire nothing decorative during a correctness rebuild; remove the dependency if untouched. Decoration is not on the critical path. |
-| 6 | Render the video | **DROP** | Marketing artifact; out of scope for this mission. `video/` stays untouched. |
-| 7 | `m` + LazyMotion bundle trim | **DEFER** | Real but low-value vs engine correctness; only after the flow works end to end. |
+**Written:** 2026-09-03 03:15 by claude, on branch `dev` at `215327e`, replacing the previous living
+plan in full (user instruction). The old plan's history survives in `git log -- plan.md` and in `log.md`.
+**Owner of this file:** the executing agent. It is the resume point: every batch ends by ticking the
+status table in §9 and appending to `log.md`. Anyone (human or agent) resuming work reads §9 first.
+**Companion:** `docs/CONTEXT.md` (what the codebase is today). This file says what it must become.
 
 ---
 
-## B. The revised plan
+## 0. Decisions taken without the user (and why)
 
-### B.1 Core primitive (named and justified)
+The user is away and asked for a plan that needs no input. Where a choice was open, this is what was
+chosen and the reason. Each is reversible; none is hidden.
 
-> **Everything is a fact awaiting confirmation.**
-
-The official portal's primitive is *the form* — hence every screen inherits form-shaped misery. Wapsi's primitive is the **confirmed fact**: a figure that always carries (a) **provenance** — who reported it, under what identifier, when; (b) a **plain-language meaning** — what it is and why it matters to *your* money; and (c) exactly **one citizen action** — confirm it, or correct it (with a reason).
-
-Justification — what compounds for free once everything is a fact:
-- Income rows, TDS credits, deduction claims, notice claims, and refund holds are all the same object with different reporters and stakes. One rendering component, one confirm/correct interaction pattern, one dispute mechanism.
-- The review screen is not a new feature — it's the same facts aggregated. The CA's audit trail is not a new feature — it's provenance displayed densely. The explanation layer ("where did this number come from?") is provenance read aloud.
-- Progressive disclosure falls out naturally: the default path shows only facts relevant to a salaried filer; expert access is "show all facts," not a different app.
-- Complexity placement: legal complexity moves into the engine and the fact definitions (our code); interface complexity collapses to one repeated gesture (confirm/correct).
-
-### B.2 Named segments (never design for the average)
-
-| Segment | Who | What they get |
+| # | Decision | Reason |
 |---|---|---|
-| **First-timer** | 18-year-old, never filed | Defaults excellent; jargon explained in place; one decision per screen; nothing requires outside knowledge |
-| **Optimiser** | ~30, files yearly, time-poor | Eligibility-surfaced deductions; regime comparison with visible reasoning on one screen; fast path |
-| **CA / Architect** | Professional verifier | Dense audit view: every computed number drills to source facts; direct navigation to any fact; arithmetic traceable line by line |
+| D1 | **Harness, vault, memory and auth live in Next.js (TypeScript), not the Java backend.** | Engine, tool registry, Gemini call and streaming UI are already TypeScript; Maven is not installed; one runtime is what the user can reason about. Java stays as the reference implementation pinned by the golden vectors. Spring AI remains a documented alternative (§11). |
+| D2 | **Storage is SQLite via Node's built-in `node:sqlite`** (Node 24 on this machine), file `data/wapsi.db`, schema written in portable SQL. | No Postgres and no Docker daemon on the machine; the user's Supabase projects belong to other apps and creating one incurs cost. The schema is column-for-column portable; a `pg` adapter is a later swap (§10, K1). On Vercel the file lives in `/tmp` and is ephemeral; documented on `/honesty`. |
+| D3 | **One confirm click before a return is marked filed** (`AGENT_REQUIRE_CONFIRMATION=true`, already set). | Same pattern as CoWork's plan approval; the user said it may be a flag, so it is. Setting it to `false` makes the agent file without the click. |
+| D4 | **Sign-in is username + password, seeded `asabs` / `12345`**, stored as a scrypt hash. Anyone can also register a new username. | User instruction. The old PAN → OTP step stays *inside* manual mode as the way to pick a return (persona or custom), not as the site gate. |
+| D5 | **Simple → Agentic, Full detail → Manual** by migration (profile v3). The mode question is removed from onboarding; everyone lands in Agentic with the switch visible. | `docs/MODES.md` already defines Simple as "do it for me" and Full as "show me everything"; the mapping is honest. |
+| D6 | **The model is whatever `AGENT_MODEL` says** (currently `gemini-3.5-flash`). The adapter verifies the id against `GET /v1beta/models` once per process and logs a clear error if it does not exist. | The user named "Gemini 3.5 Plus"; the id could not be confirmed. Config, not code. |
+| D7 | **A deterministic offline planner runs when the model is unavailable** (no key, quota, network, or bad model id). | The demo must work when the user comes back even if the key fails. Every task schema carries its own scripted question order, so the interview still completes; only the phrasing is less natural. The UI labels the run "offline planner". |
+| D8 | **DigiLocker is mocked** behind an OAuth-shaped flow with a `DIGILOCKER_MODE=mock|real` switch; the real adapter is a stub that throws "not configured". | Requester access requires a registered organisation (verified 2026-09-03). |
+| D9 | **Voice uses the existing `lib/speech.ts`** (browser speech recognition). The mic button carries a one-line disclosure that Chrome sends audio to Google. | Zero dependencies; already written; honesty rule. |
+| D10 | **Aadhaar is stored masked (last 4) plus a Verhoeff-validated flag; the full number lives only in the encrypted slot and is never rendered again.** | The full number is needed for the mocked ITR form; anything else is over-collection. |
+| D11 | **Memory is facts, never secrets.** What the agent "remembers" (has a PF account, salaried, prefers Hindi) is a `memories` row the user can see and delete; identifiers and amounts stay in slots. | The user asked for persistent memory; keeping it separate from the vault keeps the privacy boundary intact and the memory list readable. |
+| D12 | **No `git commit` and no `git push`, ever, by the agent.** All work stays in the working tree; the user reviews and commits. | User instruction 2026-09-03 03:30. |
 
-Every screen must serve segment 1 by default and segment 3 via explicit depth affordances — averaging is forbidden (see mission Step 5 guard).
+---
 
-### B.3 Default path (salaried filer, one Form 16, no capital gains)
+## 1. Goal, in one paragraph
 
-1. **Start** — choose language; pick your situation (three synthetic personas + custom). Decision: who's filing.
-2. **Verify** — mock OTP, code printed on screen, labelled mock. Decision: prove identity (simulated).
-3. **Your money** — pre-filled facts with provenance badges (employer, bank; dates). One at a time on mobile. Decision per fact: confirm / "this is wrong" (inline edit + reason). Progress visible; resumable.
-4. **Money you can claim** — eligibility questions in plain language ("Did you pay rent?", "Health insurance?"), each with what it's worth and why it's askable; eligible defaults surfaced automatically. Decision: claim / skip each.
-5. **Old vs new regime** — one screen, both outcomes computed live, recommendation with visible reasoning ("because your deductions exceed ₹X, old regime saves ₹Y"). Decision: accept recommendation or override (override allowed, never hidden).
-6. **Check** — the whole return on one screen: income − deductions = taxable → tax → already paid → refund/due. Every line expands to its source facts (CA audit path). Deliberate, weighty presentation.
-7. **File** — staged confirmation (review → submit with visibly deliberate latency → acknowledgement with what-happens-next). Decision: commit.
-8. **After** — receipt, then the refund tracker: named states, holds with release actions, cohort framing.
+A signed-in citizen lands on one line, **"Explain your situation"**, with a text box, a mic, and four
+chips. The first keystroke turns the page into a chat. The agent classifies the situation, builds a
+plan (shown top-right as a checklist the moment it exists), interviews the citizen slot by slot in
+plain language, pulls documents from the vault and (mock) DigiLocker before ever asking for them,
+computes with the engine, shows a review card, and after one confirm click files the return, drops
+the ITR-V and ITR JSON into an Outputs panel, and records everything in the ledger. Every step is
+visible in a Claude-style activity log. Every chat is kept and can be reopened; what the agent learned
+about the citizen is remembered across chats and shown to them. The model never sees a secret value
+and never invents a number. Flip the header switch to **Manual** and the same person gets the existing
+dashboard plus a grid of tasks the site can actually complete.
 
-Screens 3–5 are where progressive disclosure earns its keep: capital gains, foreign assets, business income exist in the data model and appear **only** when a fact implies them ("Add other income" reveals kinds progressively).
+## 2. Non-goals (explicitly out)
 
-### B.4 Government-portal structure imported by current design → replacements
+- Real filing with the Income Tax Department, real DigiLocker, real payments. Everything is mocked and
+  `/honesty` says so.
+- Self-hosted model. The pseudonymisation boundary (§4.3) is the privacy mechanism for now.
+- Postgres migration (K1), Spring AI (§11), multi-device sync of the vault beyond one SQLite file.
+- Redesigning the 23-language dictionaries. New copy goes through `localize()` for hi/ta and English
+  elsewhere, per the existing rule.
 
-| Imported structure | Where today | Replacement |
+---
+
+## 3. Architecture
+
+```
+browser ── /app (agentic) ──┐                     ┌── lib/harness/planner   (plan → steps)
+        ── /  (manual)   ──┤  Next.js route        ├── lib/harness/interview (slot state machine)
+        ── /vault        ──┤  handlers (server) ───┤── lib/harness/tools     (typed tool registry)
+        ── /signin       ──┘        │              ├── lib/harness/model     (Gemini adapter + offline planner)
+                                    │              ├── lib/harness/memory    (remember / recall / forget)
+                                    │              └── lib/harness/events    (SSE event stream)
+                                    ▼
+                        lib/server/db.ts        (node:sqlite, migrations)
+                        lib/server/auth.ts      (users, sessions, scrypt)
+                        lib/server/vault.ts     (slots AES-256-GCM, audit log, documents)
+                        lib/server/digilocker.ts (mock adapter; real stub)
+                                    │
+                        lib/engine/*  (unchanged: the only place numbers come from)
+                        lib/return/*  (ledger; agent writes through the same reducers)
+```
+
+### 3.1 Routes
+
+| Route | New/Changed | Purpose |
 |---|---|---|
-| Schedule-by-schedule tabs ("PART A/B/C", section-number headings) | statement tab headings | Views named for intent: "Money coming in", "Tax already paid", "Deductions you claim" |
-| Acronym-first copy (u/s 192/194A, TAN, DIN as primary labels) | TDS section labels, DIN banner | Plain-language headline first ("Tax your employer already sent in"), identifier demoted to provenance detail; en.ts's own editorial contract restored |
-| Form-selection burden (which ITR?) | implicit | Never shown; the engine infers eligibility from facts and says so |
-| Jargon validation errors | hardcoded zod strings | Issue codes → dictionary messages (validate.ts design) |
-| Binary opaque waits ("Send Return" instant flicker) | handleSendFiling | Named-state progression, weight matched to stakes |
+| `/signin` | new | Username + password. Register link. Redirects to `/welcome` (first time) or the last mode. |
+| `/welcome` | new | Onboarding (language, intent, profession, filing history, focuses; **no mode question**). Shown once per user; `users.onboarded_at` set on completion. |
+| `/app` | new | Agentic surface. Hero → chat. Requires session. `/app?run=<id>` reopens a past chat. |
+| `/` | changed | Manual surface = existing journey, gated by session; mode switch in header. Onboarding step removed from the page's own state machine (it lives at `/welcome`). |
+| `/vault` | new | Documents, details and memory: present / from DigiLocker / missing per task; upload; "what Wapsi remembers"; audit trail. |
+| `/api/auth/*` | new | `signin`, `signup`, `signout`, `me`, `preferences` (mode, lang, theme). |
+| `/api/agent/stream` | new | POST, returns `text/event-stream`. The harness. |
+| `/api/agent` | kept | Legacy one-shot route for the manual-mode panel; cap logic moved to `lib/server/cap.ts`. |
+| `/api/vault/*` | new | `slots` (GET status, PUT value, DELETE), `documents` (GET list, POST upload, GET /:id, DELETE), `digilocker/connect`, `digilocker/callback`, `digilocker/pull`, `audit`. |
+| `/api/memory` | new | GET list, DELETE one, DELETE all. |
+| `/api/runs` | new | GET list (chat history), GET `/:id` (events for replay), DELETE `/:id`. |
+| `/api/outputs/:id` | new | Serves generated files (ITR JSON, ITR-V HTML, challan). |
+| `/reconcile`, `/honesty`, `/architecture` | kept | `/honesty` gains the vault, memory, DigiLocker-mock, SQLite-ephemeral and voice disclosures. |
 
-### B.5 Documented user failures → design decisions (each complaint designed out or accepted)
+### 3.2 Data model (SQLite, `lib/server/schema.sql`)
 
-| Failure (PDF evidence) | Decision |
+```
+users            (id TEXT PK, username TEXT UNIQUE, password_hash TEXT, created_at, onboarded_at NULL,
+                  onboarding_json TEXT NULL, mode TEXT CHECK(mode IN ('agentic','manual')) DEFAULT 'agentic',
+                  lang TEXT DEFAULT 'en', theme TEXT DEFAULT 'light', vault_key_wrapped BLOB)
+sessions         (token_hash TEXT PK, user_id, created_at, expires_at, last_seen_at)
+slots            (user_id, slot_id TEXT, ciphertext BLOB, iv BLOB, tag BLOB, masked TEXT,
+                  source TEXT CHECK(source IN ('user','digilocker','document','persona')),
+                  verified INTEGER, updated_at, PRIMARY KEY(user_id, slot_id))
+documents        (id TEXT PK, user_id, doc_type TEXT, assessment_year TEXT, filename, content_type,
+                  bytes BLOB, sha256 TEXT, source TEXT, extracted_json TEXT NULL, uploaded_at)
+vault_audit      (id INTEGER PK, user_id, at, actor TEXT CHECK(actor IN ('user','agent','system')),
+                  action TEXT, slot_id TEXT NULL, document_id TEXT NULL, run_id TEXT NULL, detail TEXT)
+memories         (id TEXT PK, user_id, key TEXT, value TEXT, source_run_id TEXT NULL, at,
+                  UNIQUE(user_id, key))                          -- facts, never identifiers or amounts
+runs             (id TEXT PK, user_id, task_id TEXT NULL, title TEXT, status TEXT, created_at,
+                  updated_at, plan_json TEXT NULL, state_json TEXT)   -- interview state, not values
+run_events       (id INTEGER PK, run_id, seq INTEGER, at, type TEXT, payload_json TEXT)
+outputs          (id TEXT PK, run_id, user_id, kind TEXT, name TEXT, content_type, bytes BLOB, at)
+question_usage   (key TEXT PK, count INTEGER, day TEXT)         -- anonymous cap only
+returns          (user_id PK, state_json TEXT, updated_at)      -- server copy of ReturnState
+```
+
+Rules: `slots.ciphertext` is AES-256-GCM under a per-user data key, itself wrapped by
+`VAULT_MASTER_KEY` (env; if absent in dev, generated once into `data/master.key` with a console
+warning). `masked` is the only column ever sent to the browser or the model. Every read of a slot
+value writes a `vault_audit` row. `run_events` is append-only and is what the activity log replays;
+it is also the chat history. `memories` values are free text under 200 characters, written only by
+the `remember` tool or the user, and are shown verbatim on `/vault`.
+
+### 3.3 The harness (`lib/harness/`)
+
+1. **recall** — load the user's memories and the vault status map (slot ids → filled/masked, never
+   values). Both are prepended to the model context as "What you already know about this citizen".
+2. **classify** — model (or offline keyword table) maps the first message to a `TaskId` and extracts
+   what the sentence already contains (income band, profession, "new job", "small business",
+   "notice"). Extracted facts are *proposals*; each becomes a pre-filled answer the user confirms.
+3. **plan** — the task schema yields ordered steps; the model may reorder or drop optional steps but
+   cannot add tools. The plan is emitted as one `plan` event → the right panel's Progress list.
+4. **interview** — a deterministic slot machine: `nextSlot(state)` returns the first unfilled required
+   slot whose `dependsOn` are satisfied. The model's only job is to *phrase* the question (with the
+   plain-language template as fallback). The UI renders the matching input component; the value goes
+   to `/api/vault/slots` directly, never through the model. The model receives
+   `{slot, status:"filled", masked}`. Non-secret answers (yes/no, choices) also call `remember`.
+5. **gather** — before asking for any document slot, run the source chain: vault → DigiLocker (mock)
+   → ask. Each attempt is an event ("Checked your vault: Form 16 found (uploaded 2 Sep)").
+6. **compute** — engine only. `compute_tax_ay2026` and `compare_regimes` over the ledger built from
+   slots. Emits a `card:review`.
+7. **act** — `prepare_filing` → `card:confirm` → user clicks → `file_return` writes to the ledger
+   (`markFiled`), the context (`MARK_FILED`), produces ITR JSON + ITR-V → `output` events.
+8. **persist** — every event is written to `run_events` before it is streamed, so a reload replays
+   and the run appears in chat history with a title derived from the first message.
+
+Tool calls are validated with zod schemas before execution; a malformed call is an `error` event and
+the offline planner takes over that step.
+
+### 3.4 Event protocol (`lib/harness/events.ts`)
+
+```
+type RunEvent =
+  | { type:"run.start";   runId; taskId?; title }
+  | { type:"thinking";    text }                      // model thought summaries or planner notes
+  | { type:"plan";        steps:[{id,title,detail?}] } // Progress panel appears on this
+  | { type:"step.start";  stepId }
+  | { type:"step.done";   stepId; note? }
+  | { type:"tool.call";   name; argsMasked }
+  | { type:"tool.result"; name; summary }
+  | { type:"message";     role:"user"|"assistant"; text }   // assistant text via components/agent/format.tsx
+  | { type:"ask";         slotId; prompt; input:SlotInput; prefill? }   // renders the isolated form
+  | { type:"card";        card:Card }                  // review | confirm | document | itrv | challan | vaultStatus | memory
+  | { type:"output";      outputId; kind:"itr-json"|"itr-v"|"challan"|"summary"; name; href }
+  | { type:"context";     items:[{kind:"document"|"slot"|"source"|"memory", label, status}] }
+  | { type:"memory";      op:"remember"|"forget"; key; value? }
+  | { type:"error";       message; recoverable }
+  | { type:"run.done";    status:"complete"|"waiting"|"failed" }
+```
+
+### 3.5 Task schemas (`lib/harness/tasks/*.ts`)
+
+Each: `{ id, title, triggers[], steps[], slots[], documents[], outputs[] }`. Slots:
+`{ id, label, question, why, input, validate, required, secret, dependsOn?, sources:["vault","digilocker","document","ask"] }`.
+
+| Task | Slots (required unless marked `?`) | Documents | Outputs |
+|---|---|---|---|
+| `file_return` | pan, full_name, dob, aadhaar, mobile, email, employment_type, gross_salary, tds_192, has_pf (→80CCD(2)/80C), savings_interest?, other_income?, rent_paid?, insurance_premium?, investments_80c?, bank_account, ifsc, regime_choice | Form 16 (preferred), bank statement? | ITR JSON, ITR-V, summary |
+| `compare_regimes` | gross_salary, deductions bundle (80C, 80D, HRA/rent, 24b?) | none | comparison card, summary |
+| `business_benefits` | business_type, revenue, expenses?, gst_registered?, presumptive_opt (44AD/44ADA) | none | benefits card, summary |
+| `respond_notice` | notice_din, notice_section, notice_amount, agree/disagree, reason | notice PDF | draft response, summary |
+| `pay_tax` | (from ledger) outstanding, bank | none | Challan 280 receipt |
+| `check_refund` | pan, ack_number? | none | refund timeline card |
+| `demo_persona` | which (sunita/rakesh/priya) | none | loads the persona into the ledger and vault |
+
+Plain-language question phrasing rule (from the user): never lead with the form name. Ask what the
+thing *is* ("the salary statement your employer gives you each year, usually in June; do you have
+it?"), then name it in small print so the user learns the term.
+
+### 3.6 Memory and chat history (user requirement, added 2026-09-03 03:15)
+
+- **Chat history.** Every run persists (`runs`, `run_events`, `outputs`). The agentic surface has a
+  history drawer (clock icon in the header) listing runs newest first with title, task, status and
+  date; opening one replays its events, restores the side panel, and lets the user continue if it was
+  `waiting`. Delete removes the run, its events and outputs (documents and slots stay; they belong to
+  the vault, not the chat).
+- **Persistent memory.** `memories(key, value)` rows such as `employment=salaried`,
+  `has_pf=yes`, `preferred_language=hi`, `filed_ay_2026_27=yes`. Written by the `remember` tool
+  when the interview learns a non-secret fact, and by the user from `/vault`. Read at the start of
+  every run and shown to the model as plain sentences. Shown on `/vault` under "What Wapsi remembers"
+  with per-item delete and "forget everything". The agent never stores identifiers, amounts, or
+  document contents as memories; the tool's zod schema rejects values that match any identifier
+  validator or contain a rupee amount.
+- **Context panel** lists memories that influenced the current run.
+
+### 3.7 Validation (`lib/validation/`)
+
+One module per identifier, each exporting `validate(raw) → {ok,value,masked?} | {ok:false, issue}` with
+issue codes (never messages), plus tests:
+
+| Identifier | Rule |
 |---|---|
-| "Something went wrong, try later" everywhere | Every simulated failure path names cause + next action; sandbox fault-injection demonstrates this deliberately |
-| Blank-screen waits; users told to wait 2 minutes | Skeletons for predictable layouts; indeterminate motion only for genuinely unknown outcomes; no blank waits |
-| Prefill errors citizens can't argue with | Provenance badge + `onlyReporterCanFix` surfaces *who must fix it*; dispute records reason |
-| s.245 set-off against demands never received | Notice decode shows demand origin/year/"did you ever get this?" with one-tap dispute (Rakesh persona) |
-| Verified returns shown unverified; lying about state | State machine is single-source (`REFUND_SEQUENCE`), persisted transitions logged in timeline |
-| Work lost mid-session ("start a new filing") | Full return state persisted + versioned; resume banner "restored from HH:MM"; corrections undoable before filing |
-| Validation rejected at submit (27-char city) | All shape validation at entry via validate.ts philosophy; submit-time checks limited to cross-field rules already previewed earlier |
-| Refund variance rage ("60 days, nothing") | Cohort framing + named holds with clear-by estimates; variance explained, not averaged away |
-| English-only critical flows (Kar Saathi: 2 of 22 languages) | Full trilingual discipline; i18n keys compile-enforced; stored timeline events keyed, not English literals |
-| Desktop-bound utilities exclude mobile | Everything works at 375px first; no desktop-only step anywhere |
+| PAN | `^[A-Z]{3}[ABCFGHLJPT][A-Z][0-9]{4}[A-Z]$`; 4th letter = holder type, `P` required for an individual; 5th letter should equal surname initial (warning, not error). |
+| Aadhaar | 12 digits, first digit 2–9, Verhoeff checksum valid. Stored masked `XXXX XXXX 1234`. |
+| VID | 16 digits, first digit 2–9, Verhoeff. |
+| TAN | `^[A-Z]{4}[0-9]{5}[A-Z]$`. |
+| IFSC | `^[A-Z]{4}0[A-Z0-9]{6}$` (existing). |
+| Bank account | 9–18 digits. |
+| Mobile | 10 digits, first 6–9. |
+| Email | RFC-lite. |
+| PIN code | 6 digits, first 1–9. |
+| UAN | 12 digits. |
+| GSTIN | 15 chars `^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$`, state code 01–38, embedded PAN valid, mod-36 checksum. |
+| DIN | 20 alphanumeric (ITD document identification). |
+| Acknowledgement no. | 15 digits. |
+| BSR / challan serial | 7 digits / 5 digits (existing in challan280). |
+| DOB | ISO date, age 18–120 for filer. |
+| Money | whole rupees, ≥0, ≤ 10^10; Indian grouping on display only. |
 
-Explicitly accepted (with reason): OTP is decorative (prototype has no auth backend — labelled mock); no real bank validation (format-shape only — labelled).
+### 3.8 UI (`components/agentic/`)
+
+- `Hero.tsx` — big serif line, sub-line, pill input (mic + Ask), four chips (File my return · Compare
+  regimes · I received a notice · Load a demo). Chips insert text, not run scripts.
+- `ChatShell.tsx` — morph from hero to two-column chat on first submit (`motion` layout animation;
+  content never gated on animation, per repo rule).
+- `Transcript.tsx` — messages; `ActivityLog.tsx` ("Worked for 22s" collapsible: thinking, tool calls,
+  files); `AskForm.tsx` (isolated input per `SlotInput`: text, number, date, select, upload, yes/no);
+  `Cards.tsx` (review, confirm, document, ITR-V, challan, vault status, memory).
+- `SidePanel.tsx` — Progress (hidden until `plan`), Outputs, Context, matching the CoWork screenshot.
+- `HistoryDrawer.tsx` — past chats (§3.6).
+- `ModeSwitch.tsx` — Agentic | Manual segmented control in the header of both surfaces; persists to
+  `users.mode`.
+- Manual grid `components/dashboard/task-grid.tsx` — tiles listed in §5.
 
 ---
 
-## C. Build items
+## 4. Security & privacy design
 
-Interfaces between areas (agreed **before** fan-out):
+### 4.1 Auth
+- scrypt (`node:crypto`), 16-byte salt, N=2^15. Seed `asabs`/`12345` on first boot only if absent.
+- Session token: 32 random bytes, stored as SHA-256 hash, `HttpOnly; SameSite=Lax; Secure` (secure
+  only when `NODE_ENV=production`), 30-day expiry, sliding.
+- Rate limit sign-in: 10 failures / 15 min per username (in-memory map).
+- Signed-in sessions: **no question cap**. Anonymous `/api/agent`: cap 4 (unchanged).
 
-```
-lib/engine/types.ts      TaxInput {facts[], claims[], regime, age...}, TaxBreakdown
-lib/engine/slab.ts       pure: newRegimeTax(taxable, fy) -> {slabs:[{upto,rate,tax}], total}   TODO(verify) constants
-lib/engine/tax.ts        pure: computeTax(input) -> TaxBreakdown {grossIncome, standardDeduction,
-                         taxableIncome, slabTax, rebate87A, cess, totalTax, tdsCredits,
-                         refundOrDue, regimeComparison?}
-lib/return/state.ts      ReturnState {version, facts, disputes, claims, regime, filings...}
-lib/return/persist.ts    load()/save()/migrate(versioned) + undo stack (cap depth)
-lib/i18n/*               ALL user-facing strings; Dict = typeof en enforced
-components/fact-row.tsx  THE primitive renderer: provenance + meaning + confirm/correct
-app/(flow)/              screens consume store + engine; no computation inline
-```
+### 4.2 Vault
+- Values never appear in: run_events, memories, model prompts, logs, URLs, or React state beyond the
+  input component that captured them. After PUT, the input clears and shows the masked form.
+- Per-user data key generated at sign-up, wrapped with the master key; rotating the master re-wraps.
+- Audit row on every decrypt, including the run id and the tool that asked.
+- Documents: 5 MB cap, PDF/PNG/JPEG only, sha256 dedupe per user, `pdfExtract` runs server-side and
+  stores only structured fields (amounts) in `extracted_json`; identifiers found in PDFs go to slots.
 
-### P1 — Decompose `app/page.tsx`
-- **Status:** DONE · **Owner:** builder-decomp
-- **Rationale:** Nothing else can proceed safely on a 2,900-line monolith with dead code and behavioural bugs.
-- **Acceptance:** Behaviour-preserving split into components/ + lib modules; typecheck+build pass; no dead imports; seeded personas render identically; REFUND_SEQUENCE drift fixed.
-- **Evidence:** page.tsx 2,897→931 lines; 13 modules under components/ (all <400 lines); fidelity check 199/199 classNames + 61/61 text nodes match; typecheck+build exit 0; defects fixed: custom-persona id, 9 dead imports, Math.random→mulberry32 via lib/rng.ts, timeline advancer now iterates canonical REFUND_SEQUENCE. Log entries [2026-08-25 ~04:10] builder-decomp.
+### 4.3 What the model sees
+- Slot *status* and masked values only. Financial figures go to the model **without** name, PAN,
+  Aadhaar, account numbers, or email: the request builder strips them and replaces the citizen name
+  with "the citizen". This is the pseudonymisation boundary; it is documented on `/honesty`.
+- Memories are sent as plain sentences; they cannot contain identifiers or amounts by construction.
+- Tool results are summarised server-side before being returned to the model (already the pattern).
 
-### P2 — Test infrastructure
-- **Status:** DONE · **Owner:** builder-engine
-- **Acceptance:** Vitest wired (`npm test`), CI-runnable locally, example tests green.
-- **Evidence:** vitest devDependency added; `npm test` → 50 passed (50) in 408ms.
+---
 
-### P3 — Pure tax engine
-- **Status:** DONE · **Owner:** builder-engine
-- **Rationale:** Highest-risk area; previously a flat-15%-above-7L formula that contradicted the repo's own narratives (AUDIT §3).
-- **Acceptance:** Dependency-free module; every constant sourced or `TODO(verify)`; boundary tests; golden persona tests.
-- **Evidence:** lib/engine/{constants,types,slab,tax}.ts — zero framework imports; ALL constants TODO(verify) vs Finance Act 2026 / incometax.gov.in; 50 tests incl. every slab edge ±1, rebate cliff + marginal relief zone, golden Sunita/Priya/Rakesh, monotonicity property sweep 0–3M. Known gaps documented: surcharge absent, capital-gains special rates not modelled, 234A/B/C/F absent.
+## 5. Manual mode grid (real tiles only)
 
-### P4 — Data model, persistence, forgiveness
-- **Status:** DONE · **Owner:** builder-store
-- **Acceptance:** Versioned ReturnState, save/resume, undo (capped depth), migration; extends rather than replaces types.ts/validate.ts philosophy.
-- **Evidence:** lib/return/{state,persist}.ts — event-sourced corrections replayed over baselinePersona; revert preserves history; legacy v0 drafts auto-migrate under existing `wapsi_active_data` key; undo cap 25; 22 new tests → suite total 72 passing.
+| Tile | Backed by | Status |
+|---|---|---|
+| File / check my return | existing 5-step flow | exists |
+| Reconcile with AIS/26AS | `/reconcile` | exists |
+| Pay outstanding tax | Challan 280 modal | exists |
+| Respond to a notice | Actions tab | exists |
+| Tax calculator | engine, new `components/tools/calculator.tsx` | build |
+| Compare regimes | `compareRegimes`, new tile view | build (engine exists) |
+| Advance-tax schedule | engine + 15 Jun/15 Sep/15 Dec/15 Mar split | build |
+| HRA helper | new pure `lib/tools/hra.ts` (min of actual, 50%/40% basic, rent−10% basic) | build |
+| Capital-gains helper | s.111A/112A/112 via engine | build |
+| Tax calendar | static AY 2026-27 dates, `lib/tools/calendar.ts` | build |
+| TDS mismatch check | ledger TDS vs Form 16 extracted | build |
+| e-Verify (mock) | new step after filing, Aadhaar-OTP-shaped, `949494` | build |
+| Download ITR-V | existing | exists |
+| Filing history | `returns` + runs | build |
+| My documents & memory (vault) | `/vault` | build |
+| Connect DigiLocker (mock) | `/api/vault/digilocker/*` | build |
+| Refund status | existing tracker | exists |
+| Chat history | `/app` history drawer | build |
 
-### P5 — Core filing flow (default happy path)
-- **Status:** DONE · **Owner:** builder-flow
-- **Acceptance:** B.3's screens work end-to-end for Sunita-class persona at 375px; staged file confirmation.
-- **Evidence:** old flat calculation deleted; all figures via lib/engine through lib/return/compute.ts bridge; deductions eligibility step, regime choice screen, check screen, staged filing step (~1.2s named progression), acknowledgement; typecheck/test/build green. Divergences surfaced not fudged (Sunita ₹8,400 exact match).
+Excluded deliberately (would need invented registries): Know your JAO, TAN lookup, CSI file,
+Instant e-PAN, Aadhaar-link status, NUDGE campaign.
 
-### P6 — Progressive disclosure & edge cases
-- **Status:** DONE · **Owner:** builder-flow
-- **Evidence:** facts-driven rendering — salary-only personas never see CG/business/NR fields; Rakesh's capital gains appear because the fact exists; expert depth via Check drill-down + sandbox drawer.
+---
 
-### P7 — Explanation layer
-- **Status:** DONE · **Owner:** builder-flow
-- **Evidence:** every Check-screen line expands to contributing facts + provenance + plain-language explanation; regime recommendation shows one-screen money reasoning; claim worth computed by engine.
+## 6. Onboarding-once (user requirement)
 
-### P8 — Craft & states
-- **Status:** DONE · **Owner:** builder-flow
-- **Evidence:** skeletons for predictable layouts; sandbox fault-injection error ladder names cause + next action ("nothing was lost"); restored-draft banner; reduced-motion inherited; 375px single-column stacking.
+- `/welcome` renders only when `users.onboarded_at IS NULL`. Completion writes `onboarding_json` and
+  `onboarded_at`; the localStorage profile is written too (existing consumers), keyed by user id.
+- Middleware: `/app`, `/`, `/vault` redirect to `/signin` without session; to `/welcome` without
+  `onboarded_at`; `/welcome` redirects to the mode surface if already onboarded.
+- "Edit preferences" in the header reopens the same form in edit mode without resetting `onboarded_at`.
+- Sign-out clears the cookie and the per-user localStorage keys; a different user on the same browser
+  never sees the previous user's profile (keys are suffixed with user id; legacy unsuffixed keys are
+  migrated to the first user who signs in, then removed).
 
-### P9 — i18n integrity
-- **Status:** DONE · **Owner:** builder-flow (binding on all agents)
-- **Evidence:** ~100 new keys added to en/hi/ta with Dict=typeof en compile enforcement; zod messages via validate.ts issue codes; persisted timeline headlines migrated to i18n keys (persist v2). Known residual: mock-i18n parallel table for data-layer labels (open consolidation item); actions-tab/sandbox drawer copy partially localize-based.
+---
 
-### P10 — Persona critics (Step 4)
-- **Status:** DONE · **Owner:** orchestrator
-- **Acceptance:** Critics A/B/C run landing→filed, each exercises ≥1 non-English locale; verdicts recorded.
-- **Evidence:** `critics/first-timer-round1.md`, `critics/optimiser-round1.md`, and `critics/ca-round1.md`; all three reports include exactly 12 scores and a verdict.
+## 7. Edge-case register
 
-### P11 — Convergence loop (Step 5)
-- **Status:** TODO · **Owner:** orchestrator
-- **Acceptance:** All three SATISFIED in same round, ≤5 rounds, or honest deadlock report.
-- **Evidence:** log.md round summaries.
+| Area | Case | Handling |
+|---|---|---|
+| Auth | wrong password | generic "username or password is wrong", counter increments, lockout message after 10 |
+| Auth | duplicate username on signup | 409 → "that name is taken" |
+| Auth | expired cookie mid-chat | SSE closes with `error{recoverable:false}`; UI shows "sign in again", run persists, resumes after sign-in |
+| Auth | two tabs | sessions are server-side; both work; mode switch syncs on focus (`visibilitychange` refetch of `/api/auth/me`) |
+| Onboarding | user closes mid-way | draft stored in localStorage as today; `/welcome` resumes at the same step |
+| Onboarding | v1/v2 profiles in localStorage | migrated to v3 (mode dropped; `simple`→agentic, `full`→manual written to `users.mode`) |
+| Harness | first message is off-topic ("hi") | classify → `unknown` → assistant asks one clarifying question with the four chips |
+| Harness | model down / bad key / bad model id | offline planner, run labelled; the run still completes |
+| Harness | model returns a tool not in registry or bad args | zod fails → `error{recoverable:true}` → planner supplies the deterministic next step |
+| Harness | user answers a different question than asked ("actually my salary is 14L") | free-text answers are classified as slot proposals; if it matches another slot, that slot is filled (after validation) and the current question is repeated |
+| Harness | user says "I don't have that document" | slot marked `unavailable`; task schema defines the fallback (Form 16 → ask salary + TDS directly) |
+| Harness | user changes an earlier answer | `ask` for any filled slot is allowed via the Context panel; dependent slots re-validated, plan step re-opened |
+| Harness | reload mid-run | `/api/runs/:id` replays `run_events`; the last `ask` re-renders |
+| Harness | two runs in parallel | one active run per user; a new first message while a run is `waiting` asks "continue or start over" |
+| Harness | SSE not supported / proxy buffering | response sets `X-Accel-Buffering: no`, flushes a comment line every 15 s; client falls back to polling `/api/runs/:id` if no event for 30 s |
+| Memory | model tries to remember an identifier or amount | `remember` schema rejects; event `error{recoverable:true}`; nothing stored |
+| Memory | conflicting fact ("I'm salaried" then "I run a business") | latest wins (`UNIQUE(user_id,key)` upsert); the old value is written to `vault_audit` as `memory.replaced` |
+| Memory | user deletes a memory mid-run | next `recall` omits it; the current run's context panel updates on the next event |
+| History | run deleted while open in another tab | replay returns 404 → "this chat was deleted", hero shown |
+| History | very long run (hundreds of events) | replay paginates by `seq`; activity log virtualises beyond 200 rows |
+| Vault | Aadhaar fails Verhoeff | inline "that number doesn't check out; one digit may be off", no save |
+| Vault | PAN 4th letter not P | "this looks like a company/firm PAN, not a person's" (block for `file_return`) |
+| Vault | upload >5 MB or wrong type | 413/415 with plain message; nothing stored |
+| Vault | scanned/compressed PDF | extraction returns nothing → assistant says so and asks for the figures directly |
+| Vault | same file uploaded twice | sha256 match → reuse, no duplicate row |
+| Vault | DigiLocker mock "connected" but doc missing | chain falls to `ask` with the reason shown |
+| Vault | master key missing in production | boot fails loudly with instructions; never falls back to plaintext |
+| Filing | outstanding tax > 0 | the confirm card becomes "Pay first" (existing 139(9) rule) and routes to the challan step |
+| Filing | already filed this AY | `file_return` becomes revised return u/s 139(5) staging (existing) |
+| Filing | confirm flag false | `card:confirm` skipped; `file_return` runs; the review card still shows |
+| Manual | persona vs real user | demo personas populate slots with `source:'persona'`, clearly badged; real user starts empty |
+| i18n | new UI strings | `localize()` (en/hi/ta) for component strings; no new `Dict` keys unless all 23 files get them |
+| Deploy | Vercel `/tmp` SQLite | documented; app boots, data does not persist across deploys |
+| Tests | no jsdom | logic (planner, interview, validation, vault crypto, auth, memory) unit-tested in node; UI verified in the browser pane with `data-testid` hooks |
 
-### P12 — Resolve narrative refund drift
-- **Status:** DONE · **Owner:** orchestrator
-- **Rationale:** A refund amount shown in the tracker must be the same number produced by the tested engine. Divergence undermines the fact primitive and can mislead a filer about money at stake.
-- **Acceptance criteria:** Priya and Rakesh fixture refund amounts match `computeForPersona(..., "new")`; regression tests pin both values; the reason for the chosen source of truth is recorded in `log.md`.
-- **Evidence:** `lib/return/__tests__/compute.test.ts` pins Priya at ₹34,800 and Rakesh at ₹94,118 against `computeForPersona(..., "new")`; `lib/personas.ts` and `components/mock-i18n.ts` were corrected; result logged.
+---
 
-### P13 — Rebuild the visual system and shell
-- **Status:** DONE · **Owner:** orchestrator
-- **Rationale:** The existing tokens are dark-first, red-accented and dashboard-like, while the product needs a calm, legible, trust-first filing service that makes provenance visible.
-- **Acceptance criteria:** `app/globals.css` and `app/layout.tsx` have a real diff; responsive tokens, type, focus, light/dark treatment, disclosure surfaces, and loading/error/recovery classes are defined; synthetic disclaimer remains persistent.
-- **Evidence:** `app/globals.css`, `app/layout.tsx`, and shell components implement light-first responsive tokens, focus states, disclosure/error/recovery surfaces, and persistent synthetic-data disclaimer; before/after screen captures are under `docs/redesign/`; typecheck, Vitest, and build passed.
+## 8. Phases and tasks
 
-### P14 — Make the fact primitive visible
-- **Status:** DONE · **Owner:** orchestrator
-- **Rationale:** Provenance, plain-language meaning, and one confirm/correct action are the core thesis, not implementation details.
-- **Acceptance criteria:** every displayed income and tax-credit figure uses a shared provenance-carrying component; each offers confirm or correct-with-reason; corrected facts remain undoable and persisted.
-- **Evidence:** `components/fact-row.tsx` is used by the statement facts, tax-paid fact, and claim rows; each exposes provenance, plain meaning, confirm/correct-with-reason, and undo; correction replay is covered by `lib/return/state.ts` and the mobile evidence in `critics/screenshots/`.
+Each task lists the files it touches and its acceptance check. Gates after every phase:
+`npx tsc --noEmit` (0), `npx vitest run` (all green, count updated in CONTEXT.md), `npx next build`
+(exit 0), browser check of anything visual.
 
-### P15 — Deliver the eight-screen filing path
-- **Status:** DONE · **Owner:** orchestrator
-- **Rationale:** The current app has the pieces but not a coherent, learnable sequence from Start through After.
-- **Acceptance criteria:** Start, Verify, Your money, Money you can claim, Old vs new regime, Check, File, and After are explicit states; one decision per mobile screen; progressive disclosure remains facts-driven; filing acknowledgement is staged and deliberate.
-- **Evidence:** `docs/redesign/before-01-start.png` through `before-08-after.png` and `after-01-start.png` through `after-08-after.png`; the round-one critic walkthroughs cover Start → Verify → Your money → Money you can claim → Old vs new regime → Check → File → After.
+### Phase 0 — Foundation (auth, DB, onboarding-once, mode rename)
+- 0.1 `lib/server/db.ts` + `schema.sql` + migration runner; `data/` gitignored. Test: opens, migrates, inserts.
+- 0.2 `lib/server/auth.ts` (scrypt, sessions, seed asabs) + `/api/auth/{signin,signup,signout,me,preferences}` + `app/signin/page.tsx`. Test: seed, wrong password, lockout; browser: sign in as asabs.
+- 0.3 `middleware.ts` gating `/`, `/app`, `/vault`, `/welcome`. Browser: redirects.
+- 0.4 `app/welcome/page.tsx` reusing `components/onboarding.tsx` with the mode step removed; `users.onboarded_at`. Shows once; not again after reload or re-sign-in.
+- 0.5 Mode rename: `lib/onboarding.ts` v3 (`mode` removed from profile; `UiMode = "agentic"|"manual"` in `lib/mode.ts`), i18n `modeSimple/modeDetailed` → `modeAgentic/modeManual` in all 23 files, `portal-header.tsx`, `personalized-dashboard.tsx`, agent `set_mode` tool, `pushModePreference`, tests. The *register* seam (explainers vs sign-off) is kept internally as `guided = mode==="agentic"` so nothing visual regresses in manual mode. MODES.md rewritten as AGENTIC.md.
+- 0.6 Cap: `lib/server/cap.ts`; `/api/agent` skips the cap when a session cookie is valid. Test.
 
-### P16 — Persona critics and convergence
-- **Status:** IN PROGRESS · **Owner:** orchestrator
-- **Rationale:** The simplification thesis must survive first-timer, optimiser, and CA scrutiny instead of being judged only by the builder.
-- **Acceptance criteria:** each critic runs against the fixed 12-point rubric with incremental reports; all three return SATISFIED in one round or the deadlock and highest-impact remaining fix are reported honestly.
-- **Evidence:** round 1 and round 2 are recorded in `log.md` and `critics/*-round2.md`; round 3 is recorded in `critics/optimiser-round3.md` and `critics/ca-round3.md` with fresh Hindi correction/reload and regime-path evidence. A is SATISFIED; B/C are NOT SATISFIED at 11 PASS / 0 FAIL / 1 BLOCKED because participant-based reuse/adoption evidence was not collected. Convergence remains open.
+### Phase 1 — Agentic surface (UI)
+- 1.1 `app/app/page.tsx` shell + `components/agentic/Hero.tsx` (serif line, pill input, mic via `lib/speech.ts`, chips). Screenshot.
+- 1.2 `ChatShell.tsx` morph on first submit; `Transcript.tsx`; `ActivityLog.tsx`; `SidePanel.tsx`; `AskForm.tsx`; `Cards.tsx`; `HistoryDrawer.tsx`. Static event fixtures first so the UI is verifiable before the harness exists. Screenshots of hero, chat, panel, history; dark mode.
+- 1.3 `ModeSwitch.tsx` in both headers; `/` reads `users.mode`. Switch round-trips.
 
-### P20 — Workstream 2 capacity model
-- **Status:** DONE · **Owner:** orchestrator
-- **Rationale:** Scale claims are only credible when the target workload is explicit, source-backed, and separated from anecdotes about the official portal.
-- **Acceptance criteria:** `docs/scale/capacity-model.md` cites published inputs, shows the arithmetic from annual volume through peak submissions and total RPS, labels assumptions, defines SLOs, names failure modes, and states what is not claimed.
-- **Evidence:** `docs/scale/capacity-model.md`; inputs use the official PIB 2 August 2024 filing release and July 2025 backgrounder; no live system was contacted.
+### Phase 2 — Harness
+- 2.1 `lib/harness/events.ts`, `tasks/*.ts` (7 schemas), `interview.ts` (nextSlot, apply answer, unavailable, revisit), `planner.ts` (schema → steps), `offline.ts` (deterministic phrasing + keyword classifier). Unit tests for every transition in §7.
+- 2.2 `lib/harness/model.ts`: Gemini adapter with tool calling, thought summaries, model-id check, timeouts, retries, pseudonymised context builder. Test with a fake fetch.
+- 2.3 `lib/harness/tools.ts`: typed registry (zod): `classify_situation`, `request_slot`, `mark_unavailable`, `check_sources`, `compute_tax`, `compare_regimes`, `prepare_filing`, `file_return`, `generate_itr_json`, `generate_itrv`, `pay_challan`, `draft_notice_response`, `load_demo_persona`, `remember`, `forget`, `set_mode`, `set_theme`. Each tool has a test.
+- 2.4 `lib/harness/memory.ts` + `/api/memory`; `runs` persistence + `/api/runs` (list, replay, delete). Tests: upsert, reject identifier, list order, delete cascade.
+- 2.5 `app/api/agent/stream/route.ts`: SSE, persistence to `run_events`, resume. Curl-level test with the offline planner; browser end-to-end.
+- 2.6 Wire the UI to the stream and the history drawer; remove fixtures. Full run "I got a job with a 14 lakh package" completes to a filed return with outputs; reopening it from history replays.
 
-### P21 — Spring Boot backend and exact money foundation
-- **Status:** DONE · **Owner:** orchestrator
-- **Rationale:** The backend must make exact money and stateless, asynchronous processing executable rather than aspirational; the Next.js frontend remains the product surface.
-- **Stack rationale:** Spring Boot on Java 21 keeps exact `BigDecimal`/paise arithmetic and virtual-thread I/O available without reactive complexity; Spring Batch is a natural fit for seasonal batch-shaped work; the JVM is familiar to government/financial adopters; Next.js remains the citizen-facing frontend.
-- **Acceptance criteria:** Java 21+ Spring Boot service with a single `Money` value object using integer paise or scaled `BigDecimal`; no currency `double` or `float`; explicit rounding tests; local run instructions.
-- **Evidence:** `backend/pom.xml`, `backend/src/main/java/com/wapsi/backend/money/Money.java`, `backend/src/test/.../MoneyTest.java`, and `docs/scale/money-audit.md`; isolated Maven 3.9.11 with Temurin 21.0.12 ran `mvn -f backend/pom.xml test` successfully (6 tests, 0 failures), including embedded PostgreSQL integration.
+### Phase 3 — Vault, validation, DigiLocker mock
+- 3.1 `lib/validation/*` with tests (§3.7); `lib/validate.ts` re-exports for existing callers.
+- 3.2 `lib/server/vault.ts` (crypto, slots, audit, documents, source chain) + `/api/vault/*`. Tests: encrypt/decrypt round trip, audit row per read, masked-only output, dedupe.
+- 3.3 `lib/server/digilocker.ts` mock (connect → consent page → callback → issued docs: PAN, Aadhaar; never Form 16) + `app/digilocker/consent/page.tsx`. Browser flow.
+- 3.4 `app/vault/page.tsx`: per-task requirement matrix, upload, memories with delete, audit list, DigiLocker connect. Screenshot.
+- 3.5 Persona → slots + memories loader (`source:'persona'`) so demo accounts have a pre-filled vault. Test.
 
-### P22 — Rules as versioned, cited data
-- **Status:** DONE · **Owner:** orchestrator
-- **Rationale:** Assessment-year changes must be data revisions that preserve old-return reproducibility, not silent code edits.
-- **Acceptance criteria:** versioned rule-set schema with assessment year, regime, effective window, source citation, and supersession; pure engine signature includes rule-set version; uncited values remain `TODO(verify)`.
-- **Evidence:** `backend/src/main/java/com/wapsi/backend/rules/`, `backend/src/main/resources/rules/2026-27-new.json`, `2026-27-old.json`, and `docs/scale/rules-audit.md`; modeled slab, rebate, standard-deduction, age-band, claim-ceiling, and cess values now carry current Income Tax Department/CBDT source citations. Scope gaps remain explicitly documented.
+### Phase 4 — Manual grid and new functions
+- 4.1 `components/dashboard/task-grid.tsx` with the §5 tiles, routed. Screenshot.
+- 4.2 `lib/tools/{hra,calendar,advanceTax,tdsMismatch}.ts` + tests; tile views.
+- 4.3 e-Verify mock step after filing (both modes). Test + browser.
+- 4.4 Filing history from `returns`/`runs`.
 
-### P23 — Append-only fact ledger and projections
-- **Status:** DONE · **Owner:** orchestrator
-- **Rationale:** Provenance, correction reasons, undo, and rebuildable returns should be storage properties of the fact primitive.
-- **Acceptance criteria:** append-only fact events with supersession, confirmation metadata, assessment-year partition key, projection rebuild, and idempotent correction tests.
-- **Evidence:** `backend/src/main/java/com/wapsi/backend/ledger/PostgresFactLedger.java`, `backend/src/main/resources/db/migration/V1__fact_ledger.sql`, `InMemoryFactLedgerTest`, and `PostgresFactLedgerTest`; embedded PostgreSQL proves migration, append-only history, supersession projection, and duplicate-event rejection. Production datasource/outbox wiring remains out of scope.
+### Phase 5 — Filing end-to-end through the agent
+- 5.1 `file_return` writes ledger + context (`MARK_FILED`), ITR JSON per a documented subset of the ITD ITR-1/ITR-2 schema (`lib/itr/schema.ts`), ITR-V via existing `ItrVReceipt` rendered to static HTML, both stored in `outputs` and served from `/api/outputs/:id`. Outputs panel shows both; files open.
+- 5.2 Regime chosen by comparison unless the user overrides; review card explains the choice.
+- 5.3 Confirm flag honoured. Test both values.
 
-### P24 — TypeScript-to-Java conformance vectors
-- **Status:** DONE · **Owner:** orchestrator
-- **Rationale:** The existing 74-case TypeScript suite is the behavioral contract for a Java engine port; divergence is a blocker, never a tuning choice.
-- **Acceptance criteria:** language-neutral JSON vectors in `fixtures/golden/`, Java runner passes them to the paise, and both engines run the same vectors in verification.
-- **Evidence:** `fixtures/golden/cases.ts`, generated `fixtures/golden/vectors.json`, `fixtures/golden/export.test.ts`, `fixtures/golden/README.md`, and `backend/src/test/java/com/wapsi/backend/engine/GoldenVectorTest.java`; all 72 generated cases pass in both engines.
+### Phase 6 — Docs, honesty, gates
+- 6.1 `docs/CONTEXT.md` rewritten sections (routes, models, storage keys, test count, hooks), `docs/AGENTIC.md` (replaces MODES.md), `/honesty` and `/architecture` updated, `.env.example` new keys (`VAULT_MASTER_KEY`, `DIGILOCKER_MODE`, `SESSION_TTL_DAYS`), `README.md` quick start with `asabs`.
+- 6.2 Final gates, browser walkthrough of both modes in light and dark, `log.md` entry. **No commit, no push (D12)**; leave the tree for the user to review.
 
-### P25 — Owned load-test harness
-- **Status:** DONE · **Owner:** orchestrator
-- **Rationale:** The evidence must be reproducible on systems we own and must assert correctness, not just liveness.
-- **Acceptance criteria:** one-command local runner with environment definition, synthetic seed generator, end-to-end journeys, latency/error/RPS output, and correctness assertions.
-- **Evidence:** `loadtest/run.mjs` and `loadtest/run.ps1` start only the owned local Spring Boot jar, generate deterministic synthetic DEMP-prefixed references, exercise POST → idempotent retry → status polling, and report RPS, p50/p95/p99, errors, and correctness failures; `docs/scale/reproduce.md` records the environment and command; the 20-request smoke run passed with zero correctness failures.
+---
 
-### P26 — Scale evidence artifacts
-- **Status:** IN PROGRESS · **Owner:** orchestrator
-- **Rationale:** Successes and failures need to be measured together: linearity, degradation, chaos, and soak matter as much as peak throughput.
-- **Acceptance criteria:** six evidence documents under `docs/scale/`, including at least one documented failure and fix; no run targets an external system.
-- **Evidence:** `docs/scale/load-test-report.md`, `linearity.md`, `capacity-plan.md`, `degradation.md`, `chaos.md`, and `soak.md` now include bounded local measurements and raw summaries. Shared Postgres/queue failure tests, modeled-peak testing, and the required 24-hour soak remain open, so P26 remains in progress.
+## 9. Status (the resume table; update after every batch)
 
-### P27 — Architecture case for adoption
-- **Status:** DONE · **Owner:** orchestrator
-- **Rationale:** A government reviewer needs a portable, evidence-led case with incremental adoption options and limitations stated before discovery.
-- **Acceptance criteria:** `docs/scale/architecture-case.md` follows the six required sections and links every measured artifact while separating citizen experience evidence from technical measurements.
-- **Evidence:** `docs/scale/architecture-case.md` links the source audit, exact-money/ledger foundation, 72-vector conformance, load/linearity/degradation/chaos/soak evidence, and explicit limitations. It remains an evidence-led case, not a production approval or national-capacity claim.
+Legend: `[ ]` not started · `[~]` in progress · `[x]` done and gated · `[!]` blocked (say why in log.md)
 
-### P28 — Intent-first onboarding
-- **Status:** DONE · **Owner:** orchestrator
-- **Rationale:** A first-time filer should not land on a generic portal-shaped starting point. A few plain-language answers can choose the right pace and first task without pretending rough onboarding data is a tax determination.
-- **Acceptance criteria:** language is the first question; intent, profession, rough combined income, filing history, and relevant income/claim signals are captured in at most four follow-up questions; progress is visible; partial answers survive reload; completed answers tailor the landing CTA and regime guidance; the final regime choice remains engine-backed and users can change answers.
-- **Evidence:** `components/onboarding.tsx`, `lib/onboarding.ts`, `lib/__tests__/onboarding.test.ts`, and the clean Hindi browser walkthrough. Onboarding is local-only and explicitly does not claim legal advice or a final scheme recommendation from rough bands.
+| Task | Status | Note |
+|---|---|---|
+| 0.1 db | [ ] | |
+| 0.2 auth + signin | [ ] | |
+| 0.3 middleware | [ ] | |
+| 0.4 welcome (onboarding once) | [ ] | |
+| 0.5 mode rename | [ ] | |
+| 0.6 cap | [ ] | |
+| 1.1 hero | [ ] | |
+| 1.2 chat shell + panels + history drawer | [ ] | |
+| 1.3 mode switch | [ ] | |
+| 2.1 schemas/interview/planner/offline | [ ] | |
+| 2.2 model adapter | [ ] | |
+| 2.3 tool registry | [ ] | |
+| 2.4 memory + runs persistence | [ ] | |
+| 2.5 stream route + resume | [ ] | |
+| 2.6 wire UI + history | [ ] | |
+| 3.1 validation | [ ] | |
+| 3.2 vault | [ ] | |
+| 3.3 digilocker mock | [ ] | |
+| 3.4 vault page (docs + memories) | [ ] | |
+| 3.5 persona → slots + memories | [ ] | |
+| 4.1 grid | [ ] | |
+| 4.2 new tools | [ ] | |
+| 4.3 e-verify | [ ] | |
+| 4.4 history tile | [ ] | |
+| 5.1 file_return + outputs | [ ] | |
+| 5.2 regime choice | [ ] | |
+| 5.3 confirm flag | [ ] | |
+| 6.1 docs | [ ] | |
+| 6.2 final gates (no commit) | [ ] | |
 
-### P29 — Dashboard personalization follow-through
-- **Status:** DONE · **Owner:** orchestrator
-- **Rationale:** Onboarding should change the first useful dashboard state, not stop at a profile banner. The profile must shape the user's next action and the explanation surface while confirmed facts remain the source of tax outcomes.
-- **Acceptance criteria:** filed users open on an intent-matched dashboard surface; unfiled users remain facts-first; the dashboard shows the selected pace, work/income/history context, focus topics, regime lens, and one clear next action in all three supported languages; changing answers updates the dashboard destination.
-- **Evidence:** `components/dashboard/personalized-dashboard.tsx`, `lib/onboarding.ts`, `app/page.tsx`, localized dashboard dictionaries, and the browser walkthrough with a Hindi notice-intent profile. Typecheck, 80 Vitest tests, and production build pass; reload preserves the intent-matched dashboard destination.
+**Resume protocol.** On every wake-up: read this table, run the three gates to learn the true state
+(the table can lag a crash), continue from the first `[ ]`/`[~]`, and before stopping for any reason
+tick what is done, write a `log.md` entry, and re-schedule the wake-up. Never leave the tree failing
+`tsc`: if a batch is half-done, stub the missing piece so the gates pass, mark `[~]`, and note the stub.
 
-## D. Out of scope for v1 (critics judge the product we meant to build)
+---
 
-- Capital-gains computation (flagging and routing exist; full CG maths does not), business/professional income, presumptive schemes, NRI/foreign assets.
-- Advance tax, challans, e-Pay Tax simulation.
-- Appeals, rectification, condonation, ITR-U flows (prose on docs routes only).
-- Any network call, any real credential, any government contact — permanently out for this prototype.
-- Deployment, video production, analytics.
+## 10. Known follow-ups (not in this plan's scope)
+
+- K1 Postgres adapter (`pg`) behind `DATABASE_URL`; same schema.
+- K2 Real DigiLocker requester (needs organisation registration).
+- K3 Self-hosted model for full data residency.
+- K4 Translating new agentic copy into all 23 languages.
+- K5 Java backend parity for the vault/auth (or retirement).
+
+## 11. Alternative kept on record: Spring AI
+
+If the Java story is wanted later: Spring AI's `@Tool` methods give typed, validated tool calls with
+Gemini via Google GenAI; the harness's `tools.ts` maps 1:1 to `@Tool` methods. Requires JDK 21
+(present) and Maven (absent). Not pursued now per D1.

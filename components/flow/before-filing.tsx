@@ -37,6 +37,12 @@ interface BeforeFilingProps {
   onJumpToFact: (id: string) => void;
   /** The gate is met and the human pressed file — go to the filing step. */
   onProceed: () => void;
+  /**
+   * The return computes to a balance payable. A return filed with tax
+   * outstanding is defective u/s 139(9), so while this is set the file button
+   * becomes "Pay outstanding tax (Challan 280)" and opens the challan instead.
+   */
+  onPayOutstanding?: () => void;
   /** The facts page shows the checklist only; the check page shows the finish only. */
   showChecklist?: boolean;
   showFinish?: boolean;
@@ -86,6 +92,7 @@ export default function BeforeFiling({
   onSignOffAll,
   onJumpToFact,
   onProceed,
+  onPayOutstanding,
   showChecklist = true,
   showFinish = true,
 }: BeforeFilingProps) {
@@ -96,6 +103,9 @@ export default function BeforeFiling({
   const ready = remaining === 0;
 
   const outcomePositive = breakdown.refundOrDue >= 0;
+  // Payable, and the caller can take a challan: the statutory route is to pay
+  // first. The confirmation gate still applies to filing itself afterwards.
+  const mustPayFirst = breakdown.refundOrDue < 0 && Boolean(onPayOutstanding);
 
   return (
     <section className="print:hidden">
@@ -155,16 +165,42 @@ export default function BeforeFiling({
       {showFinish && (
       <div className="finish">
         <div>
-          <div className="k">{outcomePositive ? t.check.refundDue : t.check.balanceDue}</div>
+          {/* Three states: a cleared challan lands on exactly nil, which is
+              neither a refund nor a balance. */}
+          <div className="k">
+            {breakdown.refundOrDue === 0
+              ? t.file.outcomeOwesNothing
+              : outcomePositive
+                ? t.check.refundDue
+                : t.check.balanceDue}
+          </div>
           <div className="big" style={outcomePositive ? undefined : { color: "var(--out)" }}>
             <AnimatedAmount value={Math.abs(breakdown.refundOrDue)} lang={lang} />
           </div>
-          <div className="note">{ready ? t.checklist.noteReady : t.checklist.noteLocked}</div>
+          <div className="note">
+            {mustPayFirst
+              ? localize("A return filed with tax outstanding is defective under section 139(9). Pay the balance first; filing unlocks once nothing is due.", lang)
+              : ready
+                ? t.checklist.noteReady
+                : t.checklist.noteLocked}
+          </div>
         </div>
-        <button className="file" disabled={!ready} onClick={onProceed}>
-          {ready ? t.checklist.fileBtn : t.checklist.lockedBtn(remaining)}
-          <span className="pg" />
-        </button>
+        {mustPayFirst ? (
+          <button
+            className="file"
+            data-action="pay-outstanding"
+            style={{ background: "var(--out)" }}
+            onClick={onPayOutstanding}
+          >
+            {localize("Pay outstanding tax (Challan 280)", lang)}
+            <span className="pg" />
+          </button>
+        ) : (
+          <button className="file" disabled={!ready} onClick={onProceed}>
+            {ready ? t.checklist.fileBtn : t.checklist.lockedBtn(remaining)}
+            <span className="pg" />
+          </button>
+        )}
       </div>
       )}
     </section>

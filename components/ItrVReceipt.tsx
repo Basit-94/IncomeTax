@@ -1,153 +1,451 @@
 "use client";
 
-import React, { useRef } from 'react';
-import { useTax } from '../context/TaxReturnContext';
+/**
+ * Form ITR-V — the acknowledgement produced after a return is filed.
+ *
+ * WHAT IS REAL HERE. The computation table is the live engine output for the
+ * regime the citizen selected; every figure moves with the return. The SHA-256
+ * is a genuine digest, computed with Web Crypto over a canonical JSON
+ * serialisation of the exact figures printed below — so it actually changes when
+ * the return changes, and re-deriving it from the printed values reproduces it.
+ * The acknowledgement number is derived from that digest and the PAN, so it is
+ * stable for a given return rather than random per render. The QR encodes the
+ * ack number, PAN and hash, which is the shape a verification lookup would take.
+ *
+ * WHAT IS NOT. Nothing was filed. `wapsi.gov.in` is not a real domain, no
+ * acknowledgement was issued by the department, and this document has no legal
+ * standing whatsoever. It is printed with that stated on its face, not only in
+ * this comment — a page that looks this much like a government form must say
+ * what it is before someone photographs it.
+ *
+ * The previous version had a hardcoded ack number and a fake literal hash that
+ * never changed. That is what made it a prop rather than a receipt.
+ */
 
-export function ItrVReceipt(props?: { filedOn?: string }) {
-  const { state, computation } = useTax();
-  const activeRegime: 'NEW' | 'OLD' = state.selectedRegime;
-  const result = activeRegime === 'NEW' ? computation.newRegime : computation.oldRegime;
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
+import { Printer } from "lucide-react";
+import { useTax } from "../context/TaxReturnContext";
+import { Rupees } from "./Rupees";
+
+/** Canonical, key-ordered payload. Order matters: the digest must be stable. */
+interface ReceiptPayload {
+  assessmentYear: string;
+  pan: string;
+  name: string;
+  filingStatus: string;
+  section: string;
+  regime: string;
+  grossTotalIncome: number;
+  standardDeduction: number;
+  chapterViaDeductions: number;
+  taxableIncome: number;
+  taxBeforeRebate: number;
+  rebateAndRelief: number;
+  cess: number;
+  totalTaxLiability: number;
+  totalTaxesPaid: number;
+  netPayableOrRefund: number;
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const bytes = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/**
+ * A 15-digit acknowledgement number, the length the department uses.
+ *
+ * Derived from the return's own digest rather than Math.random(), so the same
+ * return always produces the same number — a receipt whose identifier changes
+ * on re-render is not a receipt.
+ */
+function ackNumberFrom(hashHex: string): string {
+  let digits = "";
+  for (const ch of hashHex) {
+    const v = parseInt(ch, 16);
+    if (Number.isNaN(v)) continue;
+    digits += String(v % 10);
+    if (digits.length >= 15) break;
+  }
+  return digits.padEnd(15, "0").slice(0, 15);
+}
+
+interface ItrVReceiptProps {
+  /** A pre-formatted filing date, when the caller has one (the tracker's seeded date). */
+  filedOn?: string;
+  /** ISO timestamp of acceptance. Preferred over `filedOn`; formatted in IST here. */
+  filedAt?: string;
+}
+
+/** 14 July 2026, 15:24 IST — the department's clock, whatever the browser's. */
+function formatIst(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const date = new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Asia/Kolkata",
+  }).format(d);
+  const time = new Intl.DateTimeFormat("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Kolkata",
+  }).format(d);
+  return `${date}, ${time} IST`;
+}
+
+export function ItrVReceipt({ filedOn, filedAt }: ItrVReceiptProps = {}) {
+  const { state, active, netRefund, netPayable, isPayable, isSettled } = useTax();
   const receiptRef = useRef<HTMLDivElement>(null);
+  const [hash, setHash] = useState<string>("");
 
-  const ackNumber = '202627082219483';
-  // SS4B CA finding 2: the timeline said 14 July while this box said 26 August.
-  // The persona's filedOn is the single source; the constant is only the
-  // fallback for contexts with no persona date.
-  const filingDate = props?.filedOn ?? '26 August 2026';
-  const isRefund = result.netPayableOrRefund < 0;
+  const payload = useMemo<ReceiptPayload>(
+    () => ({
+      assessmentYear: "2026-27",
+      pan: state.pan,
+      name: state.name,
+      filingStatus: state.filingStatus,
+      section: state.filingSection,
+      regime: state.selectedRegime,
+      grossTotalIncome: active.grossTotalIncome,
+      standardDeduction: active.standardDeduction,
+      chapterViaDeductions: active.totalDeductions - active.standardDeduction,
+      taxableIncome: active.taxableIncome,
+      taxBeforeRebate: active.taxBeforeRebate,
+      rebateAndRelief: active.rebate87A + active.marginalRelief,
+      cess: active.cess,
+      totalTaxLiability: active.totalTaxLiability,
+      totalTaxesPaid: active.totalTaxesPaid,
+      netPayableOrRefund: active.netPayableOrRefund,
+    }),
+    [state.pan, state.name, state.filingStatus, state.filingSection, state.selectedRegime, active],
+  );
 
-  const handlePrint = () => {
-    window.print();
-  };
+  // Web Crypto's digest is async, so the hash lands a tick after first paint.
+  // Guarded against a stale write if the return changes while it resolves, and
+  // against an insecure origin, where crypto.subtle does not exist and the
+  // sheet would otherwise sit at "computing…" forever.
+  const [digestError, setDigestError] = useState<string>("");
+  useEffect(() => {
+    let cancelled = false;
+    if (!globalThis.crypto?.subtle) {
+      setHash("");
+      setDigestError("Digest unavailable: this page is not served over HTTPS.");
+      return;
+    }
+    setDigestError("");
+    sha256Hex(JSON.stringify(payload))
+      .then((h) => {
+        if (!cancelled) setHash(h);
+      })
+      .catch(() => {
+        if (!cancelled) setDigestError("Digest could not be computed in this browser.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [payload]);
+
+  const ackNumber = hash ? ackNumberFrom(hash) : "";
+  const verifyUrl = hash
+    ? `https://wapsi.gov.in/verify?ack=${ackNumber}&pan=${state.pan}&hash=${hash.slice(0, 32)}`
+    : "";
+
+  // The timestamp is the moment the return was accepted — never the browser's
+  // clock at render time, which would stamp a preview as if it had been filed.
+  const acceptedAt = filedAt ?? state.filedAt;
+  const submissionStamp = acceptedAt
+    ? formatIst(acceptedAt)
+    : filedOn
+      ? `${filedOn} · time not recorded`
+      : "Not yet submitted — preview";
+
+  const sectionLabel =
+    state.filingSection === "139(5)"
+      ? "139(5) — revised return"
+      : "139(1) — on or before due date";
 
   return (
-    <div className="max-w-3xl mx-auto my-8 space-y-4">
-      {/* Action Bar */}
-      <div className="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-200 print:hidden">
+    <div className="mx-auto my-8 max-w-3xl space-y-4">
+      {/*
+        Print rules live in app/globals.css alongside the existing @media print
+        block, not in a styled-jsx tag here — there was already one print rule
+        set for `.printable-sheet` and a second, competing one in a component
+        would be the next thing to drift.
+      */}
+      <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 p-4 print:hidden">
         <div>
-          <h3 className="font-bold text-gray-900 text-sm">Official Filing Proof Ready</h3>
-          <p className="text-xs text-gray-500">AY 2026-27 statutory acknowledgment receipt</p>
+          <h3 className="text-sm font-bold text-gray-900">Acknowledgement preview</h3>
+          <p className="text-xs text-gray-500">
+            AY 2026-27 · figures are live and the hash below is computed from them
+          </p>
         </div>
         <button
-          onClick={handlePrint}
-          className="px-5 py-2.5 bg-teal-800 hover:bg-teal-900 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-2 cursor-pointer"
+          onClick={() => window.print()}
+          data-action="download-itrv"
+          className="flex cursor-pointer items-center gap-2 rounded-lg bg-teal-800 px-5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-teal-900"
         >
-          ⬇ Download Official PDF / Print
+          <Printer size={14} /> Download official PDF
         </button>
       </div>
 
-      {/* The Printable Acknowledgment Sheet */}
       <div
         ref={receiptRef}
-        className="printable-sheet bg-white p-8 border-2 border-gray-300 rounded-xl shadow-md text-gray-900 font-sans print:border-none print:shadow-none print:p-0"
+        className="printable-sheet rounded-xl border-2 border-gray-300 bg-white p-8 font-sans text-gray-900 shadow-md print:rounded-none print:border-none print:p-0 print:shadow-none"
       >
-        {/* Official Header */}
-        <div className="border-b-2 border-gray-800 pb-4 flex justify-between items-start">
+        {/* This banner prints. It is the first thing on the sheet by design. */}
+        <p className="mb-4 rounded border border-amber-400 bg-amber-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-amber-900">
+          Synthetic prototype document · nothing was filed with any authority · no legal standing
+        </p>
+
+        <div className="flex items-start justify-between border-b-2 border-gray-800 pb-4">
           <div>
-            <span className="text-[10px] font-extrabold tracking-widest text-gray-500 uppercase">
-              GOVERNMENT OF INDIA · INCOME TAX DEPARTMENT
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">
+              Government of India — Income Tax Department
             </span>
-            <h1 className="text-xl font-extrabold text-gray-950 mt-0.5">
+            <h1 className="mt-0.5 text-xl font-extrabold text-gray-950">
               FORM ITR-V (ACKNOWLEDGEMENT)
             </h1>
-            <p className="text-xs text-gray-600 mt-1">
-              Assessment Year: <strong>2026-27</strong> | Financial Year: <strong>2025-26</strong>
+            <p className="mt-1 text-xs text-gray-600">
+              Assessment Year: <strong>2026-27</strong> | Financial Year:{" "}
+              <strong>2025-26</strong>
             </p>
           </div>
 
           <div className="text-right">
-            <div className="inline-block p-2 border border-dashed border-gray-400 rounded bg-gray-50 text-center">
-              <span className="text-[10px] font-mono uppercase block text-gray-500">e-Filing ACK No</span>
-              <span className="text-xs font-mono font-bold text-gray-900">{ackNumber}</span>
+            <div className="inline-block rounded border border-dashed border-gray-400 bg-gray-50 p-2 text-center">
+              <span className="block text-[10px] font-mono uppercase text-gray-500">
+                e-Filing ack no
+              </span>
+              <span className="text-xs font-mono font-bold tabular-nums text-gray-900">
+                {ackNumber || (digestError ? "unavailable" : "computing…")}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Taxpayer Particulars */}
-        <div className="grid grid-cols-2 gap-4 py-4 border-b border-gray-200 text-xs">
+        <div className="grid grid-cols-2 gap-4 border-b border-gray-200 py-4 text-xs">
           <div>
-            <p className="text-gray-500">Name of Assessee:</p>
-            <p className="font-bold text-gray-900 uppercase text-sm">{state.fullName}</p>
-            <p className="text-gray-500 mt-2">PAN:</p>
-            <p className="font-bold text-gray-900 font-mono text-sm">{state.pan}</p>
+            <p className="text-gray-500">Name of assessee:</p>
+            <p className="text-sm font-bold uppercase text-gray-900">{state.name}</p>
+            <p className="mt-2 text-gray-500">PAN:</p>
+            <p className="font-mono text-sm font-bold text-gray-900">{state.pan}</p>
+            <p className="mt-2 text-gray-500">Status:</p>
+            <p className="text-sm font-bold text-gray-900">{state.filingStatus}</p>
           </div>
           <div>
-            <p className="text-gray-500">Filing Status / Section:</p>
-            <p className="font-bold text-gray-900">139(1) - On or before due date</p>
-            <p className="text-gray-500 mt-2">Filing Date & Timestamp:</p>
-            <p className="font-bold text-gray-900">{filingDate} · 15:24 IST</p>
+            <p className="text-gray-500">Filed under section:</p>
+            <p className="font-bold text-gray-900">{sectionLabel}</p>
+            <p className="mt-2 text-gray-500">Submission timestamp:</p>
+            <p className="font-bold text-gray-900 tabular-nums" data-testid="itrv-timestamp">
+              {submissionStamp}
+            </p>
+            <p className="mt-2 text-gray-500">Regime opted:</p>
+            <p className="font-bold text-gray-900">
+              {state.selectedRegime === "NEW" ? "New regime u/s 115BAC" : "Old regime"}
+            </p>
           </div>
         </div>
 
-        {/* Computation Summary Table */}
-        <div className="py-4 border-b border-gray-200">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-gray-700 mb-2">
-            Statement of Computation (Rupees Only)
+        <div className="border-b border-gray-200 py-4">
+          <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-700">
+            Statement of computation (rupees only)
           </h4>
           <table className="w-full text-xs">
             <tbody className="divide-y divide-gray-100">
               <tr>
-                <td className="py-1.5 text-gray-600">1. Gross Total Income</td>
-                <td className="py-1.5 text-right font-semibold">₹{result.grossTotalIncome.toLocaleString('en-IN')}</td>
+                <td className="py-1.5 text-gray-600">1. Gross total income</td>
+                <td className="py-1.5 text-right">
+                  <Rupees value={active.grossTotalIncome} className="font-semibold" />
+                </td>
               </tr>
               <tr>
-                <td className="py-1.5 text-gray-600">2. Standard Deduction u/s 16(ia)</td>
-                <td className="py-1.5 text-right font-semibold text-emerald-700">-₹{result.standardDeduction.toLocaleString('en-IN')}</td>
+                <td className="py-1.5 text-gray-600">2. Standard deduction u/s 16(ia)</td>
+                <td className="py-1.5 text-right">
+                  <span className="font-semibold text-emerald-700">
+                    −<Rupees value={active.standardDeduction} />
+                  </span>
+                </td>
               </tr>
               <tr>
-                <td className="py-1.5 text-gray-600">3. Total Deductions under Chapter VI-A</td>
-                <td className="py-1.5 text-right font-semibold text-emerald-700">-₹{(result.totalDeductions - result.standardDeduction).toLocaleString('en-IN')}</td>
+                <td className="py-1.5 text-gray-600">3. Deductions under Chapter VI-A</td>
+                <td className="py-1.5 text-right">
+                  <span className="font-semibold text-emerald-700">
+                    −
+                    <Rupees value={active.totalDeductions - active.standardDeduction} />
+                  </span>
+                </td>
               </tr>
-              <tr className="font-bold bg-gray-50">
-                <td className="py-2 text-gray-900">4. Total Taxable Income (1 - 2 - 3)</td>
-                <td className="py-2 text-right text-gray-900">₹{result.taxableIncome.toLocaleString('en-IN')}</td>
-              </tr>
-              <tr>
-                <td className="py-1.5 text-gray-600">5. Tax on Total Income</td>
-                <td className="py-1.5 text-right font-semibold">₹{result.taxBeforeRebate.toLocaleString('en-IN')}</td>
-              </tr>
-              <tr>
-                <td className="py-1.5 text-gray-600">6. Rebate under Section 87A / Marginal Relief</td>
-                <td className="py-1.5 text-right font-semibold text-emerald-700">-₹{(result.rebate87A + result.marginalRelief).toLocaleString('en-IN')}</td>
-              </tr>
-              <tr>
-                <td className="py-1.5 text-gray-600">7. Health & Education Cess (4%)</td>
-                <td className="py-1.5 text-right font-semibold">₹{result.cess.toLocaleString('en-IN')}</td>
-              </tr>
-              <tr className="font-bold border-t border-gray-300">
-                <td className="py-2 text-gray-900">8. Net Tax Liability</td>
-                <td className="py-2 text-right text-gray-900">₹{result.totalTaxLiability.toLocaleString('en-IN')}</td>
+              <tr className="bg-gray-50 font-bold">
+                <td className="py-2 text-gray-900">4. Total taxable income (1 − 2 − 3)</td>
+                <td className="py-2 text-right">
+                  <Rupees value={active.taxableIncome} className="text-gray-900" />
+                </td>
               </tr>
               <tr>
-                <td className="py-1.5 text-gray-600">9. Total Taxes Paid (TDS as per 26AS)</td>
-                <td className="py-1.5 text-right font-semibold text-emerald-700">₹{result.totalTaxesPaid.toLocaleString('en-IN')}</td>
+                <td className="py-1.5 text-gray-600">5. Tax on total income</td>
+                <td className="py-1.5 text-right">
+                  <Rupees value={active.taxBeforeRebate} className="font-semibold" />
+                </td>
               </tr>
-              <tr className="font-extrabold text-sm bg-teal-50 text-teal-950">
-                <td className="p-2.5">{isRefund ? '10. Net Refund Due (9 - 8)' : '10. Net Tax Payable (8 - 9)'}</td>
-                <td className="p-2.5 text-right font-mono">
-                  {isRefund ? `₹${Math.abs(result.netPayableOrRefund).toLocaleString('en-IN')}` : `₹${result.netPayableOrRefund.toLocaleString('en-IN')}`}
+              {active.specialRateTax > 0 && (
+                <tr>
+                  <td className="py-1.5 pl-4 text-gray-500">
+                    of which special rates (s.111A / 112A / 112)
+                  </td>
+                  <td className="py-1.5 text-right">
+                    <Rupees value={active.specialRateTax} className="text-gray-500" />
+                  </td>
+                </tr>
+              )}
+              {active.specialExemptAmount > 0 && (
+                <tr>
+                  <td className="py-1.5 pl-4 text-gray-500">
+                    LTCG u/s 112A within the ₹1,25,000 threshold — included in row 4, not taxed
+                  </td>
+                  <td className="py-1.5 text-right">
+                    <Rupees value={active.specialExemptAmount} className="text-gray-500" />
+                  </td>
+                </tr>
+              )}
+              <tr>
+                <td className="py-1.5 text-gray-600">
+                  6. Rebate u/s 87A {active.marginalRelief > 0 ? "(marginal relief)" : ""}
+                </td>
+                <td className="py-1.5 text-right">
+                  <span className="font-semibold text-emerald-700">
+                    −<Rupees value={active.rebate87A + active.marginalRelief} />
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td className="py-1.5 text-gray-600">7. Health &amp; education cess (4%)</td>
+                <td className="py-1.5 text-right">
+                  <Rupees value={active.cess} className="font-semibold" />
+                </td>
+              </tr>
+              <tr className="border-t border-gray-300 font-bold">
+                <td className="py-2 text-gray-900">8. Net tax liability</td>
+                <td className="py-2 text-right">
+                  <Rupees value={active.totalTaxLiability} className="text-gray-900" />
+                </td>
+              </tr>
+              <tr>
+                <td className="py-1.5 text-gray-600">9. Taxes paid — TDS per 26AS</td>
+                <td className="py-1.5 text-right">
+                  <Rupees value={active.tdsPaid} className="font-semibold text-emerald-700" />
+                </td>
+              </tr>
+              {active.advanceTaxPaid > 0 && (
+                <tr>
+                  <td className="py-1.5 text-gray-600">10. Advance tax paid</td>
+                  <td className="py-1.5 text-right">
+                    <Rupees
+                      value={active.advanceTaxPaid}
+                      className="font-semibold text-emerald-700"
+                    />
+                  </td>
+                </tr>
+              )}
+              {active.selfAssessmentPaid > 0 && (
+                <tr>
+                  <td className="py-1.5 text-gray-600">
+                    11. Self-assessment tax u/s 140A (Challan 280)
+                  </td>
+                  <td className="py-1.5 text-right">
+                    <Rupees
+                      value={active.selfAssessmentPaid}
+                      className="font-semibold text-emerald-700"
+                    />
+                  </td>
+                </tr>
+              )}
+              <tr className="bg-teal-50 text-sm font-extrabold text-teal-950">
+                <td className="p-2.5">
+                  {/* Three outcomes. A challan settles the return at exactly nil,
+                      and an acknowledgement that calls that a refund due is a
+                      document stating money is owed back when none is. */}
+                  {isPayable
+                    ? "Net tax payable"
+                    : isSettled
+                      ? "Nothing further payable"
+                      : "Net refund due"}
+                </td>
+                <td className="p-2.5 text-right">
+                  <Rupees value={isPayable ? netPayable : netRefund} />
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        {/* Cryptographic Verification Hash & Footer */}
-        <div className="pt-4 flex justify-between items-end text-[11px] text-gray-500">
-          <div className="space-y-1">
-            <p className="font-semibold text-gray-700">Digital Signature / e-Verification:</p>
-            <p className="font-mono text-[10px] text-gray-400">
-              SHA256: 4f9e2b810d7a4c9e8211b439c7f1a8e9903bc189d23e54b
+        {state.selfAssessmentPayments.length > 0 && (
+          <div className="border-b border-gray-200 py-4">
+            <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-700">
+              Details of self-assessment tax paid
+            </h4>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-[10px] uppercase tracking-wider text-gray-500">
+                  <th className="pb-1 font-semibold">BSR code</th>
+                  <th className="pb-1 font-semibold">Challan serial</th>
+                  <th className="pb-1 font-semibold">Date</th>
+                  <th className="pb-1 text-right font-semibold">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {state.selfAssessmentPayments.map((p) => (
+                  <tr key={`${p.bsrCode}-${p.challanNo}`}>
+                    <td className="py-1.5 font-mono tabular-nums">{p.bsrCode}</td>
+                    <td className="py-1.5 font-mono tabular-nums">{p.challanNo}</td>
+                    <td className="py-1.5 font-mono tabular-nums">{p.date}</td>
+                    <td className="py-1.5 text-right">
+                      <Rupees value={p.amount} className="font-semibold" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className="flex items-end justify-between gap-6 pt-4 text-[11px] text-gray-500">
+          <div className="min-w-0 space-y-1">
+            <p className="font-semibold text-gray-700">Verification digest:</p>
+            <p className="break-all font-mono text-[9px] leading-relaxed text-gray-500">
+              SHA-256: {hash || digestError || "computing…"}
             </p>
-            <p className="text-emerald-700 font-bold">✓ e-Verified via one-time code (mock verification)</p>
+            <p className="text-[10px] text-gray-400">
+              Computed with Web Crypto over the figures printed above. Change any one of
+              them and this digest changes.
+            </p>
+            <p className="pt-1 text-[10px] text-gray-500">
+              e-Verification: <span className="font-semibold">not performed</span> — this
+              document was never submitted.
+            </p>
           </div>
 
-          <div className="text-right">
-            <p className="text-[10px] text-gray-400">Generated by Wapsi Compliance Engine</p>
-            <p className="font-semibold text-gray-700">Directorate of Income Tax (Systems)</p>
+          <div className="shrink-0 text-center">
+            {verifyUrl && (
+              <div className="inline-block rounded border border-gray-300 bg-white p-1.5">
+                <QRCodeSVG value={verifyUrl} size={92} level="M" />
+              </div>
+            )}
+            <p className="mt-1 max-w-[110px] text-[9px] leading-tight text-gray-400">
+              Encodes ack no, PAN and the first 128 bits of the digest. The host is not a
+              real domain.
+            </p>
           </div>
         </div>
       </div>
     </div>
   );
 }
+
+export default ItrVReceipt;
