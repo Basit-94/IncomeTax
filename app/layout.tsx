@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Caveat, JetBrains_Mono, Source_Serif_4, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import Disclaimer from "../components/disclaimer";
@@ -60,6 +61,7 @@ export default function RootLayout({
         </TaxProvider>
         <div className="veil" aria-hidden="true" />
         <Analytics />
+        <SpeedInsights />
         <Disclaimer />
       </body>
     </html>

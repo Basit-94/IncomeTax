@@ -2462,3 +2462,13 @@ things there are already true and will NOT be rewritten:
 - **Risk:** none.
 - **Result:** DONE — `npm run typecheck` exit 0; `npx vitest run` passed all 14 test files (177/177 tests passed).
 
+## [2026-09-03 01:53] orchestrator (Vercel Speed Insights Integration)
+- **Action:** INSTALL | MODIFY
+- **Target:** `package.json`, `app/layout.tsx`, `log.md`
+- **Intent:** Install `@vercel/speed-insights` and mount `<SpeedInsights />` in `app/layout.tsx` alongside `<Analytics />` for real-time Web Vitals and performance telemetry in deployed environments.
+- **Why:** Enable Core Web Vitals monitoring across routes.
+- **Expected effect:** Clean layout mount; `npm run typecheck` exit 0; `177/177` tests green.
+- **Risk:** none.
+- **Result:** DONE — Installed and mounted `<SpeedInsights />`; `npm run typecheck` exit 0; `npx vitest run` passed all 14 test files (177/177 tests passed).
+
+
