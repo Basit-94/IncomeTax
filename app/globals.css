@@ -394,6 +394,11 @@
 }
 
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 14mm;
+  }
+
   body, html, main, .service-shell, #__next {
     background-color: white !important;
     background: none !important;
@@ -414,6 +419,25 @@
     overflow: visible !important;
     height: auto !important;
     display: block !important;
+  }
+
+  /* When an acknowledgement sheet is on the page, it is the only thing that
+     prints. Without this the fixed dock and the app chrome land on the paper —
+     `print:hidden` covers what we remembered to mark, and this covers the rest.
+     Scoped with :has() so pages that carry no sheet still print normally
+     instead of coming out blank. */
+  body:has(.printable-sheet) * {
+    visibility: hidden;
+  }
+  body:has(.printable-sheet) .printable-sheet,
+  body:has(.printable-sheet) .printable-sheet * {
+    visibility: visible;
+  }
+  body:has(.printable-sheet) .printable-sheet {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
   }
 }
 

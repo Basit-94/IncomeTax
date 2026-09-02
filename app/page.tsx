@@ -73,6 +73,7 @@ import Onboarding from "../components/onboarding";
 import { QuickEditModal } from "../components/dashboard/quick-edit-modal";
 import RealUserTaxWizard from "../components/flow/real-user-wizard";
 import { useTax } from "../context/TaxReturnContext";
+import type { FactId as TaxFactId } from "../context/TaxReturnContext";
 import InteractiveTaxDashboard from "../components/InteractiveTaxDashboard";
 import { stableIdempotencyKey } from "@/lib/submission-key";
 
@@ -137,41 +138,71 @@ export default function WapsiPrototype() {
   const persona = returnState?.persona ?? null;
   const regime = returnState?.regime ?? DEFAULT_REGIME;
 
-  // Sync with central TaxReturnContext
+  // Prefill push into the central TaxReturnContext (the reconciliation surface).
+  //
+  // One-way by design: this writes each row's REPORTED figure. The context
+  // refuses to move a `declaredAmount` the citizen has already confirmed or
+  // disputed there, so re-running this effect on every persona/regime change can
+  // no longer overwrite their answer — which is exactly what it used to do.
   useEffect(() => {
     if (!persona || !taxDispatch) return;
 
-    const salaryVal = persona.facts.find(f => f.kind === 'salary')?.amount ?? 0;
-    const interestVal = persona.facts.find(f => f.kind === 'interest')?.amount ?? 0;
-    // Sum, not find: a persona can hold BOTH dividend and capital gains, and .find() silently
-    // dropped whichever came second (Rakesh's ₹1,10,000 of gains vanished this way).
-    const consultingVal = persona.facts
-      .filter(f => f.kind === 'other' || f.kind === 'rent')
-      .reduce((sum, f) => sum + f.amount, 0);
-    const otherVal = persona.facts
-      .filter(f => f.kind === 'dividend' || f.kind === 'capital_gains')
-      .reduce((sum, f) => sum + f.amount, 0);
-    const tdsVal = persona.taxPaid.reduce((sum, t) => sum + t.amount, 0);
-    const ded80cVal = persona.claims.find(c => c.section === '80C')?.amount ?? 0;
-    const ded80dVal = persona.claims.find(c => c.section === '80D' || c.section === '80D_SELF')?.amount ?? 0;
+    // Sum, not find: a persona can hold more than one fact of a kind, and .find()
+    // silently dropped whichever came second (Rakesh's ₹1,10,000 of gains
+    // vanished this way). Every kind now has its own row, so nothing is pooled.
+    const sumOf = (...kinds: IncomeFact["kind"][]): number =>
+      persona.facts
+        .filter((f) => kinds.includes(f.kind))
+        .reduce((sum, f) => sum + f.amount, 0);
+    const tdsUnder = (match: (section: string) => boolean): number =>
+      persona.taxPaid.filter((t) => match(t.section)).reduce((sum, t) => sum + t.amount, 0);
+
+    // Classification travels with the amount, or the reconciliation surface would
+    // tax a s.112A gain at slab and quietly overstate the liability.
+    const gainsMeta = persona.facts.find((f) => f.kind === "capital_gains")?.capitalGains;
+
+    // confirmedFactIds are persona fact ids ("fact-salary-…"), not context keys.
+    // Translate through kind, or every confirmation is dropped on the floor.
+    const kindToFactId: Partial<Record<IncomeFact["kind"], TaxFactId>> = {
+      salary: "salary",
+      interest: "savings_interest",
+      dividend: "dividend",
+      capital_gains: "capital_gains",
+      rent: "rental",
+      other: "consulting",
+    };
+    const confirmedIds = (returnState?.confirmedFactIds ?? [])
+      .map((id) => persona.facts.find((f) => f.id === id)?.kind)
+      .map((kind) => (kind ? kindToFactId[kind] : undefined))
+      .filter((id): id is TaxFactId => Boolean(id));
 
     taxDispatch({
       type: 'SYNC_STATE',
       payload: {
-        fullName: persona.name || "Taxpayer Name",
+        name: persona.name || "Taxpayer Name",
         pan: persona.pan || "ABCDE1234F",
         isSalaried: persona.facts.some(f => f.kind === 'salary'),
         regime: regime === 'old' ? 'OLD' : 'NEW',
         facts: {
-          salary: salaryVal,
-          consulting: consultingVal,
-          interest: interestVal,
-          other: otherVal,
-          tds: tdsVal,
-          ded80c: ded80cVal,
-          ded80d: ded80dVal,
+          salary: sumOf('salary'),
+          consulting: sumOf('other'),
+          savings_interest: sumOf('interest'),
+          dividend: sumOf('dividend'),
+          capital_gains: sumOf('capital_gains'),
+          rental: sumOf('rent'),
+          tds_salary: tdsUnder(s => s.includes('192')),
+          tds_bank: tdsUnder(s => s.includes('194A')),
+          tds_other: tdsUnder(s => !s.includes('192') && !s.includes('194A')),
+          sec_80c: persona.claims.find(c => c.section === '80C')?.amount ?? 0,
+          sec_80d: persona.claims
+            .filter(c => c.section === '80D' || c.section === '80D_SELF' || c.section === '80D_PARENTS')
+            .reduce((sum, c) => sum + c.amount, 0),
+          sec_80ccd2: persona.claims
+            .filter(c => c.section === '80CCD_2' || c.section === '80CCD(2)')
+            .reduce((sum, c) => sum + c.amount, 0),
         },
-        confirmedIds: returnState?.confirmedFactIds ?? [],
+        capitalGainsMeta: gainsMeta,
+        confirmedIds,
       }
     });
   }, [persona, regime, returnState?.confirmedFactIds, taxDispatch]);
