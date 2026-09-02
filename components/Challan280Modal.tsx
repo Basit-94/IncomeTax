@@ -21,6 +21,7 @@ import { m, AnimatePresence } from "motion/react";
 import { QRCodeSVG } from "qrcode.react";
 import { Banknote, Building2, Check, Loader2, QrCode, ShieldAlert, X } from "lucide-react";
 import { useTax } from "../context/TaxReturnContext";
+import type { SelfAssessmentPayment } from "../context/TaxReturnContext";
 import { Rupees } from "./Rupees";
 import {
   ASSESSMENT_YEAR,
@@ -38,8 +39,15 @@ import {
 interface Challan280ModalProps {
   open: boolean;
   onClose: () => void;
-  /** Fired after the payment is recorded, so the caller can advance the flow. */
-  onPaid?: () => void;
+  /**
+   * The balance to collect. Defaults to the context's net payable; the main
+   * journey passes its own engine figure so the challan always matches the
+   * "balance due" the citizen was just shown, even where the two models
+   * differ on a claim the reconciliation surface does not carry.
+   */
+  amount?: number;
+  /** Fired after the payment is recorded, with the challan, so the caller can mirror it. */
+  onPaid?: (payment: SelfAssessmentPayment) => void;
 }
 
 type PaymentMethod = "UPI" | "NET_BANKING";
@@ -53,8 +61,9 @@ function mmss(totalSeconds: number): string {
   return `${m2}:${String(s).padStart(2, "0")}`;
 }
 
-export function Challan280Modal({ open, onClose, onPaid }: Challan280ModalProps) {
+export function Challan280Modal({ open, onClose, onPaid, amount }: Challan280ModalProps) {
   const { state, netPayable, dispatch } = useTax();
+  const due = amount ?? netPayable;
 
   const [method, setMethod] = useState<PaymentMethod>("UPI");
   const [bank, setBank] = useState<string>(NET_BANKING_BANKS[0].code);
@@ -68,12 +77,12 @@ export function Challan280Modal({ open, onClose, onPaid }: Challan280ModalProps)
   const [amountDue, setAmountDue] = useState(0);
   useEffect(() => {
     if (open) {
-      setAmountDue(Math.round(netPayable));
+      setAmountDue(Math.round(due));
       setStage("select");
       setReceipt(null);
       setSecondsLeft(UPI_QR_TTL_SECONDS);
     }
-    // netPayable is deliberately not a dependency: freezing on open is the point.
+    // `due` is deliberately not a dependency: freezing on open is the point.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -102,7 +111,7 @@ export function Challan280Modal({ open, onClose, onPaid }: Challan280ModalProps)
     // and hides the state the citizen would really be waiting in.
     setTimeout(() => {
       const ids = syntheticChallanIdentifiers(amountDue * 31 + state.pan.length);
-      const payment = {
+      const payment: SelfAssessmentPayment = {
         ...ids,
         amount: amountDue,
         date: new Date().toISOString().slice(0, 10),
@@ -113,11 +122,11 @@ export function Challan280Modal({ open, onClose, onPaid }: Challan280ModalProps)
           method === "NET_BANKING"
             ? NET_BANKING_BANKS.find((b) => b.code === bank)?.name
             : undefined,
-      } as const;
+      };
       dispatch({ type: "ADD_SELF_ASSESSMENT_PAYMENT", payment });
       setReceipt(ids);
       setStage("done");
-      onPaid?.();
+      onPaid?.(payment);
     }, 1400);
   }
 
@@ -345,7 +354,10 @@ export function Challan280Modal({ open, onClose, onPaid }: Challan280ModalProps)
 
                 <button
                   onClick={simulateSuccess}
-                  disabled={amountDue <= 0}
+                  // An expired UPI request cannot be paid; the citizen reopens
+                  // the drawer for a fresh one rather than paying into a dead
+                  // collect request.
+                  disabled={amountDue <= 0 || (method === "UPI" && secondsLeft <= 0)}
                   className="w-full rounded-xl bg-teal-800 px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-teal-900 disabled:cursor-not-allowed disabled:bg-slate-300 cursor-pointer"
                 >
                   Simulate payment success

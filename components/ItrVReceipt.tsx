@@ -74,7 +74,33 @@ function ackNumberFrom(hashHex: string): string {
   return digits.padEnd(15, "0").slice(0, 15);
 }
 
-export function ItrVReceipt(props?: { filedOn?: string }) {
+interface ItrVReceiptProps {
+  /** A pre-formatted filing date, when the caller has one (the tracker's seeded date). */
+  filedOn?: string;
+  /** ISO timestamp of acceptance. Preferred over `filedOn`; formatted in IST here. */
+  filedAt?: string;
+}
+
+/** 14 July 2026, 15:24 IST — the department's clock, whatever the browser's. */
+function formatIst(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const date = new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Asia/Kolkata",
+  }).format(d);
+  const time = new Intl.DateTimeFormat("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Kolkata",
+  }).format(d);
+  return `${date}, ${time} IST`;
+}
+
+export function ItrVReceipt({ filedOn, filedAt }: ItrVReceiptProps = {}) {
   const { state, active, netRefund, netPayable, isPayable, isSettled } = useTax();
   const receiptRef = useRef<HTMLDivElement>(null);
   const [hash, setHash] = useState<string>("");
@@ -118,13 +144,14 @@ export function ItrVReceipt(props?: { filedOn?: string }) {
     ? `https://wapsi.gov.in/verify?ack=${ackNumber}&pan=${state.pan}&hash=${hash.slice(0, 32)}`
     : "";
 
-  const filingDate =
-    props?.filedOn ??
-    new Date().toLocaleDateString("en-IN", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
+  // The timestamp is the moment the return was accepted — never the browser's
+  // clock at render time, which would stamp a preview as if it had been filed.
+  const acceptedAt = filedAt ?? state.filedAt;
+  const submissionStamp = acceptedAt
+    ? formatIst(acceptedAt)
+    : filedOn
+      ? `${filedOn} · time not recorded`
+      : "Not yet submitted — preview";
 
   const sectionLabel =
     state.filingSection === "139(5)"
@@ -148,9 +175,10 @@ export function ItrVReceipt(props?: { filedOn?: string }) {
         </div>
         <button
           onClick={() => window.print()}
+          data-action="download-itrv"
           className="flex cursor-pointer items-center gap-2 rounded-lg bg-teal-800 px-5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-teal-900"
         >
-          <Printer size={14} /> Print / save as PDF
+          <Printer size={14} /> Download official PDF
         </button>
       </div>
 
@@ -166,7 +194,7 @@ export function ItrVReceipt(props?: { filedOn?: string }) {
         <div className="flex items-start justify-between border-b-2 border-gray-800 pb-4">
           <div>
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">
-              Government of India · Income Tax Department
+              Government of India — Income Tax Department
             </span>
             <h1 className="mt-0.5 text-xl font-extrabold text-gray-950">
               FORM ITR-V (ACKNOWLEDGEMENT)
@@ -201,8 +229,10 @@ export function ItrVReceipt(props?: { filedOn?: string }) {
           <div>
             <p className="text-gray-500">Filed under section:</p>
             <p className="font-bold text-gray-900">{sectionLabel}</p>
-            <p className="mt-2 text-gray-500">Date and timestamp:</p>
-            <p className="font-bold text-gray-900 tabular-nums">{filingDate} · 15:24 IST</p>
+            <p className="mt-2 text-gray-500">Submission timestamp:</p>
+            <p className="font-bold text-gray-900 tabular-nums" data-testid="itrv-timestamp">
+              {submissionStamp}
+            </p>
             <p className="mt-2 text-gray-500">Regime opted:</p>
             <p className="font-bold text-gray-900">
               {state.selectedRegime === "NEW" ? "New regime u/s 115BAC" : "Old regime"}

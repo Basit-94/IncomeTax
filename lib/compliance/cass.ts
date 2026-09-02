@@ -42,6 +42,8 @@ export interface CassRowInput {
   declaredAmount: number;
   /** Whether proof is already attached to this row. */
   hasAttachment?: boolean;
+  /** The attached file's name, when one was chosen. Nothing is uploaded. */
+  attachmentName?: string;
   /** Who reported it — named in the warning so the citizen knows who to ask. */
   reportedBy?: string;
 }

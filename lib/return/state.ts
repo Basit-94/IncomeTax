@@ -13,6 +13,7 @@
  */
 
 import type { CustomPersonaId, IncomeFact, Lang, Persona, PersonaId } from "../types";
+import type { AISFeedbackCode } from "../compliance/aisFeedback";
 
 /** What the citizen is asserting about a fact: its figure, or that it exists at all. */
 export type CorrectionField = "amount" | "existence";
@@ -33,6 +34,12 @@ export interface Correction {
   next: number | boolean;
   /** The citizen's own words for why the prefill is wrong. */
   reason: string;
+  /**
+   * The CBDT AIS feedback code the citizen chose, when the dispute UI offered
+   * one. Older saved corrections omit it; the reconciliation surface infers a
+   * code from the reason and the figure in that case.
+   */
+  feedbackCode?: AISFeedbackCode;
   /** ISO timestamp of when the correction was made. */
   at: string;
   /** True once the citizen took it back. Kept in history regardless. */

@@ -2,24 +2,42 @@ import { describe, it, expect } from "vitest";
 import {
   INITIAL_STATE,
   MAX_UNDO_DEPTH,
+  PERSIST_VERSION,
   deriveTaxReturn,
+  inferFeedbackCode,
+  parsePersisted,
+  serializeForStorage,
   taxReducer,
 } from "../TaxReturnContext";
-import type { FactId, TaxAction, TaxReturnState } from "../TaxReturnContext";
+import type { FactId, TaxAction, TaxReturnState, UpstreamFact } from "../TaxReturnContext";
 
 /**
  * Prefill helper: pushes a complete set of figures down from the main journey,
  * exactly as app/page.tsx's mirror effect does. Any fact id not named is zeroed,
  * so each test starts from a return with nothing in it but what it declares.
+ * Figures given as numbers are untouched ledger rows (reported = declared, no
+ * correction); pass an UpstreamFact to describe a row the ledger has answered.
  */
 function sync(
   state: TaxReturnState,
-  facts: Partial<Record<FactId, number>>,
-  confirmedIds: string[] = [],
+  facts: Partial<Record<FactId, number | UpstreamFact>>,
+  confirmedIds: FactId[] = [],
 ): TaxReturnState {
-  const zeroed = Object.fromEntries(
-    (Object.keys(state.facts) as FactId[]).map((id) => [id, 0]),
-  ) as Record<FactId, number>;
+  const rows: Partial<Record<FactId, UpstreamFact>> = {};
+  for (const id of Object.keys(state.facts) as FactId[]) {
+    const given = facts[id];
+    if (given !== undefined && typeof given !== "number") {
+      rows[id] = given;
+      continue;
+    }
+    const amount = typeof given === "number" ? given : 0;
+    rows[id] = {
+      reported: amount,
+      declared: amount,
+      disputed: false,
+      confirmed: confirmedIds.includes(id),
+    };
+  }
 
   return taxReducer(state, {
     type: "SYNC_STATE",
@@ -28,8 +46,7 @@ function sync(
       pan: "ABCDE1234F",
       isSalaried: true,
       regime: "NEW",
-      facts: { ...zeroed, ...facts },
-      confirmedIds,
+      facts: rows,
     },
   });
 }
@@ -177,6 +194,123 @@ describe("SYNC_STATE must never overwrite a figure the citizen has answered", ()
 
     expect(resynced.facts.salary.status).toBe("CONFIRMED");
     expect(resynced.facts.salary.feedbackCode).toBe("CODE_1");
+    expect(resynced.facts.salary.origin).toBe("upstream");
+  });
+});
+
+/**
+ * The second half of the same seam. A correction made on the main journey's
+ * facts board is a dispute, and must arrive here as one — reported on the
+ * department's side, declared on the citizen's — or the radar, the s.139(9)
+ * card and the ITR-V are all reading a return the citizen never described.
+ */
+describe("SYNC_STATE carries the ledger's own answers, both sides", () => {
+  const disputedUpstream: UpstreamFact = {
+    reported: 1_500_000,
+    declared: 1_000_000,
+    disputed: true,
+    feedbackCode: "CODE_3",
+    disputeReason: "Two months of the reported salary were never paid.",
+    confirmed: false,
+  };
+
+  it("lands a ledger correction as a DISPUTED row with both figures", () => {
+    const state = sync(INITIAL_STATE, { salary: disputedUpstream, tds_salary: 60_000 });
+
+    expect(state.facts.salary.reportedAmount).toBe(1_500_000);
+    expect(state.facts.salary.declaredAmount).toBe(1_000_000);
+    expect(state.facts.salary.status).toBe("DISPUTED");
+    expect(state.facts.salary.feedbackCode).toBe("CODE_3");
+    expect(state.facts.salary.disputeReason).toBe(disputedUpstream.disputeReason);
+    expect(state.facts.salary.origin).toBe("upstream");
+
+    // Which is exactly what the radar and the summary need to see.
+    const derived = deriveTaxReturn(state);
+    expect(derived.cass.riskLevel).toBe("HIGH");
+    expect(derived.netRefund).toBe(60_000);
+    expect(derived.incomeReported - derived.incomeDeclared).toBe(500_000);
+  });
+
+  it("fixes the confirm-then-correct case: a confirmed row follows the later correction", () => {
+    // The sequence the old bridge got wrong: confirmed first, corrected after.
+    const confirmed = sync(INITIAL_STATE, { salary: 1_500_000 }, ["salary"]);
+    expect(confirmed.facts.salary.status).toBe("CONFIRMED");
+
+    const corrected = sync(confirmed, { salary: disputedUpstream });
+    expect(corrected.facts.salary.status).toBe("DISPUTED");
+    expect(corrected.facts.salary.declaredAmount).toBe(1_000_000);
+    expect(deriveTaxReturn(corrected).active.grossTotalIncome).toBe(1_000_000);
+  });
+
+  it("infers a CBDT code when an older correction carries none", () => {
+    const state = sync(INITIAL_STATE, {
+      salary: { ...disputedUpstream, feedbackCode: undefined, disputeReason: "Amount is incorrect" },
+      dividend: {
+        reported: 12_500,
+        declared: 0,
+        disputed: true,
+        disputeReason: "Duplicate entry in tax statement",
+        confirmed: false,
+      },
+    });
+    expect(state.facts.salary.feedbackCode).toBe("CODE_3");
+    expect(state.facts.dividend.feedbackCode).toBe("CODE_5");
+  });
+
+  it("returns an upstream-answered row to PENDING when the ledger withdraws the answer", () => {
+    const disputed = sync(INITIAL_STATE, { salary: disputedUpstream });
+    // The citizen undid the correction on the facts board.
+    const withdrawn = sync(disputed, { salary: 1_500_000 });
+
+    expect(withdrawn.facts.salary.status).toBe("PENDING");
+    expect(withdrawn.facts.salary.declaredAmount).toBe(1_500_000);
+    expect(withdrawn.facts.salary.feedbackCode).toBeUndefined();
+    expect(withdrawn.facts.salary.origin).toBeUndefined();
+  });
+
+  it("keeps an answer given on this surface when the ledger says nothing", () => {
+    const local = taxReducer(sync(INITIAL_STATE, { salary: 1_500_000 }), {
+      type: "DISPUTE_FACT",
+      factId: "salary",
+      declaredAmount: 1_200_000,
+      feedbackCode: "CODE_3",
+    });
+    expect(local.facts.salary.origin).toBeUndefined();
+
+    const resynced = sync(local, { salary: 1_500_000 });
+    expect(resynced.facts.salary.status).toBe("DISPUTED");
+    expect(resynced.facts.salary.declaredAmount).toBe(1_200_000);
+  });
+
+  it("lets the ledger's answer win over one given here", () => {
+    const local = taxReducer(sync(INITIAL_STATE, { salary: 1_500_000 }), {
+      type: "DISPUTE_FACT",
+      factId: "salary",
+      declaredAmount: 1_200_000,
+      feedbackCode: "CODE_3",
+    });
+    const resynced = sync(local, { salary: disputedUpstream });
+    expect(resynced.facts.salary.declaredAmount).toBe(1_000_000);
+    expect(resynced.facts.salary.origin).toBe("upstream");
+  });
+
+  it("an action taken here clears the upstream marker", () => {
+    const disputed = sync(INITIAL_STATE, { salary: disputedUpstream });
+    const confirmedHere = taxReducer(disputed, { type: "CONFIRM_FACT", factId: "salary" });
+    expect(confirmedHere.facts.salary.origin).toBeUndefined();
+    expect(confirmedHere.facts.salary.declaredAmount).toBe(1_500_000);
+  });
+});
+
+describe("inferFeedbackCode", () => {
+  it("maps the main journey's canned reasons onto the CBDT table", () => {
+    expect(inferFeedbackCode(50_000, "Amount is incorrect")).toBe("CODE_3");
+    expect(inferFeedbackCode(50_000, "Belongs to joint account / split")).toBe("CODE_4");
+    expect(inferFeedbackCode(0, "This is not my income / Fraud / Mistake")).toBe("CODE_5");
+    expect(inferFeedbackCode(0, "Duplicate TDS entry")).toBe("CODE_5");
+    expect(inferFeedbackCode(0, "Deducted on wrong PAN")).toBe("CODE_4");
+    expect(inferFeedbackCode(0, undefined)).toBe("CODE_5");
+    expect(inferFeedbackCode(10, undefined)).toBe("CODE_3");
   });
 });
 
@@ -393,6 +527,80 @@ describe("ingesting a Form 16", () => {
     // tds_salary was still PENDING, so it follows the document on both sides.
     expect(ingested.facts.tds_salary.reportedAmount).toBe(88_000);
     expect(ingested.facts.tds_salary.declaredAmount).toBe(88_000);
+  });
+});
+
+describe("persistence", () => {
+  const worked = run(
+    sync(INITIAL_STATE, { salary: 1_285_000 }),
+    { type: "DISPUTE_FACT", factId: "salary", declaredAmount: 1_275_000, feedbackCode: "CODE_3" },
+    {
+      type: "ADD_SELF_ASSESSMENT_PAYMENT",
+      payment: {
+        challanNo: "04217",
+        bsrCode: "0510308",
+        amount: 10_400,
+        date: "2026-07-14",
+        majorHead: "0021",
+        minorHead: "300",
+        method: "UPI",
+      },
+    },
+    { type: "MARK_FILED", filedAt: "2026-07-14T09:54:00.000Z" },
+  );
+
+  it("round-trips the mutable slice and drops the undo stack", () => {
+    const saved = parsePersisted(serializeForStorage(worked));
+    expect(saved).not.toBeNull();
+    const hydrated = taxReducer(INITIAL_STATE, { type: "HYDRATE", payload: saved });
+
+    expect(hydrated.hydrated).toBe(true);
+    expect(hydrated.history).toHaveLength(0);
+    expect(hydrated.facts.salary.declaredAmount).toBe(1_275_000);
+    expect(hydrated.facts.salary.status).toBe("DISPUTED");
+    expect(hydrated.selfAssessmentPayments).toHaveLength(1);
+    expect(hydrated.filedAt).toBe("2026-07-14T09:54:00.000Z");
+    expect(deriveTaxReturn(hydrated).netPayable).toBe(0);
+  });
+
+  it("treats junk, another version, or nothing as nothing saved", () => {
+    expect(parsePersisted(null)).toBeNull();
+    expect(parsePersisted("{not json")).toBeNull();
+    expect(parsePersisted(JSON.stringify({ version: PERSIST_VERSION + 1, state: {} }))).toBeNull();
+    expect(parsePersisted(JSON.stringify({ version: PERSIST_VERSION, state: { pan: "X" } }))).toBeNull();
+
+    const hydrated = taxReducer(INITIAL_STATE, { type: "HYDRATE", payload: null });
+    expect(hydrated.hydrated).toBe(true);
+    expect(hydrated.facts.salary.reportedAmount).toBe(INITIAL_STATE.facts.salary.reportedAmount);
+  });
+
+  it("RESET leaves nothing of the previous citizen behind", () => {
+    const reset = taxReducer(worked, { type: "RESET" });
+    expect(reset.selfAssessmentPayments).toHaveLength(0);
+    expect(reset.filedAt).toBeUndefined();
+    expect(reset.facts.salary.status).toBe("PENDING");
+    expect(reset.facts.salary.reportedAmount).toBe(INITIAL_STATE.facts.salary.reportedAmount);
+    expect(reset.hydrated).toBe(true);
+  });
+});
+
+describe("evidence attachments", () => {
+  it("keeps the file name so the radar can show what was attached", () => {
+    const state = taxReducer(INITIAL_STATE, {
+      type: "ATTACH_EVIDENCE",
+      factId: "salary",
+      hasAttachment: true,
+      attachmentName: "form16-fy2025-26.pdf",
+    });
+    expect(state.facts.salary.hasAttachment).toBe(true);
+    expect(state.facts.salary.attachmentName).toBe("form16-fy2025-26.pdf");
+
+    const detached = taxReducer(state, {
+      type: "ATTACH_EVIDENCE",
+      factId: "salary",
+      hasAttachment: false,
+    });
+    expect(detached.facts.salary.attachmentName).toBeUndefined();
   });
 });
 

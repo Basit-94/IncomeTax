@@ -30,9 +30,29 @@ import { Rupees } from "./Rupees";
 
 const spring = { type: "spring" as const, stiffness: 120, damping: 18, mass: 0.7 };
 
-export function DefectiveNoticeCard() {
+interface DefectiveNoticeCardProps {
+  /**
+   * Called alongside STAGE_REVISED_RETURN. The main journey keeps its own
+   * ledger; it uses this to accept the reported figures there too, or the next
+   * sync would push its corrections straight back and undo the reconcile.
+   */
+  onReconcile?: () => void;
+  /** Called alongside UNDO_LAST_ACTION, for the same reason. */
+  onUndoReconcile?: () => void;
+}
+
+export function DefectiveNoticeCard({ onReconcile, onUndoReconcile }: DefectiveNoticeCardProps = {}) {
   const { state, incomeReported, incomeDeclared, dispatch, canUndo } = useTax();
   const [expanded, setExpanded] = useState(false);
+
+  const stage = (): void => {
+    dispatch({ type: "STAGE_REVISED_RETURN" });
+    onReconcile?.();
+  };
+  const undo = (): void => {
+    dispatch({ type: "UNDO_LAST_ACTION" });
+    onUndoReconcile?.();
+  };
 
   const shortfall = incomeReported - incomeDeclared;
 
@@ -68,7 +88,7 @@ export function DefectiveNoticeCard() {
           </div>
           {canUndo && (
             <button
-              onClick={() => dispatch({ type: "UNDO_LAST_ACTION" })}
+              onClick={undo}
               className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-300 bg-white px-3.5 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-50"
             >
               <RotateCcw size={13} /> Undo auto-reconcile
@@ -112,7 +132,7 @@ export function DefectiveNoticeCard() {
       <div className="flex flex-col gap-4 p-5 md:flex-row md:items-start md:justify-between">
         <div className="space-y-2">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-700 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white">
-            <AlertOctagon size={11} /> Notice u/s 139(9) — defective return
+            <AlertOctagon size={11} /> Notice under Section 139(9) — Defective Return
           </span>
           <h3 className="text-sm font-extrabold text-rose-950">
             Reported receipts exceed the income declared in your schedules
@@ -129,10 +149,11 @@ export function DefectiveNoticeCard() {
 
         <div className="flex shrink-0 flex-col gap-2">
           <button
-            onClick={() => dispatch({ type: "STAGE_REVISED_RETURN" })}
+            onClick={stage}
+            data-action="auto-reconcile"
             className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-rose-700 px-5 py-3 text-xs font-bold text-white shadow-sm transition hover:bg-rose-800"
           >
-            Auto-reconcile &amp; prepare revised return u/s 139(5)
+            Auto-Reconcile &amp; Prepare Revised Return u/s 139(5)
             <ArrowRight size={14} />
           </button>
           <button

@@ -4,6 +4,7 @@ import { CheckCircle2, AlertTriangle, ChevronRight } from "lucide-react";
 import type { Persona, Lang, BankAccount, Notice } from "../../lib/types";
 import { localize } from "../mock-i18n";
 import { MockField, MockFill, MOCK } from "@/components/dev/mock-fill";
+import { DefectiveNoticeCard } from "../DefectiveNoticeCard";
 
 interface ActionsTabProps {
   persona: Persona;
@@ -17,6 +18,12 @@ interface ActionsTabProps {
   saveRentClaim: () => void;
   handleFixBank: (bank: BankAccount) => void;
   handleNoticeClick: (notice: Notice) => void;
+  /**
+   * s.139(9) one-click resolver. The card reads the reconciliation context;
+   * these keep the page's own ledger in step with what it does.
+   */
+  onAutoReconcile?: () => void;
+  onUndoAutoReconcile?: () => void;
 }
 
 export default function ActionsTab({
@@ -31,10 +38,16 @@ export default function ActionsTab({
   saveRentClaim,
   handleFixBank,
   handleNoticeClick,
+  onAutoReconcile,
+  onUndoAutoReconcile,
 }: ActionsTabProps) {
   return (
     <div className="space-y-6">
-      
+
+      {/* s.139(9) — renders only while declared income is short of what the
+          reporters filed, or once a revised return has been staged. */}
+      <DefectiveNoticeCard onReconcile={onAutoReconcile} onUndoReconcile={onUndoAutoReconcile} />
+
       {/* PENDING NOTICES */}
       {persona.notices.length > 0 ? (
         <div className="bg-white border border-line rounded-xl p-5 space-y-4 shadow-sm">

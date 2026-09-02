@@ -58,6 +58,7 @@ import { DefectiveNoticeCard } from "./DefectiveNoticeCard";
 import { PdfIngestionDropzone } from "./PdfIngestionDropzone";
 import { Challan280Modal } from "./Challan280Modal";
 import { Rupees } from "./Rupees";
+import { AnimatedAmount } from "./ui/animated-amount";
 import { MockField, MockFill, MOCK } from "@/components/dev/mock-fill";
 import { LogoLink } from "./brand/logo";
 
@@ -426,22 +427,16 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
               AY 2026-27 · net position
             </span>
             <div className="flex items-baseline gap-2 flex-wrap">
-              <m.div
-                layout
-                key={positionKey}
-                /* initial={false}, not `initial={{ opacity: 0 }}`: the key changes
-                   whenever the position flips, so an opacity-gated enter would
-                   leave the headline figure at opacity 0 for as long as the frame
-                   loop is stalled. This is the number the whole screen exists to
-                   show — it renders at its final value and animates only as an
-                   enhancement. */
-                initial={false}
-                animate={{ opacity: 1, y: 0 }}
-                transition={springTransition}
-              >
-                <Rupees
+              {/* No key on this element and no opacity-gated enter: the figure
+                  must render at its final value whether or not a frame loop is
+                  running. AnimatedAmount springs the digits between values — a
+                  ₹18,280 due that becomes an ₹84,040 refund rolls through the
+                  numbers rather than snapping, and the colour flips with the
+                  position. */}
+              <m.div layout transition={springTransition}>
+                <AnimatedAmount
                   value={isPayable ? netPayable : netRefund}
-                  className={`text-4xl font-extrabold tracking-tight ${
+                  className={`text-4xl font-extrabold ${
                     isPayable
                       ? "text-amber-700"
                       : isSettled
@@ -803,9 +798,9 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
               </span>
               <div className="flex items-baseline gap-1.5 flex-wrap">
                 <m.div layout transition={springTransition}>
-                  <Rupees
+                  <AnimatedAmount
                     value={isPayable ? netPayable : netRefund}
-                    className="text-xl font-bold tracking-tight"
+                    className="text-xl font-bold"
                   />
                 </m.div>
                 <span className="text-xs text-slate-400 font-mono">

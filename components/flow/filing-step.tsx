@@ -2,11 +2,12 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { m } from "motion/react";
-import { CheckCircle2, FileCheck, Loader2 } from "lucide-react";
+import { Banknote, CheckCircle2, FileCheck, Loader2 } from "lucide-react";
 import type { Persona, Lang } from "../../lib/types";
 import type { Dict } from "../../lib/i18n";
 import { formatMoney } from "../../lib/money";
 import { computeForPersona } from "../../lib/return/compute";
+import { localize } from "../mock-i18n";
 
 type Stage = "idle" | "checking" | "sealing" | "committing" | "done" | "error";
 
@@ -21,6 +22,12 @@ interface FilingStepProps {
    *  network/server failure so the error ladder can name the cause and offer retry (T1.4). */
   onFile: () => void | Promise<void>;
   onBack: () => void;
+  /**
+   * The return computes to a balance payable. Filing with tax outstanding is
+   * defective u/s 139(9), so the confirm button gives way to the challan until
+   * the balance is cleared.
+   */
+  onPayOutstanding?: () => void;
 }
 
 /**
@@ -37,12 +44,14 @@ export default function FilingStep({
   slowMode,
   onFile,
   onBack,
+  onPayOutstanding,
 }: FilingStepProps) {
   const [stage, setStage] = useState<Stage>("idle");
   const [networkError, setNetworkError] = useState(false);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const b = computeForPersona(persona, regime);
+  const mustPayFirst = b.refundOrDue < 0 && Boolean(onPayOutstanding);
 
   useEffect(() => {
     const handleSubmitted = (e: Event) => {
@@ -166,6 +175,11 @@ export default function FilingStep({
         <span className={`block text-3xl font-extrabold tabular tracking-tight ${b.refundOrDue >= 0 ? "text-money" : "text-alarm"}`}>
           {formatMoney(Math.abs(b.refundOrDue), lang)}
         </span>
+        {mustPayFirst && (
+          <p className="pt-1 text-xs leading-relaxed text-ink-2">
+            {localize("A return filed with tax outstanding is defective under section 139(9). Pay the balance first; filing unlocks once nothing is due.", lang)}
+          </p>
+        )}
       </div>
 
       {/* NAMED-STAGE PROGRESSION */}
@@ -234,13 +248,24 @@ export default function FilingStep({
           >
             {t.common.back}
           </button>
-          <button
-            onClick={beginFiling}
-            className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-navy px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:opacity-90"
-          >
-            <FileCheck size={16} />
-            <span>{t.file.confirmAndFile}</span>
-          </button>
+          {mustPayFirst ? (
+            <button
+              onClick={onPayOutstanding}
+              data-action="pay-outstanding"
+              className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-alarm px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:opacity-90"
+            >
+              <Banknote size={16} />
+              <span>{localize("Pay outstanding tax (Challan 280)", lang)}</span>
+            </button>
+          ) : (
+            <button
+              onClick={beginFiling}
+              className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-navy px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:opacity-90"
+            >
+              <FileCheck size={16} />
+              <span>{t.file.confirmAndFile}</span>
+            </button>
+          )}
         </div>
       ) : (
         !busy && null

@@ -17,28 +17,111 @@
  * shared with the agent's predict_audit_risk tool. The probability is a fixed
  * illustrative figure and the badge says so — the department publishes no CASS
  * selection rates, so no honest number exists to put there.
+ *
+ * ATTACHMENTS ARE MOCK. The file picker is real, so the gesture is the real
+ * one, but nothing is uploaded: only the file's name is kept on the row, and
+ * the surface says so.
  */
 
-import React from "react";
+import React, { useRef } from "react";
 import { m, AnimatePresence } from "motion/react";
 import { Paperclip, Radar, ShieldCheck, TriangleAlert } from "lucide-react";
 import { useTax } from "../context/TaxReturnContext";
-import { CASS_INQUIRY_PROBABILITY_LABEL, CASS_VARIANCE_THRESHOLD } from "../lib/compliance/cass";
-import { Rupees } from "./Rupees";
 import type { FactId } from "../context/TaxReturnContext";
+import type { CassRowFinding } from "../lib/compliance/cass";
+import {
+  CASS_AGGREGATE_RUPEE_THRESHOLD,
+  CASS_INQUIRY_PROBABILITY_LABEL,
+  CASS_VARIANCE_THRESHOLD,
+} from "../lib/compliance/cass";
+import { Rupees } from "./Rupees";
 
 const spring = { type: "spring" as const, stiffness: 120, damping: 18, mass: 0.7 };
 
-export function AuditRiskRadar() {
-  const { cass, dispatch } = useTax();
+interface AuditRiskRadarProps {
+  /** Hide the "no flags" card entirely; render only when the radar has fired. */
+  quietWhenClear?: boolean;
+}
+
+/** One flagged row with its attach-proof control. */
+function FindingRow({ finding }: { finding: CassRowFinding }) {
+  const { dispatch } = useTax();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const attach = (file: File | undefined): void => {
+    if (!file) return;
+    dispatch({
+      type: "ATTACH_EVIDENCE",
+      factId: finding.id as FactId,
+      hasAttachment: true,
+      attachmentName: file.name,
+    });
+  };
+
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/80 px-4 py-3">
+      <div className="min-w-0 space-y-0.5">
+        <p className="truncate text-xs font-bold text-slate-900">{finding.label}</p>
+        <p className="text-[11px] text-slate-600">
+          <Rupees value={finding.reportedAmount} className="font-semibold" /> reported
+          {finding.reportedBy ? ` by ${finding.reportedBy}` : ""} ·{" "}
+          <Rupees value={finding.declaredAmount} className="font-semibold" /> declared
+          {" · "}
+          <span className="font-mono font-bold tabular-nums text-amber-800">
+            {Math.round(finding.variance * 100)}% lower
+          </span>
+        </p>
+      </div>
+
+      {finding.hasAttachment ? (
+        <span className="inline-flex max-w-full shrink-0 items-center gap-1.5 rounded-lg bg-emerald-100 px-3 py-1.5 text-[11px] font-bold text-emerald-800">
+          <Paperclip size={11} />
+          <span className="truncate">
+            Proof attached
+            {finding.attachmentName ? ` · ${finding.attachmentName}` : ""}
+          </span>
+        </span>
+      ) : (
+        <>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="application/pdf,image/*"
+            className="hidden"
+            aria-hidden="true"
+            tabIndex={-1}
+            onChange={(e) => {
+              attach(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            data-action="attach-proof"
+            onClick={() => inputRef.current?.click()}
+            className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-[11px] font-bold text-amber-900 transition hover:bg-amber-50"
+          >
+            <Paperclip size={11} /> Attach documentary proof (salary slip / Form 16 / bank statement)
+          </button>
+        </>
+      )}
+    </li>
+  );
+}
+
+export function AuditRiskRadar({ quietWhenClear = false }: AuditRiskRadarProps = {}) {
+  const { cass } = useTax();
 
   const isHigh = cass.riskLevel === "HIGH";
+  if (quietWhenClear && !isHigh) return null;
 
   return (
     <m.section
       layout
       transition={spring}
       aria-live="polite"
+      data-testid="cass-radar"
+      data-risk={cass.riskLevel}
       className={`overflow-hidden rounded-2xl border p-5 transition-colors ${
         isHigh ? "border-amber-300 bg-amber-50/70" : "border-slate-200 bg-white"
       }`}
@@ -59,7 +142,7 @@ export function AuditRiskRadar() {
               }`}
             >
               {isHigh
-                ? "Scrutiny risk warning (CASS algorithm flag)"
+                ? "Scrutiny Risk Warning (CASS Algorithm Flag)"
                 : "No scrutiny flags on this return"}
             </h3>
             <p
@@ -69,21 +152,23 @@ export function AuditRiskRadar() {
             >
               {isHigh ? (
                 <>
-                  A downward revision of this size against third-party data is a
-                  documented selection trigger. An illustrative{" "}
+                  You have declared{" "}
+                  <Rupees value={cass.aggregateShortfall} className="font-bold" /> less than
+                  reported by your employer/bank in AIS. This has a{" "}
                   <strong className="font-bold">
                     {CASS_INQUIRY_PROBABILITY_LABEL} probability
                   </strong>{" "}
-                  of generating an inquiry notice u/s {cass.scrutinySection} — the
-                  direction is real, the exact figure is not published by the
-                  department and this one is a stand-in.
+                  of generating an inquiry notice u/s {cass.scrutinySection}. The direction
+                  is real — a downward revision of this size against third-party data is a
+                  documented selection trigger — but the department publishes no selection
+                  rate, so that percentage is an illustrative stand-in, not a measurement.
                 </>
               ) : (
                 <>
                   Nothing you have declared falls materially below what your employer,
                   banks or registrar reported. Rows are flagged past a{" "}
                   {Math.round(CASS_VARIANCE_THRESHOLD * 100)}% reduction, or a total
-                  reduction over <Rupees value={100000} />.
+                  reduction over <Rupees value={CASS_AGGREGATE_RUPEE_THRESHOLD} />.
                 </>
               )}
             </p>
@@ -115,42 +200,7 @@ export function AuditRiskRadar() {
           >
             <ul className="mt-4 space-y-2 border-t border-amber-200 pt-4">
               {cass.findings.map((f) => (
-                <li
-                  key={f.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/80 px-4 py-3"
-                >
-                  <div className="min-w-0 space-y-0.5">
-                    <p className="truncate text-xs font-bold text-slate-900">{f.label}</p>
-                    <p className="text-[11px] text-slate-600">
-                      <Rupees value={f.reportedAmount} className="font-semibold" /> reported
-                      {f.reportedBy ? ` by ${f.reportedBy}` : ""} ·{" "}
-                      <Rupees value={f.declaredAmount} className="font-semibold" /> declared
-                      {" · "}
-                      <span className="font-bold text-amber-800 tabular-nums">
-                        {Math.round(f.variance * 100)}% lower
-                      </span>
-                    </p>
-                  </div>
-
-                  {f.hasAttachment ? (
-                    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-emerald-100 px-3 py-1.5 text-[11px] font-bold text-emerald-800">
-                      <Paperclip size={11} /> Proof attached
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() =>
-                        dispatch({
-                          type: "ATTACH_EVIDENCE",
-                          factId: f.id as FactId,
-                          hasAttachment: true,
-                        })
-                      }
-                      className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-[11px] font-bold text-amber-900 transition hover:bg-amber-50"
-                    >
-                      <Paperclip size={11} /> Attach proof
-                    </button>
-                  )}
-                </li>
+                <FindingRow key={f.id} finding={f} />
               ))}
             </ul>
 
@@ -163,7 +213,8 @@ export function AuditRiskRadar() {
                   {cass.unsupportedFindings.length} flagged row
                   {cass.unsupportedFindings.length === 1 ? " has" : "s have"} no supporting
                   document yet. Attaching it now is the difference between answering a
-                  notice in a day and reconstructing a year-old transaction.
+                  notice in a day and reconstructing a year-old transaction. Files are
+                  never uploaded here — only the name is kept on the row.
                 </>
               ) : (
                 <> Every flagged row has proof attached. That is the answer to the notice.</>

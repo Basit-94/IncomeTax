@@ -29,7 +29,15 @@ const spring = { type: "spring" as const, stiffness: 120, damping: 18, mass: 0.7
 
 type Phase = "idle" | "reading" | "ingested" | "empty" | "error";
 
-export function PdfIngestionDropzone() {
+interface PdfIngestionDropzoneProps {
+  /**
+   * Fired after the context has ingested the document, so a surface that
+   * keeps its own ledger (the main journey) can write the same figures into it.
+   */
+  onIngested?: (document: IngestedDocument) => void;
+}
+
+export function PdfIngestionDropzone({ onIngested }: PdfIngestionDropzoneProps = {}) {
   const { dispatch } = useTax();
   const inputRef = useRef<HTMLInputElement>(null);
   const [phase, setPhase] = useState<Phase>("idle");
@@ -64,6 +72,7 @@ export function PdfIngestionDropzone() {
           extracted,
         };
         dispatch({ type: "INGEST_DOCUMENT", document });
+        onIngested?.(document);
         setResult(document);
         setPhase("ingested");
       } catch {
@@ -71,7 +80,7 @@ export function PdfIngestionDropzone() {
         setPhase("error");
       }
     },
-    [dispatch],
+    [dispatch, onIngested],
   );
 
   return (

@@ -39,7 +39,7 @@ export function AnimatedAmount({
   }, [springVal, lang]);
 
   return (
-    <span ref={displayRef} className={`font-mono tracking-tight ${className}`}>
+    <span ref={displayRef} className={`font-mono tabular-nums tracking-tight ${className}`}>
       {formatMoney(value, lang)}
     </span>
   );

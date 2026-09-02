@@ -20,29 +20,54 @@
  *     `declaredAmount` belongs to the citizen. Once a fact leaves PENDING —
  *     CONFIRMED or DISPUTED — nothing but an explicit citizen action may move it.
  *
- * Everything else follows from that split, including the field rename: a single
- * `userAmount` that sometimes meant "prefill" and sometimes meant "the citizen's
- * position" is what made the bug easy to write in the first place.
+ * SECOND FIX (2026-09-03). The first fix left a gap on the other side of the
+ * same seam. The main journey (`app/page.tsx`) pushed its EFFECTIVE figures —
+ * the persona after the citizen's corrections — as `reportedAmount`. So a
+ * dispute made on the facts board arrived here as a new department figure, not
+ * as a dispute: the ITR-V in the overview tab could show the old figure on a
+ * row the citizen had already confirmed and then corrected, and the CASS radar
+ * and s.139(9) card never saw a main-journey correction at all. `SYNC_STATE`
+ * now carries BOTH sides of every row — the ledger's baseline as `reported`,
+ * its effective figure as `declared`, whether the ledger holds an active
+ * correction, and whether the row is confirmed there. Rows the ledger has
+ * answered are marked `origin: "upstream"` so that when the ledger withdraws
+ * that answer (an undone correction) the row goes back to PENDING instead of
+ * carrying a dispute nobody holds any more. A row answered HERE keeps its
+ * answer unless the ledger asserts one of its own; the ledger is the product's
+ * provenance-carrying record and wins a conflict.
  *
  * Every dispatch recomputes the whole return in one memo — liability under both
  * regimes, the net position, and the CASS scrutiny assessment — so no surface
  * can lag behind another. There is no second store and no local copy of an
  * amount anywhere downstream.
  *
+ * PERSISTENCE. The mutable slice is saved to localStorage under its own
+ * versioned key, so a challan paid or a revised return staged survives a
+ * reload. Hydration happens in an effect after mount — never in the reducer's
+ * initialiser — because the server renders INITIAL_STATE and a client that
+ * initialised from storage would not match it.
+ *
  * SCOPE. This is the flat reconciliation surface (AIS row → confirm/dispute →
  * pay → file). The main journey in `app/page.tsx` keeps its own event-sourced
  * `Correction[]` ledger with full provenance (`lib/return/state.ts`); that model
  * is the product's thesis and is deliberately NOT collapsed into this one. The
- * two meet at `SYNC_STATE`, which pushes prefill down without ever reaching back
- * in and rewriting what the citizen has said here.
+ * two meet at `SYNC_STATE`, which pushes the ledger down one way.
  */
 
-import React, { createContext, useContext, useReducer, useMemo, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useReducer,
+  useMemo,
+  useCallback,
+  useEffect,
+} from "react";
 import { computeAY2026Tax } from "../lib/taxEngineAY2026";
 import type { CapitalGainsLot, RegimeResult, TaxEngineOutput } from "../lib/taxEngineAY2026";
 import type { CapitalGainsMeta } from "../lib/types";
 import { assessCassRisk } from "../lib/compliance/cass";
 import type { CassAssessment } from "../lib/compliance/cass";
+import { isAISFeedbackCode } from "../lib/compliance/aisFeedback";
 import type { AISFeedbackCode } from "../lib/compliance/aisFeedback";
 
 /* ------------------------------------------------------------------ schema -- */
@@ -80,6 +105,22 @@ export type FactId =
   | "sec_80d"
   | "sec_80ccd2";
 
+export const FACT_IDS: readonly FactId[] = [
+  "salary",
+  "consulting",
+  "savings_interest",
+  "dividend",
+  "capital_gains",
+  "rental",
+  "tds_salary",
+  "tds_bank",
+  "tds_other",
+  "advance_tax",
+  "sec_80c",
+  "sec_80d",
+  "sec_80ccd2",
+] as const;
+
 /** Which AIS/26AS statement a row came from. Shown on the card, not decorative. */
 export type FactStatement = "AIS" | "TIS" | "26AS" | "Form 16" | "SFT" | "self";
 
@@ -95,6 +136,8 @@ export interface TaxFact {
   feedbackCode?: AISFeedbackCode;
   disputeReason?: string;
   hasAttachment?: boolean;
+  /** The file the citizen attached as proof, by name — nothing is uploaded. */
+  attachmentName?: string;
   /** The deductor/bank/registrar who reported it — named so it can be chased. */
   reportedBy?: string;
   statement?: FactStatement;
@@ -110,6 +153,14 @@ export interface TaxFact {
   supersededAmount?: number;
   /** Which section of the Act the row is claimed under, for deductions. */
   section?: string;
+  /**
+   * "upstream" when the current status was written by SYNC_STATE from the
+   * main journey's ledger rather than by an action on this surface. Such a
+   * row follows the ledger: if the ledger withdraws its answer, the row goes
+   * back to PENDING. A row answered here carries no origin and keeps its
+   * answer until the ledger asserts one of its own.
+   */
+  origin?: "upstream";
 }
 
 export type FilingStatus = "INDIVIDUAL" | "HUF";
@@ -143,6 +194,23 @@ export interface IngestedDocument {
 }
 
 /**
+ * One row as the main journey's ledger sees it. Both sides travel together so
+ * this surface can tell a department figure from a citizen's correction.
+ */
+export interface UpstreamFact {
+  /** The ledger's baseline — what the reporter filed. */
+  reported: number;
+  /** The ledger's effective figure after the citizen's corrections. */
+  declared: number;
+  /** True when the ledger holds an active (non-reverted) correction on the row. */
+  disputed: boolean;
+  feedbackCode?: AISFeedbackCode;
+  disputeReason?: string;
+  /** True when every ledger item behind this row has been confirmed there. */
+  confirmed: boolean;
+}
+
+/**
  * The part of the state UNDO_LAST_ACTION restores.
  *
  * The spec typed history as `Array<Record<string, TaxFact>>` — facts only. That
@@ -170,10 +238,35 @@ export interface TaxReturnState extends TaxReturnSnapshot {
   ingestedDocuments: IngestedDocument[];
   /** Set when a s.139(9) defect has been raised against the filed return. */
   defectNoticeOpen: boolean;
+  /** ISO timestamp of the moment the return was accepted for filing, if it has been. */
+  filedAt?: string;
+  /** True once persisted state has been read back after mount. Never persisted. */
+  hydrated: boolean;
 }
 
 /** 25 levels, per spec. Deep enough to walk back a whole reconciliation sitting. */
 export const MAX_UNDO_DEPTH = 25;
+
+/** The slice that survives a reload. History and the hydration flag do not. */
+export type PersistedTaxReturn = Pick<
+  TaxReturnState,
+  | "pan"
+  | "name"
+  | "filingStatus"
+  | "isSalaried"
+  | "age"
+  | "selectedRegime"
+  | "facts"
+  | "selfAssessmentPayments"
+  | "filingSection"
+  | "revisedReturnStaged"
+  | "ingestedDocuments"
+  | "defectNoticeOpen"
+  | "filedAt"
+>;
+
+export const PERSIST_STORAGE_KEY = "wapsi_reconciliation";
+export const PERSIST_VERSION = 1;
 
 export type TaxAction =
   | { type: "CONFIRM_FACT"; factId: FactId }
@@ -185,7 +278,12 @@ export type TaxAction =
       disputeReason?: string;
     }
   | { type: "RESET_FACT"; factId: FactId }
-  | { type: "ATTACH_EVIDENCE"; factId: FactId; hasAttachment: boolean }
+  | {
+      type: "ATTACH_EVIDENCE";
+      factId: FactId;
+      hasAttachment: boolean;
+      attachmentName?: string;
+    }
   | { type: "ADD_SELF_ASSESSMENT_PAYMENT"; payment: SelfAssessmentPayment }
   | { type: "UNDO_LAST_ACTION" }
   | { type: "SET_REGIME"; regime: Regime }
@@ -193,6 +291,9 @@ export type TaxAction =
   | { type: "INGEST_DOCUMENT"; document: IngestedDocument }
   | { type: "RAISE_DEFECT_NOTICE" }
   | { type: "STAGE_REVISED_RETURN" }
+  | { type: "MARK_FILED"; filedAt: string }
+  | { type: "HYDRATE"; payload: PersistedTaxReturn | null }
+  | { type: "RESET" }
   | {
       type: "SYNC_STATE";
       payload: {
@@ -202,16 +303,20 @@ export type TaxAction =
         age?: number;
         filingStatus?: FilingStatus;
         regime: Regime;
-        /** Upstream prefill, keyed by fact id. Writes reportedAmount always. */
-        facts: Partial<Record<FactId, number>>;
+        /**
+         * The ledger's view of every row it knows about, both sides. Writes
+         * reportedAmount always; moves declaredAmount and status only under
+         * the rules documented on the reducer case.
+         */
+        facts: Partial<Record<FactId, UpstreamFact>>;
         /**
          * Asset-class metadata for the capital-gains row. Travels with the
          * amount, or a s.112A gain would be re-taxed at slab here and the
          * liability shown to the citizen would be wrong.
          */
         capitalGainsMeta?: CapitalGainsMeta;
-        /** Ids the main journey has already had confirmed. */
-        confirmedIds: string[];
+        /** ISO timestamp of acceptance, once the ledger records one. */
+        filedAt?: string;
       };
     };
 
@@ -309,6 +414,8 @@ export const INITIAL_STATE: TaxReturnState = {
   revisedReturnStaged: false,
   ingestedDocuments: [],
   defectNoticeOpen: false,
+  filedAt: undefined,
+  hydrated: false,
 };
 
 /* ---------------------------------------------------------------- reducer -- */
@@ -336,6 +443,20 @@ function withFact(
   return { ...state.facts, [factId]: { ...state.facts[factId], ...patch } };
 }
 
+/**
+ * The CBDT code a correction implies when the ledger did not record one — the
+ * main journey's older corrections, and its self-declared edits, carry only a
+ * reason string. Zero is a denial; anything else is a disputed figure.
+ */
+export function inferFeedbackCode(declared: number, reason?: string): AISFeedbackCode {
+  const text = (reason ?? "").toLowerCase();
+  if (/joint|split|other pan|wrong pan|another pan/.test(text)) return "CODE_4";
+  if (/duplicate|not my income|fraud|denied|never received/.test(text)) return "CODE_5";
+  if (/exempt|not taxable/.test(text)) return "CODE_2";
+  if (declared === 0) return "CODE_5";
+  return "CODE_3";
+}
+
 export function taxReducer(state: TaxReturnState, action: TaxAction): TaxReturnState {
   switch (action.type) {
     /**
@@ -354,6 +475,7 @@ export function taxReducer(state: TaxReturnState, action: TaxAction): TaxReturnS
           feedbackCode: "CODE_1",
           declaredAmount: fact.reportedAmount,
           disputeReason: undefined,
+          origin: undefined,
         }),
       };
     }
@@ -371,6 +493,7 @@ export function taxReducer(state: TaxReturnState, action: TaxAction): TaxReturnS
           feedbackCode: action.feedbackCode,
           disputeReason: action.disputeReason,
           supersededAmount: undefined,
+          origin: undefined,
         }),
       };
     }
@@ -388,6 +511,7 @@ export function taxReducer(state: TaxReturnState, action: TaxAction): TaxReturnS
           feedbackCode: undefined,
           disputeReason: undefined,
           supersededAmount: undefined,
+          origin: undefined,
         }),
       };
     }
@@ -397,7 +521,10 @@ export function taxReducer(state: TaxReturnState, action: TaxAction): TaxReturnS
       return {
         ...state,
         history: pushHistory(state),
-        facts: withFact(state, action.factId, { hasAttachment: action.hasAttachment }),
+        facts: withFact(state, action.factId, {
+          hasAttachment: action.hasAttachment,
+          attachmentName: action.hasAttachment ? action.attachmentName : undefined,
+        }),
       };
     }
 
@@ -495,6 +622,7 @@ export function taxReducer(state: TaxReturnState, action: TaxAction): TaxReturnS
             declaredAmount: fact.reportedAmount,
             status: "CONFIRMED",
             feedbackCode: "CODE_1",
+            origin: undefined,
           },
         };
       }
@@ -508,43 +636,117 @@ export function taxReducer(state: TaxReturnState, action: TaxAction): TaxReturnS
       };
     }
 
+    /** The moment the return was accepted. Stamped on the ITR-V. */
+    case "MARK_FILED":
+      return { ...state, filedAt: action.filedAt };
+
     /**
-     * Prefill from the main journey.
+     * Persisted state read back after mount. Facts are merged row by row over
+     * the initial table so a row added to the schema after the save still
+     * exists; anything the saved shape lacks keeps its initial value.
+     */
+    case "HYDRATE": {
+      if (!action.payload) return { ...state, hydrated: true };
+      const saved = action.payload;
+      const facts = { ...state.facts };
+      for (const id of FACT_IDS) {
+        const row = saved.facts?.[id];
+        if (row) facts[id] = { ...state.facts[id], ...row, id };
+      }
+      return {
+        ...state,
+        ...saved,
+        facts,
+        history: [],
+        hydrated: true,
+      };
+    }
+
+    /** Sign-out. Nothing of the previous citizen may survive on this surface. */
+    case "RESET":
+      return { ...INITIAL_STATE, facts: initialFacts(), hydrated: true };
+
+    /**
+     * Prefill from the main journey's ledger, both sides of every row.
      *
-     * THE FIX. `reportedAmount` is refreshed unconditionally — that is upstream's
-     * to own. `declaredAmount` moves ONLY while the row is still PENDING. A
-     * CONFIRMED or DISPUTED figure is the citizen's answer and is never
-     * overwritten, which is what the old code did on every persona/regime change.
+     * `reportedAmount` is refreshed unconditionally — that is the ledger's
+     * baseline and upstream's to own. What happens to the citizen's side
+     * depends on what the ledger says about the row:
      *
-     * Confirmations arriving from the main journey are additive: a row confirmed
-     * there becomes CONFIRMED here. A row NOT in `confirmedIds` is left alone
-     * rather than demoted, because the old demotion silently discarded a
-     * confirmation the citizen made on this very screen.
+     *   - ledger holds an active correction → DISPUTED at the ledger's
+     *     figure, with its code and reason. Marked `origin: "upstream"`.
+     *   - ledger has the row confirmed → CONFIRMED at the reported figure.
+     *     Marked `origin: "upstream"`.
+     *   - ledger says nothing → a row this surface answered keeps its answer;
+     *     a row the ledger answered earlier (`origin: "upstream"`) goes back
+     *     to PENDING, because the ledger has withdrawn that answer; a PENDING
+     *     row simply follows the reported figure.
+     *
+     * The old rule — never overwrite a CONFIRMED or DISPUTED figure — still
+     * holds for anything answered here. It is the ledger's OWN answers that
+     * now travel, which is what the ITR-V, the radar and the s.139(9) card
+     * were missing.
      */
     case "SYNC_STATE": {
       const { payload } = action;
       let facts = state.facts;
-      for (const [key, amount] of Object.entries(payload.facts)) {
+      for (const [key, up] of Object.entries(payload.facts)) {
         const factId = key as FactId;
         const fact = facts[factId];
-        if (!fact || amount === undefined || !Number.isFinite(amount)) continue;
-        const isPending = fact.status === "PENDING";
-        const confirmedUpstream = payload.confirmedIds.includes(factId);
-        facts = {
-          ...facts,
-          [factId]: {
+        if (!fact || !up) continue;
+        if (!Number.isFinite(up.reported) || !Number.isFinite(up.declared)) continue;
+
+        const reportedAmount = Math.max(0, Math.round(up.reported));
+        const capitalGains =
+          factId === "capital_gains" && payload.capitalGainsMeta
+            ? payload.capitalGainsMeta
+            : fact.capitalGains;
+
+        let next: TaxFact;
+        if (up.disputed) {
+          const code =
+            up.feedbackCode && isAISFeedbackCode(up.feedbackCode)
+              ? up.feedbackCode
+              : inferFeedbackCode(up.declared, up.disputeReason);
+          next = {
             ...fact,
-            reportedAmount: amount,
-            declaredAmount: isPending ? amount : fact.declaredAmount,
-            status: confirmedUpstream && isPending ? "CONFIRMED" : fact.status,
-            feedbackCode:
-              confirmedUpstream && isPending ? "CODE_1" : fact.feedbackCode,
-            capitalGains:
-              factId === "capital_gains" && payload.capitalGainsMeta
-                ? payload.capitalGainsMeta
-                : fact.capitalGains,
-          },
-        };
+            reportedAmount,
+            declaredAmount: Math.max(0, Math.round(up.declared)),
+            status: "DISPUTED",
+            feedbackCode: code,
+            disputeReason: up.disputeReason,
+            supersededAmount: undefined,
+            origin: "upstream",
+            capitalGains,
+          };
+        } else if (up.confirmed) {
+          next = {
+            ...fact,
+            reportedAmount,
+            declaredAmount: reportedAmount,
+            status: "CONFIRMED",
+            feedbackCode: "CODE_1",
+            disputeReason: undefined,
+            supersededAmount: undefined,
+            origin: "upstream",
+            capitalGains,
+          };
+        } else if (fact.origin === "upstream" || fact.status === "PENDING") {
+          next = {
+            ...fact,
+            reportedAmount,
+            declaredAmount: reportedAmount,
+            status: "PENDING",
+            feedbackCode: undefined,
+            disputeReason: undefined,
+            supersededAmount: undefined,
+            origin: undefined,
+            capitalGains,
+          };
+        } else {
+          next = { ...fact, reportedAmount, capitalGains };
+        }
+        facts = { ...facts, [factId]: next };
       }
       return {
         ...state,
@@ -554,6 +756,7 @@ export function taxReducer(state: TaxReturnState, action: TaxAction): TaxReturnS
         age: payload.age ?? state.age,
         filingStatus: payload.filingStatus ?? state.filingStatus,
         selectedRegime: payload.regime,
+        filedAt: payload.filedAt ?? state.filedAt,
         facts,
       };
     }
@@ -561,6 +764,67 @@ export function taxReducer(state: TaxReturnState, action: TaxAction): TaxReturnS
     default:
       return state;
   }
+}
+
+/* ------------------------------------------------------------ persistence -- */
+
+/** The slice worth keeping across a reload, in a versioned envelope. */
+export function serializeForStorage(state: TaxReturnState): string {
+  const slice: PersistedTaxReturn = {
+    pan: state.pan,
+    name: state.name,
+    filingStatus: state.filingStatus,
+    isSalaried: state.isSalaried,
+    age: state.age,
+    selectedRegime: state.selectedRegime,
+    facts: state.facts,
+    selfAssessmentPayments: state.selfAssessmentPayments,
+    filingSection: state.filingSection,
+    revisedReturnStaged: state.revisedReturnStaged,
+    ingestedDocuments: state.ingestedDocuments,
+    defectNoticeOpen: state.defectNoticeOpen,
+    filedAt: state.filedAt,
+  };
+  return JSON.stringify({ version: PERSIST_VERSION, state: slice });
+}
+
+/**
+ * Read a saved envelope back. Anything unparseable, from another version, or
+ * missing the fact table is treated as "nothing saved" — a corrupt draft must
+ * never throw on the way in, and must never half-apply.
+ */
+export function parsePersisted(raw: string | null): PersistedTaxReturn | null {
+  if (!raw) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== "object" || parsed === null) return null;
+  const envelope = parsed as { version?: unknown; state?: unknown };
+  if (envelope.version !== PERSIST_VERSION) return null;
+  const s = envelope.state as Partial<PersistedTaxReturn> | undefined;
+  if (!s || typeof s !== "object" || typeof s.facts !== "object" || s.facts === null) {
+    return null;
+  }
+  return {
+    pan: typeof s.pan === "string" ? s.pan : INITIAL_STATE.pan,
+    name: typeof s.name === "string" ? s.name : INITIAL_STATE.name,
+    filingStatus: s.filingStatus === "HUF" ? "HUF" : "INDIVIDUAL",
+    isSalaried: typeof s.isSalaried === "boolean" ? s.isSalaried : INITIAL_STATE.isSalaried,
+    age: typeof s.age === "number" ? s.age : INITIAL_STATE.age,
+    selectedRegime: s.selectedRegime === "OLD" ? "OLD" : "NEW",
+    facts: s.facts,
+    selfAssessmentPayments: Array.isArray(s.selfAssessmentPayments)
+      ? s.selfAssessmentPayments
+      : [],
+    filingSection: s.filingSection === "139(5)" ? "139(5)" : "139(1)",
+    revisedReturnStaged: s.revisedReturnStaged === true,
+    ingestedDocuments: Array.isArray(s.ingestedDocuments) ? s.ingestedDocuments : [],
+    defectNoticeOpen: s.defectNoticeOpen === true,
+    filedAt: typeof s.filedAt === "string" ? s.filedAt : undefined,
+  };
 }
 
 /* ------------------------------------------------------------- derivation -- */
@@ -653,6 +917,7 @@ export function deriveTaxReturn(state: TaxReturnState): TaxDerived {
       reportedAmount: f.reportedAmount,
       declaredAmount: f.declaredAmount,
       hasAttachment: f.hasAttachment,
+      attachmentName: f.attachmentName,
       reportedBy: f.reportedBy,
     })),
   );
@@ -702,8 +967,37 @@ export interface TaxContextValue extends TaxDerived {
 
 const TaxContext = createContext<TaxContextValue | null>(null);
 
+function readStorage(): PersistedTaxReturn | null {
+  try {
+    return parsePersisted(window.localStorage.getItem(PERSIST_STORAGE_KEY));
+  } catch {
+    return null;
+  }
+}
+
+function writeStorage(state: TaxReturnState): void {
+  try {
+    window.localStorage.setItem(PERSIST_STORAGE_KEY, serializeForStorage(state));
+  } catch {
+    /* quota or privacy mode — the in-memory state is still authoritative */
+  }
+}
+
 export const TaxProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, dispatch] = useReducer(taxReducer, INITIAL_STATE);
+
+  // Read the saved slice back once, after mount. Not in the reducer's
+  // initialiser: the server rendered INITIAL_STATE, and a client that started
+  // from storage would disagree with it at hydration.
+  useEffect(() => {
+    dispatch({ type: "HYDRATE", payload: readStorage() });
+  }, []);
+
+  // Save every committed state after hydration. Before it, the state is the
+  // synthetic prefill and writing it would overwrite the citizen's saved draft.
+  useEffect(() => {
+    if (state.hydrated) writeStorage(state);
+  }, [state]);
 
   // One memo, one recomputation per dispatch. Keyed on the whole state object:
   // the reducer is strictly immutable, so a new reference means something moved.
