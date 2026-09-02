@@ -89,6 +89,7 @@ production pod sizing, or national-scale readiness.
 
 ## Evidence and design notes
 
+- [Project context](docs/CONTEXT.md) — the one-stop brief for anyone (or any agent) joining the repo: architecture, state models, engine rules, personas, verification.
 - [Capacity model](docs/scale/capacity-model.md) — published workload inputs and labeled assumptions.
 - [Rule-source audit](docs/scale/rules-audit.md) — current primary-source mapping for modeled AY 2026–27 values and explicit scope gaps.
 - [Architecture case](docs/scale/architecture-case.md) — evidence-led adoption case and limitations.

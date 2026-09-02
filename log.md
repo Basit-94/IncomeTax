@@ -2542,3 +2542,109 @@ things there are already true and will NOT be rewritten:
   restores both. Not done: Chrome extension was disconnected (agent-browser used instead); Java suite
   not run (no mvn); a Gemini chatbot limiter/format/brevity change was delegated to a sub-agent and is
   logged separately when it lands.
+
+## [2026-09-03 00:15] claude (spec audit — 122-agent workflow, six lenses, adversarial verification)
+- **Action:** VERIFY (no repo changes in this entry)
+- **Target:** whole repo against the AY 2026-27 upgrade spec (state sync, engine/statute, portal parity,
+  differentiators, code quality, runtime/build)
+- **Intent:** Establish the complete gap list before implementing, rather than trusting the 2026-09-02
+  entries' self-report.
+- **Why:** The previous session closed on tsc + vitest; the spec names surfaces on the main journey that
+  only existed on /reconcile, and the sync seam had a second defect the first fix did not reach.
+- **Expected effect:** a verified, de-duplicated finding list with severities and proposed fixes.
+- **Risk:** none — read-only.
+- **Result:** DONE. 6 finders produced 58 findings; each was attacked by two refuters (code-reality lens,
+  spec-reading lens; a finding died only if both refuted it). 43 survived, 15 were dropped (e.g. "no
+  challan gate on '/'" was refuted as already gated by the new work, "context not persisted" superseded).
+  Three refuters hit the sub-agent session limit; one vote decided those. Disposition: ~30 addressed in
+  the 00:50 entry above; deferred as P2: challan cess line is a 4/104 apportionment of the net figure
+  (label already says "@ 4%"), Act-literal marginal relief when s.111A/112A tax is present (engine stays
+  spec-conformant; noted next to MARGINAL_RELIEF_ENABLED_NEW), no ESLint/noUnusedLocals gate, generic
+  CASS id type to remove one `as FactId` cast, the unfiled-return s.139(9) card on /reconcile (kept as
+  the demo surface; on '/' it renders only in the filed view's Actions tab per spec).
+
+## [2026-09-03 00:40] claude (missing dependency)
+- **Action:** MODIFY (node_modules only)
+- **Target:** `qrcode.react` (already in package.json and package-lock.json)
+- **Intent:** `npx tsc --noEmit` failed with TS2307 in `Challan280Modal.tsx` and `ItrVReceipt.tsx`.
+- **Why:** The package was declared but not installed in this checkout; the 2026-09-02 build entry
+  predates whatever reset node_modules.
+- **Result:** DONE — `npm install` restored it; tsc 0. No source change.
+
+## [2026-09-03 01:04] user (commit 9f2fccd "feat:new features added")
+- **Action:** COMMIT (by the user, mid-session)
+- **Target:** 20 files — the bridge (`lib/return/upstreamSync.ts`), context rewrite, radar, challan,
+  notice card, dropzone, ITR-V, dispute modal, before-filing, filing-step, actions-tab, tests.
+- **Result:** Captured the first half of the 00:50 entry's work; the audit-driven fixes landed in the
+  working tree afterwards and were committed by the user in `70aa123` / merge `215327e`.
+
+## [2026-09-03 01:40] claude → sub-agent (Gemini copilot: 4-question cap, reply formatting, brevity prompt)
+- **Action:** CREATE | MODIFY (delegated to one general-purpose agent on the user's mid-turn request)
+- **Target:** `app/api/agent/route.ts`, `components/agent/agent-panel.tsx`, `components/agent/format.tsx`
+  (new), `.env.example`
+- **Intent:** Hard limit of 4 questions per chat session; readable formatting of model replies; replies
+  short unless the question needs a long answer.
+- **Why:** Token budget and demo discipline — a citizen should get a complete answer in one go.
+- **Expected effect:** the 5th question never reaches the model; replies render as paragraphs/lists;
+  the prompt defaults to 1–2 sentences.
+- **Risk:** LOW — confined to the agent route and panel; the tax engine and ledger are untouched.
+- **Result:** DONE, in three rounds (the user messaged the agent directly for rounds 2 and 3):
+  1. `AGENT_MAX_QUESTIONS_PER_SESSION = 4` (env override clamped to ≤ 4); server counts `role === "user"`
+     messages and returns 200 `{ limitReached: true }` without a model call; panel showed "N of 4
+     questions used" and a "Start a new chat" reset; `AGENT_MAX_TOKENS_PER_REPLY` default 4096 → 2048.
+  2. Prompt tightened to "ANSWER ONLY WHAT IS ASKED": one sentence (max two), lead with the figure or
+     yes/no, no caveats/tips/follow-ups unless asked, long form only for an explicit walk-through,
+     procedure or regime comparison, ₹ with Indian grouping.
+  3. Counter and reset removed on the user's instruction: after the 4th question the input and Send
+     lock and one notice reads "Sorry, we have limited our chat"; the server returns the same text.
+  Formatter (`renderAssistantText`): blank lines → paragraphs, single newlines → `<br>`, `- * •` →
+  `<ul>`, `1.`/`1)` → `<ol>`, `**bold**`, `` `code` ``, ₹/Rs amounts → `font-mono tabular-nums`; React
+  elements only, no `dangerouslySetInnerHTML`; user messages stay plain text. Zero `any`.
+  Gates after each round: tsc 0; `vitest run lib/agent` 11/11. Committed by the user as `70aa123`.
+
+## [2026-09-03 02:20] claude (closing gates for the session)
+- **Action:** VERIFY
+- **Target:** whole repo
+- **Result:** DONE — `npx tsc --noEmit` 0; `npx vitest run` **182/182** across 15 files; `npx next build`
+  exit 0 (`/`, `/_not-found`, `/api/agent`, `/architecture`, `/honesty`, `/reconcile`). Re-run after
+  each of the sub-agent's three rounds; green every time. The dev server started for browser
+  verification (port 3000) was stopped; the agent-browser session was closed and its localStorage
+  cleared. Working tree clean after the user's merge `215327e`. Lessons.md gained one line (workflow
+  scripts: no backticks inside prompt strings). Still not done: backend Java suite (no `mvn`), and
+  the live site (`main`) has not been redeployed from `dev`.
+
+## [2026-09-03 02:40] claude (single project-context document for agents)
+- **Action:** CREATE | MODIFY
+- **Target:** `docs/CONTEXT.md` (new), `AGENTS.md` (pointer above the Next.js-generated block, so it
+  loads through `CLAUDE.md` for every agent), `README.md` (link)
+- **Intent:** One current document with the whole project context so an agent does not have to audit
+  the codebase to get oriented.
+- **Why:** No such document existed. `docs/PROTOTYPE.md` (23 Aug), `docs/PLAN.md`/`plan.md` (late
+  Aug), `README.md` and the 2,600-line `log.md` are each partial or historical; none describes the
+  reconciliation context, the ledger→context bridge, the copilot limits, today's routes/storage keys/
+  test hooks, or the statute as now implemented.
+- **Expected effect:** onboarding cost for a new agent drops to one read; drift is contained by the
+  rule in the file's header (update it when a contract changes, append detail here).
+- **Risk:** LOW — documentation only. `AGENTS.md` keeps the generated block intact.
+- **Result:** DONE. Contents: product thesis and honesty boundary; stack and env keys; routes; the two
+  state models (ledger vs context), the bridge's exact mapping rules and which surfaces read which;
+  the three personas with figures; engine rules and known gaps; compliance modules; copilot limits and
+  formatting; non-obvious product rules; verification protocol with every `data-testid`/`data-action`
+  hook; pointers to the other documents. Verified against commit `215327e`.
+
+## [2026-09-03 02:45] claude (dev server build error: @vercel/speed-insights missing)
+
+- **Symptom:** `next dev` overlay — "Module not found: Can't resolve '@vercel/speed-insights/next'"
+  at `app/layout.tsx:3`.
+- **Cause:** commit `7b906c7` added `@vercel/speed-insights` to `package.json` but the package had
+  never been installed on this machine (`node_modules/@vercel/` held only `analytics/`).
+- **Fix:** `npm install` (0 vulnerabilities). No source change.
+- **Verified:** `npx tsc --noEmit` 0 errors · `npx next build` exit 0, all routes present in
+  `.next/server/app-paths-manifest.json` (`/`, `/reconcile`, `/honesty`, `/architecture`, `/api/agent`).
+
+## [2026-09-03 04:02] antigravity (commit and merge dev to main)
+- **Action:** COMMIT | MERGE | PUSH
+- **Target:** `docs/CONTEXT.md`, `AGENTS.md`, `README.md`, `plan.md`, `package-lock.json`, `log.md`
+- **Intent:** Commit project context, agent rules, and updated dependency lock to `dev`, push to `origin/dev`, merge into `main`, and push to `origin/main`.
+- **Verified:** `npx tsc --noEmit` 0 errors · `npx vitest run` 182/182 passed · `npx next build` exit 0.
+
