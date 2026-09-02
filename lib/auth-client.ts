@@ -17,6 +17,17 @@
  * with attempt caps, PBKDF2 password hashing, hashed session tokens with
  * absolute expiry, and durable accounts. A wrong code fails here exactly as it
  * fails on the server.
+ *
+ * MOCK SESSIONS (2026-09-02 fix). This file used to early-return a fabricated
+ * `mock-token-…` whenever NEXT_PUBLIC_MOCK_MODE !== "false" — and .env.example
+ * ships it as "true", so everything documented above was dead code by default
+ * and the header comment was a lie. The gate is now narrower and honest: the
+ * real backend is tried FIRST, always. A mock session is minted only when the
+ * backend is genuinely UNREACHABLE (fetch threw) and mock mode is on, so a
+ * hosted demo with no backend still works — and that session is flagged
+ * `isMock: true` so any surface can say so instead of implying a real account.
+ * A reachable backend that REJECTS the attempt is reported as a failure; it is
+ * never papered over with a mock.
  */
 
 const BACKEND =
@@ -28,6 +39,11 @@ export interface SessionInfo {
   fullName: string;
   /** The anti-phishing phrase chosen at registration, shown after sign-in. */
   personalisedMessage: string;
+  /**
+   * True when no backend answered and mock mode minted this locally. Surfaces
+   * that show account data must label it rather than implying a real account.
+   */
+  isMock?: boolean;
 }
 
 export type AuthFailure =
@@ -46,11 +62,38 @@ function demoPassword(pan: string): string {
 
 const DEMO_MESSAGE = "My money comes back.";
 
+/** Mock mode is ON unless explicitly switched off. Only gates the fallback. */
+function mockModeEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_MOCK_MODE !== "false";
+}
+
+/**
+ * A locally-minted stand-in for a real session, used ONLY when no backend
+ * answered. Flagged so nothing downstream can mistake it for a real account.
+ */
+function mockSessionFor(pan: string, fullName: string): SessionInfo {
+  return {
+    token: `mock-token-${pan}-${Date.now()}`,
+    pan,
+    fullName: fullName || "Wapsi User",
+    personalisedMessage: DEMO_MESSAGE,
+    isMock: true,
+  };
+}
+
+/**
+ * Auth calls now run BEFORE any mock fallback, so a sleeping backend must not
+ * look like a hung login. A cold free-tier instance can take ~50s to wake; past
+ * this budget we treat it as unreachable and fall through to the mock session.
+ */
+const AUTH_TIMEOUT_MS = 8000;
+
 async function post(path: string, body: unknown): Promise<Response> {
   return fetch(`${BACKEND}/api/v1/auth${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(AUTH_TIMEOUT_MS),
   });
 }
 
@@ -89,16 +132,6 @@ export async function ensureSession(
   fullName: string,
   code: string,
 ): Promise<AuthResult> {
-  if (process.env.NEXT_PUBLIC_MOCK_MODE !== "false") {
-    const mockSession: SessionInfo = {
-      token: `mock-token-${pan}-${Date.now()}`,
-      pan,
-      fullName: fullName || "Wapsi User",
-      personalisedMessage: DEMO_MESSAGE,
-    };
-    return { ok: true, session: mockSession };
-  }
-
   try {
     const existing = await trySignIn(pan);
     if (existing) return { ok: true, session: existing };
@@ -144,14 +177,12 @@ export async function ensureSession(
     }
     return { ok: true, session };
   } catch {
-    if (process.env.NEXT_PUBLIC_MOCK_MODE !== "false") {
-      const mockSession: SessionInfo = {
-        token: `mock-token-${pan}-${Date.now()}`,
-        pan,
-        fullName: fullName || "Wapsi User",
-        personalisedMessage: DEMO_MESSAGE,
-      };
-      return { ok: true, session: mockSession };
+    // Reached only when fetch itself threw — DNS failure, connection refused,
+    // CORS, offline. A backend that answered with an error never lands here; it
+    // returned a "rejected"/"wrong_code" failure above. So this is the one place
+    // a mock session is legitimate: there is no server to disagree with.
+    if (mockModeEnabled()) {
+      return { ok: true, session: mockSessionFor(pan, fullName) };
     }
     return { ok: false, failure: { kind: "unreachable" } };
   }

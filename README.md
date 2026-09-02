@@ -13,8 +13,12 @@ This repository contains two deliberately separate parts:
 - An additive Spring Boot / Java 21 engineering boundary under `backend/`.
   It demonstrates exact-paise money, versioned rules, an append-only
   PostgreSQL ledger adapter, and an asynchronous idempotent submission API.
-  The Next.js UI does not call this backend, and the backend does not submit a
-  real return.
+  The Next.js UI **does** call this backend where one is reachable — it signs in
+  against `/api/v1/auth/*` (`lib/auth-client.ts`), reads filing history, and
+  POSTs `/api/v1/returns/submit` before the UI ever says "filed"
+  (`app/page.tsx`). With no backend running, sign-in falls back to a session
+  flagged `isMock: true` and the demo continues locally. Either way the backend
+  does not submit a real return to any official system.
 
 ## Run the frontend
 
