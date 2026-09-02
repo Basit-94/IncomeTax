@@ -18,11 +18,24 @@ import type { Dict } from "../../lib/i18n";
 import type { Lang, Persona } from "../../lib/types";
 import { formatMoney } from "../../lib/money";
 import { MockFill } from "../dev/mock-fill";
+import { renderAssistantText } from "./format";
+
+/** Mirrors AGENT_MAX_QUESTIONS_PER_SESSION in app/api/agent/route.ts — the server is authoritative. */
+const MAX_QUESTIONS_PER_SESSION = 4;
 
 interface AgentMessage {
   role: "user" | "model";
   text: string;
   tools?: string[];
+}
+
+interface AgentResponse {
+  reply?: string;
+  error?: string;
+  toolEvents?: { tool: string }[];
+  clientActions?: ClientAction[];
+  /** Set by the route when the session's question cap is hit; the model was not called. */
+  limitReached?: boolean;
 }
 
 interface FilingSummary {
@@ -71,12 +84,17 @@ export default function AgentPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingFiling, setPendingFiling] = useState<FilingSummary | null>(null);
+  const [limitReached, setLimitReached] = useState(false);
   const [sessionId] = useState(() =>
     typeof crypto !== "undefined" && "randomUUID" in crypto
       ? crypto.randomUUID().replace(/-/g, "").slice(0, 24)
       : `s${Date.now()}`,
   );
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // No reset path on purpose: the site is public and the cap protects the API key.
+  const questionsUsed = messages.filter((m) => m.role === "user").length;
+  const atLimit = limitReached || questionsUsed >= MAX_QUESTIONS_PER_SESSION;
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -112,7 +130,7 @@ export default function AgentPanel({
 
   const send = async (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed || busy) return;
+    if (!trimmed || busy || atLimit) return;
     setError(null);
     setInput("");
     const nextMessages: AgentMessage[] = [...messages, { role: "user", text: trimmed }];
@@ -141,14 +159,15 @@ export default function AgentPanel({
           },
         }),
       });
-      const data = await res.json();
+      const data: AgentResponse = await res.json();
       if (!res.ok || data.error) {
         setError(t.agent.error);
         setMessages(nextMessages); // keep the user's message so retry is one click of Send
         return;
       }
-      const tools = (data.toolEvents ?? []).map((e: { tool: string }) => e.tool);
+      const tools = (data.toolEvents ?? []).map((e) => e.tool);
       setMessages([...nextMessages, { role: "model", text: data.reply || "", tools }]);
+      if (data.limitReached) setLimitReached(true);
       runClientActions(data.clientActions ?? []);
     } catch {
       setError(t.agent.error);
@@ -205,7 +224,11 @@ export default function AgentPanel({
                   : "max-w-[85%] rounded-2xl rounded-bl-sm bg-paper-2 border border-line text-ink text-sm px-3.5 py-2.5"
               }
             >
-              <div className="whitespace-pre-wrap leading-relaxed">{m.text}</div>
+              {m.role === "user" ? (
+                <div className="whitespace-pre-wrap leading-relaxed">{m.text}</div>
+              ) : (
+                renderAssistantText(m.text)
+              )}
               {m.tools && m.tools.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {m.tools.map((tool, j) => (
@@ -287,17 +310,23 @@ export default function AgentPanel({
         }}
       >
         <MockFill onFill={() => setInput(t.agent.sample)} className="-top-6 right-2" />
+        {atLimit && (
+          <p className="mb-1.5 text-xs text-ink-2 bg-paper-2 border border-line rounded-lg px-3 py-2">
+            Sorry, we have limited our chat
+          </p>
+        )}
         <div className="flex items-center gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={t.agent.placeholder}
-            className="flex-1 rounded-xl border border-line bg-paper-2 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-navy/40"
+            disabled={atLimit}
+            className="flex-1 rounded-xl border border-line bg-paper-2 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-navy/40 disabled:opacity-50"
           />
           <button
             type="submit"
-            disabled={busy || !input.trim()}
+            disabled={busy || atLimit || !input.trim()}
             aria-label={t.agent.send}
             className="rounded-xl bg-navy text-white p-2.5 disabled:opacity-40"
           >

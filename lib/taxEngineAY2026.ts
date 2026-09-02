@@ -70,6 +70,20 @@ export interface TaxEngineInput {
    * citizen, not a deductor, paid it.
    */
   selfAssessmentPaid?: number;
+  /**
+   * Chapter VI-A claims the reconciliation surface has no row for (80GG,
+   * 80E, 80TTA, 24(b), parents' 80D ...). Forwarded to the engine with their
+   * own sections so each keeps its statutory cap under the old regime.
+   */
+  additionalClaims?: AdditionalClaim[];
+}
+
+/** A claim passed through by section, untouched. */
+export interface AdditionalClaim {
+  id: string;
+  section: string;
+  label: string;
+  amount: number;
 }
 
 export interface RegimeResult {
@@ -81,6 +95,8 @@ export interface RegimeResult {
   slabTax: number;
   /** Tax on classified capital gains at s.111A / s.112A / s.112 rates. */
   specialRateTax: number;
+  /** The s.112A slice within total income that attracts no tax. */
+  specialExemptAmount: number;
   /** slabTax + specialRateTax. */
   taxBeforeRebate: number;
   rebate87A: number;
@@ -157,6 +173,16 @@ function calculateForRegime(input: TaxEngineInput, regime: "new" | "old"): Regim
       label: "Section 80CCD(2) — employer NPS",
     });
   }
+  for (const claim of input.additionalClaims ?? []) {
+    if (claim.amount <= 0) continue;
+    claims.push({
+      id: claim.id,
+      section: claim.section,
+      amount: claim.amount,
+      evidenceAttached: true,
+      label: claim.label,
+    });
+  }
 
   const ageBand = input.age >= 80 ? "above_80" : input.age >= 60 ? "60_to_80" : "below_60";
 
@@ -188,6 +214,7 @@ function calculateForRegime(input: TaxEngineInput, regime: "new" | "old"): Regim
     taxableIncome: breakdown.taxableIncome,
     slabTax: breakdown.slabTax,
     specialRateTax,
+    specialExemptAmount: breakdown.specialExemptTotal,
     taxBeforeRebate: breakdown.taxBeforeRebate,
     rebate87A: isRelief ? 0 : breakdown.rebate87A,
     marginalRelief: isRelief ? breakdown.rebate87A : 0,

@@ -263,7 +263,7 @@ export default function DisputeModal({
                 )}
 
                 {/* Plain-Language Advisory advisory mismatch card */}
-                {parsedAmount < reportedAmount && (
+                {disputeAmount.trim() !== "" && parsedAmount < reportedAmount && (
                   <div className="bg-warn-soft/40 border border-warn/30 p-4 rounded-xl space-y-2">
                     <span className="text-xs font-bold text-warn uppercase tracking-wider flex items-center gap-1.5">
                       <AlertTriangle size={14} />

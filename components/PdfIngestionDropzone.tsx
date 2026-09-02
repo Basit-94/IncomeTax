@@ -19,7 +19,11 @@ import { m, AnimatePresence } from "motion/react";
 import { CheckCircle2, FileUp, Loader2, Lock, XCircle } from "lucide-react";
 import { useTax } from "../context/TaxReturnContext";
 import type { IngestedDocument } from "../context/TaxReturnContext";
-import { extractFieldsFromPdfBytes, isEmptyExtraction } from "../lib/compliance/pdfExtract";
+import {
+  detectDocumentKind,
+  extractFieldsFromPdfBytes,
+  isEmptyExtraction,
+} from "../lib/compliance/pdfExtract";
 import { Rupees } from "./Rupees";
 
 export type { ExtractedFields } from "../lib/compliance/pdfExtract";
@@ -52,7 +56,9 @@ export function PdfIngestionDropzone({ onIngested }: PdfIngestionDropzoneProps =
       setErrorText("");
       try {
         const buffer = await file.arrayBuffer();
-        const extracted = extractFieldsFromPdfBytes(new Uint8Array(buffer));
+        const bytes = new Uint8Array(buffer);
+        const extracted = extractFieldsFromPdfBytes(bytes);
+        const kind = detectDocumentKind(bytes, file.name);
 
         // A visible parse beat. Instant completion on a document upload reads as
         // "nothing happened" and people re-drop the same file.
@@ -67,7 +73,7 @@ export function PdfIngestionDropzone({ onIngested }: PdfIngestionDropzoneProps =
 
         const document: IngestedDocument = {
           fileName: file.name,
-          kind: /ais/i.test(file.name) ? "AIS" : "FORM_16",
+          kind,
           ingestedAt: new Date().toISOString(),
           extracted,
         };
@@ -123,24 +129,20 @@ export function PdfIngestionDropzone({ onIngested }: PdfIngestionDropzoneProps =
           }}
         />
 
-        <AnimatePresence mode="wait">
-          {phase === "reading" ? (
-            <m.div
+        {/* A plain conditional, like the rest of the surface: the caption must
+            never wait on an exit animation to finish. */}
+        {phase === "reading" ? (
+            <div
               key="reading"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
               className="flex flex-col items-center gap-2 py-2"
+              role="status"
             >
               <Loader2 size={24} className="animate-spin text-teal-700" />
               <p className="text-sm font-semibold text-slate-700">Reading your document…</p>
-            </m.div>
+            </div>
           ) : (
-            <m.div
+            <div
               key="idle"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
               className="flex flex-col items-center gap-2 py-2"
             >
               <FileUp size={24} className="text-slate-400" />
@@ -153,9 +155,8 @@ export function PdfIngestionDropzone({ onIngested }: PdfIngestionDropzoneProps =
               <p className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
                 <Lock size={11} /> Read in your browser. The file is never uploaded.
               </p>
-            </m.div>
+            </div>
           )}
-        </AnimatePresence>
       </m.div>
 
       <AnimatePresence>
@@ -171,7 +172,10 @@ export function PdfIngestionDropzone({ onIngested }: PdfIngestionDropzoneProps =
             role="status"
           >
             <p className="flex items-center gap-2 text-sm font-extrabold text-emerald-900">
-              <CheckCircle2 size={15} /> AIS data successfully ingested
+              <CheckCircle2 size={15} />{" "}
+              {result.kind === "AIS"
+                ? "AIS Data Successfully Ingested"
+                : "Form 16 Data Successfully Ingested"}
             </p>
             <ul className="mt-2 space-y-1 text-xs text-emerald-900">
               {result.extracted.pan && (

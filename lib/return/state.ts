@@ -119,13 +119,22 @@ export function effectivePersona(state: ReturnState): Persona {
   };
 }
 
-/** Append a correction and recompute the effective persona. Pure. */
+/**
+ * Append a correction and recompute the effective persona. Pure.
+ *
+ * A corrected fact is no longer a confirmed one: "yes, that's right" and "no,
+ * this is wrong" are mutually exclusive answers, so the id leaves
+ * confirmedFactIds. Without this a card confirmed and then corrected wore both
+ * badges and lost its undo, and the reconciliation surface was told the row
+ * was confirmed at a figure the citizen had just rejected.
+ */
 export function applyCorrection(state: ReturnState, correction: Correction): ReturnState {
   const entry: Correction = { ...correction, reverted: false };
   const corrections = [...state.corrections, entry];
   return {
     ...state,
     corrections,
+    confirmedFactIds: state.confirmedFactIds.filter((id) => id !== correction.factId),
     persona: effectivePersona({ ...state, corrections }),
   };
 }

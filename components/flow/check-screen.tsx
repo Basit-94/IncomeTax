@@ -215,7 +215,11 @@ export default function CheckScreen({ persona, t, lang, regime }: CheckScreenPro
         {b.rebate87A > 0 && (
           <Row
             id="rebate"
-            label={t.check.rebate87A}
+            label={
+              b.marginalReliefApplied
+                ? `${t.check.rebate87A} (${localize("marginal relief", lang)})`
+                : t.check.rebate87A
+            }
             value={`− ${formatMoney(b.rebate87A, lang)}`}
             tone="money"
             explain={t.check.explainRebate(formatMoney(b.rebate87A, lang))}

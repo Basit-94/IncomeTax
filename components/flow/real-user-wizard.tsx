@@ -7,6 +7,7 @@ import type { Dict } from "../../lib/i18n";
 import { formatMoney } from "../../lib/money";
 import { computeTax } from "../../lib/engine/tax";
 import { AnimatedAmount } from "../ui/animated-amount";
+import { Rupees } from "../Rupees";
 import { MockField, MockFill, MOCK } from "@/components/dev/mock-fill";
 
 export interface UserTaxProfile {
@@ -125,11 +126,9 @@ export default function RealUserTaxWizard({
     );
   }, [formData]);
 
-  const updateField = (field: keyof UserTaxProfile, value: any) => {
-    let cleanValue = value;
-    if (typeof value === "number") {
-      cleanValue = Math.max(0, value);
-    }
+  const updateField = <K extends keyof UserTaxProfile>(field: K, value: UserTaxProfile[K]) => {
+    const cleanValue =
+      typeof value === "number" ? (Math.max(0, value) as UserTaxProfile[K]) : value;
     setFormData((prev) => ({ ...prev, [field]: cleanValue }));
   };
 
@@ -535,7 +534,9 @@ export default function RealUserTaxWizard({
               <button
                 key={opt.id}
                 type="button"
-                onClick={() => updateField("employmentType", opt.id)}
+                onClick={() =>
+                  updateField("employmentType", opt.id as UserTaxProfile["employmentType"])
+                }
                 className={`p-4 rounded-xl border text-left transition cursor-pointer ${
                   formData.employmentType === opt.id
                     ? "border-money bg-money-soft/10 text-navy"
@@ -622,7 +623,8 @@ export default function RealUserTaxWizard({
                       <MockFill onFill={() => updateField("monthlySalaryInput", MOCK.monthlySalary)} />
                     </MockField>
                     <span className="block text-[10px] text-ink-3 mt-1">
-                      We will automatically calculate your annual salary as ₹{((Number(formData.monthlySalaryInput) || 0) * 12).toLocaleString("en-IN")}
+                      We will automatically calculate your annual salary as{" "}
+                      <Rupees value={(Number(formData.monthlySalaryInput) || 0) * 12} />
                     </span>
                   </div>
                 )}

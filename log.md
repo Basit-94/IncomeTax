@@ -2446,3 +2446,73 @@ things there are already true and will NOT be rewritten:
 - **Risk:** none.
 - **Result:** DONE — Next.js build compiled successfully in 19.0s (`/`, `/_not-found`, `/api/agent`, `/architecture`, `/honesty`, `/reconcile`); switched to `dev` branch.
 
+
+## [2026-09-03 00:50] claude (ledger→context bridge carries both sides; spec surfaces mounted in the main journey)
+- **Action:** MODIFY | CREATE | VERIFY
+- **Target:** `context/TaxReturnContext.tsx`, `lib/return/upstreamSync.ts` (new), `lib/return/state.ts`,
+  `app/page.tsx`, `components/{AuditRiskRadar,DefectiveNoticeCard,Challan280Modal,PdfIngestionDropzone,
+  ItrVReceipt,InteractiveTaxDashboard}.tsx`, `components/dashboard/{dispute-modal,actions-tab,overview-tab}.tsx`,
+  `components/flow/{before-filing,filing-step,check-screen,real-user-wizard}.tsx`, `lib/engine/{tax,types}.ts`,
+  `lib/taxEngineAY2026.ts`, `lib/compliance/{pdfExtract,cass}.ts`, `components/ui/animated-amount.tsx`,
+  `components/mock-i18n.ts`, `lib/types.ts`, tests under `context/__tests__`, `lib/return/__tests__`, `lib/__tests__`.
+- **Intent:** Close the second half of the state-sync defect. The 2026-09-02 fix stopped SYNC_STATE
+  overwriting a figure answered on /reconcile, but `app/page.tsx` still pushed the EFFECTIVE persona as
+  `reportedAmount`. A "No, this is wrong" on the facts board therefore reached the context as a new
+  department figure, not a dispute: the ITR-V in the overview tab could print the pre-correction figure
+  on a row confirmed-then-changed, and the CASS radar / s.139(9) card never fired for a main-journey
+  correction. Then mount the spec surfaces where the spec puts them: dropzone at the top of the facts
+  step, radar on facts/check/statement, s.139(9) card in the Actions tab, Challan 280 gate on the
+  check step and filing step.
+- **Why (decisions, stated so they can be argued with):**
+  - The bridge now sends BOTH sides per row — baseline persona as `reported`, effective persona as
+    `declared`, plus `disputed` (active correction, with its CBDT code and reason) and `confirmed`.
+    Pure and tested in `lib/return/upstreamSync.ts` (`buildSyncPayload`). Rows the ledger answered are
+    marked `origin: "upstream"` so a withdrawn correction returns the row to PENDING; a row answered on
+    /reconcile keeps its answer unless the ledger asserts one. The ledger wins a conflict — it is the
+    provenance-carrying record.
+  - `applyCorrection` now removes the fact from `confirmedFactIds`: "yes" and "no" are mutually
+    exclusive answers. Fixes the double-badge/no-undo card on '/'.
+  - The dispute modal emits a CBDT code (different→CODE_3, joint→CODE_4, not-mine/duplicate→CODE_5;
+    TDS wrong-PAN→CODE_4) stored on `Correction.feedbackCode`; older corrections are inferred.
+  - Claims with no context row (80GG, 80E, 80TTA, 24(b), parents' 80D) travel as `additionalClaims`
+    by section, so the context's old-regime figure — what the ITR-V prints — equals the page's. Parents'
+    80D no longer pools into the ₹25,000 self cap.
+  - Context slice is persisted (`wapsi_reconciliation`, versioned, hydrated in an effect after mount,
+    never in the initialiser — SSR renders INITIAL_STATE). `RESET` on logout; `MARK_FILED` stamps the
+    ITR-V timestamp (was a hardcoded "15:24 IST"); unfiled previews now say "Not yet submitted — preview".
+  - Challan 280 on '/': the modal takes an explicit `amount` (the page's own engine figure) and reports
+    the payment; the page mirrors it as a s.140A tax-paid row; the bridge excludes 140A from `tds_other`
+    so the credit is never counted twice. UPI expiry now disables payment. Challan ids seeded by PAN and
+    payment ordinal so equal amounts do not collide.
+  - s.139(9) auto-reconcile on '/': card dispatches to the context AND the page reverts the income
+    corrections on the short rows and confirms them, so the next sync agrees. Undo runs both undos. The
+    card's undo is offered only while the top of the undo stack is the pre-stage snapshot.
+  - Radar: real file picker (name kept, nothing uploaded), spec wording, CASS assessed over DISPUTED
+    rows only (spec), reporter names now synced from the ledger (Sunita's row said "Nimbus Systems").
+  - Engine (statute, parity-safe — 72 golden vectors still green): standard deduction u/s 16(ia) capped
+    at the salary and nil with no salary; total income carries the WHOLE s.112A gain (the ₹1.25 lakh is
+    a tax threshold, not an income exemption), so the ITR-V identity gross − 16(ia) − VI-A = total income
+    holds and the s.87A ₹12 lakh test uses the right base. Exempt slice exposed as `specialExemptAmount`.
+  - PDF: PAN read label-anchored first, bounded fallback (an unanchored match over PDF bytes could rewrite
+    the return's PAN); document kind sniffed from text; toast casing per spec; `mode="wait"` removed.
+  - Headline/dock on /reconcile use the spring counter (`AnimatedAmount`, now `tabular-nums`) so the
+    figure rolls between values instead of snapping. Zero `any` (wizard `updateField` made generic).
+- **Expected effect:** a dispute anywhere moves every surface in the same commit; the three mandatory
+  vectors hold; both models agree on the net figure; nothing the citizen said is lost.
+- **Risk:** MEDIUM — the SYNC contract changed shape (all callers updated; tsc gates it) and the
+  engine's `taxableIncome` now includes the s.112A exempt slice (only display and the 87A base change;
+  liability is identical because tax was always computed on the slice above the threshold).
+- **Result:** DONE. `npx tsc --noEmit` 0; `npx vitest run` **182/182** (156 → 182); `npx next build`
+  exit 0 (6 routes). Audited first by a 122-agent workflow (six lenses, two refuters per finding; 43
+  findings survived, ~30 addressed here; deferred as P2: challan cess apportionment label, Act-literal
+  marginal relief with special-rate tax, ESLint/noUnusedLocals gate, generic CASS id type).
+  Live in Chromium via agent-browser (dev server): /reconcile Case 3 ₹18,280 payable → ₹84,040 refund,
+  radar HIGH, CTA flip, persisted across reload; Challan 280 ₹17,577 + ₹703 = ₹18,280, BSR 7 digits,
+  serial 5, settled ₹0; s.139(9) auto-reconcile → 139(5) on the ITR-V, undo exact. '/': Sunita salary
+  corrected to ₹15,00,000 → context DISPUTED/CODE_3/reporter Chettinad; check step "Left to pay
+  ₹89,293" → pay gate → challan carries ₹89,293 → ledger 140A row + context payment, balance nil.
+  Rakesh capital gains "not my income" → CODE_5, radar HIGH on the statement tab, s.139(9) card in
+  Actions, auto-reconcile → ITR-V "139(5) — revised return", GTI ₹20,01,550 = page headline; undo
+  restores both. Not done: Chrome extension was disconnected (agent-browser used instead); Java suite
+  not run (no mvn); a Gemini chatbot limiter/format/brevity change was delegated to a sub-agent and is
+  logged separately when it lands.

@@ -27,11 +27,18 @@ import {
 import { computeSlabs, slabTable } from "./slab";
 import type { SpecialRateItem, TaxBreakdown, TaxInput, TaxInputFact } from "./types";
 
-/** Standard deduction applies to salary income only, under both regimes. */
+/**
+ * Standard deduction u/s 16(ia): the flat figure or the salary itself,
+ * whichever is less. It is a deduction FROM salary, so it can never exceed
+ * the salary it is deducted from, and a filer with no salary income gets none.
+ */
 function standardDeductionFor(input: TaxInput): number {
-  const salaried = input.facts.some((f) => f.kind === "salary");
-  if (!salaried) return 0;
-  return input.regime === "new" ? STANDARD_DEDUCTION_NEW : STANDARD_DEDUCTION_OLD;
+  const salary = input.facts
+    .filter((f) => f.kind === "salary")
+    .reduce((sum, f) => sum + f.amount, 0);
+  if (salary <= 0) return 0;
+  const flat = input.regime === "new" ? STANDARD_DEDUCTION_NEW : STANDARD_DEDUCTION_OLD;
+  return Math.min(salary, flat);
 }
 
 /**
@@ -110,14 +117,19 @@ export function computeTax(input: TaxInput): TaxBreakdown {
   // s.111A/112A/112 gains, matching the Act.
   const specialRate = specialRateItems(input.facts);
   const specialGainsTotal = specialRate.reduce((s, i) => s + i.gains, 0);
-  const specialTaxableTotal = specialRate.reduce((s, i) => s + i.taxable, 0);
+  const specialExemptTotal = specialRate.reduce((s, i) => s + i.exemptAmount, 0);
   const specialTax = specialRate.reduce((s, i) => s + i.tax, 0);
 
   const slabTaxable = Math.max(
     0,
     grossIncome - specialGainsTotal - standardDeduction - totalDeductions,
   );
-  const taxableIncome = slabTaxable + specialTaxableTotal;
+  // Total income carries the WHOLE of a s.112A gain. The ₹1.25 lakh is a
+  // threshold in the tax computation under s.112A, not an exemption that
+  // reduces total income — so the s.87A ₹12 lakh test, and the figure a return
+  // prints as total income, both include it. The exempt slice is reported
+  // separately so a computation sheet can show why the tax is lower.
+  const taxableIncome = slabTaxable + specialGainsTotal;
 
   const table = slabTable(input.regime, input.ageBand);
   const { slices, total: slabTax } = computeSlabs(slabTaxable, table);
@@ -150,6 +162,7 @@ export function computeTax(input: TaxInput): TaxBreakdown {
     slabBreakdown: slices,
     slabTax,
     specialRate,
+    specialExemptTotal,
     taxBeforeRebate,
     rawTax: taxBeforeRebate,
     rebate87A,

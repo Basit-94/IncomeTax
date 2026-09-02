@@ -144,12 +144,13 @@ export interface Claim {
   evidenceAttached: boolean;
 }
 
+/** Legacy shape; nothing constructs it today. Kept typed rather than loose. */
 export interface CorrectionEvent {
   id: string;
   factId: string;
   field: "amount" | "existence";
-  oldValue: any;
-  newValue: any;
+  oldValue: number | boolean;
+  newValue: number | boolean;
   timestamp: string;
   reverted?: boolean;
 }

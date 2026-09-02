@@ -346,6 +346,10 @@ export const LOCALIZED_MOCK_STRINGS: Record<string, Record<string, string>> = {
     hi: "स्व-निर्धारण कर भुगतान (चालान 280)",
     ta: "சுய மதிப்பீட்டு வரி செலுத்தப்பட்டது (சலான் 280)"
   },
+  "marginal relief": {
+    hi: "सीमांत राहत",
+    ta: "விளிம்பு நிவாரணம்"
+  },
   "Gross salary (from uploaded Form 16)": {
     hi: "सकल वेतन (अपलोड किए गए फॉर्म 16 से)",
     ta: "மொத்த சம்பளம் (பதிவேற்றிய படிவம் 16-லிருந்து)"

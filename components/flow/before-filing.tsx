@@ -165,7 +165,15 @@ export default function BeforeFiling({
       {showFinish && (
       <div className="finish">
         <div>
-          <div className="k">{outcomePositive ? t.check.refundDue : t.check.balanceDue}</div>
+          {/* Three states: a cleared challan lands on exactly nil, which is
+              neither a refund nor a balance. */}
+          <div className="k">
+            {breakdown.refundOrDue === 0
+              ? t.file.outcomeOwesNothing
+              : outcomePositive
+                ? t.check.refundDue
+                : t.check.balanceDue}
+          </div>
           <div className="big" style={outcomePositive ? undefined : { color: "var(--out)" }}>
             <AnimatedAmount value={Math.abs(breakdown.refundOrDue)} lang={lang} />
           </div>

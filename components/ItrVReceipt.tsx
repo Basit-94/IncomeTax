@@ -128,12 +128,25 @@ export function ItrVReceipt({ filedOn, filedAt }: ItrVReceiptProps = {}) {
   );
 
   // Web Crypto's digest is async, so the hash lands a tick after first paint.
-  // Guarded against a stale write if the return changes while it resolves.
+  // Guarded against a stale write if the return changes while it resolves, and
+  // against an insecure origin, where crypto.subtle does not exist and the
+  // sheet would otherwise sit at "computing…" forever.
+  const [digestError, setDigestError] = useState<string>("");
   useEffect(() => {
     let cancelled = false;
-    void sha256Hex(JSON.stringify(payload)).then((h) => {
-      if (!cancelled) setHash(h);
-    });
+    if (!globalThis.crypto?.subtle) {
+      setHash("");
+      setDigestError("Digest unavailable: this page is not served over HTTPS.");
+      return;
+    }
+    setDigestError("");
+    sha256Hex(JSON.stringify(payload))
+      .then((h) => {
+        if (!cancelled) setHash(h);
+      })
+      .catch(() => {
+        if (!cancelled) setDigestError("Digest could not be computed in this browser.");
+      });
     return () => {
       cancelled = true;
     };
@@ -211,7 +224,7 @@ export function ItrVReceipt({ filedOn, filedAt }: ItrVReceiptProps = {}) {
                 e-Filing ack no
               </span>
               <span className="text-xs font-mono font-bold tabular-nums text-gray-900">
-                {ackNumber || "computing…"}
+                {ackNumber || (digestError ? "unavailable" : "computing…")}
               </span>
             </div>
           </div>
@@ -288,6 +301,16 @@ export function ItrVReceipt({ filedOn, filedAt }: ItrVReceiptProps = {}) {
                   </td>
                   <td className="py-1.5 text-right">
                     <Rupees value={active.specialRateTax} className="text-gray-500" />
+                  </td>
+                </tr>
+              )}
+              {active.specialExemptAmount > 0 && (
+                <tr>
+                  <td className="py-1.5 pl-4 text-gray-500">
+                    LTCG u/s 112A within the ₹1,25,000 threshold — included in row 4, not taxed
+                  </td>
+                  <td className="py-1.5 text-right">
+                    <Rupees value={active.specialExemptAmount} className="text-gray-500" />
                   </td>
                 </tr>
               )}
@@ -396,7 +419,7 @@ export function ItrVReceipt({ filedOn, filedAt }: ItrVReceiptProps = {}) {
           <div className="min-w-0 space-y-1">
             <p className="font-semibold text-gray-700">Verification digest:</p>
             <p className="break-all font-mono text-[9px] leading-relaxed text-gray-500">
-              SHA-256: {hash || "computing…"}
+              SHA-256: {hash || digestError || "computing…"}
             </p>
             <p className="text-[10px] text-gray-400">
               Computed with Web Crypto over the figures printed above. Change any one of
@@ -415,7 +438,8 @@ export function ItrVReceipt({ filedOn, filedAt }: ItrVReceiptProps = {}) {
               </div>
             )}
             <p className="mt-1 max-w-[110px] text-[9px] leading-tight text-gray-400">
-              Encodes ack no, PAN and digest. The host is not a real domain.
+              Encodes ack no, PAN and the first 128 bits of the digest. The host is not a
+              real domain.
             </p>
           </div>
         </div>

@@ -110,7 +110,12 @@ export function Challan280Modal({ open, onClose, onPaid, amount }: Challan280Mod
     // A visible settlement pause: a payment that returns instantly reads as fake
     // and hides the state the citizen would really be waiting in.
     setTimeout(() => {
-      const ids = syntheticChallanIdentifiers(amountDue * 31 + state.pan.length);
+      // Seeded by amount, PAN and the payment's ordinal, so two challans for
+      // the same sum do not come back with the same BSR code and serial.
+      const panSeed = [...state.pan].reduce((s, ch) => s * 31 + ch.charCodeAt(0), 7);
+      const ids = syntheticChallanIdentifiers(
+        amountDue * 31 + panSeed + state.selfAssessmentPayments.length * 1_000_003,
+      );
       const payment: SelfAssessmentPayment = {
         ...ids,
         amount: amountDue,

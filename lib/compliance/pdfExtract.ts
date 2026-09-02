@@ -17,6 +17,31 @@
 export const PAN_RE = /[A-Z]{5}[0-9]{4}[A-Z]{1}/;
 
 /**
+ * The PAN as it is actually labelled on a Form 16 / AIS. Tried first: a raw
+ * PDF byte stream is full of upper-case runs that happen to fit the structural
+ * pattern, and a false match here would silently rewrite the return's PAN.
+ */
+const PAN_LABELLED_RE =
+  /(?:PAN of the (?:Deductee|Employee|Assessee)|Permanent Account (?:No\.?|Number)|PAN)[^A-Z0-9]{0,40}([A-Z]{5}[0-9]{4}[A-Z])(?![A-Z0-9])/;
+
+/** The structural fallback, bounded so it cannot start or end mid-run. */
+const PAN_BOUNDED_RE = /(?<![A-Z0-9])[A-Z]{5}[0-9]{4}[A-Z](?![A-Z0-9])/;
+
+export type DocumentKind = "FORM_16" | "AIS";
+
+/**
+ * What the document says it is, from its own text; the file name is only a
+ * fallback. A Form 16 says so in its heading (and cites s.203); an AIS says
+ * "Annual Information Statement".
+ */
+export function detectDocumentKind(bytes: Uint8Array, fileName = ""): DocumentKind {
+  const text = decodeLatin1(bytes);
+  if (/Annual Information Statement/i.test(text)) return "AIS";
+  if (/FORM\s*NO\.?\s*16|Certificate under section 203/i.test(text)) return "FORM_16";
+  return /ais/i.test(fileName) ? "AIS" : "FORM_16";
+}
+
+/**
  * The rupee sign, as it can actually turn up in a PDF's bytes.
  *
  * decodeLatin1 below is byte-for-byte by design, so a UTF-8 "₹" (E2 82 B9)
@@ -69,7 +94,7 @@ export function decodeLatin1(bytes: Uint8Array): string {
 export function extractFieldsFromPdfBytes(bytes: Uint8Array): ExtractedFields {
   const text = decodeLatin1(bytes);
 
-  const pan = PAN_RE.exec(text)?.[0];
+  const pan = PAN_LABELLED_RE.exec(text)?.[1] ?? PAN_BOUNDED_RE.exec(text)?.[0];
   const grossSalaryRaw = GROSS_SALARY_RE.exec(text)?.[1];
   const tdsRaw = TDS_RE.exec(text)?.[1];
 

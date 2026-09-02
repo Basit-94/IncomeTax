@@ -39,6 +39,21 @@ import {
   type GenerateStatutoryArtifactArgs,
 } from "../../../lib/agent/copilot-engine";
 
+/* ------------------------------------------------------------------ limits -- */
+
+/**
+ * Hard cap on citizen questions (role === "user" messages) per chat session.
+ * AGENT_MAX_QUESTIONS_PER_SESSION may lower this, never raise it — the cap is
+ * the point. AGENT_MAX_TURNS_PER_SESSION (default 40) still bounds total messages.
+ */
+const AGENT_MAX_QUESTIONS_PER_SESSION = 4;
+
+function maxQuestionsPerSession(): number {
+  const raw = Number(process.env.AGENT_MAX_QUESTIONS_PER_SESSION);
+  if (!Number.isFinite(raw) || raw < 1) return AGENT_MAX_QUESTIONS_PER_SESSION;
+  return Math.min(Math.floor(raw), AGENT_MAX_QUESTIONS_PER_SESSION);
+}
+
 /* ----------------------------------------------------------------- context -- */
 
 interface AgentContext {
@@ -291,6 +306,16 @@ function systemPrompt(ctx: AgentContext): string {
     `- Mode: ${ctx.mode === "simple" ? "Simple mode (plain words, no unexplained legal jargon — one idea per sentence)" : "Full detail mode (authoritative, precise statutory citations & complete derivations)"}`,
     ctx.userName ? `- Citizen Name: ${ctx.userName}` : "",
     "",
+    "### ANSWER STYLE (ANSWER ONLY WHAT IS ASKED)",
+    "- Reply with ONLY the direct answer to the exact question — usually one sentence, at most two. If the answer is a number or a yes/no, lead with it.",
+    "- Do NOT add context, background, caveats, related tips, alternatives, next steps, or suggested follow-ups unless the citizen explicitly asks for them.",
+    "- No preamble, no sign-off, no pleasantries, never repeat the question back.",
+    "- Use bullet points only when the citizen asks for a list of more than two items. Use `**bold**` only for the single figure or decision that answers the question.",
+    "- Give a longer, structured answer ONLY when the citizen explicitly asks for a computation walk-through, a step-by-step procedure, or a regime comparison — and even then, include only the steps needed.",
+    "- Format money as ₹ with Indian grouping (e.g. ₹12,50,000), never 'Rs' or Western grouping.",
+    "- When a tool result is shown, state only the figure(s) the question asked for — never restate the other fields.",
+    `- The citizen has at most ${maxQuestionsPerSession()} questions in this session, so the answer must be correct and complete on the first attempt — but complete means answering the question fully, not adding more.`,
+    "",
     "### CORE OPERATING PRINCIPLES",
     "1. NEVER INVENT TAX FIGURES: You must NEVER attempt mental arithmetic on taxes, slabs, rebates, or marginal relief. Always invoke the `compute_tax_ay2026` tool with the active return facts to get authoritative numbers.",
     "2. CITIZEN-FIRST EXPLANATIONS: Translate complex statutory terms into plain language:",
@@ -356,7 +381,7 @@ async function tryCallGemini(
     key = key.slice(1, -1);
   }
 
-  const maxTokens = Number(process.env.AGENT_MAX_TOKENS_PER_REPLY || 4096);
+  const maxTokens = Number(process.env.AGENT_MAX_TOKENS_PER_REPLY || 2048);
   try {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -472,6 +497,20 @@ export async function POST(request: NextRequest) {
   if (messages.length > maxTurns) {
     return NextResponse.json(
       { reply: "This conversation has reached its length limit — please start a new one.", toolEvents: [], clientActions: [] },
+      { status: 200 },
+    );
+  }
+  const maxQuestions = maxQuestionsPerSession();
+  const questionsAsked = messages.filter((m) => m.role === "user").length;
+  if (questionsAsked > maxQuestions) {
+    appendTranscript(sessionId, { type: "limit", questionsAsked, maxQuestions });
+    return NextResponse.json(
+      {
+        reply: "Sorry, we have limited our chat",
+        toolEvents: [],
+        clientActions: [],
+        limitReached: true,
+      },
       { status: 200 },
     );
   }

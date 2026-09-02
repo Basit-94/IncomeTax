@@ -81,6 +81,8 @@ describe("buildSyncPayload", () => {
       feedbackCode: undefined,
       disputeReason: undefined,
       confirmed: false,
+      reportedBy: "Employer",
+      statement: "AIS",
     });
     expect(p.facts.savings_interest?.reported).toBe(12_000);
     // Rows the persona does not have arrive as zero, so the context zeroes them.
@@ -107,6 +109,8 @@ describe("buildSyncPayload", () => {
       feedbackCode: "CODE_3",
       disputeReason: "Two months were never paid.",
       confirmed: false,
+      reportedBy: "Employer",
+      statement: "AIS",
     });
   });
 
@@ -136,12 +140,39 @@ describe("buildSyncPayload", () => {
   });
 
   it("marks a row confirmed only when every item behind it is confirmed", () => {
-    const one = confirmFact(makeState(), "claim-80d-self");
-    expect(buildSyncPayload(one).facts.sec_80d?.confirmed).toBe(false);
+    const state = makeState();
+    state.baselinePersona.claims.push({
+      id: "claim-80c-2",
+      section: "80C",
+      label: "ELSS",
+      amount: 20_000,
+      evidenceAttached: true,
+    });
+    state.persona = state.baselinePersona;
 
-    const both = confirmFact(one, "claim-80d-parents");
-    expect(buildSyncPayload(both).facts.sec_80d?.confirmed).toBe(true);
-    expect(buildSyncPayload(both).facts.sec_80d?.reported).toBe(50_000);
+    const one = confirmFact(state, "claim-80c");
+    expect(buildSyncPayload(one).facts.sec_80c?.confirmed).toBe(false);
+
+    const both = confirmFact(one, "claim-80c-2");
+    expect(buildSyncPayload(both).facts.sec_80c?.confirmed).toBe(true);
+    expect(buildSyncPayload(both).facts.sec_80c?.reported).toBe(120_000);
+  });
+
+  it("keeps parents' 80D and unmodelled sections as additional claims with their own sections", () => {
+    const p = buildSyncPayload(makeState());
+    // Only the self premium sits on the sec_80d row (₹25,000 cap).
+    expect(p.facts.sec_80d?.reported).toBe(20_000);
+    expect(p.additionalClaims).toEqual([
+      { id: "claim-80d-parents", section: "80D_PARENTS", label: "Parents", amount: 30_000 },
+      { id: "claim-80gg", section: "80GG", label: "Rent", amount: 60_000 },
+    ]);
+  });
+
+  it("a correction withdraws an earlier confirmation of the same item", () => {
+    const confirmed = confirmFact(makeState(), "fact-salary");
+    const corrected = applyCorrection(confirmed, correction("c1", "fact-salary", 900_000, 700_000));
+    expect(corrected.confirmedFactIds).not.toContain("fact-salary");
+    expect(buildSyncPayload(corrected).facts.salary).toMatchObject({ disputed: true, confirmed: false });
   });
 
   it("pools TDS by section and leaves self-assessment tax to the context", () => {

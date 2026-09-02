@@ -1461,7 +1461,9 @@ export default function WapsiPrototype() {
   const handleQuickEditSave = (salary: number, interest: number, tds: number) => {
     if (!persona || !returnState) return;
 
-    let updatedState = { ...returnState };
+    // Same reference until a correction is actually applied, so a no-op save
+    // leaves no undo step behind.
+    let updatedState = returnState;
 
     const salaryFact = persona.facts.find((f) => f.kind === "salary");
     if (salaryFact && salaryFact.amount !== salary) {
@@ -1505,7 +1507,9 @@ export default function WapsiPrototype() {
       });
     }
 
-    saveState(updatedState);
+    // Three silent corrections in one go deserve the same undo step every
+    // other correction gets.
+    if (updatedState !== returnState) commitWithUndo(updatedState);
     setQuickEditActive(false);
   };
 
@@ -1978,6 +1982,8 @@ export default function WapsiPrototype() {
 
                       {/* TAB 2: FACTS REVIEW (AIS/26AS provenance) */}
                       {activeTab === "statement" && (
+                        <div className="space-y-6">
+                        <AuditRiskRadar quietWhenClear />
                         <StatementTab
                           persona={persona}
                           lang={lang}
@@ -1995,6 +2001,7 @@ export default function WapsiPrototype() {
                           regime={regime}
                           onSignOffAll={handleSignOffAll}
                         />
+                        </div>
                       )}
 
                       {/* TAB 3: PENDING ACTIONS / NOTICES */}

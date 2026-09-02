@@ -62,6 +62,12 @@ export function DefectiveNoticeCard({ onReconcile, onUndoReconcile }: DefectiveN
     (f) => f.category === "income" && f.declaredAmount < f.reportedAmount,
   );
 
+  // "Undo auto-reconcile" must undo the auto-reconcile — not whatever the
+  // citizen did most recently. It is offered only while the top of the undo
+  // stack is the snapshot taken just before staging.
+  const canUndoStage =
+    canUndo && state.revisedReturnStaged && state.history[0]?.revisedReturnStaged === false;
+
   if (state.revisedReturnStaged) {
     return (
       <m.section
@@ -86,7 +92,7 @@ export function DefectiveNoticeCard({ onReconcile, onUndoReconcile }: DefectiveN
               carries the original filing date.
             </p>
           </div>
-          {canUndo && (
+          {canUndoStage && (
             <button
               onClick={undo}
               className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-300 bg-white px-3.5 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-50"

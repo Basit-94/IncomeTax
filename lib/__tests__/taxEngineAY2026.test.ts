@@ -158,6 +158,49 @@ describe("AY 2026-27 — deductions by regime", () => {
   });
 });
 
+describe("AY 2026-27 — standard deduction u/s 16(ia) is capped at the salary", () => {
+  it("gives nothing to a salaried filer with no salary income this year", () => {
+    const { newRegime } = computeAY2026Tax(
+      salariedCase({ isSalaried: true, grossSalary: 0, savingsInterest: 200_000 }),
+    );
+    expect(newRegime.standardDeduction).toBe(0);
+    expect(newRegime.taxableIncome).toBe(200_000);
+  });
+
+  it("never exceeds the salary it is deducted from", () => {
+    const { newRegime, oldRegime } = computeAY2026Tax(
+      salariedCase({ grossSalary: 40_000, savingsInterest: 100_000 }),
+    );
+    expect(newRegime.standardDeduction).toBe(40_000);
+    expect(oldRegime.standardDeduction).toBe(40_000);
+    expect(newRegime.taxableIncome).toBe(100_000);
+  });
+});
+
+describe("AY 2026-27 — s.112A gains sit in total income in full", () => {
+  it("counts the whole gain in total income, taxes only the slice above ₹1,25,000, and reports the exempt slice", () => {
+    const { newRegime } = computeAY2026Tax(
+      salariedCase({
+        grossSalary: 1_000_000,
+        capitalGains: [
+          { amount: 185_000, classification: { assetClass: "equity_stt", holding: "long" } },
+        ],
+      }),
+    );
+    // 10,00,000 − 75,000 + the full 1,85,000: the threshold is a tax rule, not
+    // an exemption from total income.
+    expect(newRegime.taxableIncome).toBe(1_110_000);
+    expect(newRegime.specialExemptAmount).toBe(125_000);
+    expect(newRegime.specialRateTax).toBe(7_500); // (1,85,000 − 1,25,000) × 12.5%
+    // Total income is at or below ₹12,00,000, so the slab tax is rebated in
+    // full; the s.112A tax is not rebatable and stays.
+    expect(newRegime.rebate87A).toBe(newRegime.slabTax);
+    expect(newRegime.taxAfterRebate).toBe(7_500);
+    // The ITR-V identity: gross − standard deduction − VI-A = total income.
+    expect(newRegime.grossTotalIncome - newRegime.totalDeductions).toBe(newRegime.taxableIncome);
+  });
+});
+
 describe("AY 2026-27 — taxes paid", () => {
   it("credits self-assessment tax u/s 140A exactly like TDS, clearing the balance", () => {
     const before = computeAY2026Tax(

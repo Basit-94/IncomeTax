@@ -63,7 +63,12 @@ import React, {
   useEffect,
 } from "react";
 import { computeAY2026Tax } from "../lib/taxEngineAY2026";
-import type { CapitalGainsLot, RegimeResult, TaxEngineOutput } from "../lib/taxEngineAY2026";
+import type {
+  AdditionalClaim,
+  CapitalGainsLot,
+  RegimeResult,
+  TaxEngineOutput,
+} from "../lib/taxEngineAY2026";
 import type { CapitalGainsMeta } from "../lib/types";
 import { assessCassRisk } from "../lib/compliance/cass";
 import type { CassAssessment } from "../lib/compliance/cass";
@@ -208,6 +213,9 @@ export interface UpstreamFact {
   disputeReason?: string;
   /** True when every ledger item behind this row has been confirmed there. */
   confirmed: boolean;
+  /** Who reported the row, per the ledger's provenance. Named on the radar. */
+  reportedBy?: string;
+  statement?: FactStatement;
 }
 
 /**
@@ -240,6 +248,12 @@ export interface TaxReturnState extends TaxReturnSnapshot {
   defectNoticeOpen: boolean;
   /** ISO timestamp of the moment the return was accepted for filing, if it has been. */
   filedAt?: string;
+  /**
+   * Chapter VI-A claims the ledger holds that have no row here (80GG, 80E,
+   * parents' 80D ...). Fed to the engine by section so this surface computes
+   * the same old-regime figure the main journey does. Not editable here.
+   */
+  additionalClaims: AdditionalClaim[];
   /** True once persisted state has been read back after mount. Never persisted. */
   hydrated: boolean;
 }
@@ -263,6 +277,7 @@ export type PersistedTaxReturn = Pick<
   | "ingestedDocuments"
   | "defectNoticeOpen"
   | "filedAt"
+  | "additionalClaims"
 >;
 
 export const PERSIST_STORAGE_KEY = "wapsi_reconciliation";
@@ -317,6 +332,8 @@ export type TaxAction =
         capitalGainsMeta?: CapitalGainsMeta;
         /** ISO timestamp of acceptance, once the ledger records one. */
         filedAt?: string;
+        /** Claims with no row here, forwarded by section. Absent = none. */
+        additionalClaims?: AdditionalClaim[];
       };
     };
 
@@ -415,6 +432,7 @@ export const INITIAL_STATE: TaxReturnState = {
   ingestedDocuments: [],
   defectNoticeOpen: false,
   filedAt: undefined,
+  additionalClaims: [],
   hydrated: false,
 };
 
@@ -701,6 +719,10 @@ export function taxReducer(state: TaxReturnState, action: TaxAction): TaxReturnS
           factId === "capital_gains" && payload.capitalGainsMeta
             ? payload.capitalGainsMeta
             : fact.capitalGains;
+        // Provenance is the ledger's to name; the synthetic prefill's reporter
+        // must not survive onto a real citizen's row.
+        const reportedBy = up.reportedBy ?? fact.reportedBy;
+        const statement = up.statement ?? fact.statement;
 
         let next: TaxFact;
         if (up.disputed) {
@@ -718,6 +740,8 @@ export function taxReducer(state: TaxReturnState, action: TaxAction): TaxReturnS
             supersededAmount: undefined,
             origin: "upstream",
             capitalGains,
+            reportedBy,
+            statement,
           };
         } else if (up.confirmed) {
           next = {
@@ -730,6 +754,8 @@ export function taxReducer(state: TaxReturnState, action: TaxAction): TaxReturnS
             supersededAmount: undefined,
             origin: "upstream",
             capitalGains,
+            reportedBy,
+            statement,
           };
         } else if (fact.origin === "upstream" || fact.status === "PENDING") {
           next = {
@@ -742,9 +768,11 @@ export function taxReducer(state: TaxReturnState, action: TaxAction): TaxReturnS
             supersededAmount: undefined,
             origin: undefined,
             capitalGains,
+            reportedBy,
+            statement,
           };
         } else {
-          next = { ...fact, reportedAmount, capitalGains };
+          next = { ...fact, reportedAmount, capitalGains, reportedBy, statement };
         }
         facts = { ...facts, [factId]: next };
       }
@@ -757,6 +785,7 @@ export function taxReducer(state: TaxReturnState, action: TaxAction): TaxReturnS
         filingStatus: payload.filingStatus ?? state.filingStatus,
         selectedRegime: payload.regime,
         filedAt: payload.filedAt ?? state.filedAt,
+        additionalClaims: payload.additionalClaims ?? [],
         facts,
       };
     }
@@ -784,6 +813,7 @@ export function serializeForStorage(state: TaxReturnState): string {
     ingestedDocuments: state.ingestedDocuments,
     defectNoticeOpen: state.defectNoticeOpen,
     filedAt: state.filedAt,
+    additionalClaims: state.additionalClaims,
   };
   return JSON.stringify({ version: PERSIST_VERSION, state: slice });
 }
@@ -824,6 +854,7 @@ export function parsePersisted(raw: string | null): PersistedTaxReturn | null {
     ingestedDocuments: Array.isArray(s.ingestedDocuments) ? s.ingestedDocuments : [],
     defectNoticeOpen: s.defectNoticeOpen === true,
     filedAt: typeof s.filedAt === "string" ? s.filedAt : undefined,
+    additionalClaims: Array.isArray(s.additionalClaims) ? s.additionalClaims : [],
   };
 }
 
@@ -860,6 +891,7 @@ export function engineInputFor(state: TaxReturnState) {
     section80C: f.sec_80c.declaredAmount,
     section80D: f.sec_80d.declaredAmount,
     section80CCD2: f.sec_80ccd2.declaredAmount,
+    additionalClaims: state.additionalClaims,
   };
 }
 
@@ -910,16 +942,21 @@ export function deriveTaxReturn(state: TaxReturnState): TaxDerived {
     state.selectedRegime === "NEW" ? computation.oldRegime : computation.newRegime;
 
   const incomeFacts = Object.values(state.facts).filter((f) => f.category === "income");
+  // The radar watches what the citizen has actually contested. A row whose
+  // reported figure moved under a confirmation is a stale confirmation, not a
+  // downward revision the citizen made.
   const cass = assessCassRisk(
-    incomeFacts.map((f) => ({
+    incomeFacts
+      .filter((f) => f.status === "DISPUTED")
+      .map((f) => ({
       id: f.id,
       label: f.label,
       reportedAmount: f.reportedAmount,
       declaredAmount: f.declaredAmount,
-      hasAttachment: f.hasAttachment,
-      attachmentName: f.attachmentName,
-      reportedBy: f.reportedBy,
-    })),
+        hasAttachment: f.hasAttachment,
+        attachmentName: f.attachmentName,
+        reportedBy: f.reportedBy,
+      })),
   );
 
   const allFacts = Object.values(state.facts);
