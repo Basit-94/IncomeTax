@@ -68,6 +68,10 @@ export interface AgentPanelProps {
   onNavigate: (section: "overview" | "documents" | "history" | "filing") => void;
   /** The SAME commit path the filing step uses — no agent backdoor. */
   onConfirmFiling: () => void | Promise<void>;
+  /** A question handed in from the docked copilot bar; a new nonce opens the panel and sends it. */
+  externalPrompt?: { text: string; nonce: number } | null;
+  /** True when another surface (the copilot bar) is the entry point, so the bubble is not a second one. */
+  hideLauncher?: boolean;
 }
 
 export default function AgentPanel({
@@ -82,6 +86,8 @@ export default function AgentPanel({
   unlimited = false,
   onNavigate,
   onConfirmFiling,
+  externalPrompt = null,
+  hideLauncher = false,
 }: AgentPanelProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<AgentMessage[]>([]);
@@ -96,6 +102,7 @@ export default function AgentPanel({
       : `s${Date.now()}`,
   );
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastPromptNonce = useRef<number | null>(null);
 
   // No reset path on purpose: the site is public and the cap protects the API key.
   const questionsUsed = messages.filter((m) => m.role === "user").length;
@@ -181,12 +188,22 @@ export default function AgentPanel({
     }
   };
 
+  // The copilot bar's question arrives here; each nonce is sent exactly once.
+  useEffect(() => {
+    if (!externalPrompt || externalPrompt.nonce === lastPromptNonce.current) return;
+    lastPromptNonce.current = externalPrompt.nonce;
+    setOpen(true);
+    void send(externalPrompt.text);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalPrompt]);
+
   const confirmFiling = async () => {
     setPendingFiling(null);
     await onConfirmFiling();
   };
 
   if (!open) {
+    if (hideLauncher) return null;
     return (
       <button
         type="button"

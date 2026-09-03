@@ -21,6 +21,8 @@
  * documented selection trigger) and the section it lands under.
  */
 
+import type { AISVariance } from "../../types/tax";
+
 /** Fractional downward revision of a single income row that trips the radar. */
 export const CASS_VARIANCE_THRESHOLD = 0.2;
 
@@ -114,5 +116,34 @@ export function assessCassRisk(rows: CassRowInput[]): CassAssessment {
     unsupportedFindings: findings.filter(
       (f) => (f.exceedsVarianceThreshold || reasons.includes("aggregate_amount")) && !f.hasAttachment,
     ),
+  };
+}
+
+/* ------------------------------------------------ pre-audit variance test -- */
+
+/**
+ * The single-row test the pre-audit radar runs the moment a pre-filled AIS
+ * figure is edited: Variance = (PreFilled − Declared) / PreFilled. Exact
+ * integer basis points, so 20.00% is never 19.999…% by way of a float. The
+ * threshold is the same CASS_VARIANCE_THRESHOLD the aggregate assessment uses;
+ * "exceeds" is strictly greater than, matching assessCassRisk.
+ */
+export function assessAisVariance(preFilled: number, declared: number): AISVariance {
+  const pre = Math.max(0, Math.round(preFilled));
+  const dec = Math.max(0, Math.round(declared));
+  let varianceBp = 0;
+  if (pre > 0) {
+    const numerator = (pre - dec) * 10_000;
+    // Round half away from zero on integers; no floating-point division survives to the result.
+    const q = Math.trunc(numerator / pre);
+    const r = Math.abs(numerator % pre);
+    varianceBp = r * 2 >= pre ? q + Math.sign(numerator) : q;
+  }
+  return {
+    preFilled: pre,
+    declared: dec,
+    varianceBp,
+    variancePercent: varianceBp / 100,
+    exceedsThreshold: varianceBp > Math.round(CASS_VARIANCE_THRESHOLD * 10_000),
   };
 }

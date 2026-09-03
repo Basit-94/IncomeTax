@@ -20,14 +20,14 @@ export type ToolId = "calculator" | "compare" | "advance_tax" | "hra" | "capital
 
 const TITLES: Record<ToolId, string> = {
   calculator: "Tax calculator",
-  compare: "Old regime or new?",
+  compare: "Tax & Regime Optimizer",
   advance_tax: "Advance-tax dates",
   hra: "Rent allowance check",
   capital_gains: "Shares or property sold?",
-  calendar: "Tax calendar",
+  calendar: "Tax Calendar & Deadlines",
   tds_check: "Does my TDS match?",
   everify: "e-Verify my return",
-  history: "Filing history",
+  history: "Return Status & Past Filings",
 };
 
 const TODAY = new Date().toISOString().slice(0, 10);
@@ -390,10 +390,26 @@ export default function ToolDrawer({ tool, lang, onClose, persona }: { tool: Too
         {tool === "advance_tax" && <AdvanceTaxTool />}
         {tool === "hra" && <HraTool />}
         {tool === "capital_gains" && <CapitalGainsTool />}
-        {tool === "calendar" && <CalendarTool />}
+        {tool === "calendar" && (
+          <div className="space-y-6">
+            <CalendarTool />
+            <section className="space-y-3">
+              <h3 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-2">{L("Advance-tax instalments")}</h3>
+              <AdvanceTaxTool />
+            </section>
+          </div>
+        )}
         {tool === "tds_check" && <TdsCheckTool persona={persona} />}
         {tool === "everify" && <EverifyTool />}
-        {tool === "history" && <HistoryTool />}
+        {tool === "history" && (
+          <div className="space-y-6">
+            <section className="space-y-3">
+              <h3 className="text-xs font-mono font-semibold uppercase tracking-wider text-ink-2">{L("e-Verify (within 30 days of filing)")}</h3>
+              <EverifyTool />
+            </section>
+            <HistoryTool />
+          </div>
+        )}
       </div>
     </div>
   );

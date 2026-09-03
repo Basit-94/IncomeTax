@@ -17,16 +17,16 @@ import type { AISFeedbackCode } from "../../lib/compliance/aisFeedback";
  * surface so every screen names the same reason.
  */
 const CHOICE_CODE: Record<"different" | "fraud" | "joint" | "duplicate", AISFeedbackCode> = {
-  different: "CODE_3",
+  different: "CODE_2",
   fraud: "CODE_5",
-  joint: "CODE_4",
-  duplicate: "CODE_5",
+  joint: "CODE_3",
+  duplicate: "CODE_4",
 };
 
 const TDS_REASON_CODE: Record<string, AISFeedbackCode> = {
-  "Amount differs from Form 26AS/AIS": "CODE_3",
-  "Deducted on wrong PAN": "CODE_4",
-  "Duplicate TDS entry": "CODE_5",
+  "Amount differs from Form 26AS/AIS": "CODE_2",
+  "Deducted on wrong PAN": "CODE_3",
+  "Duplicate TDS entry": "CODE_4",
 };
 
 interface DisputeModalProps {
@@ -75,7 +75,7 @@ export default function DisputeModal({
   useEffect(() => {
     if (active) {
       setCorrectionChoice("different");
-      setDisputeFeedbackCode("CODE_3");
+      setDisputeFeedbackCode("CODE_2");
       // Set reason default based on target type
       if (disputeTarget === "tax") {
         setDisputeReason("Amount differs from Form 26AS/AIS");
@@ -160,7 +160,7 @@ export default function DisputeModal({
                         value={disputeReason}
                         onChange={(e) => {
                           setDisputeReason(e.target.value);
-                          setDisputeFeedbackCode(TDS_REASON_CODE[e.target.value] ?? "CODE_3");
+                          setDisputeFeedbackCode(TDS_REASON_CODE[e.target.value] ?? "CODE_2");
                         }}
                         className="w-full px-3 py-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-700 focus:outline-none"
                       >

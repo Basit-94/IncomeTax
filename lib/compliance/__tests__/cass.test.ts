@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   CASS_AGGREGATE_RUPEE_THRESHOLD,
   CASS_VARIANCE_THRESHOLD,
+  assessAisVariance,
   assessCassRisk,
 } from "../cass";
 import type { CassRowInput } from "../cass";
@@ -136,5 +137,26 @@ describe("assessCassRisk", () => {
 
   it("names the section an inquiry would issue under", () => {
     expect(assessCassRisk([]).scrutinySection).toBe("143(1)(a)");
+  });
+});
+
+describe("assessAisVariance — the pre-audit single-row test", () => {
+  it("is exact in basis points and strict at the 20% threshold", () => {
+    expect(assessAisVariance(100_000, 80_000)).toMatchObject({ varianceBp: 2_000, variancePercent: 20, exceedsThreshold: false });
+    expect(assessAisVariance(100_000, 79_999)).toMatchObject({ varianceBp: 2_000, exceedsThreshold: false });
+    expect(assessAisVariance(100_000, 79_990)).toMatchObject({ varianceBp: 2_001, exceedsThreshold: true });
+    expect(assessAisVariance(100_000, 0)).toMatchObject({ varianceBp: 10_000, variancePercent: 100, exceedsThreshold: true });
+  });
+
+  it("does not fire when the citizen declares more, or when nothing was pre-filled", () => {
+    expect(assessAisVariance(100_000, 150_000)).toMatchObject({ varianceBp: -5_000, exceedsThreshold: false });
+    expect(assessAisVariance(0, 50_000)).toMatchObject({ varianceBp: 0, exceedsThreshold: false });
+  });
+
+  it("rounds half-up on integers, never through a float", () => {
+    // (3 − 2) × 10 000 / 3 = 3333.33… → 3333
+    expect(assessAisVariance(3, 2).varianceBp).toBe(3_333);
+    // (7 − 5) × 10 000 / 7 = 2857.14… → 2857; (8 − 5) / 8 = 37.5% exactly
+    expect(assessAisVariance(8, 5).varianceBp).toBe(3_750);
   });
 });

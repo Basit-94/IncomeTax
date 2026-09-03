@@ -262,7 +262,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
   const [editingFactId, setEditingFactId] = useState<FactId | null>(null);
   const [draft, setDraft] = useState<DisputeDraft>({
     amount: "",
-    feedbackCode: "CODE_3",
+    feedbackCode: "CODE_2",
     reason: "",
   });
   const [showItrV, setShowItrV] = useState(false);
@@ -303,14 +303,14 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
       amount: String(fact.declaredAmount),
       feedbackCode: fact.feedbackCode && fact.feedbackCode !== "CODE_1"
         ? fact.feedbackCode
-        : "CODE_3",
+        : "CODE_2",
       reason: fact.disputeReason ?? "",
     });
   };
 
   const closeDrawer = (): void => {
     setEditingFactId(null);
-    setDraft({ amount: "", feedbackCode: "CODE_3", reason: "" });
+    setDraft({ amount: "", feedbackCode: "CODE_2", reason: "" });
   };
 
   const commitDispute = (factId: FactId): void => {

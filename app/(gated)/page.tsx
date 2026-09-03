@@ -65,7 +65,14 @@ import { EditIncomeModal } from "@/components/dashboard/edit-income-modal";
 import BankIfscModal from "@/components/dashboard/bank-ifsc-modal";
 import NoticeModal from "@/components/dashboard/notice-modal";
 import PersonalizedDashboard from "@/components/dashboard/personalized-dashboard";
-import TaskGrid, { type TileId } from "@/components/dashboard/task-grid";
+import TaxDashboardGrid, { type DashboardCardId } from "@/components/dashboard/TaxDashboardGrid";
+import QuickStartBanner from "@/components/dashboard/QuickStartBanner";
+import CopilotBar from "@/components/dashboard/copilot-bar";
+import ProfileSheet from "@/components/dashboard/profile-sheet";
+import AISDiscrepancyModal from "@/components/modals/AISDiscrepancyModal";
+import type { AISDiscrepancyAttribution, AISVariance } from "@/types/tax";
+import { assessAisVariance } from "@/lib/compliance/cass";
+import { compareRegimesExact, returnFactsFromPersona, toWholeRupees } from "@/lib/taxEngine";
 import ToolDrawer, { type ToolId } from "@/components/tools/tool-drawer";
 import FlowStepper, { FLOW_STEPS, type FlowStepName } from "@/components/flow/flow-stepper";
 import DeductionsStep from "@/components/flow/deductions-step";
@@ -116,6 +123,17 @@ function freshState(persona: Persona, lang: Lang): ReturnState {
     persona,
     corrections: [],
     confirmedFactIds: [],
+  };
+}
+
+/** Rakesh's AIS-mismatch hold releases once the disputed capital-gains row goes to zero. */
+function withHoldsResolved(p: Persona): Persona {
+  return {
+    ...p,
+    refund: {
+      ...p.refund,
+      holds: p.refund.holds.map((h) => (h.kind === "ais_mismatch" ? { ...h, resolved: true } : h)),
+    },
   };
 }
 
@@ -186,6 +204,12 @@ export default function WapsiPrototype() {
     () => (persona ? computeForPersona(persona, regime) : null),
     [persona, regime],
   );
+  /** Both regimes from the exact-paise engine: the header preview and the grid read this. */
+  const exactComparison = useMemo(
+    () => (persona ? compareRegimesExact(returnFactsFromPersona(persona)) : null),
+    [persona],
+  );
+  const scrutinyFlags = returnState?.corrections.filter((c) => !c.reverted && c.attribution).length ?? 0;
   const dashboardDestination =
     onboardingProfile && persona
       ? getDashboardDestination(
@@ -236,7 +260,7 @@ export default function WapsiPrototype() {
   const [disputeAmount, setDisputeAmount] = useState<string>("");
   const [disputeReason, setDisputeReason] = useState<string>("");
   /** The CBDT AIS feedback code behind the citizen's choice in the dispute modal. */
-  const [disputeFeedbackCode, setDisputeFeedbackCode] = useState<AISFeedbackCode>("CODE_3");
+  const [disputeFeedbackCode, setDisputeFeedbackCode] = useState<AISFeedbackCode>("CODE_2");
   /** Challan 280 drawer — the only route forward while the return computes to a balance payable. */
   const [challanOpen, setChallanOpen] = useState(false);
   
@@ -268,18 +292,23 @@ export default function WapsiPrototype() {
   const [wizardCompleted, setWizardCompleted] = useState(false);
   /** Plan §5: the manual grid's tool views open in a drawer over whatever is on screen. */
   const [tool, setTool] = useState<ToolId | null>(null);
+  /** A reduction the pre-audit radar intercepted, waiting for its CBDT code. */
+  const [pendingScrutiny, setPendingScrutiny] = useState<{ correction: Correction; fact: IncomeFact; variance: AISVariance } | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  /** The copilot bar's question, handed to the assistant panel; the nonce makes each send distinct. */
+  const [copilotPrompt, setCopilotPrompt] = useState<{ text: string; nonce: number } | null>(null);
 
-  const handleTile = (id: TileId) => {
+  const handleCard = (id: DashboardCardId) => {
     switch (id) {
       case "file_return":
         if (step === "dashboard") setFlowStep("facts");
         else document.getElementById("landing-pan")?.focus();
         return;
-      case "refund":
-        setActiveTab("overview");
-        return;
-      case "reconcile":
+      case "match_records":
         router.push("/reconcile");
+        return;
+      case "regime_optimizer":
+        setTool("compare");
         return;
       case "pay_tax":
         setChallanOpen(true);
@@ -287,18 +316,13 @@ export default function WapsiPrototype() {
       case "notices":
         setActiveTab("actions");
         return;
-      case "itrv":
-        setActiveTab("overview");
+      case "return_status":
+        if (step === "dashboard" && persona && persona.refund.state !== "not_filed") setActiveTab("overview");
+        else setTool("history");
         return;
-      case "vault":
-      case "digilocker":
-        router.push("/vault");
+      case "calendar":
+        setTool("calendar");
         return;
-      case "chat":
-        router.push("/app");
-        return;
-      default:
-        setTool(id);
     }
   };
 
@@ -898,6 +922,49 @@ export default function WapsiPrototype() {
     setDisputeReason(correction?.reason || "");
   };
 
+  /**
+   * The pre-audit radar. A reduction of a pre-filled figure by more than 20% is
+   * the documented CASS selection trigger, so it does not enter the ledger until
+   * the citizen binds it to a CBDT code in the scrutiny modal. Everything else
+   * commits straight away. The variance is measured against the BASELINE figure
+   * — what the department pre-filled — not the current effective one.
+   */
+  const commitCorrection = (correction: Correction, fact: IncomeFact | undefined) => {
+    if (!returnState) return;
+    const baseline = fact ? returnState.baselinePersona.facts.find((f) => f.id === fact.id) : undefined;
+    if (fact && baseline && correction.target === "fact" && correction.field === "amount" && fact.provenance.statement !== "self" && typeof correction.next === "number") {
+      const variance = assessAisVariance(baseline.amount, correction.next);
+      if (variance.exceedsThreshold) {
+        setPendingScrutiny({ correction, fact, variance });
+        setActiveDisputeId(null);
+        return;
+      }
+    }
+    applyAndCommit(correction, fact);
+  };
+
+  const applyAndCommit = (correction: Correction, fact: IncomeFact | undefined) => {
+    if (!returnState) return;
+    let next = applyCorrection(returnState, correction);
+    if (persona?.id === "rakesh" && fact?.id === "rakesh-capital-gains" && correction.next === 0) {
+      next = { ...next, baselinePersona: withHoldsResolved(next.baselinePersona), persona: withHoldsResolved(next.persona) };
+    }
+    commitWithUndo(next);
+    setActiveDisputeId(null);
+  };
+
+  /** The scrutiny modal's answer. CODE_1 keeps the department's figure: nothing enters the ledger. */
+  const resolveScrutiny = (attribution: AISDiscrepancyAttribution) => {
+    if (!pendingScrutiny) return;
+    const { correction, fact } = pendingScrutiny;
+    setPendingScrutiny(null);
+    if (attribution.code === "CODE_1") return;
+    applyAndCommit(
+      { ...correction, feedbackCode: attribution.code, reason: attribution.explanation || correction.reason, attribution },
+      fact,
+    );
+  };
+
   const saveDispute = () => {
     if (!persona || !returnState || !activeDisputeId) return;
 
@@ -919,33 +986,7 @@ export default function WapsiPrototype() {
       target: fact ? "fact" : tax ? "tax" : "claim",
     };
 
-    let next = applyCorrection(returnState, correction);
-
-    // Rakesh AIS-mismatch hold releases when the capital-gains figure goes to zero.
-    if (persona.id === "rakesh" && fact?.id === "rakesh-capital-gains") {
-      if (correction.next === 0) {
-        next = {
-          ...next,
-          baselinePersona: withHolds(next.baselinePersona),
-          persona: withHolds(next.persona),
-        };
-      }
-    }
-
-    commitWithUndo(next);
-    setActiveDisputeId(null);
-
-    function withHolds(p: Persona): Persona {
-      return {
-        ...p,
-        refund: {
-          ...p.refund,
-          holds: p.refund.holds.map((h) =>
-            h.kind === "ais_mismatch" ? { ...h, resolved: true } : h,
-          ),
-        },
-      };
-    }
+    commitCorrection(correction, fact);
   };
 
   const handleSaveAndRecalculate = (factId: string, updatedAmount: number, comment?: string) => {
@@ -965,38 +1006,12 @@ export default function WapsiPrototype() {
       next: updatedAmount,
       reason: comment?.trim() || t.file.disputeDefaultReason,
       // A self-declared figure being edited is by definition "not fully correct".
-      feedbackCode: "CODE_3",
+      feedbackCode: "CODE_2",
       at: new Date().toISOString(),
       target: fact ? "fact" : tax ? "tax" : "claim",
     };
 
-    let next = applyCorrection(returnState, correction);
-
-    // Rakesh AIS-mismatch hold releases when the capital-gains figure goes to zero.
-    if (persona.id === "rakesh" && fact?.id === "rakesh-capital-gains") {
-      if (correction.next === 0) {
-        next = {
-          ...next,
-          baselinePersona: withHolds(next.baselinePersona),
-          persona: withHolds(next.persona),
-        };
-      }
-    }
-
-    commitWithUndo(next);
-    setActiveDisputeId(null);
-
-    function withHolds(p: Persona): Persona {
-      return {
-        ...p,
-        refund: {
-          ...p.refund,
-          holds: p.refund.holds.map((h) =>
-            h.kind === "ais_mismatch" ? { ...h, resolved: true } : h,
-          ),
-        },
-      };
-    }
+    commitCorrection(correction, fact);
   };
 
   // --- INTERACTIVE FEATURES FOR PERSONAS ---
@@ -1208,6 +1223,11 @@ export default function WapsiPrototype() {
           facts,
           claims,
           tdsCreditsPaise,
+          // The pre-audit attributions: each disputed AIS row with its CBDT code, so the
+          // department sees the citizen's position with the return, not in a later notice.
+          aisFeedback: returnState.corrections
+            .filter((c) => !c.reverted && c.attribution)
+            .map((c) => c.attribution),
         }),
       });
       if (res.ok) {
@@ -1578,6 +1598,17 @@ export default function WapsiPrototype() {
           showLanguage
           uiMode="manual"
           onUiModeChange={(next) => void switchUiMode(next)}
+          onOpenProfile={() => setProfileOpen(true)}
+          regimePreview={
+            step === "dashboard" && persona && exactComparison
+              ? {
+                  regime,
+                  newTax: toWholeRupees(exactComparison.new.taxPayable288BPaise),
+                  oldTax: toWholeRupees(exactComparison.old.taxPayable288BPaise),
+                  onChange: (chosen) => returnState && saveState({ ...returnState, regime: chosen }),
+                }
+              : undefined
+          }
         />
 
         {/* --- MAIN BODY --- */}
@@ -1612,10 +1643,41 @@ export default function WapsiPrototype() {
                 }
               }}
               onConfirmFiling={handleFileCommit}
+              externalPrompt={copilotPrompt}
+              hideLauncher
             />
           )}
 
           <ToolDrawer tool={tool} lang={lang} onClose={() => setTool(null)} persona={persona} />
+
+          <ProfileSheet
+            open={profileOpen}
+            lang={lang}
+            persona={step === "dashboard" ? persona : null}
+            onClose={() => setProfileOpen(false)}
+            onSignOut={step === "dashboard" ? () => { setProfileOpen(false); handleLogOut(); } : undefined}
+            onEditOnboarding={() => { setProfileOpen(false); handleEditOnboarding(); }}
+          />
+
+          {/* The pre-audit scrutiny modal: opens from commitCorrection, never from a click. */}
+          <AISDiscrepancyModal
+            open={pendingScrutiny !== null}
+            item={
+              pendingScrutiny
+                ? {
+                    id: pendingScrutiny.fact.id,
+                    label: pendingScrutiny.fact.label,
+                    reporter: pendingScrutiny.fact.provenance.reporter,
+                    statement: pendingScrutiny.fact.provenance.statement === "self" ? "AIS" : pendingScrutiny.fact.provenance.statement,
+                  }
+                : null
+            }
+            variance={pendingScrutiny?.variance ?? null}
+            initialCode={pendingScrutiny?.correction.feedbackCode}
+            lang={lang}
+            onConfirm={resolveScrutiny}
+            onCancel={() => setPendingScrutiny(null)}
+          />
 
           {/* Ambient motes on every page: slow, evenly multicoloured
               (user directives 2026-08-29). OUTSIDE AnimatePresence. */}
@@ -1642,8 +1704,9 @@ export default function WapsiPrototype() {
                   onboardingProfile={onboardingProfile}
                   onEditOnboarding={handleEditOnboarding}
                 />
-                <div className="mt-10">
-                  <TaskGrid lang={lang} hasReturn={false} onSelect={handleTile} />
+                <div className="mt-10 space-y-6">
+                  <QuickStartBanner lang={lang} />
+                  <TaxDashboardGrid lang={lang} persona={null} regime={regime} today={TODAY} onSelect={handleCard} />
                 </div>
               </m.div>
             )}
@@ -1690,8 +1753,19 @@ export default function WapsiPrototype() {
                 {/* ACTIVE PROFILE STRIP */}
                 <ProfileStrip persona={persona} lang={lang} t={t} onLogOut={handleLogOut} isRealMode={isRealMode} onEditOnboarding={handleEditOnboarding} greeting={session?.pan === persona.pan ? session.personalisedMessage : undefined} />
 
-                {/* Plan §5: every tile here completes end to end; tool views open in the drawer. */}
-                <TaskGrid lang={lang} hasReturn onSelect={handleTile} />
+                {/* The 7-card grid (wapsi_dashboard_card_optimization.md §4): every card completes
+                    end to end; tool views open in the drawer, the challan in its modal. */}
+                <QuickStartBanner lang={lang} />
+                <TaxDashboardGrid
+                  lang={lang}
+                  persona={persona}
+                  regime={regime}
+                  confirmedFactIds={returnState?.confirmedFactIds}
+                  scrutinyFlags={scrutinyFlags}
+                  today={TODAY}
+                  onSelect={handleCard}
+                  onScrutinyClick={() => setFlowStep("facts")}
+                />
 
                 {/* Portal chrome removed (user directive 2026-08-29): the D13
                     case-file hero above is the cover; tabs are the nav; the
@@ -2024,6 +2098,13 @@ export default function WapsiPrototype() {
                     </m.div>
                   </>
                 )}
+
+                {/* The persistent copilot: the one place to type. Sticky to the viewport foot. */}
+                <CopilotBar
+                  lang={lang}
+                  onAsk={(text) => setCopilotPrompt({ text, nonce: Date.now() })}
+                  onTool={(id) => setTool(id)}
+                />
 
               </m.div>
             )}

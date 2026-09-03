@@ -468,11 +468,11 @@ function withFact(
  */
 export function inferFeedbackCode(declared: number, reason?: string): AISFeedbackCode {
   const text = (reason ?? "").toLowerCase();
-  if (/joint|split|other pan|wrong pan|another pan/.test(text)) return "CODE_4";
-  if (/duplicate|not my income|fraud|denied|never received/.test(text)) return "CODE_5";
-  if (/exempt|not taxable/.test(text)) return "CODE_2";
+  if (/joint|split|other pan|wrong pan|another pan|other year|financial year/.test(text)) return "CODE_3";
+  if (/duplicate|already counted|reported twice/.test(text)) return "CODE_4";
+  if (/not my income|fraud|denied|never received/.test(text)) return "CODE_5";
   if (declared === 0) return "CODE_5";
-  return "CODE_3";
+  return "CODE_2";
 }
 
 export function taxReducer(state: TaxReturnState, action: TaxAction): TaxReturnState {

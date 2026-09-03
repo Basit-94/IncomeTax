@@ -10,10 +10,12 @@
  *
  * SINGLE SOURCE. Two copies of this table already existed — one in
  * `lib/agent/copilot-engine.ts` and one in the agent's system prompt — and they
- * had drifted: the same code meant "Information is not fully correct" in one
- * and something else in the other. This module is now the only definition; both
- * import it. The wording follows the more specific of the two, because a citizen
- * choosing between five options needs them to be distinguishable.
+ * had drifted. This module is now the only definition; both import it.
+ *
+ * Table (aligned 2026-09-03 to the pre-audit spec, which follows the order of
+ * the department's own AIS feedback options):
+ *   CODE_1 correct · CODE_2 not fully correct · CODE_3 other PAN / year ·
+ *   CODE_4 duplicate · CODE_5 denied.
  *
  * Pure data, no React: the agent (server) and the reconciliation surface
  * (client) both read it.
@@ -32,19 +34,32 @@ export const AIS_FEEDBACK_CODES: readonly AISFeedbackCode[] = [
 /** Short label — what goes in the dropdown. */
 export const AIS_FEEDBACK_LABELS: Readonly<Record<AISFeedbackCode, string>> = {
   CODE_1: "Information is correct",
-  CODE_2: "Income is not taxable / fully exempt",
-  CODE_3: "Information is not fully correct (disputed amount)",
-  CODE_4: "Information belongs to another PAN / joint account",
-  CODE_5: "Information is denied / duplicate transaction",
+  CODE_2: "Information is not fully correct",
+  CODE_3: "Information relates to other PAN / financial year",
+  CODE_4: "Information is duplicate",
+  CODE_5: "Information is denied",
 };
 
 /** One line of plain language, for the citizen who does not know which to pick. */
 export const AIS_FEEDBACK_HELP: Readonly<Record<AISFeedbackCode, string>> = {
   CODE_1: "The amount and the source are both right. Nothing to change.",
-  CODE_2: "You did receive this, but it is exempt — agricultural income, a matured PPF, a gift within limits.",
-  CODE_3: "The source is right but the figure is not. You will enter the correct amount.",
-  CODE_4: "This belongs to someone else, or to a joint account where the income is not yours.",
-  CODE_5: "You never received this at all, or it has already been counted in another row.",
+  CODE_2: "The source is right but the figure is not. You will enter the correct amount and say why, with proof if you have it.",
+  CODE_3: "This belongs to someone else's PAN, a joint holder, or a different year.",
+  CODE_4: "The same transaction was reported twice — for instance by both the fund house and its registrar.",
+  CODE_5: "You never received this at all.",
+};
+
+/**
+ * Which codes need the citizen's own words before the dispute can be filed.
+ * CODE_2 always does — "not fully correct" is meaningless without the reason
+ * and, ideally, the document that shows the right figure.
+ */
+export const AIS_FEEDBACK_REQUIRES_EXPLANATION: Readonly<Record<AISFeedbackCode, boolean>> = {
+  CODE_1: false,
+  CODE_2: true,
+  CODE_3: false,
+  CODE_4: false,
+  CODE_5: false,
 };
 
 /** The codes that mean the citizen is contesting the row. CODE_1 is agreement. */

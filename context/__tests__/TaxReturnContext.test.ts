@@ -253,8 +253,8 @@ describe("SYNC_STATE carries the ledger's own answers, both sides", () => {
         confirmed: false,
       },
     });
-    expect(state.facts.salary.feedbackCode).toBe("CODE_3");
-    expect(state.facts.dividend.feedbackCode).toBe("CODE_5");
+    expect(state.facts.salary.feedbackCode).toBe("CODE_2");
+    expect(state.facts.dividend.feedbackCode).toBe("CODE_4");
   });
 
   it("returns an upstream-answered row to PENDING when the ledger withdraws the answer", () => {
@@ -304,13 +304,13 @@ describe("SYNC_STATE carries the ledger's own answers, both sides", () => {
 
 describe("inferFeedbackCode", () => {
   it("maps the main journey's canned reasons onto the CBDT table", () => {
-    expect(inferFeedbackCode(50_000, "Amount is incorrect")).toBe("CODE_3");
-    expect(inferFeedbackCode(50_000, "Belongs to joint account / split")).toBe("CODE_4");
+    expect(inferFeedbackCode(50_000, "Amount is incorrect")).toBe("CODE_2");
+    expect(inferFeedbackCode(50_000, "Belongs to joint account / split")).toBe("CODE_3");
     expect(inferFeedbackCode(0, "This is not my income / Fraud / Mistake")).toBe("CODE_5");
-    expect(inferFeedbackCode(0, "Duplicate TDS entry")).toBe("CODE_5");
-    expect(inferFeedbackCode(0, "Deducted on wrong PAN")).toBe("CODE_4");
+    expect(inferFeedbackCode(0, "Duplicate TDS entry")).toBe("CODE_4");
+    expect(inferFeedbackCode(0, "Deducted on wrong PAN")).toBe("CODE_3");
     expect(inferFeedbackCode(0, undefined)).toBe("CODE_5");
-    expect(inferFeedbackCode(10, undefined)).toBe("CODE_3");
+    expect(inferFeedbackCode(10, undefined)).toBe("CODE_2");
   });
 });
 

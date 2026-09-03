@@ -7,8 +7,8 @@ architecture, a contract, a storage key, a route, or a test count, update the ma
 append the detail to `log.md` (append-only, `## [YYYY-MM-DD HH:MM] who (title)` entries).
 
 **Last verified against the tree:** 2026-09-03 (branch `dev`, uncommitted working tree on top of
-`215327e`; the agent never commits, plan D12). Gates at that point: `npx tsc --noEmit` 0 errors ·
-`npx vitest run` 231/231 across 25 files · `npx next build` exit 0.
+`13791a1`; the agent never commits, plan D12). Gates at that point: `npx tsc --noEmit` 0 errors ·
+`npx vitest run` 262/262 across 26 files · `npx next build` exit 0.
 
 **The plan that produced this version:** `plan.md` (decisions D1–D12, phases, the status table).
 **The two surfaces:** `docs/AGENTIC.md`.
@@ -55,7 +55,7 @@ Env (see `.env.example`): `GEMINI_API_KEY`, `AGENT_MODEL`, `AGENT_FALLBACK_MODEL
 | `/signin` | `app/signin/page.tsx` + `components/auth/signin-form.tsx` | The site gate. Sign in or create an account. Redirects a signed-in user to `/welcome` (first time) or their surface. |
 | `/welcome` | `app/welcome/page.tsx` + `components/auth/welcome-client.tsx` + `components/onboarding.tsx` | Onboarding v4, five pages, **once per account** (`users.onboarded_at`); `?edit=1` reopens without resetting. |
 | `/app` | `app/(gated)/app/page.tsx` → `components/agentic/surface.tsx` | The agentic surface: hero → chat, activity log, side panel (Progress/Outputs/Context), history drawer. |
-| `/` | `app/(gated)/page.tsx` (~2,200 lines, client) | The manual surface: landing (PAN or persona) → OTP (`949494`) → dashboard; plus `components/dashboard/task-grid.tsx` and `components/tools/tool-drawer.tsx`. |
+| `/` | `app/(gated)/page.tsx` (~2,300 lines, client) | The manual surface: landing (PAN or persona) → OTP (`949494`) → dashboard. Since 2026-09-03 the dashboard is the **7-card grid** (`components/dashboard/TaxDashboardGrid.tsx`, ids `file_return · match_records · regime_optimizer · pay_tax · notices · return_status · calendar`) under a DigiLocker `QuickStartBanner.tsx`, with a docked `copilot-bar.tsx` (hands its text to `AgentPanel` via `externalPrompt`; the HRA chip opens the tool drawer) and a `profile-sheet.tsx` slide-over behind the header's profile icon (documents, DigiLocker, sign-out). The header also shows a regime toggle preview with both regimes' payable figures. Tool views still open in `components/tools/tool-drawer.tsx` (`compare`, `calendar` now carries the advance-tax schedule, `history` now carries e-verify; `calculator`, `hra`, `capital_gains`, `tds_check`, `advance_tax`, `everify` remain as ids but only `hra` is reachable, from the copilot chip). The 18-tile `task-grid.tsx` is gone. |
 | `/vault` | `app/(gated)/vault/page.tsx` → `components/vault/vault-page.tsx` | Per-task requirement matrix, documents + upload, memories (delete), DigiLocker link, audit trail. |
 | `/digilocker/consent` | `app/digilocker/consent/page.tsx` | The mock consent screen (Allow/Deny). |
 | `/reconcile` | `components/InteractiveTaxDashboard.tsx` | The AIS/26AS reconciliation matrix (unchanged). |
@@ -115,8 +115,26 @@ s.87A full rebate ≤ ₹12L with marginal relief; s.111A 20%, s.112A 12.5% abov
 72 golden vectors pin it to the Java engine. Known gaps: surcharge, s.234A/B/C, s.234F.
 Presumptive scheme (s.44AD 8%/6%, s.44ADA 50%, limits ₹2/3 crore and ₹50/75 lakh) lives in `lib/harness/tools.ts`.
 
+**`lib/taxEngine.ts` (2026-09-03) — the dashboard's exact-paise engine.** Pure, BigInt-paise inside,
+imports every slab edge and rate from `lib/engine/constants.ts` (one table, no drift). Applies s.288A
+(total income → nearest ₹10) and s.288B (tax → nearest ₹10) once each at the statutory boundaries;
+exposes `MARGINAL_RELIEF_UPPER_BOUND_RUPEES` (₹12,70,588, solved from the slab table — note that with
+s.288A applied the last income that actually receives relief is ₹12,70,584). API: `computeRegime /
+computeNewRegime / computeOldRegime / compareRegimesExact / returnFactsFromPersona / toPaise / toWholeRupees`;
+types in `types/tax.ts` (`ReturnFacts`, `RegimeComputation`, `AISVariance`, `AISDiscrepancyAttribution`,
+`DashboardCardId`). `lib/__tests__/taxEngine.test.ts` pins it to `lib/engine/tax.ts` on the pre-288B figure
+for a salary sweep and the three personas. The ledger and the harness still use `lib/engine`.
+
 ## 7. Compliance and helpers
-`lib/compliance/` (CBDT codes, CASS radar, Challan 280 identifiers, PDF extraction) unchanged.
+`lib/compliance/` (CBDT codes, CASS radar, Challan 280 identifiers, PDF extraction). **CBDT code table
+remapped 2026-09-03** to the pre-audit spec (single source `aisFeedback.ts`, all dependents updated):
+CODE_1 correct · CODE_2 not fully correct (needs explanation, `AIS_FEEDBACK_REQUIRES_EXPLANATION`) ·
+CODE_3 other PAN / financial year · CODE_4 duplicate · CODE_5 denied. `inferFeedbackCode` in
+`context/TaxReturnContext.tsx`, the dispute modal, the reconciliation surface, the copilot engine and the
+agent prompt follow it. `cass.ts` gained `assessAisVariance(preFilled, declared)` (exact basis points,
+strict `> 20%`). `Correction.attribution?: AISDiscrepancyAttribution` (`lib/return/state.ts`) records the
+code, figures, variance, explanation and proof name when the radar fired; `handleFileCommit` sends the
+active attributions as `aisFeedback` on the submission payload.
 `lib/validation/index.ts`: PAN (holder-type letter, surname-initial warning), Aadhaar/VID (Verhoeff),
 TAN, IFSC, bank account, mobile, email, PIN, UAN, GSTIN (state, embedded PAN, mod-36), DIN, ack, BSR,
 challan serial, money, DOB; issue codes, plain-language `issueText`. `lib/tools/index.ts`: HRA
@@ -130,18 +148,25 @@ exemption, advance-tax schedule, tax calendar, TDS mismatch. `lib/itr/index.ts`:
   and slot *ids*, never masks with digits or names; identifiers are stripped by construction.
 - Memories are facts. `remember` throws on anything that validates as an identifier or reads as an amount.
 - Filing with tax owing shows "Pay the balance first" (mock challan) before filing.
+- **Pre-audit scrutiny radar.** Any correction that reduces a pre-filled (non-`self`) income fact by
+  more than 20% of the BASELINE figure does not enter the ledger until the citizen binds it to a CBDT
+  code in `components/modals/AISDiscrepancyModal.tsx` (`commitCorrection` in `page.tsx`). CODE_1
+  withdraws the reduction; CODE_2 needs ≥10 characters of explanation. The grid header shows a
+  "CASS scrutiny trigger warning · N" badge while such attributions are active.
 - Citizen-facing copy never names a section as the subject; consequence, not rule.
 - New UI copy goes through `localize()` (`components/mock-i18n.ts`, en/hi/ta); `Dict` keys need all 23 files.
 
 ## 9. Verification protocol
 1. `npx tsc --noEmit` (0 errors; zero `any`).
-2. `npx vitest run` — 25 files / 231 tests: engine + slab, golden export, return state/persist/compute,
+2. `npx vitest run` — 26 files / 262 tests: engine + slab, exact-paise engine (`lib/__tests__/taxEngine.test.ts`), golden export, return state/persist/compute,
    upstreamSync, context reducer, compliance, agent, onboarding v4, submission key, db, auth, view
    reducer, validation, interview + offline planner, vault/memory/runs/tools, DigiLocker, engine
    integration (offline filing run, confirm flag both ways, DigiLocker pull, business + notice), rate-limit, env, tools.
 3. `npx next build`.
 4. Browser hooks: `data-testid="signin-card|onboarding|onboarding-next|hero|composer|composer-input|composer-submit|composer-mic|hero-chip|chat-shell|run-status|transcript|msg-user|msg-assistant|activity-log|ask-form|ask-answered|ask-yes|ask-no|ask-submit|ask-skip|ask-issue|card-review|card-confirm|card-comparison|card-itrv|card-document|confirm-action|side-panel|progress-list|outputs-list|history-button|history-drawer|new-chat|run-problem|mode-switch|task-grid|tool-drawer|vault-page|vault-matrix|vault-documents|vault-memories|vault-audit|vault-danger-zone|digilocker-consent|consent-allow|everify-code|everify-submit"`,
-   `data-slot-id`, `data-tile`, `data-tool`, `data-step-status`, `data-mode`, plus the older
+   dashboard 2026-09-03: `quick-start-banner|quick-start-cta|cass-radar-badge|ais-discrepancy-modal|cass-scrutiny-badge|ais-variance|ais-explanation|ais-attach|copilot-bar|copilot-input|copilot-submit|copilot-chip|profile-button|profile-sheet|profile-documents|profile-digilocker|regime-preview`
+   (`data-code` on each CBDT option, `data-regime` on the header seg);
+   `data-slot-id`, `data-tile` (now the seven card ids), `data-tool`, `data-step-status`, `data-mode`, plus the older
    `net-position`, `cass-radar`, `itrv-timestamp`, `#fact-<id>`, `#dashboard-tabs`.
    The automation's synthetic "Return" key does not reach React's `onKeyDown`; dispatch a real
    `KeyboardEvent("keydown", {key:"Enter"})` when scripting the composer.

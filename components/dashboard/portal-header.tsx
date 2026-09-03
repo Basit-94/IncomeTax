@@ -1,6 +1,8 @@
 "use client";
 
-import { Settings, Sun, Moon } from "lucide-react";
+import { Settings, Sun, Moon, UserRound } from "lucide-react";
+import type { Regime } from "../../lib/engine/types";
+import { formatMoney } from "../../lib/money";
 import { type Dict } from "../../lib/i18n";
 import { UI_MODES, type UiMode } from "../../lib/mode";
 import type { Lang } from "../../lib/types";
@@ -25,6 +27,13 @@ interface PortalHeaderProps {
       (user directive 2026-08-29); it follows the account, not the page. */
   uiMode?: UiMode;
   onUiModeChange?: (mode: UiMode) => void;
+  /** Opens the profile slide-over ("My documents and details" lives there, not in the grid). */
+  onOpenProfile?: () => void;
+  /**
+   * The regime toggle preview: both regimes' payable figures from the exact-paise
+   * engine, with the active one pressed. Shown only while a return is open.
+   */
+  regimePreview?: { regime: Regime; newTax: number; oldTax: number; onChange: (regime: Regime) => void };
 }
 
 export default function PortalHeader({
@@ -39,6 +48,8 @@ export default function PortalHeader({
   showLanguage = true,
   uiMode,
   onUiModeChange,
+  onOpenProfile,
+  regimePreview,
 }: PortalHeaderProps) {
   return (
     <header className="border-b border-line bg-paper text-ink z-10 relative print:hidden">
@@ -91,6 +102,26 @@ export default function PortalHeader({
 
         {/* Row 2: the remaining controls, right-aligned */}
         <div className="flex flex-wrap items-center gap-3 justify-end">
+          {regimePreview && (
+            <div className="seg" role="group" aria-label="Tax regime" data-testid="regime-preview">
+              {(["new", "old"] as const).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  className="min-h-[44px] flex items-baseline gap-2"
+                  aria-pressed={regimePreview.regime === r}
+                  data-regime={r}
+                  onClick={() => regimePreview.regime !== r && regimePreview.onChange(r)}
+                >
+                  <span>{r === "new" ? "New" : "Old"}</span>
+                  <span className="font-mono text-[11px] tabular-nums opacity-80">
+                    {formatMoney(r === "new" ? regimePreview.newTax : regimePreview.oldTax, lang)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
           {showLanguage && (
             <LanguageMenu lang={lang} onChange={changeLang} label={t.shell.language} />
           )}
@@ -122,6 +153,18 @@ export default function PortalHeader({
             <Settings size={14} className={showConsole ? "animate-spin" : ""} />
             <span>{t.shell.sandbox}</span>
           </button>
+
+          {onOpenProfile && (
+            <button
+              type="button"
+              onClick={onOpenProfile}
+              aria-label="My documents and details"
+              data-testid="profile-button"
+              className="min-h-[44px] min-w-[44px] px-3 py-1.5 bg-paper-2 border border-line rounded text-ink-2 hover:bg-slate-200 transition-colors flex items-center justify-center cursor-pointer"
+            >
+              <UserRound size={16} />
+            </button>
+          )}
         </div>
       </div>
     </header>

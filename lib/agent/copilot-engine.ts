@@ -186,7 +186,7 @@ export function executeComputeTaxAy2026(args: ComputeTaxAy2026Args) {
  */
 export function executeReconcileFact(args: ReconcileFactArgs) {
   const { factId, action, correctedAmount, cbdtReasonCode, userComment } = args;
-  const reasonCode = cbdtReasonCode || (action === "CONFIRM" ? "CODE_1" : "CODE_3");
+  const reasonCode = cbdtReasonCode || (action === "CONFIRM" ? "CODE_1" : "CODE_2");
   const reasonDescription = CBDT_REASON_CODES[reasonCode] || "Disputed entry";
 
   return {

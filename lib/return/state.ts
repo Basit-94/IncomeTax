@@ -14,6 +14,7 @@
 
 import type { CustomPersonaId, IncomeFact, Lang, Persona, PersonaId } from "../types";
 import type { AISFeedbackCode } from "../compliance/aisFeedback";
+import type { AISDiscrepancyAttribution } from "../../types/tax";
 
 /** What the citizen is asserting about a fact: its figure, or that it exists at all. */
 export type CorrectionField = "amount" | "existence";
@@ -40,6 +41,13 @@ export interface Correction {
    * code from the reason and the figure in that case.
    */
   feedbackCode?: AISFeedbackCode;
+  /**
+   * Set when the pre-audit radar fired on this correction (a reduction of a
+   * pre-filled figure by more than 20%) and the citizen bound it to a CBDT
+   * code. Rides into the submission payload so the department sees the
+   * position with the return, not months later.
+   */
+  attribution?: AISDiscrepancyAttribution;
   /** ISO timestamp of when the correction was made. */
   at: string;
   /** True once the citizen took it back. Kept in history regardless. */
