@@ -2665,6 +2665,39 @@ things there are already true and will NOT be rewritten:
   5. Never commit or push without explicit user instruction.
 - **Verified:** `npx tsc --noEmit` 0 errors · `npx vitest run` 182/182 passed across 14 test files.
 
+## [2026-09-03 16:38] antigravity (deactivate 4-question onboarding wizard in app/page.tsx on dev-2)
+- **Action:** EDIT
+- **Target:** `app/page.tsx`, `log.md`
+- **Intent:** Deactivate the 4-question onboarding wizard per user request:
+  1. Default root page step directly to `"landing"`.
+  2. Routed browser back button and `goHome()` directly to `"landing"`.
+  3. Removed `<Onboarding />` step from active `AnimatePresence` rendering while keeping `components/onboarding.tsx` and `lib/onboarding.ts` intact for future reactivation.
+  4. Always enable language switcher (`showLanguage={true}`) across all 23 languages on the landing page.
+- **Verified:** `npx tsc --noEmit` 0 errors · `npx vitest run` 182/182 passed across 14 test files · `npx next build` exit 0 (routes `/`, `/_not-found`, `/api/agent`, `/architecture`, `/reconcile`).
+
+## [2026-09-03 16:44] antigravity (remove Technical Architecture link and /architecture route on dev-2)
+- **Action:** DELETE | EDIT
+- **Target:** `components/landing.tsx`, `app/(docs)` (deleted `architecture/page.tsx`, `layout.tsx`), `log.md`
+- **Intent:** Remove "Technical architecture" link from landing page and delete the `app/(docs)` directory containing `/architecture`.
+- **Verified:** `npx tsc --noEmit` 0 errors · `npx vitest run` 182/182 passed across 14 test files · `npx next build` exit 0 (routes `/`, `/_not-found`, `/api/agent`, `/reconcile`).
+
+## [2026-09-03 16:53] antigravity (implement 7-card capability grid & interactive modals on dev-2)
+- **Action:** CREATE | EDIT
+- **Target:** `lib/landingCards.ts` (new), `components/modals/TaxOptimizerModal.tsx` (new), `components/modals/TaxCalendarModal.tsx` (new), `components/landing-action-grid.tsx` (new), `components/landing.tsx`, `app/page.tsx`, `log.md`
+- **Intent:** Implement the 7-Card Capability Grid on the landing page:
+  1. Card 1 (File or Review Return): Facts-first return builder & submission pipeline launcher.
+  2. Card 2 (Match Official Records): Reconciles Form 16, 26AS, and AIS data with CBDT feedback codes (pre-fills Priya's discrepancy demo).
+  3. Card 3 (Tax & Regime Optimizer): Instant interactive modal comparing Old vs. New regime with Section 87A marginal relief and standard deduction.
+  4. Card 4 (Pay Tax Due): Self-assessment tax payment launcher u/s 140A (pre-fills Rakesh's Challan 280 demo).
+  5. Card 5 (Notices & Defect Resolver): Automated defense drafter for Section 143(1)(a) & 139(9) notices.
+  6. Card 6 (Return Status & History): Unified lifecycle tracker for past filings, verification, and refunds.
+  7. Card 7 (Tax Calendar & Deadlines): Instant interactive modal detailing all 4 advance tax installment dates, July 31 due date, Dec 31 belated cutoff, and Sections 234A/B/C interest penalties.
+  8. Full multilingual support across all 23 languages without altering existing UI styling tokens.
+- **Verified:** `npx tsc --noEmit` 0 errors · `npx vitest run` 182/182 passed across 14 test files · `npx next build` exit 0 · Local dev server 200 OK.
+
+
+
+
 
 
 

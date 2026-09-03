@@ -1,16 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import Link from "next/link";
-import { ChevronRight, Cpu } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import type { Dict } from "../lib/i18n";
+import type { Lang } from "../lib/types";
 import type { OnboardingProfile } from "../lib/onboarding";
 import { getPersonalization } from "../lib/onboarding";
 import { PERSONAS } from "../lib/personas";
 import { MockField, MockFill, MOCK } from "@/components/dev/mock-fill";
+import LandingActionGrid from "./landing-action-grid";
+import type { LandingActionCard } from "@/lib/landingCards";
 
 interface LandingProps {
   t: Dict;
+  lang?: Lang;
   panInput: string;
   panInputError: string | null;
   handlePanInputChange: (val: string) => void;
@@ -32,6 +35,7 @@ const PAN_ERROR_ID = "landing-pan-error";
 
 export default function Landing({
   t,
+  lang = "en",
   panInput,
   panInputError,
   handlePanInputChange,
@@ -75,6 +79,20 @@ export default function Landing({
     void el.offsetWidth; /* restart the ring when a second card is clicked */
     el.classList.add("flash");
     flashTimer.current = setTimeout(() => el.classList.remove("flash"), 900);
+  };
+
+  const handleActionClick = (id: LandingActionCard["id"]) => {
+    if (id === "file_return") {
+      fillPanFromPersona(PERSONAS.sunita.pan);
+    } else if (id === "match_records") {
+      fillPanFromPersona(PERSONAS.priya.pan);
+    } else if (id === "pay_tax") {
+      fillPanFromPersona(PERSONAS.rakesh.pan);
+    } else if (id === "notices") {
+      fillPanFromPersona(PERSONAS.sunita.pan);
+    } else if (id === "status_history") {
+      fillPanFromPersona(PERSONAS.rakesh.pan);
+    }
   };
 
   return (
@@ -167,6 +185,9 @@ export default function Landing({
         </button>
       </form>
 
+      {/* ── 7-Action Capability Grid ─────────────── */}
+      <LandingActionGrid lang={lang} onActionClick={handleActionClick} />
+
       {/* ── the reviewer detour: three people you can be ─────────────── */}
       <div className="divider">
         <svg width="70" height="18" viewBox="0 0 70 18" aria-hidden="true">
@@ -205,30 +226,6 @@ export default function Landing({
           );
         })}
       </section>
-
-      <div className="divider" aria-hidden="true">
-        <div className="line" />
-        <svg width="46" height="10" viewBox="0 0 46 10" aria-hidden="true">
-          <path
-            d="M2 6 C 10 2, 18 9, 26 5 S 40 4, 44 6"
-            fill="none"
-            stroke="var(--subtle-color)"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-          />
-        </svg>
-        <div className="line" />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-x-6">
-        <Link
-          href="/architecture"
-          className="inline-flex min-h-11 items-center gap-1.5 font-mono text-xs text-ink-2 hover:text-money hover:underline"
-        >
-          <Cpu size={12} aria-hidden="true" />
-          <span>{t.landing.architectureLink}</span>
-        </Link>
-      </div>
     </div>
   );
 }

@@ -70,7 +70,7 @@ import CheckScreen from "../components/flow/check-screen";
 import BeforeFiling from "../components/flow/before-filing";
 import FilingStep from "../components/flow/filing-step";
 import { generateSeededUser } from "../components/sandbox-user";
-import Onboarding from "../components/onboarding";
+// Onboarding temporarily deactivated per user instruction
 import { QuickEditModal } from "../components/dashboard/quick-edit-modal";
 import RealUserTaxWizard from "../components/flow/real-user-wizard";
 import { useTax } from "../context/TaxReturnContext";
@@ -133,7 +133,7 @@ export default function WapsiPrototype() {
   const [lang, setLang] = useState<Lang>("en");
   const [theme, setTheme] = useState<"dark" | "light">("light");
   const [antigravityUi, setAntigravityUi] = useState(false);
-  const [step, setStep] = useState<"onboarding" | "landing" | "otp" | "dashboard">("onboarding");
+  const [step, setStep] = useState<"onboarding" | "landing" | "otp" | "dashboard">("landing");
   const [activePersonaId, setActivePersonaId] = useState<PersonaId | "custom" | null>(null);
   const [onboardingProfile, setOnboardingProfile] = useState<OnboardingProfile | null>(null);
   const [onboardingDraft, setOnboardingDraft] = useState<OnboardingDraft>({});
@@ -303,12 +303,11 @@ export default function WapsiPrototype() {
         } else {
           setActiveTab(destination);
         }
-        setStep("dashboard");
       } else {
-        setOnboardingReturnStep("dashboard");
-        setStep("onboarding");
+        setActiveTab("overview");
       }
-    } else if (savedOnboarding) {
+      setStep("dashboard");
+    } else {
       setStep("landing");
     }
   }, []);
@@ -339,14 +338,14 @@ export default function WapsiPrototype() {
     document.documentElement.lang = lang;
   }, [lang]);
 
-  // Handle browser back button: goes to onboarding (home) if in dashboard/landing
+  // Handle browser back button: goes to landing (home) if in dashboard/otp
   useEffect(() => {
     // Initial history state
     window.history.replaceState({ page: "home" }, "");
 
     const handlePopState = (event: PopStateEvent) => {
       if (event.state && event.state.page === "home") {
-        setStep("onboarding");
+        setStep("landing");
       }
     };
 
@@ -356,15 +355,15 @@ export default function WapsiPrototype() {
     };
   }, []);
 
-  // Whenever step advances to dashboard/landing/otp, push a new state to browser history
+  // Whenever step advances to dashboard/otp, push a new state to browser history
   useEffect(() => {
-    if (step !== "onboarding") {
+    if (step !== "landing") {
       window.history.pushState({ page: "wizard" }, "");
     }
   }, [step]);
 
   const goHome = () => {
-    setStep("onboarding");
+    setStep("landing");
     window.history.replaceState({ page: "home" }, "");
   };
 
@@ -622,7 +621,7 @@ export default function WapsiPrototype() {
     // page. Nothing of the previous citizen may survive there either.
     taxDispatch({ type: "RESET" });
     setChallanOpen(false);
-    setStep("onboarding");
+    setStep("landing");
     setActivePersonaId(null);
     setOnboardingProfile(null);
     setOnboardingDraft({});
@@ -1561,7 +1560,7 @@ export default function WapsiPrototype() {
           toggleTheme={toggleTheme}
           setShowConsole={setShowConsole}
           onLogoClick={goHome}
-          showLanguage={step !== "onboarding"}
+          showLanguage={true}
           mode={step === "dashboard" && persona ? uiMode : undefined}
           onModeChange={(mode) => {
             if (!onboardingProfile) return;
@@ -1618,27 +1617,7 @@ export default function WapsiPrototype() {
           <MiniBurstHost />
 
           <AnimatePresence mode="wait">
-            
-            {/* STEP 1: ONBOARDING */}
-            {step === "onboarding" && (
-              <m.div
-                key="onboarding"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.25 }}
-              >
-                <Onboarding
-                  lang={lang}
-                  t={t}
-                  initialDraft={onboardingDraft}
-                  onLanguageChange={changeLang}
-                  onComplete={handleCompleteOnboarding}
-                />
-              </m.div>
-            )}
-
-            {/* STEP 2: LANDING */}
+            {/* STEP 1: LANDING */}
             {step === "landing" && (
               <m.div
                 key="landing"
@@ -1649,12 +1628,13 @@ export default function WapsiPrototype() {
               >
                 <Landing
                   t={t}
+                  lang={lang}
                   panInput={panInput}
                   panInputError={panInputError}
                   handlePanInputChange={handlePanInputChange}
                   handlePanSubmit={handlePanSubmit}
-                  onboardingProfile={onboardingProfile}
-                  onEditOnboarding={handleEditOnboarding}
+                  onboardingProfile={null}
+                  onEditOnboarding={() => {}}
                 />
               </m.div>
             )}
