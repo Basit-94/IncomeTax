@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { ChevronRight, UserCheck, LogOut, ArrowRight, Sparkles } from "lucide-react";
 import type { Dict } from "../lib/i18n";
-import type { Lang } from "../lib/types";
+import type { Lang, Notice, BankAccount, Persona } from "../lib/types";
 import type { OnboardingProfile } from "../lib/onboarding";
 import { getPersonalization } from "../lib/onboarding";
 import { PERSONAS } from "../lib/personas";
@@ -11,7 +11,7 @@ import { MockField, MockFill, MOCK } from "@/components/dev/mock-fill";
 import LandingActionGrid from "./landing-action-grid";
 import type { LandingActionCard } from "@/lib/landingCards";
 
-import type { IngestedDocument } from "@/context/TaxReturnContext";
+import type { IngestedDocument, SelfAssessmentPayment } from "@/context/TaxReturnContext";
 import type { ReconcileRow } from "./modals/MatchRecordsModal";
 
 interface LandingProps {
@@ -26,7 +26,18 @@ interface LandingProps {
   onLaunchPersona?: (personaId: "sunita" | "rakesh" | "priya", directToDashboard?: boolean) => void;
   onLaunchPan?: (pan: string) => void;
   onLaunchWithForm16?: (doc: IngestedDocument) => void;
-  activeCitizen?: { name: string; pan: string; salary?: number; tds?: number; totalTaxesPaid?: number } | null;
+  activeCitizen?: {
+    name: string;
+    pan: string;
+    salary?: number;
+    tds?: number;
+    totalTaxesPaid?: number;
+    taxDue?: number;
+    notices?: Notice[];
+    banks?: BankAccount[];
+    refund?: Persona["refund"];
+    hasDiscrepancies?: boolean;
+  } | null;
   onResumeReturn?: () => void;
   onLogout?: () => void;
   onApplyReconciliation?: (reconciledRows: ReconcileRow[]) => void;
@@ -41,6 +52,8 @@ interface LandingProps {
       homeLoan: number;
     }
   ) => void;
+  onApplyChallan?: (payment: SelfAssessmentPayment) => void;
+  onResolveNotice?: (noticeId: string, resolution: "agree" | "disagree", responseStatement?: string) => void;
   currentRegime?: "new" | "old";
 }
 
@@ -72,6 +85,8 @@ export default function Landing({
   onLogout,
   onApplyReconciliation,
   onApplyOptimizer,
+  onApplyChallan,
+  onResolveNotice,
   currentRegime,
 }: LandingProps) {
   const isHindi = lang === "hi";
@@ -283,6 +298,8 @@ export default function Landing({
         onResumeReturn={onResumeReturn}
         onApplyReconciliation={onApplyReconciliation}
         onApplyOptimizer={onApplyOptimizer}
+        onApplyChallan={onApplyChallan}
+        onResolveNotice={onResolveNotice}
         currentRegime={currentRegime}
       />
 

@@ -18,13 +18,16 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { getLandingCards, type LandingActionCard } from "@/lib/landingCards";
-import type { Lang } from "@/lib/types";
+import type { Lang, Notice, BankAccount, Persona } from "@/lib/types";
 import TaxOptimizerModal from "./modals/TaxOptimizerModal";
 import TaxCalendarModal from "./modals/TaxCalendarModal";
 import FileReturnModal from "./modals/FileReturnModal";
 import AgenticModeModal from "./modals/AgenticModeModal";
 import MatchRecordsModal, { type ReconcileRow } from "./modals/MatchRecordsModal";
-import type { IngestedDocument } from "@/context/TaxReturnContext";
+import PayTaxModal from "./modals/PayTaxModal";
+import NoticesModal from "./modals/NoticesModal";
+import StatusHistoryModal from "./modals/StatusHistoryModal";
+import type { IngestedDocument, SelfAssessmentPayment } from "@/context/TaxReturnContext";
 
 interface LandingActionGridProps {
   lang: Lang;
@@ -32,7 +35,18 @@ interface LandingActionGridProps {
   onLaunchPersona?: (personaId: "sunita" | "rakesh" | "priya", directToDashboard?: boolean) => void;
   onLaunchPan?: (pan: string) => void;
   onLaunchWithForm16?: (doc: IngestedDocument) => void;
-  activeCitizen?: { name: string; pan: string; salary?: number; tds?: number; totalTaxesPaid?: number } | null;
+  activeCitizen?: {
+    name: string;
+    pan: string;
+    salary?: number;
+    tds?: number;
+    totalTaxesPaid?: number;
+    taxDue?: number;
+    notices?: Notice[];
+    banks?: BankAccount[];
+    refund?: Persona["refund"];
+    hasDiscrepancies?: boolean;
+  } | null;
   onResumeReturn?: () => void;
   onLaunchFullReconcile?: () => void;
   onApplyReconciliation?: (reconciledRows: ReconcileRow[]) => void;
@@ -47,6 +61,8 @@ interface LandingActionGridProps {
       homeLoan: number;
     }
   ) => void;
+  onApplyChallan?: (payment: SelfAssessmentPayment) => void;
+  onResolveNotice?: (noticeId: string, resolution: "agree" | "disagree", responseStatement?: string) => void;
   currentRegime?: "new" | "old";
 }
 
@@ -71,12 +87,17 @@ export default function LandingActionGrid({
   onLaunchFullReconcile,
   onApplyReconciliation,
   onApplyOptimizer,
+  onApplyChallan,
+  onResolveNotice,
   currentRegime,
 }: LandingActionGridProps) {
   const cards = getLandingCards(lang);
   const [isFileReturnOpen, setIsFileReturnOpen] = useState(false);
   const [isMatchRecordsOpen, setIsMatchRecordsOpen] = useState(false);
   const [isOptimizerOpen, setIsOptimizerOpen] = useState(false);
+  const [isPayTaxOpen, setIsPayTaxOpen] = useState(false);
+  const [isNoticesOpen, setIsNoticesOpen] = useState(false);
+  const [isStatusHistoryOpen, setIsStatusHistoryOpen] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isAgenticOpen, setIsAgenticOpen] = useState(false);
 
@@ -95,6 +116,18 @@ export default function LandingActionGrid({
       setIsOptimizerOpen(true);
       return;
     }
+    if (id === "pay_tax") {
+      setIsPayTaxOpen(true);
+      return;
+    }
+    if (id === "notices") {
+      setIsNoticesOpen(true);
+      return;
+    }
+    if (id === "status_history") {
+      setIsStatusHistoryOpen(true);
+      return;
+    }
     if (id === "tax_calendar") {
       setIsCalendarOpen(true);
       return;
@@ -105,129 +138,166 @@ export default function LandingActionGrid({
   return (
     <section className="mt-8 space-y-6" aria-label="Portal Capabilities Grid">
       {/* ========================================================================= */}
-      {/* HIGHLIGHTED AGENTIC MODE HERO BOX (AT THE TOP OF ALL CARDS)              */}
+      {/* AGENTIC MODE HERO BOX (CLEAN, ELEVATED ARCHITECTURE)                      */}
       {/* ========================================================================= */}
-      <div className="relative group rounded-3xl p-[2px] bg-gradient-to-r from-violet-600 via-indigo-500 to-purple-600 shadow-xl shadow-indigo-500/15 hover:shadow-2xl hover:shadow-indigo-500/25 transition-all duration-300">
-        <div className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-indigo-50/80 via-paper to-purple-50/50 dark:from-indigo-950/30 dark:via-paper dark:to-purple-950/20 p-6 md:p-8 text-start backdrop-blur-md">
-          {/* Subtle Ambient Background Radiances */}
-          <div className="absolute top-0 right-0 -mr-16 -mt-16 size-64 rounded-full bg-indigo-400/10 dark:bg-indigo-400/5 blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-1/3 -mb-16 size-48 rounded-full bg-purple-400/10 dark:bg-purple-400/5 blur-2xl pointer-events-none" />
+      <div className="relative rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-[0_10px_25px_-5px_rgba(0,0,0,0.04)] dark:shadow-none p-6 sm:p-7 md:p-8 text-start transition-shadow hover:shadow-[0_14px_30px_-5px_rgba(0,0,0,0.07)]">
+        {/* Top Bar: Single Muted Pill */}
+        <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 dark:border-slate-800/80">
+          <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 px-2.5 py-0.5 text-[11px] font-mono font-medium text-slate-600 dark:text-slate-300">
+            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span>{isHindi ? "एजेंटिक मोड · स्वायत्त कर फाइलिंग" : "AI AGENTIC MODE • CONVERSATIONAL TAX FILING"}</span>
+          </div>
+        </div>
 
-          {/* Top Bar: Live AI Indicator + Badge */}
-          <div className="flex flex-wrap items-center justify-between gap-3 relative z-10">
-            <div className="flex items-center gap-2.5">
-              <span className="relative flex size-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
-                <span className="relative inline-flex rounded-full size-3 bg-indigo-500" />
-              </span>
-              <span className="rounded-full bg-indigo-600/10 dark:bg-indigo-400/15 border border-indigo-500/30 px-3 py-0.5 text-[11px] font-mono font-bold tracking-wider text-indigo-700 dark:text-indigo-300 uppercase flex items-center gap-1.5">
-                <Sparkles size={12} className="text-indigo-500" />
-                <span>{isHindi ? "एजेंटिक मोड · स्वायत्त बातचीत" : "AI AGENTIC MODE · CONVERSATIONAL TAX FILING"}</span>
-              </span>
+        {/* Main Hero Content (Responsive 2-column: Left 55-58%, Right ~42-45%) */}
+        <div className="mt-5 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+          {/* Left Column: Vision, Subtext, Navy CTA & Compact Starter Pills */}
+          <div className="lg:col-span-7 space-y-4">
+            <h3 className="font-sans text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight leading-snug">
+              {isHindi
+                ? "स्वायत्त बातचीत: संपूर्ण रिटर्न दाखिल व कर अनुकूलन"
+                : "File, Reconcile & Optimize Taxes via Conversation"}
+            </h3>
+
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-xl">
+              {isHindi
+                ? "कोई जटिल पोर्टल नहीं, कोई स्लैब गणना का सिरदर्द नहीं। अपनी मातृभाषा में बोलें या फॉर्म 16 अपलोड करें — हमारा स्वायत्त टैक्स एजेंट छिपी कटौतियां खोजता है, AIS विसंगतियां ठीक करता है और अधिकतम रिफंड सुनिश्चित करता है।"
+                : "No tedious portals, no manual slab math, no legal jargon. Simply converse or upload your Form 16. Our autonomous tax agent uncovers missing 80C/80D/HRA deductions, reconciles AIS discrepancies with statutory codes, and prepares your return hands-free."}
+            </p>
+
+            {/* Primary CTA (Deep Slate / Navy) */}
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setIsAgenticOpen(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 px-5 py-2.5 text-xs sm:text-sm font-semibold shadow-xs transition-colors cursor-pointer"
+              >
+                <Sparkles size={14} />
+                <span>{isHindi ? "एजेंटिक मोड शुरू करें" : "Explore Agentic Mode"}</span>
+                <ArrowRight size={14} />
+              </button>
             </div>
 
-            <div className="flex items-center gap-2 text-[11px] font-mono font-semibold text-ink-3">
-              <span className="rounded-md bg-paper-3/80 px-2 py-0.5 border border-line">
-                {isHindi ? "23 भाषाएं" : "23 Languages"}
+            {/* Compact Starter Prompt Pills */}
+            <div className="pt-1 space-y-2">
+              <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                {isHindi ? "त्वरित शुरुआत (Click to Ask):" : "Try asking the agent:"}
               </span>
-              <span className="rounded-md bg-paper-3/80 px-2 py-0.5 border border-line">
-                {isHindi ? "शून्य-फॉर्म" : "Zero Form Filling"}
-              </span>
+
+              <div className="flex flex-col gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setIsAgenticOpen(true)}
+                  className="group w-full text-start rounded-lg bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 transition-colors cursor-pointer flex items-center justify-between"
+                >
+                  <span className="flex items-center gap-2 truncate">
+                    <MessageSquare size={12} className="text-slate-400 dark:text-slate-500 shrink-0" />
+                    <span className="truncate">{isHindi ? "“यहाँ मेरा फॉर्म 16 है, अधिकतम रिफंड निकालें”" : "“Here is my Form 16, maximize my refund”"}</span>
+                  </span>
+                  <span className="font-mono text-xs text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors ml-2 shrink-0">
+                    ↵
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsAgenticOpen(true)}
+                  className="group w-full text-start rounded-lg bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 transition-colors cursor-pointer flex items-center justify-between"
+                >
+                  <span className="flex items-center gap-2 truncate">
+                    <MessageSquare size={12} className="text-slate-400 dark:text-slate-500 shrink-0" />
+                    <span className="truncate">{isHindi ? "“AIS में बैंक ब्याज विसंगति का जवाब तैयार करें”" : "“Reconcile my SBI interest mismatch in AIS”"}</span>
+                  </span>
+                  <span className="font-mono text-xs text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors ml-2 shrink-0">
+                    ↵
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Main Hero Content (Responsive 2-column) */}
-          <div className="mt-5 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center relative z-10">
-            {/* Left Column: Vision & Pitch */}
-            <div className="lg:col-span-7 space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/30 shrink-0">
-                  <Bot size={24} />
-                </div>
-                <div>
-                  <h3 className="font-sans text-xl md:text-2xl font-black text-ink tracking-tight">
-                    {isHindi
-                      ? "एजेंटिक मोड: सामान्य बातचीत से संपूर्ण रिटर्न दाखिल व अनुपालन"
-                      : "Agentic Mode: File, Reconcile & Resolve Everything via Natural Conversation"}
-                  </h3>
-                </div>
+          {/* Right Column: Compact Autonomous Terminal Preview Mockup (~45% width) */}
+          <div className="lg:col-span-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/80 shadow-xs overflow-hidden">
+            {/* Terminal Window Header Bar */}
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-3.5 py-2 bg-slate-100/70 dark:bg-slate-800/50 text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="size-2 rounded-full bg-rose-400" />
+                <span className="size-2 rounded-full bg-amber-400" />
+                <span className="size-2 rounded-full bg-emerald-400" />
+                <span className="ml-1.5 font-mono text-[10.5px] font-medium text-slate-600 dark:text-slate-300">
+                  Wapsi Terminal
+                </span>
               </div>
-
-              <p className="text-xs md:text-sm text-ink-2 leading-relaxed">
-                {isHindi
-                  ? "कोई जटिल पोर्टल नहीं, कोई स्लैब गणना का सिरदर्द नहीं। अपनी भाषा में बोलें या लिखें — हमारा स्वायत्त टैक्स एजेंट आपकी फॉर्म 16 पढ़ता है, छिपी कटौतियां (80C, 80D, HRA) खोजता है, AIS विसंगतियों को ठीक करता है और स्वतः रिटर्न तैयार करता है।"
-                  : "No tedious portals, no manual slab math, no legal jargon. Simply converse or upload your Form 16. Our autonomous tax agent uncovers missing 80C/80D/HRA deductions, resolves AIS discrepancies with statutory codes, and prepares your return hands-free."}
-              </p>
-
-              {/* Sample Prompt Chips */}
-              <div className="pt-2 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAgenticOpen(true)}
-                  className="rounded-full bg-paper/80 dark:bg-paper-2/90 border border-indigo-500/30 px-3 py-1 text-[11px] font-medium text-ink-2 hover:border-indigo-500 hover:text-ink transition cursor-pointer flex items-center gap-1.5 shadow-sm"
-                >
-                  <MessageSquare size={12} className="text-indigo-500" />
-                  <span>{isHindi ? "“यहाँ मेरा फॉर्म 16 है, अधिकतम रिफंड निकालें”" : "“Here is my Form 16, maximize my refund”"}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsAgenticOpen(true)}
-                  className="rounded-full bg-paper/80 dark:bg-paper-2/90 border border-indigo-500/30 px-3 py-1 text-[11px] font-medium text-ink-2 hover:border-indigo-500 hover:text-ink transition cursor-pointer flex items-center gap-1.5 shadow-sm"
-                >
-                  <MessageSquare size={12} className="text-indigo-500" />
-                  <span>{isHindi ? "“AIS बैंक ब्याज विसंगति का जवाब तैयार करें”" : "“Reconcile my SBI interest mismatch in AIS”"}</span>
-                </button>
-              </div>
+              <span className="flex items-center gap-1 font-mono text-[9.5px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Agent active 🟢</span>
+              </span>
             </div>
 
-            {/* Right Column: Interactive Chat Teaser & CTA */}
-            <div className="lg:col-span-5 flex flex-col justify-between rounded-2xl border border-line/70 bg-paper/90 dark:bg-paper-2/90 p-4 shadow-md backdrop-blur-sm">
-              <div className="space-y-2.5 text-xs">
-                {/* Simulated Citizen Prompt */}
-                <div className="flex items-start gap-2 justify-end">
-                  <div className="rounded-xl rounded-tr-sm bg-indigo-600 px-3 py-2 text-white shadow-sm text-[11px]">
-                    <span className="block opacity-75 text-[9px] font-mono mb-0.5">Citizen</span>
-                    <span>
-                      {isHindi
-                        ? "मेरी ₹14.5L सैलरी है और ₹85k TDS कटा है। कौन सा रिजीम बेहतर है?"
-                        : "I have ₹14.5L salary and ₹85k TDS. Which regime saves more?"}
+            {/* Terminal Canvas */}
+            <div className="p-3.5 sm:p-4 space-y-3">
+              {/* User Message (High Contrast Deep Charcoal/Navy) */}
+              <div className="flex items-start justify-end">
+                <div className="max-w-[92%] rounded-xl rounded-tr-xs bg-slate-900 dark:bg-slate-950 text-white p-2.5 sm:p-3 border border-slate-800 shadow-xs">
+                  <span className="block text-[8.5px] font-mono uppercase tracking-wider text-slate-400 font-semibold mb-0.5">
+                    Citizen · Verified
+                  </span>
+                  <p className="text-xs leading-relaxed m-0 text-slate-100">
+                    {isHindi
+                      ? "मेरी ₹14.5L सैलरी है और ₹85,000 TDS कटा है। कौन सा रिजीम मुझे अधिक रिफंड देगा?"
+                      : "I have ₹14.5L salary and ₹85,000 TDS. Which regime gives me the highest refund?"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Agent Autonomous Execution Trail */}
+              <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/80 space-y-1 font-mono text-[10.5px]">
+                <div className="flex items-center gap-1 text-slate-700 dark:text-slate-200 font-semibold text-[10px]">
+                  <Zap size={11} className="text-amber-500" />
+                  <span>Execution Trail:</span>
+                </div>
+                <div className="grid grid-cols-2 gap-1 text-[9.5px]">
+                  <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                    ✓ Form 16 parsed
+                  </span>
+                  <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                    ✓ AIS matched
+                  </span>
+                  <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                    ✓ 80C/80D verified
+                  </span>
+                  <span className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-semibold">
+                    ⚡ Optimal found
+                  </span>
+                </div>
+              </div>
+
+              {/* Agent Highlighted Outcome Card */}
+              <div className="p-3 rounded-lg border border-emerald-200 dark:border-emerald-800/80 bg-emerald-50/70 dark:bg-emerald-950/30 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[9.5px] font-semibold uppercase text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
+                    <Sparkles size={11} className="text-emerald-600" />
+                    <span>Recommended: Old Regime</span>
+                  </span>
+                  <span className="rounded bg-emerald-600 text-white font-mono text-[9px] font-bold px-1.5 py-0.2">
+                    Saves ₹30,160
+                  </span>
+                </div>
+
+                <div className="flex items-baseline justify-between border-t border-emerald-200/80 dark:border-emerald-800/60 pt-1.5">
+                  <div>
+                    <span className="text-[9px] text-slate-500 dark:text-slate-400 block font-mono">Net Statutory Outcome:</span>
+                    <span className="font-mono text-base sm:text-lg font-bold text-emerald-700 dark:text-emerald-300">
+                      +₹8,560 Net Refund Due
+                    </span>
+                  </div>
+                  <div className="text-end">
+                    <span className="text-[9px] text-slate-500 dark:text-slate-400 block font-mono">Old vs New:</span>
+                    <span className="font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                      ₹76.4k vs ₹106.6k
                     </span>
                   </div>
                 </div>
-
-                {/* Simulated Agent Reply */}
-                <div className="flex items-start gap-2">
-                  <div className="size-6 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Bot size={13} />
-                  </div>
-                  <div className="rounded-xl rounded-tl-sm bg-paper-2 dark:bg-paper-3 p-2.5 border border-line text-[11px] space-y-1">
-                    <div className="flex items-center gap-1.5 font-bold text-ink">
-                      <span>Wapsi Autonomous Agent</span>
-                      <Zap size={11} className="text-amber-500" />
-                    </div>
-                    <p className="m-0 text-ink-2 leading-relaxed">
-                      {isHindi
-                        ? "पुरानी व्यवस्था में 80C + 80D के साथ आपका टैक्स ₹76,440 है। आपको ₹8,560 का रिफंड मिलेगा!"
-                        : "In Old Regime with 80C + 80D, your tax is ₹76,440 vs ₹1,06,600 in New. You get an ₹8,560 refund!"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Button */}
-              <div className="mt-4 pt-3 border-t border-line/60 flex items-center justify-between">
-                <span className="text-[10px] font-mono text-ink-3 flex items-center gap-1">
-                  <ShieldCheck size={12} className="text-indigo-600" />
-                  <span>{isHindi ? "मानव स्वीकृति सुरक्षित" : "Human-in-Loop Safe AI"}</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setIsAgenticOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 px-4 py-2 text-xs font-bold text-white shadow-md shadow-indigo-600/25 hover:opacity-95 transition-all transform hover:scale-[1.02] cursor-pointer"
-                >
-                  <span>{isHindi ? "एजेंटिक मोड देखें" : "Explore Agentic Mode"}</span>
-                  <ArrowRight size={14} />
-                </button>
               </div>
             </div>
           </div>
@@ -354,6 +424,28 @@ export default function LandingActionGrid({
         onResumeReturn={onResumeReturn}
         onLaunchFullReconcile={onLaunchFullReconcile}
         onApplyReconciliation={onApplyReconciliation}
+      />
+      <PayTaxModal
+        isOpen={isPayTaxOpen}
+        onClose={() => setIsPayTaxOpen(false)}
+        lang={lang}
+        activeCitizen={activeCitizen}
+        onApplyChallan={onApplyChallan}
+      />
+      <NoticesModal
+        isOpen={isNoticesOpen}
+        onClose={() => setIsNoticesOpen(false)}
+        lang={lang}
+        activeCitizen={activeCitizen}
+        onResolveNotice={onResolveNotice}
+        onNavigateToDashboard={onResumeReturn}
+      />
+      <StatusHistoryModal
+        isOpen={isStatusHistoryOpen}
+        onClose={() => setIsStatusHistoryOpen(false)}
+        lang={lang}
+        activeCitizen={activeCitizen}
+        onViewReturnDetails={onResumeReturn}
       />
       <TaxCalendarModal
         isOpen={isCalendarOpen}

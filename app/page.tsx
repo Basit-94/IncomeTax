@@ -1393,6 +1393,30 @@ export default function WapsiPrototype() {
     commitWithUndo(next);
   };
 
+  const handleResolveNotice = (_noticeId: string, resolution: "agree" | "disagree", _statement?: string) => {
+    if (!returnState) {
+      const base = persona || PERSONAS.rakesh;
+      const initial: ReturnState = {
+        version: CURRENT_VERSION,
+        lang,
+        personaId: base.id === "custom" ? "custom" : base.id,
+        baselinePersona: { ...base },
+        persona: { ...base },
+        corrections: [],
+        confirmedFactIds: [],
+        regime,
+      };
+      setReturnState(initial);
+      saveState(initial);
+    }
+    if (resolution === "agree") {
+      handleAutoReconcile();
+      taxDispatch({ type: "STAGE_REVISED_RETURN" });
+    }
+    setStep("dashboard");
+    setActiveTab("actions");
+  };
+
   /**
    * Challan 280 paid, ledger side. The context already holds the payment;
    * the ledger gets the same challan as a tax-paid row under s.140A, so the
@@ -1401,7 +1425,22 @@ export default function WapsiPrototype() {
    * (lib/return/upstreamSync.ts), or the challan would be credited twice.
    */
   const handleChallanPaid = (payment: SelfAssessmentPayment) => {
-    if (!returnState) return;
+    let state = returnState;
+    if (!state) {
+      const base = persona || PERSONAS.rakesh;
+      state = {
+        version: CURRENT_VERSION,
+        lang,
+        personaId: base.id === "custom" ? "custom" : base.id,
+        baselinePersona: { ...base },
+        persona: { ...base },
+        corrections: [],
+        confirmedFactIds: [],
+        regime,
+      };
+      setActivePersonaId(state.personaId);
+    }
+
     const entry: TaxAlreadyPaid = {
       id: `sat-${payment.bsrCode}-${payment.challanNo}`,
       label: "Self-assessment tax paid (Challan 280)",
@@ -1416,14 +1455,68 @@ export default function WapsiPrototype() {
         onlyReporterCanFix: false,
       },
     };
-    const add = (p: Persona): Persona => ({ ...p, taxPaid: [...p.taxPaid, entry] });
-    commitWithUndo({
-      ...returnState,
-      baselinePersona: add(returnState.baselinePersona),
-      persona: add(returnState.persona),
-      // The citizen just made this payment; it does not need confirming.
-      confirmedFactIds: [...returnState.confirmedFactIds, entry.id],
+    const add = (p: Persona): Persona => ({ ...p, taxPaid: [...(p.taxPaid || []), entry] });
+    const baselinePersona = add(state.baselinePersona);
+    const effective = add(state.persona);
+
+    const newTaxCalc = computeForPersona(effective, regime);
+    const refundOrDue = newTaxCalc.refundOrDue;
+
+    if (refundOrDue > 0) {
+      baselinePersona.refund = {
+        ...baselinePersona.refund,
+        state: "under_review",
+        filedOn: baselinePersona.refund.filedOn || payment.date,
+        amount: refundOrDue,
+      };
+      effective.refund = {
+        ...effective.refund,
+        state: "under_review",
+        filedOn: effective.refund.filedOn || payment.date,
+        amount: refundOrDue,
+      };
+    } else {
+      baselinePersona.refund = {
+        ...baselinePersona.refund,
+        state: "not_filed",
+        amount: 0,
+      };
+      effective.refund = {
+        ...effective.refund,
+        state: "not_filed",
+        amount: 0,
+      };
+    }
+
+    const updatedReturnState: ReturnState = {
+      ...state,
+      baselinePersona,
+      persona: effective,
+      confirmedFactIds: [...state.confirmedFactIds, entry.id],
+    };
+
+    setReturnState(updatedReturnState);
+    saveState(updatedReturnState);
+
+    // Sync central reconciliation context
+    taxDispatch({
+      type: "ADD_SELF_ASSESSMENT_PAYMENT",
+      payment,
     });
+    taxDispatch({
+      type: "SYNC_STATE",
+      payload: buildSyncPayload(updatedReturnState),
+    });
+
+    setWizardCompleted(true);
+    setIsRealMode(false);
+
+    if (refundOrDue >= 0) {
+      setActiveTab("overview");
+    } else {
+      setFlowStep("check");
+    }
+    setStep("dashboard");
   };
 
   /**
@@ -2295,6 +2388,16 @@ export default function WapsiPrototype() {
                           salary: (persona || returnState?.persona)!.facts.find((f) => f.kind === "salary")?.amount,
                           tds: (persona || returnState?.persona)!.taxPaid.reduce((sum, t) => sum + t.amount, 0),
                           totalTaxesPaid: (persona || returnState?.persona)!.taxPaid.reduce((sum, t) => sum + t.amount, 0),
+                          taxDue: Math.max(0, -computeForPersona(persona || returnState!.persona, regime).refundOrDue),
+                          notices: (persona || returnState?.persona)!.notices,
+                          banks: (persona || returnState?.persona)!.banks,
+                          refund: (persona || returnState?.persona)!.refund,
+                          hasDiscrepancies: returnState
+                            ? returnState.baselinePersona.facts.some((bf) => {
+                                const eff = returnState.persona.facts.find((ef) => ef.id === bf.id);
+                                return (eff?.amount ?? 0) < bf.amount;
+                              })
+                            : false,
                         }
                       : null
                   }
@@ -2302,6 +2405,8 @@ export default function WapsiPrototype() {
                   onLogout={handleLogOut}
                   onApplyReconciliation={handleApplyReconciliation}
                   onApplyOptimizer={handleApplyOptimizer}
+                  onApplyChallan={handleChallanPaid}
+                  onResolveNotice={handleResolveNotice}
                   currentRegime={regime}
                 />
               </m.div>

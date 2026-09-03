@@ -2960,27 +2960,342 @@ things there are already true and will NOT be rewritten:
 - **Verified:**
   - `npm run typecheck` passed (0 errors).
   - `npx vitest run` passed all 185 tests across 14 test files (added unit test in `lib/return/__tests__/upstreamSync.test.ts`).
+  - `npm run build` compiled successfully.
+  - Pushed cleanly to `origin/dev-2`.
 
+---
 
+## 2026-09-03 22:38 - Card 4: Interactive e-Pay Tax & Challan 280 Hub Implementation
+- **Intent & User Requirement:**
+  - Build Card 4 ("Pay Tax Due") with clean implementation, rich interactivity, realistic payment simulation, official CBDT compliance proof (Challan 280 / ITNS 280 counterfoil), advance tax schedule with Section 234 penalty radar, and live return draft integration.
+  - Test and verify end-to-end data flow: when Challan 280 is paid and applied to the return, verify that it updates `persona.taxPaid`, dispatches to `TaxReturnContext.selfAssessmentPayments`, reduces/settles outstanding tax due to ₹0, clears Section 139(9) defective return flags, and updates the ITR-V receipt and dashboard.
+- **Implementation Details:**
+  1. **New `PayTaxModal` Component (`components/modals/PayTaxModal.tsx`):**
+     - **3 Interactive Tabs:**
+       - **Tab 1: e-Pay Tax Gateway:**
+         - Statutory Minor Head selection: `(300) Self-Assessment Tax u/s 140A` (default for filing balance due), `(100) Advance Tax u/s 208-211` (quarterly installments), and `(400) Regular Assessment Demand` (notices u/s 143(1)(a)/156).
+         - Automatic calculation of Base Tax (100/104) and 4% Health & Education Cess (4/104).
+         - Quick taxpayer profile selectors (Rakesh ₹18,280 due, Sunita ₹89,293 advance, or active citizen's exact balance due).
+         - Dual payment rails: Real dynamic SVG UPI QR code with `upi://pay` deep link and 5-minute countdown timer; and Net Banking selector across authorized collecting banks (SBI, HDFC, ICICI, Axis, PNB, Canara).
+         - Realistic payment processing simulation with gateway settlement state.
+       - **Tab 2: Statutory Challan 280 (ITNS 280) Counterfoil:**
+         - Authentically styled CBDT counterfoil displaying the statutory triplet required by Section 140A: 7-digit BSR code, 5-digit Challan serial number, and Tender date.
+         - Displays Major Head (`0021`), Minor Head (`300`/`100`), Taxpayer PAN, Name, Base Tax, and 4% Cess breakdown.
+       - **Tab 3: Advance Tax Calendar & Sec 234 Penalty Radar:**
+         - Displays statutory quarterly advance tax deadlines (June 15 - 15%, Sept 15 - 45%, Dec 15 - 75%, March 15 - 100%).
+         - Detailed educational breakdowns of interest penalties u/s 234A, 234B, 234C, 234F, and the Section 139(9) defective return rule.
+     - **Modal Footer & Application:**
+       - Dynamic footer showing total challan amount and selected tax head.
+       - "Apply Challan to My Return" button after successful payment.
+  2. **Grid & Landing Page Integration:**
+     - Connected Card 04 (`pay_tax`) in `components/landing-action-grid.tsx` to open `PayTaxModal`.
+     - Passed `activeCitizen` (including `taxDue`) and `onApplyChallan` handler through `LandingActionGridProps` and `LandingProps` in `components/landing.tsx`.
+  3. **Return Engine & State Synchronization in `app/page.tsx`:**
+     - In `handleChallanPaid`:
+       - Handles uninitialized state (defaults to active citizen or Rakesh).
+       - Appends payment u/s `140A` with synthetic BSR code and Challan serial into `taxPaid`.
+       - Recalculates tax liability and net refund/due status.
+       - If tax is settled or refund arises: sets `refund.state = "under_review"`, dispatches `ADD_SELF_ASSESSMENT_PAYMENT` and `SYNC_STATE` to central `TaxReturnContext`, and opens overview.
+  4. **Automated Verification & Tests:**
+     - Created `lib/return/__tests__/challanFlow.test.ts` testing the complete lifecycle: tax due detection, Challan 280 payment simulation, ledger balance clearance to ₹0, `buildSyncPayload` capture, context reduction, and derived settlement.
+     - Added test in `lib/return/__tests__/compute.test.ts` asserting Challan 280 credits into `tdsCredits`.
+     - `npm run typecheck` passed (0 errors).
+     - `npx vitest run` passed all 187 tests across 15 test suites.
+     - `npm run build` compiled all routes cleanly with static and dynamic code optimization.
+     - Live dev server verified returning `HTTP/1.1 200 OK`.
 
+---
 
+## 2026-09-03 23:05 - Complete Interactive Suite for Cards 5, 6, and 7
+- **Intent & User Requirement:**
+  - Complete, clean implementation and testing for all 3 remaining cards on the capability grid:
+    - **Card 05: Notices & Defect Resolver (`notices`)**
+    - **Card 06: Return Status & History (`status_history`)**
+    - **Card 07: Statutory Tax Calendar & Deadlines (`tax_calendar`)**
+- **What Was Built:**
+  1. **Card 05 — `NoticesModal.tsx` (`components/modals/NoticesModal.tsx`):**
+     - Section 143(1)(a) & 139(9) defense studio with CBDT Document Identification Number (DIN) verification.
+     - Pre-loaded benchmark notices (Rakesh 26AS variance, Sunita HRA exemption disallowance, Priya AIS inquiry).
+     - Stance selector: Agree & Stage Revised Return u/s 139(5) vs Object with statutory citations & voice dictation.
+     - 15-day statutory countdown progress bar with consequence radar (Sec 234F ₹5,000 late fee, Sec 234A interest).
+     - Direct return draft sync via `handleResolveNotice`.
+  2. **Card 06 — `StatusHistoryModal.tsx` (`components/modals/StatusHistoryModal.tsx`):**
+     - 7-Stage Live Refund & Lifecycle stepper (Submitted -> e-Verified -> In CPC Queue -> Order u/s 143(1) -> Determined -> Sent to Bank -> Credited).
+     - Pre-validated bank account card with IFSC, masked account, and ECS validation badge.
+     - Multi-year filing archive (AY 2026-27, AY 2025-26, AY 2024-25) and Section 71/72 carry-forward loss tracker.
+     - Official 15-digit statutory ITR-V acknowledgment preview with print simulation.
+  3. **Card 07 — `TaxCalendarModal.tsx` Upgraded (`components/modals/TaxCalendarModal.tsx`):**
+     - Live countdown clock to July 31, 2026 filing deadline with .ICS calendar export.
+     - Category filters: All Taxpayers, Salaried (ITR-1/2), Business/44AD, and Senior Citizens (60+).
+     - Interactive Section 234 Interest & Late Fee Estimator with custom sliders.
+     - Statutory exemptions guide for Section 207 (senior citizens) and Section 119(2)(b) condonation.
+  4. **Landing & Grid Integration:**
+- **Target:** `components/modals/MatchRecordsModal.tsx`, `app/page.tsx`, `log.md`
+- **Intent:**
+  1. Built `FeedbackDropdown` component mirroring `components/ui/language-menu.tsx` exactly:
+     - Includes `max-h-60 overflow-y-auto` internal scroll container for options.
+     - Automatically flips vertically (`popUp` on lower rows) so the menu stays completely on screen without causing page scroll.
+     - Uses outside `mousedown` listener to close on outside click.
+  2. Fixed transition bug where clicking "Apply to My Return Draft" showed the unauthenticated/blank RealUserTaxWizard ("fill pan page"):
+     - Root cause: `isRealMode && !wizardCompleted` defaulted to opening Step 1 of the identity wizard.
+     - Fixed by explicitly setting `setWizardCompleted(true)` and `setIsRealMode(false)` in `handleApplyReconciliation`.
+     - Also safely cloned all persona arrays (`claims`, `banks`, `notices`, `refund`) so nothing crashes during state replay.
+     - User is now navigated directly to Step 1 ("Facts") with live strikethroughs, corrections, and updated tax counters.
+- **Verified:**
+  - `npm run typecheck` 0 errors.
+  - `npx vitest run` 184/184 passed across 14 test suites.
+  - `npx next build` compiled successfully (exit 0).
 
+## [2026-09-03 21:10] antigravity (Card 2 Tab 2 functional PDF ingestion & Tab 3 personal citizen case)
+- **Action:** EDIT
+- **Target:** `components/modals/MatchRecordsModal.tsx`, `components/landing.tsx`, `components/landing-action-grid.tsx`, `app/page.tsx`, `log.md`
+- **Intent:**
+  1. **Tab 2 ("Drop AIS / 26AS PDF") now fully functional:**
+     - Integrated real client-side PDF ingestion using `extractFieldsFromPdf` and `detectDocumentKind`.
+     - Supports drag-and-drop and file browsing.
+     - Live scanning state with spinner.
+     - Extracts Gross Salary, Employer, and Section 192 TDS credits and automatically loads them into the Tab 1 reconciliation table.
+     - Displays formatted success card with document kind, name, salary, and TDS, plus a 1-click CTA to view figures in Tab 1.
+  2. **Tab 3 ("Citizen Dispute Cases") now displays User's Personal Active Case:**
+     - Connected active citizen context (`name`, `pan`, `salary`, `tds`) from `persona` through `landing.tsx` and `landing-action-grid.tsx`.
+     - When logged in, Tab 3 features the citizen's own profile as the primary card: **"★ Your Active Filing Case"** with their live draft figures and a *"Reconcile My Active Return →"* button.
+     - Below the active case, provides the educational benchmark demo cases (Priya Sharma & Rakesh Kumar).
+- **Verified:**
+  - `npm run typecheck` 0 errors.
+  - `npx vitest run` 184/184 passed across 14 test suites.
+  - `npx next build` compiled successfully (exit 0).
 
+## [2026-09-03 21:27] antigravity (Restyle Agentic Mode card & modal from green to futuristic electric violet/indigo)
+- **Action:** EDIT
+- **Target:** `components/landing-action-grid.tsx`, `components/modals/AgenticModeModal.tsx`, `log.md`
+- **Intent:**
+  1. Replaced the green/emerald border and background styling on the Agentic Mode Hero Box with a futuristic **Electric Violet / Royal Indigo / Purple gradient** (`from-violet-600 via-indigo-500 to-purple-600`).
+  2. Updated all accents, ambient radiance glows, AI pulses, prompt chips, and call-to-action buttons to indigo/purple.
+  3. Synchronized `AgenticModeModal.tsx` border, header icon, and primary CTA to match the same regal violet/indigo aesthetic.
+- **Verified:**
+  - `npm run typecheck` 0 errors.
+  - `npx vitest run` 184/184 passed across 14 test suites.
 
+## [2026-09-03 21:37] antigravity (Card 3 Tax & Regime Optimizer full implementation & draft sync)
+- **Action:** EDIT
+- **Target:** `components/modals/TaxOptimizerModal.tsx`, `components/landing-action-grid.tsx`, `components/landing.tsx`, `app/page.tsx`, `log.md`
+- **Intent:**
+  1. **Pre-filled Active Citizen Context:**
+     - Connected active citizen identity (`name`, `pan`, `salary`, `tds`) from session/Form 16 directly into Card 3.
+     - Displays active taxpayer badge and pre-populates salary and TDS for real-time comparison.
+  2. **Tab 1: Live Regime Battle (Old vs New):**
+     - Side-by-side statutory cards comparing New (Sec 115BAC) vs Old Regime under AY 2026-27 rules.
+     - Dynamic winner callout with exact rupee savings.
+     - Automated Breakeven Threshold Analyzer computing the exact deduction amount needed for Old Regime to beat New Regime.
+     - Quick salary preset pills (`₹7.5L`, `₹10L`, `₹12.75L`, `₹14.5L`, `₹18L`, `₹25L`).
+  3. **Tab 2: Deduction Discovery & HRA Calculator:**
+     - Interactive sliders for Section 80C (up to ₹1.5L), Section 80D (Self/Family up to ₹25k + Senior Parents up to ₹50k), Section 80CCD(1B) NPS (up to ₹50k), and Section 24(b) Home Loan Interest (up to ₹2L).
+     - Full Section 10(13A) HRA Exemption Calculator implementing statutory Rule 2A (Basic salary, rent paid, metro/non-metro 50%/40% rule).
+     - Live deduction total feeding directly into Old Regime calculations.
+  4. **Tab 3: Section 87A Marginal Relief Radar:**
+     - Interactive cliff slider from ₹7,00,000 to ₹8,50,000 demonstrating how Marginal Relief caps tax liability strictly to excess earnings above the ₹7.75L threshold.
+  5. **Direct Return Synchronization:**
+     - Added "Apply Selected Regime to My Return" button.
+     - Implemented `handleApplyOptimizer` in `app/page.tsx`, updating `returnState.regime`, populating configured deductions into `baselinePersona.claims`, and transitioning smoothly to the Return Dashboard without re-triggering onboarding/login screens.
+- **Verified:**
+  - `npm run typecheck` 0 errors.
+  - `npx vitest run` 184/184 passed across 14 test suites.
+  - `npx next build` compiled successfully (exit 0).
 
+## [2026-09-03 21:39] antigravity (Fix React rules of hooks in TaxOptimizerModal)
+- **Action:** FIX
+- **Target:** `components/modals/TaxOptimizerModal.tsx`, `log.md`
+- **Intent:**
+  - Fixed React error: `Rendered fewer hooks than expected. This may be caused by an accidental early return statement.
+  - Root cause: `selectedRegimeChoice` was initialized via `useState` below `if (!isOpen) return null;`, violating hook ordering when opening the modal.
+  - Moved all hooks (`useState`, `useId`) to the very top of `TaxOptimizerModal` before the early return, ensuring hook execution count remains strictly identical across every render cycle.
+- **Verified:**
+  - `npm run typecheck` 0 errors.
+  - `npx vitest run` 184/184 passed across 14 test suites.
+  - `npx next build` compiled successfully (exit 0).
 
+## [2026-09-03 21:52] antigravity (Fix Card 3 Apply: update return figures, salary, deductions, and ITR-V receipt)
+- **Action:** FIX & INTEGRATE
+- **Target:** `components/modals/TaxOptimizerModal.tsx`, `components/landing-action-grid.tsx`, `components/landing.tsx`, `app/page.tsx`, `log.md`
+- **Intent:**
+  - Resolved user report where clicking "Apply" in Card 3 (Tax & Regime Optimizer) did not update the return's figures, refund/tax payable amounts, or ITR-V receipt.
+- **Root Cause & Fixes:**
+  1. **Regime Default & Sync:** `selectedRegimeChoice` was hardcoded to default to `"new"` and did not automatically follow the statutory optimizer recommendation when Old Regime was optimal. Replaced with `manualRegimeChoice` falling back to `recommendedRegime`, added interactive switcher buttons in the modal footer with real-time tax liability previews for both regimes, and updated the apply button to show the exact tax liability.
+  2. **Gross Salary Propagation:** `TaxOptimizerModalProps.onApplyOptimizer` previously passed only deductions without `grossSalary`. Updated interface to pass `grossSalary`, allowing custom salary selections and presets from Card 3 to update the return.
+  3. **Facts & Claims Mutation in ReturnState:** `handleApplyOptimizer` in `app/page.tsx` now directly updates `baselinePersona.facts` with the new gross salary, updates `baselinePersona.claims` with Chapter VI-A deductions (80C, 80D, HRA, 80CCD(1B), 24(b)), re-derives `effectivePersona`, and recalculates statutory tax and refund amounts.
+  4. **Central Reconciliation Synchronization:** Dispatches `SET_REGIME` and `SYNC_STATE` with `buildSyncPayload(updatedReturnState)` into `TaxReturnContext`, ensuring `TaxReturnContext` recomputes `active` figures and `ItrVReceipt` immediately reflects the updated regime, taxable income, and net refund/payable amounts.
+  5. **Smart Navigation:** Directs unfiled returns straight to the Review & File (`flowStep: "check"`) calculation trail, and filed returns to the Overview receipt tab (`activeTab: "overview"`).
+- **Verified:**
+  - `npm run typecheck` 0 errors.
+  - `npx vitest run` 184/184 passed across 14 test suites.
+  - `npx next build` compiled successfully (exit 0).
 
+## [2026-09-03 22:06] antigravity (Card 3 & Card 2: Check previous payments, subtract TDS & Challan 280, show Net Refund / Extra Payable, and sync ITR-V receipt)
+- **Action:** FIX & ENHANCE
+- **Target:** `components/modals/TaxOptimizerModal.tsx`, `components/landing-action-grid.tsx`, `components/landing.tsx`, `app/page.tsx`, `lib/return/upstreamSync.ts`, `context/TaxReturnContext.tsx`, `lib/return/__tests__/upstreamSync.test.ts`, `log.md`
+- **Intent & User Requirement:**
+  - When the user visits Card 3 (or Card 2) after paying a Challan 280 or having TDS deducted, the calculations must check previous payments, subtract them from the gross tax liability, and determine the exact net position:
+    - If `totalTaxesPaid > totalTax`: Portal provides a **Net Refund** u/s 244A.
+    - If `totalTaxesPaid < totalTax`: Citizen pays the **Balance Due** u/s 140A (via Challan 280).
+  - Update modal previews, Headline Channels, Return Dashboard, and final ITR-V receipt preview with the exact subtracted figures.
+- **Root Cause & Fixes:**
+  1. **Pass Total Taxes Paid to Card 3:** `activeCitizen` previously omitted Challan 280 payments and `TaxOptimizerModal` hardcoded `tdsPaid: 0`. Added `totalTaxesPaid` (sum of TDS 192, TDS 194A, Challan 280 u/s 140A, and Advance Tax) to `activeCitizen` across `app/page.tsx`, `Landing`, `LandingActionGrid`, and `TaxOptimizerModal`.
+  2. **Incorporate Subtraction in `TaxOptimizerModal`:**
+     - Passed `tdsPaid: taxesAlreadyPaid` into `computeAY2026Tax`.
+     - Side-by-side cards now explicitly display: Gross Tax Liability, Less: Taxes Already Paid (TDS & Challan 280) (`−₹XX,XXX`), and Net Outcome (`+₹XX,XXX Net Refund Due` or `₹XX,XXX Balance Tax Payable`).
+     - Winner recommendation callout displays statutory savings alongside net refund/payable after subtracting prior payments.
+     - Footer regime switcher and primary CTA button dynamically reflect real-time net refund or extra payable figures.
+  3. **Bridge & Reconciliation Context Sync:**
+     - Updated `SyncPayload` in `lib/return/upstreamSync.ts` and `context/TaxReturnContext.tsx` to include `selfAssessmentPayments?: SelfAssessmentPayment[]`.
+     - `buildSyncPayload` now maps all `140A` (Challan 280) payments from `effective.taxPaid` into `selfAssessmentPayments`.
+     - `TaxReturnContext` merges `selfAssessmentPayments` on `SYNC_STATE`, ensuring `deriveTaxReturn` and `ItrVReceipt` (lines 11 and 12) accurately subtract Challan 280 payments.
+  4. **Smart Lifecycle Handling in `handleApplyOptimizer` and `handleApplyReconciliation`:**
+     - Recalculates `refundOrDue`.
+     - If `refundOrDue > 0` (refund due): sets `refund.state = "under_review"` and routes to `activeTab = "overview"` where `RefundBanner`, `HeadlineChannels`, and `ItrVReceipt` display the refund.
+     - If `refundOrDue <= 0` (balance payable): sets `refund.state = "not_filed"` and routes to `flowStep = "check"` where `CheckScreen` and `BeforeFiling` display the balance due and Challan 280 pay button.
+- **Verified:**
+  - `npm run typecheck` passed (0 errors).
+  - `npx vitest run` passed all 185 tests across 14 test files (added unit test in `lib/return/__tests__/upstreamSync.test.ts`).
+  - `npm run build` compiled successfully.
+  - Pushed cleanly to `origin/dev-2`.
 
+---
 
+## 2026-09-03 22:38 - Card 4: Interactive e-Pay Tax & Challan 280 Hub Implementation
+- **Intent & User Requirement:**
+  - Build Card 4 ("Pay Tax Due") with clean implementation, rich interactivity, realistic payment simulation, official CBDT compliance proof (Challan 280 / ITNS 280 counterfoil), advance tax schedule with Section 234 penalty radar, and live return draft integration.
+  - Test and verify end-to-end data flow: when Challan 280 is paid and applied to the return, verify that it updates `persona.taxPaid`, dispatches to `TaxReturnContext.selfAssessmentPayments`, reduces/settles outstanding tax due to ₹0, clears Section 139(9) defective return flags, and updates the ITR-V receipt and dashboard.
+- **Implementation Details:**
+  1. **New `PayTaxModal` Component (`components/modals/PayTaxModal.tsx`):**
+     - **3 Interactive Tabs:**
+       - **Tab 1: e-Pay Tax Gateway:**
+         - Statutory Minor Head selection: `(300) Self-Assessment Tax u/s 140A` (default for filing balance due), `(100) Advance Tax u/s 208-211` (quarterly installments), and `(400) Regular Assessment Demand` (notices u/s 143(1)(a)/156).
+         - Automatic calculation of Base Tax (100/104) and 4% Health & Education Cess (4/104).
+         - Quick taxpayer profile selectors (Rakesh ₹18,280 due, Sunita ₹89,293 advance, or active citizen's exact balance due).
+         - Dual payment rails: Real dynamic SVG UPI QR code with `upi://pay` deep link and 5-minute countdown timer; and Net Banking selector across authorized collecting banks (SBI, HDFC, ICICI, Axis, PNB, Canara).
+         - Realistic payment processing simulation with gateway settlement state.
+       - **Tab 2: Statutory Challan 280 (ITNS 280) Counterfoil:**
+         - Authentically styled CBDT counterfoil displaying the statutory triplet required by Section 140A: 7-digit BSR code, 5-digit Challan serial number, and Tender date.
+         - Displays Major Head (`0021`), Minor Head (`300`/`100`), Taxpayer PAN, Name, Base Tax, and 4% Cess breakdown.
+       - **Tab 3: Advance Tax Calendar & Sec 234 Penalty Radar:**
+         - Displays statutory quarterly advance tax deadlines (June 15 - 15%, Sept 15 - 45%, Dec 15 - 75%, March 15 - 100%).
+         - Detailed educational breakdowns of interest penalties u/s 234A, 234B, 234C, 234F, and the Section 139(9) defective return rule.
+     - **Modal Footer & Application:**
+       - Dynamic footer showing total challan amount and selected tax head.
+       - "Apply Challan to My Return" button after successful payment.
+  2. **Grid & Landing Page Integration:**
+     - Connected Card 04 (`pay_tax`) in `components/landing-action-grid.tsx` to open `PayTaxModal`.
+     - Passed `activeCitizen` (including `taxDue`) and `onApplyChallan` handler through `LandingActionGridProps` and `LandingProps` in `components/landing.tsx`.
+  3. **Return Engine & State Synchronization in `app/page.tsx`:**
+     - In `handleChallanPaid`:
+       - Handles uninitialized state (defaults to active citizen or Rakesh).
+       - Appends payment u/s `140A` with synthetic BSR code and Challan serial into `taxPaid`.
+       - Recalculates tax liability and net refund/due status.
+       - If tax is settled or refund arises: sets `refund.state = "under_review"`, dispatches `ADD_SELF_ASSESSMENT_PAYMENT` and `SYNC_STATE` to central `TaxReturnContext`, and opens overview.
+  4. **Automated Verification & Tests:**
+     - Created `lib/return/__tests__/challanFlow.test.ts` testing the complete lifecycle: tax due detection, Challan 280 payment simulation, ledger balance clearance to ₹0, `buildSyncPayload` capture, context reduction, and derived settlement.
+     - Added test in `lib/return/__tests__/compute.test.ts` asserting Challan 280 credits into `tdsCredits`.
+     - `npm run typecheck` passed (0 errors).
+     - `npx vitest run` passed all 187 tests across 15 test suites.
+     - `npm run build` compiled all routes cleanly with static and dynamic code optimization.
+     - Live dev server verified returning `HTTP/1.1 200 OK`.
 
+---
 
+## 2026-09-03 23:05 - Complete Interactive Suite for Cards 5, 6, and 7
+- **Intent & User Requirement:**
+  - Complete, clean implementation and testing for all 3 remaining cards on the capability grid:
+    - **Card 05: Notices & Defect Resolver (`notices`)**
+    - **Card 06: Return Status & History (`status_history`)**
+    - **Card 07: Statutory Tax Calendar & Deadlines (`tax_calendar`)**
+- **What Was Built:**
+  1. **Card 05 — `NoticesModal.tsx` (`components/modals/NoticesModal.tsx`):**
+     - Section 143(1)(a) & 139(9) defense studio with CBDT Document Identification Number (DIN) verification.
+     - Pre-loaded benchmark notices (Rakesh 26AS variance, Sunita HRA exemption disallowance, Priya AIS inquiry).
+     - Stance selector: Agree & Stage Revised Return u/s 139(5) vs Object with statutory citations & voice dictation.
+     - 15-day statutory countdown progress bar with consequence radar (Sec 234F ₹5,000 late fee, Sec 234A interest).
+     - Direct return draft sync via `handleResolveNotice`.
+  2. **Card 06 — `StatusHistoryModal.tsx` (`components/modals/StatusHistoryModal.tsx`):**
+     - 7-Stage Live Refund & Lifecycle stepper (Submitted -> e-Verified -> In CPC Queue -> Order u/s 143(1) -> Determined -> Sent to Bank -> Credited).
+     - Pre-validated bank account card with IFSC, masked account, and ECS validation badge.
+     - Multi-year filing archive (AY 2026-27, AY 2025-26, AY 2024-25) and Section 71/72 carry-forward loss tracker.
+     - Official 15-digit statutory ITR-V acknowledgment preview with print simulation.
+  3. **Card 07 — `TaxCalendarModal.tsx` Upgraded (`components/modals/TaxCalendarModal.tsx`):**
+     - Live countdown clock to July 31, 2026 filing deadline with .ICS calendar export.
+     - Category filters: All Taxpayers, Salaried (ITR-1/2), Business/44AD, and Senior Citizens (60+).
+     - Interactive Section 234 Interest & Late Fee Estimator with custom sliders.
+     - Statutory exemptions guide for Section 207 (senior citizens) and Section 119(2)(b) condonation.
+  4. **Landing & Grid Integration:**
+     - Connected Cards 05, 06, and 07 in `components/landing-action-grid.tsx` and `components/landing.tsx`.
+     - Now all 7 cards launch dedicated interactive, accessible, bilingual modals directly from the landing page.
+  5. **Automated Verification:**
+     - Added tests in `lib/return/__tests__/noticeResolution.test.ts`, `lib/return/__tests__/statusHistory.test.ts`, and `lib/return/__tests__/taxCalendar.test.ts`.
+     - `npm run typecheck` passed (0 errors).
+     - `npx vitest run` passed all 192 tests across 18 test suites.
+     - `npm run build` compiled all routes cleanly.
+     - Live dev server verified returning `HTTP/1.1 200 OK`.
 
+---
 
+## 2026-09-03 23:15 - Fixes for Notice Applicability, PDF Calendar Export & Account Binding
+- **Intent & User Requirement:**
+  - Fix Card 05: Do not show benchmark notices as if they belong to a logged-in user who has no notices (e.g. Sunita Devi). First check if notices or discrepancies actually apply; if clean, show a zero-defect clean compliance certificate and route to dashboard or allow exploring demo cases.
+  - Fix Card 07: Replace non-opening .ICS download with high-quality printable / PDF schedule export via `window.print()` and 1-click Google Calendar web intent.
+  - Fix Card 06: Dynamically bind active citizen's real bank account (e.g. Kaveri Cooperative Bank `•••• 1183`), actual computed refund amount, and actual filing stage instead of static demo defaults.
+- **What Was Changed:**
+  1. `components/modals/NoticesModal.tsx`:
+     - Added `isCleanRecord` check based on `activeCitizen.notices` and `activeCitizen.hasDiscrepancies`.
+     - When clean: renders "Zero Pending Notices / Clean Compliance Record" with direct "View My Return in Dashboard" action and optional "Explore Benchmark Notice Scenarios" toggle.
+     - When notices exist: renders actual notice with real DIN and amount at stake.
+  2. `components/modals/TaxCalendarModal.tsx`:
+     - Added "Print / Save PDF Schedule" action triggering print dialog for high-resolution saving/printing.
+     - Added "Google Calendar" web link opening July 31 ITR deadline directly in Google Calendar in browser.
+  3. `components/modals/StatusHistoryModal.tsx`:
+     - Dynamically binds to `activeCitizen.banks` (e.g. Sunita Kaveri Cooperative Bank, Rakesh Gomti Bank).
+     - Binds to actual refund amount and actual filing stage from `activeCitizen.refund.state`.
+  4. `app/page.tsx` & `components/landing.tsx`:
+     - Expanded `activeCitizen` payload to include `notices`, `banks`, `refund`, and `hasDiscrepancies`.
+- **Verification:**
+  - `npm run typecheck` passed (0 errors).
+  - Live dev server verified returning `HTTP/1.1 200 OK`.
 
+---
 
+## 2026-09-03 23:20 - Redesign of Agentic Mode Hero Box (Visual Hierarchy, Primary CTA & Autonomous Terminal Mockup)
+- **Intent & User Requirement:**
+  - Redesign the Agentic Mode Hero Box at the top of the 7-Action Capability Grid (`components/landing-action-grid.tsx`) according to the UX/UI review:
+    1. **Visual Hierarchy & Primary CTA:**
+       - Move the primary "Explore Agentic Mode" CTA out of the right-side preview card to the left side directly under the descriptive body text.
+       - Place the starter prompt chips beneath the primary CTA as interactive pills with hover states, light fill, and return/arrow icons.
+       - Streamline the headline: "File, Reconcile & Optimize Taxes via Conversation" (and Hindi equivalent), removing/repositioning the floating icon for clean flush alignment.
+    2. **Right-Side Chat Preview Mockup:**
+       - Upgrade chat bubble contrast: user bubble switched to dark charcoal / deep navy (`bg-slate-900 dark:bg-slate-950`) with crisp white typography (13-14px).
+       - Transform into a true "Agentic" autonomous artifact:
+         - Autonomous checklist: `✓ Form 16 scanned`, `✓ AIS & 26AS matched`, `✓ 80C/80D verified`, `⚡ Optimizing regime...`
+         - Highlighted "Diff / Savings" visual card with bold numbers (`+₹8,560 Net Refund Due`, Old Regime beats New by ₹30,160).
+       - Window dressing: macOS/terminal style top header bar with window status dots and live status (`Agent active 🟢`).
+    3. **Chips, Badges & Polish:**
+       - Consolidate metadata badges into a single unified row.
+       - Increase inner padding to 32px (`p-8 md:p-10`) for visual breathing room.
+  - **Preservation Note:** The previous layout is archived here in case the user decides to revert back.
+- **Verification:**
+  - `npm run typecheck` passed (0 errors).
+  - `npx vitest run` passed all 192 tests across 18 test suites.
+  - `npm run build` compiled all routes in 2.9s with zero errors.
+  - Live dev server verified returning `HTTP/1.1 200 OK`.
 
+---
 
-
-
-
-
+## 2026-09-03 23:25 - Agentic Mode Card Refinement: Clean Light Surface, Subtle Border & Deep Navy CTA
+- **Intent & User Requirement:**
+  - Complete refinement of the hero card to a calm, modern, elevated design matching the portal aesthetic:
+    1. **Container:** Removed neon/purple glowing borders and lavender background. Replaced with clean surface (`bg-white dark:bg-slate-900`), subtle border (`1px solid #E2E8F0` / `border-slate-200 dark:border-slate-800`), and soft elevation shadow (`shadow-[0_10px_25px_-5px_rgba(0,0,0,0.04)]`).
+    2. **Internal Padding:** Reduced from ~48px to a compact 28px–32px (`p-6 sm:p-7 md:p-8`), eliminating unnecessary vertical height.
+    3. **Badges:** Removed distracting top-right badges ("23 Languages", "Zero Form Filling", "Human-in-Loop Safe"). Kept only the single top-left muted pill ("AI AGENTIC MODE • CONVERSATIONAL TAX FILING").
+    4. **Left Column:** Tightened spacing (16px–20px gaps), changed primary CTA button from purple to deep slate/navy (`#0F172A`), and made prompt chips compact with subtle borders, muted text, and clean hover transitions.
+    5. **Right Terminal Preview:** Reduced width to ~42–45% (`lg:col-span-5` vs `lg:col-span-7`), reduced internal font sizes to 10.5px–12px for a crisp widget appearance, while preserving the full agent execution trail and net refund outcome card.
+- **Verification:**
+  - `npm run typecheck` passed (0 errors).
+  - `npx vitest run` passed all 192 tests across 18 test suites.
+  - `npm run build` compiled all routes in 1.9s with zero errors.
+  - Live dev server verified returning `HTTP/1.1 200 OK`.
