@@ -2870,6 +2870,101 @@ things there are already true and will NOT be rewritten:
   - `npx vitest run` 184/184 passed across 14 test suites.
   - `npx next build` compiled successfully (exit 0).
 
+## [2026-09-03 21:27] antigravity (Restyle Agentic Mode card & modal from green to futuristic electric violet/indigo)
+- **Action:** EDIT
+- **Target:** `components/landing-action-grid.tsx`, `components/modals/AgenticModeModal.tsx`, `log.md`
+- **Intent:**
+  1. Replaced the green/emerald border and background styling on the Agentic Mode Hero Box with a futuristic **Electric Violet / Royal Indigo / Purple gradient** (`from-violet-600 via-indigo-500 to-purple-600`).
+  2. Updated all accents, ambient radiance glows, AI pulses, prompt chips, and call-to-action buttons to indigo/purple.
+  3. Synchronized `AgenticModeModal.tsx` border, header icon, and primary CTA to match the same regal violet/indigo aesthetic.
+- **Verified:**
+  - `npm run typecheck` 0 errors.
+  - `npx vitest run` 184/184 passed across 14 test suites.
+
+## [2026-09-03 21:37] antigravity (Card 3 Tax & Regime Optimizer full implementation & draft sync)
+- **Action:** EDIT
+- **Target:** `components/modals/TaxOptimizerModal.tsx`, `components/landing-action-grid.tsx`, `components/landing.tsx`, `app/page.tsx`, `log.md`
+- **Intent:**
+  1. **Pre-filled Active Citizen Context:**
+     - Connected active citizen identity (`name`, `pan`, `salary`, `tds`) from session/Form 16 directly into Card 3.
+     - Displays active taxpayer badge and pre-populates salary and TDS for real-time comparison.
+  2. **Tab 1: Live Regime Battle (Old vs New):**
+     - Side-by-side statutory cards comparing New (Sec 115BAC) vs Old Regime under AY 2026-27 rules.
+     - Dynamic winner callout with exact rupee savings.
+     - Automated Breakeven Threshold Analyzer computing the exact deduction amount needed for Old Regime to beat New Regime.
+     - Quick salary preset pills (`₹7.5L`, `₹10L`, `₹12.75L`, `₹14.5L`, `₹18L`, `₹25L`).
+  3. **Tab 2: Deduction Discovery & HRA Calculator:**
+     - Interactive sliders for Section 80C (up to ₹1.5L), Section 80D (Self/Family up to ₹25k + Senior Parents up to ₹50k), Section 80CCD(1B) NPS (up to ₹50k), and Section 24(b) Home Loan Interest (up to ₹2L).
+     - Full Section 10(13A) HRA Exemption Calculator implementing statutory Rule 2A (Basic salary, rent paid, metro/non-metro 50%/40% rule).
+     - Live deduction total feeding directly into Old Regime calculations.
+  4. **Tab 3: Section 87A Marginal Relief Radar:**
+     - Interactive cliff slider from ₹7,00,000 to ₹8,50,000 demonstrating how Marginal Relief caps tax liability strictly to excess earnings above the ₹7.75L threshold.
+  5. **Direct Return Synchronization:**
+     - Added "Apply Selected Regime to My Return" button.
+     - Implemented `handleApplyOptimizer` in `app/page.tsx`, updating `returnState.regime`, populating configured deductions into `baselinePersona.claims`, and transitioning smoothly to the Return Dashboard without re-triggering onboarding/login screens.
+- **Verified:**
+  - `npm run typecheck` 0 errors.
+  - `npx vitest run` 184/184 passed across 14 test suites.
+  - `npx next build` compiled successfully (exit 0).
+
+## [2026-09-03 21:39] antigravity (Fix React rules of hooks in TaxOptimizerModal)
+- **Action:** FIX
+- **Target:** `components/modals/TaxOptimizerModal.tsx`, `log.md`
+- **Intent:**
+  - Fixed React error: `Rendered fewer hooks than expected. This may be caused by an accidental early return statement.`
+  - Root cause: `selectedRegimeChoice` was initialized via `useState` below `if (!isOpen) return null;`, violating hook ordering when opening the modal.
+  - Moved all hooks (`useState`, `useId`) to the very top of `TaxOptimizerModal` before the early return, ensuring hook execution count remains strictly identical across every render cycle.
+- **Verified:**
+  - `npm run typecheck` 0 errors.
+  - `npx vitest run` 184/184 passed across 14 test suites.
+  - `npx next build` compiled successfully (exit 0).
+
+## [2026-09-03 21:52] antigravity (Fix Card 3 Apply: update return figures, salary, deductions, and ITR-V receipt)
+- **Action:** FIX & INTEGRATE
+- **Target:** `components/modals/TaxOptimizerModal.tsx`, `components/landing-action-grid.tsx`, `components/landing.tsx`, `app/page.tsx`, `log.md`
+- **Intent:**
+  - Resolved user report where clicking "Apply" in Card 3 (Tax & Regime Optimizer) did not update the return's figures, refund/tax payable amounts, or ITR-V receipt.
+- **Root Cause & Fixes:**
+  1. **Regime Default & Sync:** `selectedRegimeChoice` was hardcoded to default to `"new"` and did not automatically follow the statutory optimizer recommendation when Old Regime was optimal. Replaced with `manualRegimeChoice` falling back to `recommendedRegime`, added interactive switcher buttons in the modal footer with real-time tax liability previews for both regimes, and updated the apply button to show the exact tax liability.
+  2. **Gross Salary Propagation:** `TaxOptimizerModalProps.onApplyOptimizer` previously passed only deductions without `grossSalary`. Updated interface to pass `grossSalary`, allowing custom salary selections and presets from Card 3 to update the return.
+  3. **Facts & Claims Mutation in ReturnState:** `handleApplyOptimizer` in `app/page.tsx` now directly updates `baselinePersona.facts` with the new gross salary, updates `baselinePersona.claims` with Chapter VI-A deductions (80C, 80D, HRA, 80CCD(1B), 24(b)), re-derives `effectivePersona`, and recalculates statutory tax and refund amounts.
+  4. **Central Reconciliation Synchronization:** Dispatches `SET_REGIME` and `SYNC_STATE` with `buildSyncPayload(updatedReturnState)` into `TaxReturnContext`, ensuring `TaxReturnContext` recomputes `active` figures and `ItrVReceipt` immediately reflects the updated regime, taxable income, and net refund/payable amounts.
+  5. **Smart Navigation:** Directs unfiled returns straight to the Review & File (`flowStep: "check"`) calculation trail, and filed returns to the Overview receipt tab (`activeTab: "overview"`).
+- **Verified:**
+  - `npm run typecheck` 0 errors.
+  - `npx vitest run` 184/184 passed across 14 test suites.
+
+## [2026-09-03 22:06] antigravity (Card 3 & Card 2: Check previous payments, subtract TDS & Challan 280, show Net Refund / Extra Payable, and sync ITR-V receipt)
+- **Action:** FIX & ENHANCE
+- **Target:** `components/modals/TaxOptimizerModal.tsx`, `components/landing-action-grid.tsx`, `components/landing.tsx`, `app/page.tsx`, `lib/return/upstreamSync.ts`, `context/TaxReturnContext.tsx`, `lib/return/__tests__/upstreamSync.test.ts`, `log.md`
+- **Intent & User Requirement:**
+  - When the user visits Card 3 (or Card 2) after paying a Challan 280 or having TDS deducted, the calculations must check previous payments, subtract them from the gross tax liability, and determine the exact net position:
+    - If `totalTaxesPaid > totalTax`: Portal provides a **Net Refund** u/s 244A.
+    - If `totalTaxesPaid < totalTax`: Citizen pays the **Balance Due** u/s 140A (via Challan 280).
+  - Update modal previews, Headline Channels, Return Dashboard, and final ITR-V receipt preview with the exact subtracted figures.
+- **Root Cause & Fixes:**
+  1. **Pass Total Taxes Paid to Card 3:** `activeCitizen` previously omitted Challan 280 payments and `TaxOptimizerModal` hardcoded `tdsPaid: 0`. Added `totalTaxesPaid` (sum of TDS 192, TDS 194A, Challan 280 u/s 140A, and Advance Tax) to `activeCitizen` across `app/page.tsx`, `Landing`, `LandingActionGrid`, and `TaxOptimizerModal`.
+  2. **Incorporate Subtraction in `TaxOptimizerModal`:**
+     - Passed `tdsPaid: taxesAlreadyPaid` into `computeAY2026Tax`.
+     - Side-by-side cards now explicitly display: Gross Tax Liability, Less: Taxes Already Paid (TDS & Challan 280) (`−₹XX,XXX`), and Net Outcome (`+₹XX,XXX Net Refund Due` or `₹XX,XXX Balance Tax Payable`).
+     - Winner recommendation callout displays statutory savings alongside net refund/payable after subtracting prior payments.
+     - Footer regime switcher and primary CTA button dynamically reflect real-time net refund or extra payable figures.
+  3. **Bridge & Reconciliation Context Sync:**
+     - Updated `SyncPayload` in `lib/return/upstreamSync.ts` and `context/TaxReturnContext.tsx` to include `selfAssessmentPayments?: SelfAssessmentPayment[]`.
+     - `buildSyncPayload` now maps all `140A` (Challan 280) payments from `effective.taxPaid` into `selfAssessmentPayments`.
+     - `TaxReturnContext` merges `selfAssessmentPayments` on `SYNC_STATE`, ensuring `deriveTaxReturn` and `ItrVReceipt` (lines 11 and 12) accurately subtract Challan 280 payments.
+  4. **Smart Lifecycle Handling in `handleApplyOptimizer` and `handleApplyReconciliation`:**
+     - Recalculates `refundOrDue`.
+     - If `refundOrDue > 0` (refund due): sets `refund.state = "under_review"` and routes to `activeTab = "overview"` where `RefundBanner`, `HeadlineChannels`, and `ItrVReceipt` display the refund.
+     - If `refundOrDue <= 0` (balance payable): sets `refund.state = "not_filed"` and routes to `flowStep = "check"` where `CheckScreen` and `BeforeFiling` display the balance due and Challan 280 pay button.
+- **Verified:**
+  - `npm run typecheck` passed (0 errors).
+  - `npx vitest run` passed all 185 tests across 14 test files (added unit test in `lib/return/__tests__/upstreamSync.test.ts`).
+
+
+
+
+
 
 
 

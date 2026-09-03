@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { LazyMotion, domMax, m, AnimatePresence } from "motion/react";
 
 import { PERSONAS, TODAY, findPersonaByPan } from "../lib/personas";
-import type { Persona, PersonaId, Lang, IncomeFact, IncomeKind, BankAccount, Notice, RefundState, TimelineKey, Provenance, TaxAlreadyPaid } from "../lib/types";
+import type { Persona, PersonaId, Lang, IncomeFact, IncomeKind, BankAccount, Notice, RefundState, TimelineKey, Provenance, TaxAlreadyPaid, Claim } from "../lib/types";
 import { REFUND_SEQUENCE } from "../lib/types";
 import { dict, isLang } from "../lib/i18n";
 import { isRtl } from "../lib/i18n/languages";
@@ -907,27 +907,256 @@ export default function WapsiPrototype() {
       }
     }
 
+    const effective = effectivePersona({
+      ...state,
+      baselinePersona,
+      corrections: newCorrections,
+    });
+
+    const newTaxCalc = computeForPersona(effective, regime);
+    const refundOrDue = newTaxCalc.refundOrDue;
+
+    if (refundOrDue > 0) {
+      baselinePersona.refund = {
+        ...baselinePersona.refund,
+        state: baselinePersona.refund.state === "not_filed" ? "under_review" : baselinePersona.refund.state,
+        filedOn: baselinePersona.refund.filedOn || new Date().toISOString().slice(0, 10),
+        amount: refundOrDue,
+      };
+      effective.refund = {
+        ...effective.refund,
+        state: effective.refund.state === "not_filed" ? "under_review" : effective.refund.state,
+        filedOn: effective.refund.filedOn || new Date().toISOString().slice(0, 10),
+        amount: refundOrDue,
+      };
+    } else {
+      baselinePersona.refund = {
+        ...baselinePersona.refund,
+        state: "not_filed",
+        amount: 0,
+      };
+      effective.refund = {
+        ...effective.refund,
+        state: "not_filed",
+        amount: 0,
+      };
+    }
+
     // Replay through effectivePersona so all facts, corrections and taxes are live
     const updatedReturnState: ReturnState = {
       ...state,
       baselinePersona,
       corrections: newCorrections,
       confirmedFactIds: Array.from(confirmedIds),
-      persona: effectivePersona({
-        ...state,
-        baselinePersona,
-        corrections: newCorrections,
-      }),
+      persona: effective,
     };
 
     setReturnState(updatedReturnState);
     saveState(updatedReturnState);
 
-    // Ensure the interactive wizard is marked complete so it directly shows the Facts page
+    // Sync central reconciliation context
+    taxDispatch({
+      type: "SYNC_STATE",
+      payload: buildSyncPayload(updatedReturnState),
+    });
+
+    // Ensure the interactive wizard is marked complete
     setWizardCompleted(true);
     setIsRealMode(false);
-    setFlowStep("facts");
-    setActiveTab("overview");
+    if (refundOrDue > 0) {
+      setActiveTab("overview");
+    } else {
+      setFlowStep("check");
+    }
+    setStep("dashboard");
+  };
+
+  const handleApplyOptimizer = (
+    chosenRegime: "new" | "old",
+    newSalary: number,
+    deductions: {
+      section80C: number;
+      section80D: number;
+      hra: number;
+      nps: number;
+      homeLoan: number;
+    }
+  ) => {
+    let state = returnState;
+    if (!state) {
+      const base = persona || PERSONAS.priya;
+      state = {
+        version: CURRENT_VERSION,
+        lang,
+        personaId: base.id === "custom" ? "custom" : "priya",
+        baselinePersona: { ...base },
+        persona: { ...base },
+        corrections: [],
+        confirmedFactIds: [],
+        regime: chosenRegime,
+      };
+      setActivePersonaId(state.personaId);
+    }
+
+    const baselinePersona: Persona = {
+      ...state.baselinePersona,
+      facts: [...(state.baselinePersona.facts || [])],
+      taxPaid: [...(state.baselinePersona.taxPaid || [])],
+      claims: [...(state.baselinePersona.claims || [])],
+      banks: [...(state.baselinePersona.banks || [])],
+      notices: [...(state.baselinePersona.notices || [])],
+      refund: state.baselinePersona.refund ? { ...state.baselinePersona.refund } : {
+        state: "not_filed",
+        amount: 0,
+        holds: [],
+        timeline: [],
+      },
+    };
+
+    // 1. Update gross salary in facts
+    const salaryFactIdx = baselinePersona.facts.findIndex((f) => f.kind === "salary");
+    if (salaryFactIdx !== -1) {
+      baselinePersona.facts[salaryFactIdx] = {
+        ...baselinePersona.facts[salaryFactIdx],
+        amount: newSalary,
+      };
+    } else {
+      baselinePersona.facts.push({
+        id: "salary-main",
+        kind: "salary",
+        amount: newSalary,
+        label: "Salary per Form 16 / AIS",
+        provenance: {
+          reporter: "Employer",
+          reporterKind: "employer",
+          filedOn: "2026-06-15",
+          statement: "AIS",
+          onlyReporterCanFix: false,
+        },
+      });
+    }
+
+    // 2. Filter out previous optimizer claims and apply chosen deductions
+    const filteredClaims: Claim[] = baselinePersona.claims.filter(
+      (c) => !["80C", "80D", "80D_SELF", "80D_PARENTS", "80CCD_1B", "24B", "HRA"].includes(c.section)
+    );
+
+    if (deductions.section80C > 0) {
+      filteredClaims.push({
+        id: "claim-80c",
+        section: "80C",
+        amount: deductions.section80C,
+        label: "Life Insurance, EPF & PPF (Sec 80C)",
+        evidenceAttached: true,
+      });
+    }
+
+    if (deductions.section80D > 0) {
+      filteredClaims.push({
+        id: "claim-80d",
+        section: "80D_SELF",
+        amount: deductions.section80D,
+        label: "Mediclaim Health Insurance (Sec 80D)",
+        evidenceAttached: true,
+      });
+    }
+
+    if (deductions.hra > 0) {
+      filteredClaims.push({
+        id: "claim-hra",
+        section: "HRA",
+        amount: deductions.hra,
+        label: "House Rent Allowance Exemption u/s 10(13A)",
+        evidenceAttached: true,
+      });
+    }
+
+    if (deductions.nps > 0) {
+      filteredClaims.push({
+        id: "claim-nps",
+        section: "80CCD_1B",
+        amount: deductions.nps,
+        label: "National Pension Scheme u/s 80CCD(1B)",
+        evidenceAttached: true,
+      });
+    }
+
+    if (deductions.homeLoan > 0) {
+      filteredClaims.push({
+        id: "claim-24b",
+        section: "24B",
+        amount: deductions.homeLoan,
+        label: "Interest on Home Loan (Sec 24b)",
+        evidenceAttached: true,
+      });
+    }
+
+    baselinePersona.claims = filteredClaims;
+
+    // 3. Recompute effective persona and recalculate statutory tax
+    const effective = effectivePersona({
+      ...state,
+      baselinePersona,
+      regime: chosenRegime,
+    });
+
+    const newTaxCalc = computeForPersona(effective, chosenRegime);
+    const refundOrDue = newTaxCalc.refundOrDue;
+
+    if (refundOrDue > 0) {
+      baselinePersona.refund = {
+        ...baselinePersona.refund,
+        state: baselinePersona.refund.state === "not_filed" ? "under_review" : baselinePersona.refund.state,
+        filedOn: baselinePersona.refund.filedOn || new Date().toISOString().slice(0, 10),
+        amount: refundOrDue,
+      };
+      effective.refund = {
+        ...effective.refund,
+        state: effective.refund.state === "not_filed" ? "under_review" : effective.refund.state,
+        filedOn: effective.refund.filedOn || new Date().toISOString().slice(0, 10),
+        amount: refundOrDue,
+      };
+    } else {
+      baselinePersona.refund = {
+        ...baselinePersona.refund,
+        state: "not_filed",
+        amount: 0,
+      };
+      effective.refund = {
+        ...effective.refund,
+        state: "not_filed",
+        amount: 0,
+      };
+    }
+
+    const updatedReturnState: ReturnState = {
+      ...state,
+      baselinePersona,
+      regime: chosenRegime,
+      persona: effective,
+    };
+
+    setReturnState(updatedReturnState);
+    saveState(updatedReturnState);
+    setWizardCompleted(true);
+    setIsRealMode(false);
+
+    // 4. Synchronize central reconciliation context
+    taxDispatch({
+      type: "SET_REGIME",
+      regime: chosenRegime === "old" ? "OLD" : "NEW",
+    });
+    taxDispatch({
+      type: "SYNC_STATE",
+      payload: buildSyncPayload(updatedReturnState),
+    });
+
+    // 5. Navigate to the computation view
+    if (refundOrDue > 0) {
+      setActiveTab("overview");
+    } else {
+      setFlowStep("check");
+    }
     setStep("dashboard");
   };
 
@@ -2059,18 +2288,21 @@ export default function WapsiPrototype() {
                   onLaunchPan={launchWithPan}
                   onLaunchWithForm16={launchWithForm16}
                   activeCitizen={
-                    persona
+                    (persona || returnState?.persona)
                       ? {
-                          name: persona.name,
-                          pan: persona.pan,
-                          salary: persona.facts.find((f) => f.kind === "salary")?.amount,
-                          tds: persona.taxPaid.find((t) => t.section === "192")?.amount,
+                          name: (persona || returnState?.persona)!.name,
+                          pan: (persona || returnState?.persona)!.pan,
+                          salary: (persona || returnState?.persona)!.facts.find((f) => f.kind === "salary")?.amount,
+                          tds: (persona || returnState?.persona)!.taxPaid.reduce((sum, t) => sum + t.amount, 0),
+                          totalTaxesPaid: (persona || returnState?.persona)!.taxPaid.reduce((sum, t) => sum + t.amount, 0),
                         }
                       : null
                   }
                   onResumeReturn={() => setStep("dashboard")}
                   onLogout={handleLogOut}
                   onApplyReconciliation={handleApplyReconciliation}
+                  onApplyOptimizer={handleApplyOptimizer}
+                  currentRegime={regime}
                 />
               </m.div>
             )}

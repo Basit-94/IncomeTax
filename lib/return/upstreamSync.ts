@@ -19,7 +19,7 @@
  * Pure. No React, no I/O.
  */
 
-import type { FactId, FilingStatus, Regime, UpstreamFact } from "../../context/TaxReturnContext";
+import type { FactId, FilingStatus, Regime, SelfAssessmentPayment, UpstreamFact } from "../../context/TaxReturnContext";
 import type { AdditionalClaim } from "../taxEngineAY2026";
 import type { CapitalGainsMeta, IncomeKind, Persona } from "../types";
 import type { Correction, ReturnState } from "./state";
@@ -42,6 +42,8 @@ export interface SyncPayload {
    * summary above it by exactly these deductions.
    */
   additionalClaims: AdditionalClaim[];
+  /** Self-assessment tax payments (Challan 280) forwarded to reconciliation context. */
+  selfAssessmentPayments?: SelfAssessmentPayment[];
 }
 
 /** Income facts pool by kind: a persona may hold several of one kind. */
@@ -222,5 +224,20 @@ export function buildSyncPayload(state: ReturnState): SyncPayload {
     additionalClaims: effective.claims
       .filter((c) => claimRow(c.section) === null && c.amount > 0)
       .map((c) => ({ id: c.id, section: c.section, label: c.label, amount: c.amount })),
+    selfAssessmentPayments: effective.taxPaid
+      .filter((t) => t.section.includes("140A") && t.amount > 0)
+      .map((t) => ({
+        challanNo: t.provenance?.identifier?.includes("serial ")
+          ? t.provenance.identifier.split("serial ")[1].trim()
+          : "10042",
+        bsrCode: t.provenance?.identifier?.includes("BSR ")
+          ? t.provenance.identifier.split("BSR ")[1].split(" ")[0].trim()
+          : "0001234",
+        amount: t.amount,
+        date: t.provenance?.filedOn || new Date().toISOString().slice(0, 10),
+        majorHead: "0021",
+        minorHead: "300",
+        method: "UPI",
+      })),
   };
 }

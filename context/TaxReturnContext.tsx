@@ -335,6 +335,8 @@ export type TaxAction =
         filedAt?: string;
         /** Claims with no row here, forwarded by section. Absent = none. */
         additionalClaims?: AdditionalClaim[];
+        /** Self-assessment tax payments u/s 140A. Absent = keep existing. */
+        selfAssessmentPayments?: SelfAssessmentPayment[];
       };
     };
 
@@ -787,6 +789,10 @@ export function taxReducer(state: TaxReturnState, action: TaxAction): TaxReturnS
         selectedRegime: payload.regime,
         filedAt: payload.filedAt ?? state.filedAt,
         additionalClaims: payload.additionalClaims ?? [],
+        selfAssessmentPayments:
+          payload.selfAssessmentPayments && payload.selfAssessmentPayments.length > 0
+            ? payload.selfAssessmentPayments
+            : state.selfAssessmentPayments,
         facts,
       };
     }

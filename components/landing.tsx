@@ -26,10 +26,22 @@ interface LandingProps {
   onLaunchPersona?: (personaId: "sunita" | "rakesh" | "priya", directToDashboard?: boolean) => void;
   onLaunchPan?: (pan: string) => void;
   onLaunchWithForm16?: (doc: IngestedDocument) => void;
-  activeCitizen?: { name: string; pan: string; salary?: number; tds?: number } | null;
+  activeCitizen?: { name: string; pan: string; salary?: number; tds?: number; totalTaxesPaid?: number } | null;
   onResumeReturn?: () => void;
   onLogout?: () => void;
   onApplyReconciliation?: (reconciledRows: ReconcileRow[]) => void;
+  onApplyOptimizer?: (
+    regime: "new" | "old",
+    grossSalary: number,
+    deductions: {
+      section80C: number;
+      section80D: number;
+      hra: number;
+      nps: number;
+      homeLoan: number;
+    }
+  ) => void;
+  currentRegime?: "new" | "old";
 }
 
 /** D13 index cards are never perfectly square to the desk. */
@@ -59,6 +71,8 @@ export default function Landing({
   onResumeReturn,
   onLogout,
   onApplyReconciliation,
+  onApplyOptimizer,
+  currentRegime,
 }: LandingProps) {
   const isHindi = lang === "hi";
   const personalization = onboardingProfile ? getPersonalization(onboardingProfile) : null;
@@ -268,6 +282,8 @@ export default function Landing({
         activeCitizen={activeCitizen}
         onResumeReturn={onResumeReturn}
         onApplyReconciliation={onApplyReconciliation}
+        onApplyOptimizer={onApplyOptimizer}
+        currentRegime={currentRegime}
       />
 
       {/* ── The Reviewer Detour: only shown when unauthenticated ─────────── */}

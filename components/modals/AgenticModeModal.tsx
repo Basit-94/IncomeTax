@@ -109,14 +109,14 @@ export default function AgenticModeModal({
       aria-labelledby="agentic-modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md animate-in fade-in duration-200"
     >
-      <div className="surface-panel relative w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-3xl bg-paper p-6 md:p-8 shadow-2xl border border-emerald-500/40 text-start">
+      <div className="surface-panel relative w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-3xl bg-paper p-6 md:p-8 shadow-2xl border border-indigo-500/40 text-start">
         {/* Glow Header */}
         <div className="flex items-start justify-between border-b border-line pb-5">
           <div className="flex items-center gap-3.5">
-            <div className="relative flex size-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-lg shadow-emerald-600/30">
+            <div className="relative flex size-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-600/30">
               <Bot size={26} />
               <span className="absolute -bottom-1 -right-1 flex size-3.5 items-center justify-center rounded-full bg-paper">
-                <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="size-2 rounded-full bg-indigo-500 animate-pulse" />
               </span>
             </div>
             <div>
@@ -124,7 +124,7 @@ export default function AgenticModeModal({
                 <h2 id="agentic-modal-title" className="font-sans text-xl md:text-2xl font-black text-ink">
                   {isHindi ? "एजेंटिक मोड — स्वायत्त टैक्स सह-पायलट" : "Agentic Mode — Autonomous Tax Copilot"}
                 </h2>
-                <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-mono font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                <span className="rounded-full bg-indigo-500/10 border border-indigo-500/30 px-2.5 py-0.5 text-[11px] font-mono font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
                   Next-Gen AI Filing
                 </span>
               </div>
@@ -286,7 +286,7 @@ export default function AgenticModeModal({
                 onClose();
                 onOpenStandardFiling?.();
               }}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-2 text-xs font-bold text-white shadow-md shadow-emerald-600/20 hover:opacity-90 transition cursor-pointer"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-2 text-xs font-bold text-white shadow-md shadow-indigo-600/20 hover:opacity-90 transition cursor-pointer"
             >
               <span>{isHindi ? "मानक 5-चरणीय रिटर्न शुरू करें" : "Start Standard Filing"}</span>
               <ArrowRight size={14} />

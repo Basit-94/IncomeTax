@@ -32,10 +32,22 @@ interface LandingActionGridProps {
   onLaunchPersona?: (personaId: "sunita" | "rakesh" | "priya", directToDashboard?: boolean) => void;
   onLaunchPan?: (pan: string) => void;
   onLaunchWithForm16?: (doc: IngestedDocument) => void;
-  activeCitizen?: { name: string; pan: string; salary?: number; tds?: number } | null;
+  activeCitizen?: { name: string; pan: string; salary?: number; tds?: number; totalTaxesPaid?: number } | null;
   onResumeReturn?: () => void;
   onLaunchFullReconcile?: () => void;
   onApplyReconciliation?: (reconciledRows: ReconcileRow[]) => void;
+  onApplyOptimizer?: (
+    regime: "new" | "old",
+    grossSalary: number,
+    deductions: {
+      section80C: number;
+      section80D: number;
+      hra: number;
+      nps: number;
+      homeLoan: number;
+    }
+  ) => void;
+  currentRegime?: "new" | "old";
 }
 
 const CARD_ICONS = {
@@ -58,6 +70,8 @@ export default function LandingActionGrid({
   onResumeReturn,
   onLaunchFullReconcile,
   onApplyReconciliation,
+  onApplyOptimizer,
+  currentRegime,
 }: LandingActionGridProps) {
   const cards = getLandingCards(lang);
   const [isFileReturnOpen, setIsFileReturnOpen] = useState(false);
@@ -93,21 +107,21 @@ export default function LandingActionGrid({
       {/* ========================================================================= */}
       {/* HIGHLIGHTED AGENTIC MODE HERO BOX (AT THE TOP OF ALL CARDS)              */}
       {/* ========================================================================= */}
-      <div className="relative group rounded-3xl p-[2px] bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500 shadow-xl shadow-emerald-500/10 hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-300">
-        <div className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-emerald-50/90 via-paper to-teal-50/40 dark:from-emerald-950/40 dark:via-paper dark:to-cyan-950/30 p-6 md:p-8 text-start backdrop-blur-md">
+      <div className="relative group rounded-3xl p-[2px] bg-gradient-to-r from-violet-600 via-indigo-500 to-purple-600 shadow-xl shadow-indigo-500/15 hover:shadow-2xl hover:shadow-indigo-500/25 transition-all duration-300">
+        <div className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-indigo-50/80 via-paper to-purple-50/50 dark:from-indigo-950/30 dark:via-paper dark:to-purple-950/20 p-6 md:p-8 text-start backdrop-blur-md">
           {/* Subtle Ambient Background Radiances */}
-          <div className="absolute top-0 right-0 -mr-16 -mt-16 size-64 rounded-full bg-emerald-400/10 dark:bg-emerald-400/5 blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-1/3 -mb-16 size-48 rounded-full bg-teal-400/10 dark:bg-teal-400/5 blur-2xl pointer-events-none" />
+          <div className="absolute top-0 right-0 -mr-16 -mt-16 size-64 rounded-full bg-indigo-400/10 dark:bg-indigo-400/5 blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-1/3 -mb-16 size-48 rounded-full bg-purple-400/10 dark:bg-purple-400/5 blur-2xl pointer-events-none" />
 
           {/* Top Bar: Live AI Indicator + Badge */}
           <div className="flex flex-wrap items-center justify-between gap-3 relative z-10">
             <div className="flex items-center gap-2.5">
               <span className="relative flex size-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full size-3 bg-emerald-500" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
+                <span className="relative inline-flex rounded-full size-3 bg-indigo-500" />
               </span>
-              <span className="rounded-full bg-emerald-600/10 dark:bg-emerald-400/15 border border-emerald-500/30 px-3 py-0.5 text-[11px] font-mono font-bold tracking-wider text-emerald-700 dark:text-emerald-300 uppercase flex items-center gap-1.5">
-                <Sparkles size={12} className="text-emerald-500" />
+              <span className="rounded-full bg-indigo-600/10 dark:bg-indigo-400/15 border border-indigo-500/30 px-3 py-0.5 text-[11px] font-mono font-bold tracking-wider text-indigo-700 dark:text-indigo-300 uppercase flex items-center gap-1.5">
+                <Sparkles size={12} className="text-indigo-500" />
                 <span>{isHindi ? "एजेंटिक मोड · स्वायत्त बातचीत" : "AI AGENTIC MODE · CONVERSATIONAL TAX FILING"}</span>
               </span>
             </div>
@@ -127,7 +141,7 @@ export default function LandingActionGrid({
             {/* Left Column: Vision & Pitch */}
             <div className="lg:col-span-7 space-y-3">
               <div className="flex items-center gap-3">
-                <div className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-md shadow-emerald-600/30 shrink-0">
+                <div className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/30 shrink-0">
                   <Bot size={24} />
                 </div>
                 <div>
@@ -150,17 +164,17 @@ export default function LandingActionGrid({
                 <button
                   type="button"
                   onClick={() => setIsAgenticOpen(true)}
-                  className="rounded-full bg-paper/80 dark:bg-paper-2/90 border border-emerald-500/30 px-3 py-1 text-[11px] font-medium text-ink-2 hover:border-emerald-500 hover:text-ink transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                  className="rounded-full bg-paper/80 dark:bg-paper-2/90 border border-indigo-500/30 px-3 py-1 text-[11px] font-medium text-ink-2 hover:border-indigo-500 hover:text-ink transition cursor-pointer flex items-center gap-1.5 shadow-sm"
                 >
-                  <MessageSquare size={12} className="text-emerald-500" />
+                  <MessageSquare size={12} className="text-indigo-500" />
                   <span>{isHindi ? "“यहाँ मेरा फॉर्म 16 है, अधिकतम रिफंड निकालें”" : "“Here is my Form 16, maximize my refund”"}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsAgenticOpen(true)}
-                  className="rounded-full bg-paper/80 dark:bg-paper-2/90 border border-emerald-500/30 px-3 py-1 text-[11px] font-medium text-ink-2 hover:border-emerald-500 hover:text-ink transition cursor-pointer flex items-center gap-1.5 shadow-sm"
+                  className="rounded-full bg-paper/80 dark:bg-paper-2/90 border border-indigo-500/30 px-3 py-1 text-[11px] font-medium text-ink-2 hover:border-indigo-500 hover:text-ink transition cursor-pointer flex items-center gap-1.5 shadow-sm"
                 >
-                  <MessageSquare size={12} className="text-emerald-500" />
+                  <MessageSquare size={12} className="text-indigo-500" />
                   <span>{isHindi ? "“AIS बैंक ब्याज विसंगति का जवाब तैयार करें”" : "“Reconcile my SBI interest mismatch in AIS”"}</span>
                 </button>
               </div>
@@ -171,7 +185,7 @@ export default function LandingActionGrid({
               <div className="space-y-2.5 text-xs">
                 {/* Simulated Citizen Prompt */}
                 <div className="flex items-start gap-2 justify-end">
-                  <div className="rounded-xl rounded-tr-sm bg-emerald-600 px-3 py-2 text-white shadow-sm text-[11px]">
+                  <div className="rounded-xl rounded-tr-sm bg-indigo-600 px-3 py-2 text-white shadow-sm text-[11px]">
                     <span className="block opacity-75 text-[9px] font-mono mb-0.5">Citizen</span>
                     <span>
                       {isHindi
@@ -183,7 +197,7 @@ export default function LandingActionGrid({
 
                 {/* Simulated Agent Reply */}
                 <div className="flex items-start gap-2">
-                  <div className="size-6 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="size-6 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
                     <Bot size={13} />
                   </div>
                   <div className="rounded-xl rounded-tl-sm bg-paper-2 dark:bg-paper-3 p-2.5 border border-line text-[11px] space-y-1">
@@ -203,13 +217,13 @@ export default function LandingActionGrid({
               {/* Action Button */}
               <div className="mt-4 pt-3 border-t border-line/60 flex items-center justify-between">
                 <span className="text-[10px] font-mono text-ink-3 flex items-center gap-1">
-                  <ShieldCheck size={12} className="text-emerald-600" />
+                  <ShieldCheck size={12} className="text-indigo-600" />
                   <span>{isHindi ? "मानव स्वीकृति सुरक्षित" : "Human-in-Loop Safe AI"}</span>
                 </span>
                 <button
                   type="button"
                   onClick={() => setIsAgenticOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-emerald-600/25 hover:opacity-95 transition-all transform hover:scale-[1.02] cursor-pointer"
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 px-4 py-2 text-xs font-bold text-white shadow-md shadow-indigo-600/25 hover:opacity-95 transition-all transform hover:scale-[1.02] cursor-pointer"
                 >
                   <span>{isHindi ? "एजेंटिक मोड देखें" : "Explore Agentic Mode"}</span>
                   <ArrowRight size={14} />
@@ -328,6 +342,9 @@ export default function LandingActionGrid({
         isOpen={isOptimizerOpen}
         onClose={() => setIsOptimizerOpen(false)}
         lang={lang}
+        activeCitizen={activeCitizen}
+        currentRegime={currentRegime}
+        onApplyOptimizer={onApplyOptimizer}
       />
       <MatchRecordsModal
         isOpen={isMatchRecordsOpen}

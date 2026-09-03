@@ -220,4 +220,16 @@ describe("buildSyncPayload", () => {
     expect(p.capitalGainsMeta).toEqual({ assetClass: "equity_stt", holding: "short" });
     expect(p.facts.capital_gains?.reported).toBe(110_000);
   });
+
+  it("extracts self-assessment payments u/s 140A into selfAssessmentPayments", () => {
+    const state = makeState();
+    const p = buildSyncPayload(state);
+    expect(p.selfAssessmentPayments).toHaveLength(1);
+    expect(p.selfAssessmentPayments?.[0]).toMatchObject({
+      amount: 5_000,
+      majorHead: "0021",
+      minorHead: "300",
+      method: "UPI",
+    });
+  });
 });
