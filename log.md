@@ -2763,6 +2763,120 @@ things there are already true and will NOT be rewritten:
   - Mode toggle fix: Detailed mode by default, persisted in `localStorage`.
 - **Verified:** All gates passed (`tsc`, `vitest` 184/184, `next build`).
 
+## [2026-09-03 20:03] antigravity (add prominent Agentic Mode hero box at the top of action cards)
+- **Action:** CREATE | EDIT
+- **Target:** `components/landing-action-grid.tsx`, `components/modals/AgenticModeModal.tsx` (new), `log.md`
+- **Intent:**
+  1. Built a highlighted, larger-than-standard, top-level "Agentic Mode" hero card positioned directly at the top of the 7-card capability grid.
+  2. Features radiant gradient perimeter, ambient mesh backdrop, pulsing live AI badge, responsive 2-column layout with simulated conversational deduction discovery chat teaser.
+  3. Created `AgenticModeModal`: interactive scenario sandbox showcasing natural-language filing, automated deduction discovery, AIS interest mismatch defense, and statutory notice drafting with human-in-the-loop safety guarantee.
+- **Verified:**
+  - `npm run typecheck` 0 errors.
+  - `npx vitest run` 184/184 passed across 14 test suites.
+  - `npx next build` compiled successfully (exit 0).
+
+## [2026-09-03 20:25] antigravity (one-time login session, portal hub navigation & Card 2 Match Records implementation)
+- **Action:** CREATE | EDIT
+- **Target:** `components/dashboard/portal-header.tsx`, `components/landing.tsx`, `components/landing-action-grid.tsx`, `components/modals/MatchRecordsModal.tsx` (new), `app/page.tsx`, `log.md`
+- **Intent:**
+  1. Implemented **One-Time Login & Persistent Citizen Session**: once a citizen logs in via Form 16, custom PAN, or demo persona, their session remains active across the entire portal.
+  2. Enhanced `PortalHeader`: added a top navigation switch (`[ ⚡ Portal Hub ] [ 📑 My Return ]`), authenticated taxpayer identity badge (`👤 Priya Patel · ABCDE1234F`), and an explicit `Log out` control.
+  3. Re-architected `Landing`: for authenticated citizens, replaces the generic login form with an active session welcome & status banner (`Continue Filing Return →`), while keeping the Agentic Mode hero box and all 7 capability cards directly accessible.
+  4. Implemented **Card 2: Match Official Records (`MatchRecordsModal.tsx`)**:
+     - Tab 1: Live AIS vs 26AS vs Actual Reconciler with line items (Salary, Savings Interest, Dividend, Capital Gains, TDS).
+     - Live CBDT Feedback Code selector (Correct, Duplicate, Partial, Denied, Exempt) with instant tax difference recomputation.
+     - Tab 2: Client-side drag-and-drop ingestion of AIS / Form 26AS PDF.
+     - Tab 3: Pre-configured citizen dispute cases (Priya's duplicate interest & Rakesh's capital gains notice).
+- **Verified:**
+  - `npm run typecheck` 0 errors.
+  - `npx vitest run` 184/184 passed across 14 test suites.
+  - `npx next build` compiled successfully (exit 0).
+
+## [2026-09-03 20:35] antigravity (de-duplicate Form 16 dropzone on facts page after login)
+- **Action:** EDIT
+- **Target:** `app/page.tsx`, `log.md`
+- **Intent:**
+  1. Fixed redundant upload dropzone on Step 1 ("Facts"): when a citizen logs in via Form 16 / AIS, `ingestedDoc` is captured and persisted.
+  2. Replaced the blank "Drop your Form 16 or AIS PDF here" area with a compact, verified badge card displaying the ingested document name, employer, salary, and TDS.
+  3. Preserved the dropzone for manual PAN logins, and provided a clean "Replace with different Form 16 / AIS" link if the citizen ever needs to re-upload.
+- **Verified:**
+  - `npm run typecheck` 0 errors.
+  - `npx vitest run` 184/184 passed across 14 test suites.
+  - `npx next build` compiled successfully (exit 0).
+
+## [2026-09-03 20:44] antigravity (Card 2 down-arrow feedback dropdown, simplified text, live amount edit, and return state sync)
+- **Action:** EDIT
+- **Target:** `components/modals/MatchRecordsModal.tsx`, `components/landing-action-grid.tsx`, `components/landing.tsx`, `app/page.tsx`, `log.md`
+- **Intent:**
+  1. Redesigned Card 2 Feedback Selector with a prominent **down arrow button** (`ChevronDown`) that triggers a formatted floating dropdown menu.
+  2. Each option provides **simplified plain-language explanations** for all 5 CBDT feedback codes (`CODE_1` through `CODE_5`) in both English and Hindi.
+  3. Added **live inline editing** for the Actual/Declared column: citizens can edit amounts on the fly, with real-time recalculation of the summary bar, discrepancy status, and defended tax.
+  4. Wired **`onApplyReconciliation`**: clicking *"Apply to My Return Draft"* now synchronizes the reconciled figures directly into the taxpayer's active `returnState` and `TaxReturnContext`, and opens the return facts board where the reconciled facts reflect immediately.
+- **Verified:**
+  - `npm run typecheck` 0 errors.
+  - `npx vitest run` 184/184 passed across 14 test suites.
+  - `npx next build` compiled successfully (exit 0).
+
+## [2026-09-03 20:50] antigravity (Card 2 in-flow accordion sub-row expansion & real return draft changes)
+- **Action:** EDIT
+- **Target:** `components/modals/MatchRecordsModal.tsx`, `app/page.tsx`, `log.md`
+- **Intent:**
+  1. Replaced floating clipped popover dropdown with an **in-flow Accordion Sub-Row** in `MatchRecordsModal`: clicking the down arrow (`⌄`) on any row smoothly expands official CBDT options directly underneath that row.
+  2. Fixed modal layout to `h-[88vh] flex flex-col overflow-hidden` with a scrollable body container (`flex-1 overflow-y-auto`): outer page scroll is eliminated; scrolling is strictly confined to the table body.
+  3. Fixed `handleApplyReconciliation` in `app/page.tsx`:
+     - Accurately builds `baselinePersona` with AIS-reported amounts.
+     - Automatically registers official `Correction` records for disputed facts (e.g. `savings_interest` ₹45,000 -> ₹15,000 u/s 194A with `CODE_5`).
+     - Recomputes live return via `effectivePersona` and triggers `taxDispatch({ type: "SYNC_STATE" })`.
+     - Verified facts reflect with "Modified / Strikethrough / Disputed" badges and recalculated tax balances on Step 1 Facts board.
+- **Verified:**
+  - `npm run typecheck` 0 errors.
+  - `npx vitest run` 184/184 passed across 14 test suites.
+  - `npx next build` compiled successfully (exit 0).
+
+## [2026-09-03 20:59] antigravity (Card 2 LanguageMenu-style scroll dropdown & direct facts board bypass)
+- **Action:** EDIT
+- **Target:** `components/modals/MatchRecordsModal.tsx`, `app/page.tsx`, `log.md`
+- **Intent:**
+  1. Built `FeedbackDropdown` component mirroring `components/ui/language-menu.tsx` exactly:
+     - Includes `max-h-60 overflow-y-auto` internal scroll container for options.
+     - Automatically flips vertically (`popUp` on lower rows) so the menu stays completely on screen without causing page scroll.
+     - Uses outside `mousedown` listener to close on outside click.
+  2. Fixed transition bug where clicking "Apply to My Return Draft" showed the unauthenticated/blank RealUserTaxWizard ("fill pan page"):
+     - Root cause: `isRealMode && !wizardCompleted` defaulted to opening Step 1 of the identity wizard.
+     - Fixed by explicitly setting `setWizardCompleted(true)` and `setIsRealMode(false)` in `handleApplyReconciliation`.
+     - Also safely cloned all persona arrays (`claims`, `banks`, `notices`, `refund`) so nothing crashes during state replay.
+     - User is now navigated directly to Step 1 ("Facts") with live strikethroughs, corrections, and updated tax counters.
+- **Verified:**
+  - `npm run typecheck` 0 errors.
+  - `npx vitest run` 184/184 passed across 14 test suites.
+  - `npx next build` compiled successfully (exit 0).
+
+## [2026-09-03 21:10] antigravity (Card 2 Tab 2 functional PDF ingestion & Tab 3 personal citizen case)
+- **Action:** EDIT
+- **Target:** `components/modals/MatchRecordsModal.tsx`, `components/landing.tsx`, `components/landing-action-grid.tsx`, `app/page.tsx`, `log.md`
+- **Intent:**
+  1. **Tab 2 ("Drop AIS / 26AS PDF") now fully functional:**
+     - Integrated real client-side PDF ingestion using `extractFieldsFromPdf` and `detectDocumentKind`.
+     - Supports drag-and-drop and file browsing.
+     - Live scanning state with spinner.
+     - Extracts Gross Salary, Employer, and Section 192 TDS credits and automatically loads them into the Tab 1 reconciliation table.
+     - Displays formatted success card with document kind, name, salary, and TDS, plus a 1-click CTA to view figures in Tab 1.
+  2. **Tab 3 ("Citizen Dispute Cases") now displays User's Personal Active Case:**
+     - Connected active citizen context (`name`, `pan`, `salary`, `tds`) from `persona` through `landing.tsx` and `landing-action-grid.tsx`.
+     - When logged in, Tab 3 features the citizen's own profile as the primary card: **"★ Your Active Filing Case"** with their live draft figures and a *"Reconcile My Active Return →"* button.
+     - Below the active case, provides the educational benchmark demo cases (Priya Sharma & Rakesh Kumar).
+- **Verified:**
+  - `npm run typecheck` 0 errors.
+  - `npx vitest run` 184/184 passed across 14 test suites.
+  - `npx next build` compiled successfully (exit 0).
+
+
+
+
+
+
+
+
 
 
 

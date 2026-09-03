@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { LazyMotion, domMax, m, AnimatePresence } from "motion/react";
 
 import { PERSONAS, TODAY, findPersonaByPan } from "../lib/personas";
-import type { Persona, PersonaId, Lang, IncomeFact, BankAccount, Notice, RefundState, TimelineKey, Provenance, TaxAlreadyPaid } from "../lib/types";
+import type { Persona, PersonaId, Lang, IncomeFact, IncomeKind, BankAccount, Notice, RefundState, TimelineKey, Provenance, TaxAlreadyPaid } from "../lib/types";
 import { REFUND_SEQUENCE } from "../lib/types";
 import { dict, isLang } from "../lib/i18n";
 import { isRtl } from "../lib/i18n/languages";
@@ -82,6 +82,9 @@ import { AuditRiskRadar } from "../components/AuditRiskRadar";
 import { PdfIngestionDropzone } from "../components/PdfIngestionDropzone";
 import { Challan280Modal } from "../components/Challan280Modal";
 import { stableIdempotencyKey } from "@/lib/submission-key";
+import { CheckCircle2 } from "lucide-react";
+import { formatMoney } from "../lib/money";
+import type { ReconcileRow } from "../components/modals/MatchRecordsModal";
 
 // --- VALIDATION (lib/validate.ts issue codes → dictionary messages) ---
 function panIssueMessage(raw: string, t: ReturnType<typeof dict>): string {
@@ -161,12 +164,14 @@ export default function WapsiPrototype() {
   }, [returnState, taxDispatch]);
   const [undoStack, setUndoStack] = useState<ReturnState[]>([]);
   const [restoredFrom, setRestoredFrom] = useState<string | null>(null);
+  const [ingestedDoc, setIngestedDoc] = useState<IngestedDocument | null>(null);
 
   // Tab control inside dashboard (filed view) + default-path flow control
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
   const [flowStep, setFlowStep] = useState<FlowStepName>("facts");
 
   const t = dict(lang);
+  const isHindi = lang === "hi";
   const [userMode, setUserMode] = useState<"simple" | "full">("full");
   const uiMode = userMode;
 
@@ -770,7 +775,159 @@ export default function WapsiPrototype() {
     setUndoStack([]);
     setOtp(["9", "4", "9", "4", "9", "4"]);
     saveState({ ...nextState, lang });
+    setIngestedDoc(doc);
     setFlowStep("facts");
+    setStep("dashboard");
+  };
+
+  const handleApplyReconciliation = (reconciledRows: ReconcileRow[]) => {
+    let state = returnState;
+    if (!state) {
+      const base = persona || PERSONAS.priya;
+      state = {
+        version: CURRENT_VERSION,
+        lang,
+        personaId: base.id === "custom" ? "custom" : "priya",
+        baselinePersona: { ...base },
+        persona: { ...base },
+        corrections: [],
+        confirmedFactIds: [],
+        regime: "new",
+      };
+      setActivePersonaId(state.personaId);
+    }
+
+    // Clone the baseline persona facts and taxPaid safely
+    const baselinePersona: Persona = {
+      ...state.baselinePersona,
+      facts: [...(state.baselinePersona.facts || [])],
+      taxPaid: [...(state.baselinePersona.taxPaid || [])],
+      claims: [...(state.baselinePersona.claims || [])],
+      banks: [...(state.baselinePersona.banks || [])],
+      notices: [...(state.baselinePersona.notices || [])],
+      refund: state.baselinePersona.refund || {
+        state: "not_filed",
+        amount: 0,
+        holds: [],
+        timeline: [],
+      },
+    };
+
+    const newCorrections: Correction[] = [...state.corrections.filter((c) => !c.id.startsWith("corr-ais-"))];
+    const confirmedIds = new Set<string>(state.confirmedFactIds);
+
+    for (const r of reconciledRows) {
+      if (r.id.startsWith("tds")) {
+        let tax = baselinePersona.taxPaid.find((t) => t.section.includes(r.section));
+        if (!tax) {
+          tax = {
+            id: `tax-ais-${r.id}`,
+            label: r.category,
+            amount: r.reported,
+            section: r.section,
+            provenance: {
+              reporter: r.source,
+              reporterKind: "employer",
+              identifier: "26AS Record",
+              filedOn: TODAY,
+              statement: "26AS",
+              onlyReporterCanFix: true,
+            },
+          };
+          baselinePersona.taxPaid.push(tax);
+        }
+
+        if (r.status === "mismatch" && r.declared !== r.reported) {
+          newCorrections.push({
+            id: `corr-ais-tax-${r.id}`,
+            factId: tax.id,
+            field: "amount",
+            previous: r.reported,
+            next: r.declared,
+            reason: r.explanation || `Reconciled per AIS feedback ${r.feedbackCode}`,
+            feedbackCode: r.feedbackCode,
+            at: new Date().toISOString(),
+            target: "tax",
+          });
+          confirmedIds.delete(tax.id);
+        } else {
+          confirmedIds.add(tax.id);
+        }
+      } else {
+        // Income facts: salary, interest, dividend, capital_gains
+        const kind: IncomeKind =
+          r.id === "salary"
+            ? "salary"
+            : r.id === "savings_interest"
+            ? "interest"
+            : r.id === "dividend"
+            ? "dividend"
+            : r.id === "capital_gains"
+            ? "capital_gains"
+            : "other";
+
+        let fact = baselinePersona.facts.find(
+          (f) => f.kind === kind || f.id.includes(r.id) || (kind === "interest" && f.kind === "interest")
+        );
+
+        if (!fact) {
+          fact = {
+            id: `fact-ais-${r.id}`,
+            kind,
+            amount: r.reported,
+            label: r.category,
+            provenance: {
+              reporter: r.source,
+              reporterKind: "bank",
+              identifier: "AIS SFT Record",
+              filedOn: TODAY,
+              statement: "AIS",
+              onlyReporterCanFix: false,
+            },
+          };
+          baselinePersona.facts.push(fact);
+        }
+
+        if (r.status === "mismatch" && r.declared !== r.reported) {
+          newCorrections.push({
+            id: `corr-ais-fact-${r.id}`,
+            factId: fact.id,
+            field: "amount",
+            previous: r.reported,
+            next: r.declared,
+            reason: r.explanation || `Reconciled per AIS feedback ${r.feedbackCode}`,
+            feedbackCode: r.feedbackCode,
+            at: new Date().toISOString(),
+            target: "fact",
+          });
+          confirmedIds.delete(fact.id);
+        } else {
+          confirmedIds.add(fact.id);
+        }
+      }
+    }
+
+    // Replay through effectivePersona so all facts, corrections and taxes are live
+    const updatedReturnState: ReturnState = {
+      ...state,
+      baselinePersona,
+      corrections: newCorrections,
+      confirmedFactIds: Array.from(confirmedIds),
+      persona: effectivePersona({
+        ...state,
+        baselinePersona,
+        corrections: newCorrections,
+      }),
+    };
+
+    setReturnState(updatedReturnState);
+    saveState(updatedReturnState);
+
+    // Ensure the interactive wizard is marked complete so it directly shows the Facts page
+    setWizardCompleted(true);
+    setIsRealMode(false);
+    setFlowStep("facts");
+    setActiveTab("overview");
     setStep("dashboard");
   };
 
@@ -892,6 +1049,7 @@ export default function WapsiPrototype() {
     setActiveTab("overview");
     setIsRealMode(true);
     setWizardCompleted(false);
+    setIngestedDoc(null);
     // The Quick Edit modal is page-level state: left true across a logout it floats over
     // whatever renders next and traps the pointer (SS4B round 1, finding C5).
     setQuickEditActive(false);
@@ -1108,6 +1266,7 @@ export default function WapsiPrototype() {
     };
 
     const next: ReturnState = { ...returnState, baselinePersona: upgrade(returnState.baselinePersona) };
+    setIngestedDoc(doc);
     commitWithUndo({ ...next, persona: effectivePersona(next) });
   };
 
@@ -1825,6 +1984,12 @@ export default function WapsiPrototype() {
             }
             if (session) void pushModePreference(session.token, newMode);
           }}
+          activeCitizen={persona ? { name: persona.name, pan: persona.pan } : null}
+          currentView={step === "dashboard" ? "dashboard" : "hub"}
+          onViewChange={(view) => {
+            setStep(view === "hub" ? "landing" : "dashboard");
+          }}
+          onLogout={handleLogOut}
         />
 
         {/* --- MAIN BODY --- */}
@@ -1893,6 +2058,19 @@ export default function WapsiPrototype() {
                   onLaunchPersona={(personaId, direct) => void launchPersonaDirect(personaId, direct)}
                   onLaunchPan={launchWithPan}
                   onLaunchWithForm16={launchWithForm16}
+                  activeCitizen={
+                    persona
+                      ? {
+                          name: persona.name,
+                          pan: persona.pan,
+                          salary: persona.facts.find((f) => f.kind === "salary")?.amount,
+                          tds: persona.taxPaid.find((t) => t.section === "192")?.amount,
+                        }
+                      : null
+                  }
+                  onResumeReturn={() => setStep("dashboard")}
+                  onLogout={handleLogOut}
+                  onApplyReconciliation={handleApplyReconciliation}
                 />
               </m.div>
             )}
@@ -2020,9 +2198,47 @@ export default function WapsiPrototype() {
                     >
                       {flowStep === "facts" && (
                         <div className="space-y-6">
-                          {/* Top of the review page: drop a Form 16 / AIS PDF and
-                              the reported side of the salary and TDS rows follows it. */}
-                          <PdfIngestionDropzone onIngested={handlePdfIngested} />
+                          {/* If a Form 16 / AIS PDF has already been ingested, show confirmed card instead of blank dropzone */}
+                          {ingestedDoc ? (
+                            <div className="rounded-2xl border border-emerald-300 bg-emerald-50/80 dark:border-emerald-800/80 dark:bg-emerald-950/30 p-4 text-start flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
+                              <div className="flex items-center gap-3">
+                                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
+                                  <CheckCircle2 size={18} />
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-bold text-xs text-ink">
+                                      {ingestedDoc.kind === "AIS" ? (isHindi ? "AIS डेटा सफलतापूर्वक शामिल किया गया" : "AIS Data Successfully Ingested") : (isHindi ? "फॉर्म 16 डेटा सफलतापूर्वक शामिल किया गया" : "Form 16 Data Successfully Ingested")}
+                                    </span>
+                                    <span className="font-mono text-[10px] bg-paper px-2 py-0.5 rounded border border-line text-ink-2">
+                                      {ingestedDoc.fileName}
+                                    </span>
+                                  </div>
+                                  <p className="text-[11px] text-ink-2 mt-0.5">
+                                    {ingestedDoc.extracted.employerName && (
+                                      <span className="font-semibold text-ink">{ingestedDoc.extracted.employerName} · </span>
+                                    )}
+                                    {ingestedDoc.extracted.grossSalary !== undefined && (
+                                      <span>{isHindi ? "सकल वेतन:" : "Salary:"} <span className="font-mono font-bold text-ink">{formatMoney(ingestedDoc.extracted.grossSalary, lang)}</span> · </span>
+                                    )}
+                                    {ingestedDoc.extracted.tds !== undefined && (
+                                      <span>TDS: <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{formatMoney(ingestedDoc.extracted.tds, lang)}</span></span>
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => setIngestedDoc(null)}
+                                className="text-[11px] font-semibold text-ink-3 hover:text-money underline cursor-pointer self-end sm:self-center"
+                              >
+                                {isHindi ? "दूसरा फॉर्म 16 / AIS अपलोड करें" : "Replace with different Form 16 / AIS"}
+                              </button>
+                            </div>
+                          ) : (
+                            <PdfIngestionDropzone onIngested={handlePdfIngested} />
+                          )}
                           <StatementTab
                             persona={persona}
                             lang={lang}
