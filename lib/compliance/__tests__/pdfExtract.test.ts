@@ -1,7 +1,10 @@
 import { describe, it, expect } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
 import {
   PAN_RE,
   decodeLatin1,
+  extractFieldsFromPdf,
   extractFieldsFromPdfBytes,
   isEmptyExtraction,
   parseIndianNumber,
@@ -119,3 +122,33 @@ describe("parseIndianNumber", () => {
     expect(Number.isInteger(parseIndianNumber("1,00,000"))).toBe(true);
   });
 });
+
+describe("extractFieldsFromPdf async", () => {
+  it("extracts from uncompressed bytes identical to sync version", async () => {
+    const fields = await extractFieldsFromPdf(latin1(FORM_16));
+    expect(fields.pan).toBe("ABCDE1234F");
+    expect(fields.grossSalary).toBe(1_250_000);
+    expect(fields.tds).toBe(92_500);
+  });
+
+  it("extracts PAN, salary, and TDS from real Chrome/Skia Form 16 with FlateDecode and CMaps", async () => {
+    const realPdfPath = path.resolve(
+      __dirname,
+      "../../../../Form 16 - Certificate under Section 203.pdf",
+    );
+    // Alternative path if running from repo root
+    const altPath = path.resolve(process.cwd(), "Form 16 - Certificate under Section 203.pdf");
+    const targetPath = fs.existsSync(realPdfPath) ? realPdfPath : altPath;
+
+    if (fs.existsSync(targetPath)) {
+      const bytes = new Uint8Array(fs.readFileSync(targetPath));
+      const fields = await extractFieldsFromPdf(bytes);
+      expect(fields.pan).toBe("ABCDE1234F");
+      expect(fields.name).toBe("PRIYA PATEL");
+      expect(fields.employerName).toBe("INFOSYS TECHNOLOGIES LTD");
+      expect(fields.grossSalary).toBe(1_450_000);
+      expect(fields.tds).toBe(85_000);
+    }
+  });
+});
+

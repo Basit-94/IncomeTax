@@ -167,7 +167,8 @@ export default function WapsiPrototype() {
   const [flowStep, setFlowStep] = useState<FlowStepName>("facts");
 
   const t = dict(lang);
-  const uiMode = onboardingProfile?.mode ?? "simple";
+  const [userMode, setUserMode] = useState<"simple" | "full">("full");
+  const uiMode = userMode;
 
   const breakdown = useMemo(
     () => (persona ? computeForPersona(persona, regime) : null),
@@ -274,6 +275,15 @@ export default function WapsiPrototype() {
 
     if (savedTheme === "dark" || savedTheme === "light") {
       setTheme(savedTheme as "dark" | "light");
+    }
+
+    const savedMode = localStorage.getItem("wapsi_ui_mode");
+    if (savedMode === "simple" || savedMode === "full") {
+      setUserMode(savedMode);
+    } else if (savedOnboarding?.mode) {
+      setUserMode(savedOnboarding.mode);
+    } else {
+      setUserMode("full");
     }
 
     const result = loadPersist();
@@ -519,6 +529,249 @@ export default function WapsiPrototype() {
     setUndoStack([]);
     setOtp(["9", "4", "9", "4", "9", "4"]); // prefill OTP
     setStep("otp");
+  };
+
+  const launchPersonaDirect = async (personaId: PersonaId | "custom", directToDashboard: boolean = true) => {
+    if (personaId === "custom") return;
+    const seeded = PERSONAS[personaId];
+    if (!seeded) return;
+    setCustomPan(seeded.pan);
+    setIsRealMode(false);
+    setWizardCompleted(true);
+    setActivePersonaId(seeded.id);
+    const nextState: ReturnState = {
+      version: CURRENT_VERSION,
+      lang,
+      personaId: seeded.id,
+      baselinePersona: seeded,
+      persona: seeded,
+      corrections: [],
+      confirmedFactIds: [],
+      regime: "new",
+    };
+    setReturnState(nextState);
+    setUndoStack([]);
+    setOtp(["9", "4", "9", "4", "9", "4"]);
+
+    if (directToDashboard) {
+      try {
+        const result = await ensureSession(seeded.pan, seeded.name, "949494");
+        if (result.ok) {
+          setSession(result.session);
+          saveSession(result.session);
+        }
+      } catch {
+        // Fallback for offline prototype
+      }
+      saveState({ ...nextState, lang });
+      if (seeded.refund.state === "not_filed") {
+        setFlowStep("facts");
+      } else {
+        setActiveTab("overview");
+      }
+      setStep("dashboard");
+    } else {
+      setStep("otp");
+    }
+  };
+
+  const launchWithPan = (cleanPan: string) => {
+    const seeded = findPersonaByPan(cleanPan);
+    if (seeded) {
+      void launchPersonaDirect(seeded.id, true);
+      return;
+    }
+
+    setCustomPan(cleanPan);
+    setIsRealMode(true);
+    setWizardCompleted(false);
+
+    const customUser: Persona = {
+      id: "custom",
+      name: "",
+      age: 29,
+      city: "",
+      state: "",
+      occupation: "",
+      pan: cleanPan,
+      mobile: "90000 00000",
+      preferredLang: lang,
+      situation: "Real User Return",
+      act: 1,
+      actLabel: "Real User",
+      embodies: "Real User",
+      assessmentYear: "2026-27",
+      facts: [],
+      taxPaid: [],
+      claims: [],
+      banks: [],
+      refund: {
+        state: "not_filed",
+        amount: 0,
+        holds: [],
+        timeline: [],
+      },
+      notices: [],
+    };
+
+    setActivePersonaId("custom");
+    const nextState: ReturnState = {
+      version: CURRENT_VERSION,
+      lang,
+      personaId: "custom",
+      baselinePersona: customUser,
+      persona: customUser,
+      corrections: [],
+      confirmedFactIds: [],
+      regime: "new",
+    };
+    setReturnState(nextState);
+    setUndoStack([]);
+    setOtp(["9", "4", "9", "4", "9", "4"]);
+    saveState({ ...nextState, lang });
+    setFlowStep("facts");
+    setStep("dashboard");
+  };
+
+  const launchWithForm16 = (doc: IngestedDocument) => {
+    const extractedPan = doc.extracted.pan?.trim().toUpperCase();
+    const seeded = extractedPan ? findPersonaByPan(extractedPan) : null;
+    
+    // Exact citizen identity extracted from Form 16 / AIS document
+    const citizenName = doc.extracted.name?.trim() || (seeded ? seeded.name : "Taxpayer");
+    const citizenPan = extractedPan || (seeded ? seeded.pan : "ABCDE1234F");
+    const employerName = doc.extracted.employerName?.trim() || "Employer";
+    const personaId: PersonaId | "custom" = seeded ? seeded.id : "custom";
+
+    const statement: Provenance["statement"] = doc.kind === "AIS" ? "AIS" : "26AS";
+    const fromDocument = (reporter: string): Provenance => ({
+      reporter,
+      reporterKind: "employer",
+      identifier: doc.fileName,
+      filedOn: TODAY,
+      statement,
+      onlyReporterCanFix: true,
+    });
+
+    // If a seeded persona matches this PAN, augment it; otherwise build a fresh custom persona
+    const basePersona: Persona = seeded
+      ? { ...seeded, name: citizenName }
+      : {
+          id: "custom",
+          name: citizenName,
+          age: 30,
+          city: "Bengaluru",
+          state: "Karnataka",
+          occupation: "Salaried Employee",
+          pan: citizenPan,
+          mobile: "90000 00000",
+          preferredLang: lang,
+          situation: "Form 16 Salaried Return",
+          act: 1,
+          actLabel: "Real User",
+          embodies: "Real User",
+          assessmentYear: "2026-27",
+          facts: [],
+          taxPaid: [],
+          claims: [],
+          banks: [
+            {
+              id: "bank-form16-1",
+              bank: "HDFC Bank",
+              maskedNumber: "••••••••4892",
+              ifsc: "HDFC0000053",
+              status: "validated",
+              nominatedForRefund: true,
+            },
+          ],
+          refund: {
+            state: "not_filed",
+            amount: 0,
+            holds: [],
+            timeline: [],
+          },
+          notices: [],
+        };
+
+    const facts = [...basePersona.facts];
+    const taxPaid = [...basePersona.taxPaid];
+
+    if (doc.extracted.grossSalary !== undefined) {
+      const idx = facts.findIndex((f) => f.kind === "salary");
+      if (idx >= 0) {
+        facts[idx] = {
+          ...facts[idx],
+          amount: doc.extracted.grossSalary,
+          label: `Salary from ${employerName}`,
+          provenance: fromDocument(`${employerName}, per uploaded ${doc.kind}`),
+        };
+      } else {
+        facts.push({
+          id: `form16-salary-${Date.now()}`,
+          label: `Gross salary (${employerName})`,
+          amount: doc.extracted.grossSalary,
+          kind: "salary",
+          provenance: fromDocument(`${employerName}, per uploaded ${doc.kind}`),
+        });
+      }
+    }
+
+    if (doc.extracted.tds !== undefined) {
+      const idx = taxPaid.findIndex((t) => t.section === "192");
+      if (idx >= 0) {
+        taxPaid[idx] = {
+          ...taxPaid[idx],
+          amount: doc.extracted.tds,
+          label: `TDS on salary by ${employerName}`,
+          provenance: fromDocument(`${employerName}, per uploaded ${doc.kind}`),
+        };
+      } else {
+        taxPaid.push({
+          id: `form16-tds-${Date.now()}`,
+          label: `TDS u/s 192 (${employerName})`,
+          amount: doc.extracted.tds,
+          section: "192",
+          provenance: fromDocument(`${employerName}, per uploaded ${doc.kind}`),
+        });
+      }
+    }
+
+    const upgradedPersona: Persona = {
+      ...basePersona,
+      id: personaId,
+      name: citizenName,
+      pan: citizenPan,
+      facts,
+      taxPaid,
+      refund: {
+        state: "not_filed",
+        amount: doc.extracted.tds ?? basePersona.refund.amount,
+        holds: [],
+        timeline: [],
+      },
+    };
+
+    setCustomPan(upgradedPersona.pan);
+    setIsRealMode(personaId === "custom");
+    setWizardCompleted(true);
+    setActivePersonaId(personaId);
+    const nextState: ReturnState = {
+      version: CURRENT_VERSION,
+      lang,
+      personaId,
+      baselinePersona: upgradedPersona,
+      persona: upgradedPersona,
+      corrections: [],
+      confirmedFactIds: facts.map((f) => f.id),
+      regime: "new",
+    };
+
+    setReturnState(nextState);
+    setUndoStack([]);
+    setOtp(["9", "4", "9", "4", "9", "4"]);
+    saveState({ ...nextState, lang });
+    setFlowStep("facts");
+    setStep("dashboard");
   };
 
   // Handle OTP digit inputs
@@ -1561,14 +1814,16 @@ export default function WapsiPrototype() {
           setShowConsole={setShowConsole}
           onLogoClick={goHome}
           showLanguage={true}
-          mode={step === "dashboard" && persona ? uiMode : undefined}
-          onModeChange={(mode) => {
-            if (!onboardingProfile) return;
-            const nextProfile = { ...onboardingProfile, mode };
-            setOnboardingProfile(nextProfile);
-            saveOnboardingProfile(nextProfile);
-            // T5.1: the switch follows the account when a session is live.
-            if (session) void pushModePreference(session.token, mode);
+          mode={uiMode}
+          onModeChange={(newMode) => {
+            setUserMode(newMode);
+            localStorage.setItem("wapsi_ui_mode", newMode);
+            if (onboardingProfile) {
+              const nextProfile = { ...onboardingProfile, mode: newMode };
+              setOnboardingProfile(nextProfile);
+              saveOnboardingProfile(nextProfile);
+            }
+            if (session) void pushModePreference(session.token, newMode);
           }}
         />
 
@@ -1635,6 +1890,9 @@ export default function WapsiPrototype() {
                   handlePanSubmit={handlePanSubmit}
                   onboardingProfile={null}
                   onEditOnboarding={() => {}}
+                  onLaunchPersona={(personaId, direct) => void launchPersonaDirect(personaId, direct)}
+                  onLaunchPan={launchWithPan}
+                  onLaunchWithForm16={launchWithForm16}
                 />
               </m.div>
             )}

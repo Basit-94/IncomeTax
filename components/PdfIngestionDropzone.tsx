@@ -21,13 +21,14 @@ import { useTax } from "../context/TaxReturnContext";
 import type { IngestedDocument } from "../context/TaxReturnContext";
 import {
   detectDocumentKind,
+  extractFieldsFromPdf,
   extractFieldsFromPdfBytes,
   isEmptyExtraction,
 } from "../lib/compliance/pdfExtract";
 import { Rupees } from "./Rupees";
 
 export type { ExtractedFields } from "../lib/compliance/pdfExtract";
-export { extractFieldsFromPdfBytes } from "../lib/compliance/pdfExtract";
+export { extractFieldsFromPdf, extractFieldsFromPdfBytes } from "../lib/compliance/pdfExtract";
 
 const spring = { type: "spring" as const, stiffness: 120, damping: 18, mass: 0.7 };
 
@@ -57,7 +58,7 @@ export function PdfIngestionDropzone({ onIngested }: PdfIngestionDropzoneProps =
       try {
         const buffer = await file.arrayBuffer();
         const bytes = new Uint8Array(buffer);
-        const extracted = extractFieldsFromPdfBytes(bytes);
+        const extracted = await extractFieldsFromPdf(bytes);
         const kind = detectDocumentKind(bytes, file.name);
 
         // A visible parse beat. Instant completion on a document upload reads as

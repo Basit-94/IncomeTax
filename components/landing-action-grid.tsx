@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import {
@@ -16,10 +16,15 @@ import { getLandingCards, type LandingActionCard } from "@/lib/landingCards";
 import type { Lang } from "@/lib/types";
 import TaxOptimizerModal from "./modals/TaxOptimizerModal";
 import TaxCalendarModal from "./modals/TaxCalendarModal";
+import FileReturnModal from "./modals/FileReturnModal";
+import type { IngestedDocument } from "@/context/TaxReturnContext";
 
 interface LandingActionGridProps {
   lang: Lang;
   onActionClick: (cardId: LandingActionCard["id"]) => void;
+  onLaunchPersona?: (personaId: "sunita" | "rakesh" | "priya", directToDashboard?: boolean) => void;
+  onLaunchPan?: (pan: string) => void;
+  onLaunchWithForm16?: (doc: IngestedDocument) => void;
 }
 
 const CARD_ICONS = {
@@ -32,12 +37,23 @@ const CARD_ICONS = {
   tax_calendar: { icon: Calendar, color: "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300" },
 };
 
-export default function LandingActionGrid({ lang, onActionClick }: LandingActionGridProps) {
+export default function LandingActionGrid({
+  lang,
+  onActionClick,
+  onLaunchPersona,
+  onLaunchPan,
+  onLaunchWithForm16,
+}: LandingActionGridProps) {
   const cards = getLandingCards(lang);
+  const [isFileReturnOpen, setIsFileReturnOpen] = useState(false);
   const [isOptimizerOpen, setIsOptimizerOpen] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const handleCardClick = (id: LandingActionCard["id"]) => {
+    if (id === "file_return") {
+      setIsFileReturnOpen(true);
+      return;
+    }
     if (id === "tax_optimizer") {
       setIsOptimizerOpen(true);
       return;
@@ -127,6 +143,23 @@ export default function LandingActionGrid({ lang, onActionClick }: LandingAction
       </div>
 
       {/* Interactive Modals */}
+      <FileReturnModal
+        isOpen={isFileReturnOpen}
+        onClose={() => setIsFileReturnOpen(false)}
+        lang={lang}
+        onLaunchPersona={(personaId, direct) => {
+          setIsFileReturnOpen(false);
+          onLaunchPersona?.(personaId, direct);
+        }}
+        onLaunchPan={(pan) => {
+          setIsFileReturnOpen(false);
+          onLaunchPan?.(pan);
+        }}
+        onLaunchWithForm16={(doc) => {
+          setIsFileReturnOpen(false);
+          onLaunchWithForm16?.(doc);
+        }}
+      />
       <TaxOptimizerModal
         isOpen={isOptimizerOpen}
         onClose={() => setIsOptimizerOpen(false)}

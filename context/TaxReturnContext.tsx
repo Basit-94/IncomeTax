@@ -94,6 +94,7 @@ export {
   AIS_FEEDBACK_HELP,
   DISPUTE_FEEDBACK_CODES,
 } from "../lib/compliance/aisFeedback";
+import type { ExtractedFields } from "../lib/compliance/pdfExtract";
 
 export type FactId =
   | "salary"
@@ -195,7 +196,7 @@ export interface IngestedDocument {
   kind: "FORM_16" | "AIS";
   ingestedAt: string;
   /** Fields the parser actually found — absent means "not in this file". */
-  extracted: { pan?: string; grossSalary?: number; tds?: number };
+  extracted: ExtractedFields;
 }
 
 /**

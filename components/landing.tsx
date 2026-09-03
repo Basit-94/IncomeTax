@@ -11,6 +11,8 @@ import { MockField, MockFill, MOCK } from "@/components/dev/mock-fill";
 import LandingActionGrid from "./landing-action-grid";
 import type { LandingActionCard } from "@/lib/landingCards";
 
+import type { IngestedDocument } from "@/context/TaxReturnContext";
+
 interface LandingProps {
   t: Dict;
   lang?: Lang;
@@ -20,6 +22,9 @@ interface LandingProps {
   handlePanSubmit: (e: React.FormEvent) => void;
   onboardingProfile: OnboardingProfile | null;
   onEditOnboarding: () => void;
+  onLaunchPersona?: (personaId: "sunita" | "rakesh" | "priya", directToDashboard?: boolean) => void;
+  onLaunchPan?: (pan: string) => void;
+  onLaunchWithForm16?: (doc: IngestedDocument) => void;
 }
 
 /** D13 index cards are never perfectly square to the desk. */
@@ -42,6 +47,9 @@ export default function Landing({
   handlePanSubmit,
   onboardingProfile,
   onEditOnboarding,
+  onLaunchPersona,
+  onLaunchPan,
+  onLaunchWithForm16,
 }: LandingProps) {
   const personalization = onboardingProfile ? getPersonalization(onboardingProfile) : null;
   const primaryAction = onboardingProfile
@@ -186,7 +194,13 @@ export default function Landing({
       </form>
 
       {/* ── 7-Action Capability Grid ─────────────── */}
-      <LandingActionGrid lang={lang} onActionClick={handleActionClick} />
+      <LandingActionGrid
+        lang={lang}
+        onActionClick={handleActionClick}
+        onLaunchPersona={onLaunchPersona}
+        onLaunchPan={onLaunchPan}
+        onLaunchWithForm16={onLaunchWithForm16}
+      />
 
       {/* ── the reviewer detour: three people you can be ─────────────── */}
       <div className="divider">

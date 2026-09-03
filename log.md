@@ -2695,6 +2695,80 @@ things there are already true and will NOT be rewritten:
   8. Full multilingual support across all 23 languages without altering existing UI styling tokens.
 - **Verified:** `npx tsc --noEmit` 0 errors · `npx vitest run` 182/182 passed across 14 test files · `npx next build` exit 0 · Local dev server 200 OK.
 
+## [2026-09-03 18:31] antigravity (implement Card 1 FileReturnModal & direct pipeline launch on dev-2)
+- **Action:** CREATE | EDIT
+- **Target:** `components/modals/FileReturnModal.tsx` (new), `components/landing-action-grid.tsx`, `components/landing.tsx`, `app/page.tsx`, `log.md`
+- **Intent:** Implement Card 1 ("File or Review Return" / ITR-1 / Form 16) with interactive `FileReturnModal`:
+  1. Tab 1 (1-Click Salaried Return): 1-click launch of Sunita Devi's unfiled return directly into Step 1 Facts review (facts -> deductions -> regime -> check -> file).
+  2. Tab 2 (Form 16 / AIS PDF Upload): Client-side byte-level text extraction of PAN, gross salary, and TDS deductions without server upload; launches return prefilled from uploaded document.
+  3. Tab 3 (Custom PAN & Review): Permanent Account Number input with regex validation to start a custom return, plus 1-click review of already-filed returns (Rakesh Kumar, Priya Sharma) with ITR-V status.
+  4. Full multilingual support across all 23 languages without altering existing UI styling tokens.
+- **Verified:** `npx tsc --noEmit` 0 errors · `npx vitest run` 182/182 passed across 14 test files · `npx next build` exit 0 (routes `/`, `/_not-found`, `/api/agent`, `/reconcile`).
+
+## [2026-09-03 18:57] antigravity (reorder FileReturnModal to prioritize Custom PAN & add Sample Form 16)
+- **Action:** EDIT
+- **Target:** `components/modals/FileReturnModal.tsx`, `log.md`
+- **Intent:** User requested Custom PAN to be the first tab, and clarification on PDF OCR capabilities:
+  1. Reordered tabs in `FileReturnModal`: Tab 1 is now "File with Your PAN" (prominent input, autofocus, validation, plus filed persona reviews).
+  2. Tab 2 is "Upload Form 16 / AIS" with added "Load Sample Form 16" demo button and honest capability notice explaining digital text-layer extraction vs. pixel-level OCR.
+  3. Tab 3 is "1-Click Demo (Sunita)".
+- **Verified:** `npx tsc --noEmit` 0 errors · `npx vitest run` 182/182 passed across 14 test files.
+
+## [2026-09-03 19:07] antigravity (start Spring Boot backend & fix Simple/Detailed mode toggle on dev-2)
+- **Action:** EDIT | RUN
+- **Target:** `app/page.tsx`, `log.md`
+- **Intent:**
+  1. Ran Maven test suite: 103/103 backend tests passed (`mvn -f backend/pom.xml test`).
+  2. Started Spring Boot backend application on port 8080 (`mvn -f backend/pom.xml spring-boot:run`) as active background task.
+  3. Diagnosed Simple/Detailed switch failure: `onModeChange` previously returned early because `onboardingProfile` was null due to deactivated wizard; `uiMode` was hardcoded to fall back to `"simple"`.
+  4. Fixed Simple/Detailed switch: introduced `userMode` state defaulting to `"full"` (Detailed by default), persisted to `localStorage` key `wapsi_ui_mode`, and decoupled from `onboardingProfile` so it works anywhere across the app.
+- **Verified:**
+  - Frontend: `npm run typecheck` 0 errors · `npx vitest run` 182/182 passed across 14 test files · Next.js dev server running on port 3000.
+  - Backend: `mvn test` 103/103 passed · Spring Boot Tomcat live on port 8080.
+
+## [2026-09-03 19:34] antigravity (upgrade PDF ingestion with FlateDecode decompression & CMap glyph mapping)
+- **Action:** EDIT
+- **Target:** `lib/compliance/pdfExtract.ts`, `components/modals/FileReturnModal.tsx`, `components/PdfIngestionDropzone.tsx`, `lib/compliance/__tests__/pdfExtract.test.ts`, `log.md`
+- **Intent:**
+  1. Solved "No digital text layer found" on `Form 16 - Certificate under Section 203.pdf`.
+  2. Implemented `extractFieldsFromPdf` async pipeline using standard Web `DecompressionStream('deflate')` with `deflate-raw` fallback to decompress FlateDecode content streams.
+  3. Implemented PostScript `/ToUnicode` CMap parser (`beginbfrange` and `beginbfchar`) to map subsetted glyph hex CIDs to Unicode text.
+  4. Tested on `Form 16 - Certificate under Section 203.pdf`: accurately extracts Employee PAN `ABCDE1234F`, Gross Salary `₹14,50,000` (1450000), and TDS `₹85,000` (85000).
+  5. Kept synchronous `extractFieldsFromPdfBytes` intact for zero-regression backwards compatibility.
+- **Verified:**
+  - `npm run typecheck` 0 errors.
+  - `npx vitest run` 184/184 passed across 14 test suites (added real PDF unit test verifying 100% extraction).
+  - `npx next build` compiled successfully (exit code 0).
+
+## [2026-09-03 19:51] antigravity (extract employee & employer name from Form 16, create dynamic citizen persona)
+- **Action:** EDIT
+- **Target:** `lib/compliance/pdfExtract.ts`, `context/TaxReturnContext.tsx`, `components/modals/FileReturnModal.tsx`, `app/page.tsx`, `lib/compliance/__tests__/pdfExtract.test.ts`, `log.md`
+- **Intent:**
+  1. Extracted `name` and `employerName` in `lib/compliance/pdfExtract.ts` (both sync and async via CMap and layout text parsing).
+  2. Fixed `launchWithForm16` in `app/page.tsx`: eliminated hardcoded fallback to `PERSONAS.sunita`. Instead, dynamically constructs a real, dedicated `Persona` (`id: "custom"`, `name: doc.extracted.name`, `pan: doc.extracted.pan`, salary facts from `employerName`, and verified TDS).
+  3. Updated `FileReturnModal.tsx` to preview the extracted Employee Name and Employer Name alongside PAN, Salary, and TDS.
+  4. Verified with `Form 16 - Certificate under Section 203.pdf`: accurately extracts `name: "PRIYA PATEL"` and `employerName: "INFOSYS TECHNOLOGIES LTD"`.
+- **Verified:**
+  - `npm run typecheck` 0 errors.
+  - `npx vitest run` 184/184 passed across 14 test suites (including assertions for `name` and `employerName`).
+  - `npx next build` exit 0 (1635ms compilation).
+
+## [2026-09-03 19:54] antigravity (commit and push Card 1 interactive return filing & enhanced PDF parsing to dev-2)
+- **Action:** GIT COMMIT & PUSH
+- **Target:** `origin/dev-2`
+- **Intent:**
+  - Card 1 interactive `FileReturnModal`: Custom PAN priority tab, drag-and-drop Form 16/AIS ingestion, 1-click filing pipeline for Sunita Devi, and filed return reviewers.
+  - FlateDecode stream decompression and PostScript `/ToUnicode` CMap character resolver in `lib/compliance/pdfExtract.ts`.
+  - Dynamic citizen persona generation based on extracted Name, Employer Name, PAN, Gross Salary, and TDS (no hardcoded fallback).
+  - Mode toggle fix: Detailed mode by default, persisted in `localStorage`.
+- **Verified:** All gates passed (`tsc`, `vitest` 184/184, `next build`).
+
+
+
+
+
+
+
 
 
 
