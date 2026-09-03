@@ -1,15 +1,18 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { useUser, updatePreferences } from "@/lib/user-context";
+import type { UiMode } from "@/lib/mode";
 import { LazyMotion, domMax, m, AnimatePresence } from "motion/react";
 
-import { PERSONAS, TODAY, findPersonaByPan } from "../lib/personas";
-import type { Persona, PersonaId, Lang, IncomeFact, BankAccount, Notice, RefundState, TimelineKey, Provenance, TaxAlreadyPaid } from "../lib/types";
-import { REFUND_SEQUENCE } from "../lib/types";
-import { dict, isLang } from "../lib/i18n";
-import { isRtl } from "../lib/i18n/languages";
-import { mulberry32, pick } from "../lib/rng";
-import { validatePan, validateIfsc } from "../lib/validate";
+import { PERSONAS, TODAY, findPersonaByPan } from "@/lib/personas";
+import type { Persona, PersonaId, Lang, IncomeFact, BankAccount, Notice, RefundState, TimelineKey, Provenance, TaxAlreadyPaid } from "@/lib/types";
+import { REFUND_SEQUENCE } from "@/lib/types";
+import { dict, isLang } from "@/lib/i18n";
+import { isRtl } from "@/lib/i18n/languages";
+import { mulberry32, pick } from "@/lib/rng";
+import { validatePan, validateIfsc } from "@/lib/validate";
 import {
   applyCorrection,
   revertCorrection,
@@ -17,15 +20,15 @@ import {
   effectivePersona,
   type Correction,
   type ReturnState,
-} from "../lib/return/state";
+} from "@/lib/return/state";
 import {
   load as loadPersist,
   save as savePersist,
   pushUndo,
   popUndo,
   CURRENT_VERSION,
-} from "../lib/return/persist";
-import { computeForPersona, DEFAULT_REGIME } from "../lib/return/compute";
+} from "@/lib/return/persist";
+import { computeForPersona, DEFAULT_REGIME } from "@/lib/return/compute";
 import {
   loadOnboardingDraft,
   loadOnboardingProfile,
@@ -33,54 +36,54 @@ import {
   getDashboardDestination,
   type OnboardingDraft,
   type OnboardingProfile,
-} from "../lib/onboarding";
+} from "@/lib/onboarding";
 
-import Landing from "../components/landing";
-import OtpScreen from "../components/otp-screen";
-import PortalHeader from "../components/dashboard/portal-header";
-import ProfileStrip from "../components/dashboard/profile-strip";
-import TabBar, { type DashboardTab } from "../components/dashboard/tab-bar";
-import OverviewTab from "../components/dashboard/overview-tab";
-import StatementTab from "../components/dashboard/statement-tab";
-import ActionsTab from "../components/dashboard/actions-tab";
-import SandboxDrawer from "../components/dashboard/sandbox-drawer";
-import Motes from "../components/ambient/motes";
+import Landing from "@/components/landing";
+import OtpScreen from "@/components/otp-screen";
+import PortalHeader from "@/components/dashboard/portal-header";
+import ProfileStrip from "@/components/dashboard/profile-strip";
+import TabBar, { type DashboardTab } from "@/components/dashboard/tab-bar";
+import OverviewTab from "@/components/dashboard/overview-tab";
+import StatementTab from "@/components/dashboard/statement-tab";
+import ActionsTab from "@/components/dashboard/actions-tab";
+import SandboxDrawer from "@/components/dashboard/sandbox-drawer";
+import Motes from "@/components/ambient/motes";
 import {
   clearSession,
   ensureSession,
   fetchHistory,
   loadSession,
-  pushModePreference,
   saveSession,
   signOut,
   type ServerFiling,
   type SessionInfo,
-} from "../lib/auth-client";
-import MiniBurstHost from "../components/ambient/mini-burst";
-import AgentPanel from "../components/agent/agent-panel";
-import DisputeModal from "../components/dashboard/dispute-modal";
-import { EditIncomeModal } from "../components/dashboard/edit-income-modal";
-import BankIfscModal from "../components/dashboard/bank-ifsc-modal";
-import NoticeModal from "../components/dashboard/notice-modal";
-import PersonalizedDashboard from "../components/dashboard/personalized-dashboard";
-import FlowStepper, { FLOW_STEPS, type FlowStepName } from "../components/flow/flow-stepper";
-import DeductionsStep from "../components/flow/deductions-step";
-import RegimeStep from "../components/flow/regime-step";
-import CheckScreen from "../components/flow/check-screen";
-import BeforeFiling from "../components/flow/before-filing";
-import FilingStep from "../components/flow/filing-step";
-import { generateSeededUser } from "../components/sandbox-user";
-import Onboarding from "../components/onboarding";
-import { QuickEditModal } from "../components/dashboard/quick-edit-modal";
-import RealUserTaxWizard from "../components/flow/real-user-wizard";
-import { useTax } from "../context/TaxReturnContext";
-import type { IngestedDocument, SelfAssessmentPayment } from "../context/TaxReturnContext";
-import type { AISFeedbackCode } from "../lib/compliance/aisFeedback";
-import { buildSyncPayload } from "../lib/return/upstreamSync";
-import InteractiveTaxDashboard from "../components/InteractiveTaxDashboard";
-import { AuditRiskRadar } from "../components/AuditRiskRadar";
-import { PdfIngestionDropzone } from "../components/PdfIngestionDropzone";
-import { Challan280Modal } from "../components/Challan280Modal";
+} from "@/lib/auth-client";
+import MiniBurstHost from "@/components/ambient/mini-burst";
+import AgentPanel from "@/components/agent/agent-panel";
+import DisputeModal from "@/components/dashboard/dispute-modal";
+import { EditIncomeModal } from "@/components/dashboard/edit-income-modal";
+import BankIfscModal from "@/components/dashboard/bank-ifsc-modal";
+import NoticeModal from "@/components/dashboard/notice-modal";
+import PersonalizedDashboard from "@/components/dashboard/personalized-dashboard";
+import TaskGrid, { type TileId } from "@/components/dashboard/task-grid";
+import ToolDrawer, { type ToolId } from "@/components/tools/tool-drawer";
+import FlowStepper, { FLOW_STEPS, type FlowStepName } from "@/components/flow/flow-stepper";
+import DeductionsStep from "@/components/flow/deductions-step";
+import RegimeStep from "@/components/flow/regime-step";
+import CheckScreen from "@/components/flow/check-screen";
+import BeforeFiling from "@/components/flow/before-filing";
+import FilingStep from "@/components/flow/filing-step";
+import { generateSeededUser } from "@/components/sandbox-user";
+import { QuickEditModal } from "@/components/dashboard/quick-edit-modal";
+import RealUserTaxWizard from "@/components/flow/real-user-wizard";
+import { useTax } from "@/context/TaxReturnContext";
+import type { IngestedDocument, SelfAssessmentPayment } from "@/context/TaxReturnContext";
+import type { AISFeedbackCode } from "@/lib/compliance/aisFeedback";
+import { buildSyncPayload } from "@/lib/return/upstreamSync";
+import InteractiveTaxDashboard from "@/components/InteractiveTaxDashboard";
+import { AuditRiskRadar } from "@/components/AuditRiskRadar";
+import { PdfIngestionDropzone } from "@/components/PdfIngestionDropzone";
+import { Challan280Modal } from "@/components/Challan280Modal";
 import { stableIdempotencyKey } from "@/lib/submission-key";
 
 // --- VALIDATION (lib/validate.ts issue codes → dictionary messages) ---
@@ -128,16 +131,17 @@ const ADVANCE_COPY: Partial<Record<Exclude<RefundState, "not_filed" | "filed_unv
 
 export default function WapsiPrototype() {
   const { dispatch: taxDispatch } = useTax();
+  const router = useRouter();
+  const { user } = useUser();
 
   // --- CORE UI STATES ---
   const [lang, setLang] = useState<Lang>("en");
   const [theme, setTheme] = useState<"dark" | "light">("light");
   const [antigravityUi, setAntigravityUi] = useState(false);
-  const [step, setStep] = useState<"onboarding" | "landing" | "otp" | "dashboard">("onboarding");
+  const [step, setStep] = useState<"landing" | "otp" | "dashboard">("landing");
   const [activePersonaId, setActivePersonaId] = useState<PersonaId | "custom" | null>(null);
   const [onboardingProfile, setOnboardingProfile] = useState<OnboardingProfile | null>(null);
   const [onboardingDraft, setOnboardingDraft] = useState<OnboardingDraft>({});
-  const [onboardingReturnStep, setOnboardingReturnStep] = useState<"landing" | "dashboard">("landing");
   /** Versioned return document — the single source the whole flow reads and writes. */
   const [returnState, setReturnState] = useState<ReturnState | null>(null);
 
@@ -167,7 +171,16 @@ export default function WapsiPrototype() {
   const [flowStep, setFlowStep] = useState<FlowStepName>("facts");
 
   const t = dict(lang);
-  const uiMode = onboardingProfile?.mode ?? "simple";
+  /** The manual surface renders the guided register (plan D5); the Agentic/Manual switch lives on the account. */
+  const uiMode = "simple" as const;
+
+  /** The switch shows the surface being viewed; choosing the other one is persisted, then navigated. */
+  const switchUiMode = async (next: UiMode) => {
+    if (next === "manual") return;
+    await updatePreferences({ mode: next });
+    router.push("/app");
+    router.refresh();
+  };
 
   const breakdown = useMemo(
     () => (persona ? computeForPersona(persona, regime) : null),
@@ -253,6 +266,41 @@ export default function WapsiPrototype() {
   const [quickEditActive, setQuickEditActive] = useState(false);
   const [isRealMode, setIsRealMode] = useState(true);
   const [wizardCompleted, setWizardCompleted] = useState(false);
+  /** Plan §5: the manual grid's tool views open in a drawer over whatever is on screen. */
+  const [tool, setTool] = useState<ToolId | null>(null);
+
+  const handleTile = (id: TileId) => {
+    switch (id) {
+      case "file_return":
+        if (step === "dashboard") setFlowStep("facts");
+        else document.getElementById("landing-pan")?.focus();
+        return;
+      case "refund":
+        setActiveTab("overview");
+        return;
+      case "reconcile":
+        router.push("/reconcile");
+        return;
+      case "pay_tax":
+        setChallanOpen(true);
+        return;
+      case "notices":
+        setActiveTab("actions");
+        return;
+      case "itrv":
+        setActiveTab("overview");
+        return;
+      case "vault":
+      case "digilocker":
+        router.push("/vault");
+        return;
+      case "chat":
+        router.push("/app");
+        return;
+      default:
+        setTool(id);
+    }
+  };
 
   // Load saved draft (versioned ReturnState; legacy raw-Persona drafts migrate)
   useEffect(() => {
@@ -260,7 +308,10 @@ export default function WapsiPrototype() {
     const savedSession = loadSession();
     if (savedSession) setSession(savedSession);
     const savedTheme = localStorage.getItem("wapsi_theme");
-    const savedOnboarding = loadOnboardingProfile();
+    // The account is the source of truth for onboarding (plan §6); localStorage mirrors it
+    // for the consumers that still read it.
+    const savedOnboarding = user.onboarding ?? loadOnboardingProfile();
+    if (user.onboarding) saveOnboardingProfile(user.onboarding);
     const savedOnboardingDraft = loadOnboardingDraft();
 
     setOnboardingProfile(savedOnboarding);
@@ -305,12 +356,12 @@ export default function WapsiPrototype() {
         }
         setStep("dashboard");
       } else {
-        setOnboardingReturnStep("dashboard");
-        setStep("onboarding");
+        setStep("dashboard");
       }
-    } else if (savedOnboarding) {
+    } else {
       setStep("landing");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // The account's filings, from the server, whenever a session is live on the
@@ -346,7 +397,7 @@ export default function WapsiPrototype() {
 
     const handlePopState = (event: PopStateEvent) => {
       if (event.state && event.state.page === "home") {
-        setStep("onboarding");
+        setStep("landing");
       }
     };
 
@@ -358,13 +409,11 @@ export default function WapsiPrototype() {
 
   // Whenever step advances to dashboard/landing/otp, push a new state to browser history
   useEffect(() => {
-    if (step !== "onboarding") {
-      window.history.pushState({ page: "wizard" }, "");
-    }
+    window.history.pushState({ page: "wizard" }, "");
   }, [step]);
 
   const goHome = () => {
-    setStep("onboarding");
+    setStep("landing");
     window.history.replaceState({ page: "home" }, "");
   };
 
@@ -410,28 +459,9 @@ export default function WapsiPrototype() {
     }
   };
 
-  const handleCompleteOnboarding = (profile: OnboardingProfile) => {
-    setOnboardingProfile(profile);
-    setOnboardingDraft({});
-    saveOnboardingProfile(profile);
-    setLang(profile.lang);
-    localStorage.setItem("wapsi_lang", profile.lang);
-    window.dispatchEvent(new Event("wapsi_lang_change"));
-    if (returnState) {
-      const nextState = { ...returnState, lang: profile.lang };
-      saveState(nextState);
-      if (onboardingReturnStep === "dashboard") {
-        setPersonalizedDashboardDestination(profile, nextState);
-      }
-    }
-    setStep(onboardingReturnStep);
-  };
-
+  /** Answers live on the account now; editing never re-runs the gate (plan §6). */
   const handleEditOnboarding = () => {
-    if (!onboardingProfile) return;
-    setOnboardingReturnStep(step === "dashboard" ? "dashboard" : "landing");
-    setOnboardingDraft(onboardingProfile);
-    setStep("onboarding");
+    router.push("/welcome?edit=1");
   };
 
   // Submit PAN directly
@@ -591,10 +621,6 @@ export default function WapsiPrototype() {
     setAuthNote(null);
     setSession(result.session);
     saveSession(result.session);
-    // T5.1: the local mode choice follows the account from the first sign-in.
-    if (onboardingProfile) {
-      void pushModePreference(result.session.token, onboardingProfile.mode);
-    }
 
     saveState({ ...returnState, lang });
     // Unfiled citizens enter the default path; already-filed ones land on the tracker.
@@ -618,15 +644,17 @@ export default function WapsiPrototype() {
     setServerFilings(null);
     clearSession();
     localStorage.clear();
+    void fetch("/api/auth/signout", { method: "POST" }).finally(() => {
+      window.location.href = "/signin";
+    });
     // The reconciliation context is shared across routes and outlives this
     // page. Nothing of the previous citizen may survive there either.
     taxDispatch({ type: "RESET" });
     setChallanOpen(false);
-    setStep("onboarding");
+    setStep("landing");
     setActivePersonaId(null);
     setOnboardingProfile(null);
     setOnboardingDraft({});
-    setOnboardingReturnStep("landing");
     setReturnState(null);
     setUndoStack([]);
     setRestoredFrom(null);
@@ -1561,16 +1589,9 @@ export default function WapsiPrototype() {
           toggleTheme={toggleTheme}
           setShowConsole={setShowConsole}
           onLogoClick={goHome}
-          showLanguage={step !== "onboarding"}
-          mode={step === "dashboard" && persona ? uiMode : undefined}
-          onModeChange={(mode) => {
-            if (!onboardingProfile) return;
-            const nextProfile = { ...onboardingProfile, mode };
-            setOnboardingProfile(nextProfile);
-            saveOnboardingProfile(nextProfile);
-            // T5.1: the switch follows the account when a session is live.
-            if (session) void pushModePreference(session.token, mode);
-          }}
+          showLanguage
+          uiMode="manual"
+          onUiModeChange={(next) => void switchUiMode(next)}
         />
 
         {/* --- MAIN BODY --- */}
@@ -1591,12 +1612,8 @@ export default function WapsiPrototype() {
                 setTheme(next);
                 localStorage.setItem("wapsi_theme", next);
               }}
-              onSetMode={(next) => {
-                if (!onboardingProfile) return;
-                const nextProfile = { ...onboardingProfile, mode: next };
-                setOnboardingProfile(nextProfile);
-                saveOnboardingProfile(nextProfile);
-              }}
+              onSetMode={(next) => void switchUiMode(next)}
+              unlimited
               onNavigate={(section) => {
                 if (section === "filing") {
                   setFlowStep("filing");
@@ -1612,6 +1629,8 @@ export default function WapsiPrototype() {
             />
           )}
 
+          <ToolDrawer tool={tool} lang={lang} onClose={() => setTool(null)} persona={persona} />
+
           {/* Ambient motes on every page: slow, evenly multicoloured
               (user directives 2026-08-29). OUTSIDE AnimatePresence. */}
           <Motes />
@@ -1619,25 +1638,6 @@ export default function WapsiPrototype() {
 
           <AnimatePresence mode="wait">
             
-            {/* STEP 1: ONBOARDING */}
-            {step === "onboarding" && (
-              <m.div
-                key="onboarding"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.25 }}
-              >
-                <Onboarding
-                  lang={lang}
-                  t={t}
-                  initialDraft={onboardingDraft}
-                  onLanguageChange={changeLang}
-                  onComplete={handleCompleteOnboarding}
-                />
-              </m.div>
-            )}
-
             {/* STEP 2: LANDING */}
             {step === "landing" && (
               <m.div
@@ -1656,6 +1656,9 @@ export default function WapsiPrototype() {
                   onboardingProfile={onboardingProfile}
                   onEditOnboarding={handleEditOnboarding}
                 />
+                <div className="mt-10">
+                  <TaskGrid lang={lang} hasReturn={false} onSelect={handleTile} />
+                </div>
               </m.div>
             )}
 
@@ -1700,6 +1703,9 @@ export default function WapsiPrototype() {
                 
                 {/* ACTIVE PROFILE STRIP */}
                 <ProfileStrip persona={persona} lang={lang} t={t} onLogOut={handleLogOut} isRealMode={isRealMode} onEditOnboarding={handleEditOnboarding} greeting={session?.pan === persona.pan ? session.personalisedMessage : undefined} />
+
+                {/* Plan §5: every tile here completes end to end; tool views open in the drawer. */}
+                <TaskGrid lang={lang} hasReturn onSelect={handleTile} />
 
                 {/* Portal chrome removed (user directive 2026-08-29): the D13
                     case-file hero above is the cover; tabs are the nav; the
@@ -1916,7 +1922,7 @@ export default function WapsiPrototype() {
                               onJumpToFact={handleJumpToFact}
                               onProceed={() => setFlowStep("filing")}
                               onPayOutstanding={() => setChallanOpen(true)}
-                              showChecklist={uiMode === "full"}
+                              showChecklist={false /* the Full-detail register is no longer a switch (plan D5) */}
                             />
                           )}
                           <div className="flex gap-3">

@@ -18,8 +18,8 @@ export const pa: Dict = {
   dir: "ltr",
 
   common: {
-    modeSimple: "ਸਰਲ",
-    modeDetailed: "ਵਿਸਥਾਰ ਨਾਲ",
+    modeAgentic: "Agentic",
+    modeManual: "Manual",
     continue: "ਅੱਗੇ ਵਧੋ",
     back: "ਪਿੱਛੇ",
     yesThatsRight: "ਹਾਂ, ਇਹ ਸਹੀ ਹੈ",

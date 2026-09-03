@@ -2648,3 +2648,139 @@ things there are already true and will NOT be rewritten:
 - **Intent:** Commit project context, agent rules, and updated dependency lock to `dev`, push to `origin/dev`, merge into `main`, and push to `origin/main`.
 - **Verified:** `npx tsc --noEmit` 0 errors · `npx vitest run` 182/182 passed · `npx next build` exit 0.
 
+
+## [2026-09-03 04:20] claude (agentic pivot — Phase 0 foundation)
+
+- **Plan:** `plan.md` rewritten in full (user instruction) as the Agentic Pivot Plan; §9 is the resume table.
+- **Done (0.1–0.3, 0.5, 0.6):** SQLite via `node:sqlite` (`lib/server/db.ts`, `schema.ts`, `data/` gitignored);
+  accounts + sessions with scrypt and hashed cookie tokens (`lib/server/auth.ts`, `session.ts`), seeded
+  `asabs`/`12345`; `/api/auth/{signin,signup,signout,me,preferences,onboarding}`; `/signin` page; the
+  manual journey moved to `app/(gated)/page.tsx` behind a server layout that redirects to `/signin` or
+  `/welcome`; `lib/mode.ts` (`agentic`|`manual`) replaces the Simple/Full switch in the header; onboarding
+  profile v3 drops the mode question (v1/v2 migrate); `/api/agent` skips the 4-question cap for signed-in
+  sessions and the panel takes `unlimited`.
+- **Fix found by tests:** `db()` compared the cached handle's path to `dbPath()` and reopened the file
+  database under tests, polluting `data/wapsi.db`. Now the first handle wins; tests reset explicitly.
+- **Gates:** tsc 0 · vitest 191/191 (16 files) · build exit 0 (warnings are Node's SQLite experimental notice).
+- **Browser:** `/` → 307 `/signin`; asabs/12345 → `/welcome`.
+- **Next:** 0.7 onboarding v4 (five pages), then Phase 1.
+
+## [2026-09-03 04:50] claude (0.4 + 0.7 — onboarding once, onboarding v4)
+
+- **Onboarding v4** (user instruction: richer intake, at most five pages): `lib/onboarding.ts` v4 with
+  profession/age band/residency, income sources + band, holdings, filing history + who filed, intent (7)
+  + help level + optional note; `focuses` derived; `legacyIntent()`/`legacyProfession()` keep the 23
+  dictionaries valid; v1–v3 profiles migrate with gaps flagged by `missingAnswers()`. Form rewritten as
+  five pages + summary; 65 hi/ta strings added to `components/mock-i18n.ts`.
+- **Once-only:** `/welcome` stores to `users.onboarding_json` + `onboarded_at` (never reset on edit);
+  the gated layout redirects; `/api/auth/onboarding` validates with the same `createOnboardingProfile`.
+- **Fix:** draft updates are functional (`setDraft(prev => …)`); a burst of clicks in one tick used to
+  drop picks. Draft persisted from an effect.
+- **Gates:** tsc 0 · vitest 193/193 · browser: five pages → summary → `/app`; `/welcome` redirects.
+
+## [2026-09-03 05:30] claude (Phase 1 — agentic surface, plus validation)
+
+- **Built:** `lib/harness/events.ts` (event protocol, plan §3.4), `lib/harness/view.ts` (pure reducer →
+  transcript blocks, plan status, outputs, context, memories; "Worked for Ns"), `lib/harness/demo.ts`
+  (scripted run), `components/agentic/*` (hero, composer with mic, chat shell, activity log,
+  CoWork-style side panel, ask forms, typed cards, history drawer, mode switch, header).
+- **Validation (3.1, pulled forward):** `lib/validation/index.ts` with Verhoeff (Aadhaar/VID) and the
+  GSTIN mod-36 check; verified against a real GSTIN; tests.
+- **Fixes found in the browser:** Strict Mode double-mount left the run player's `cancelled` ref true
+  (no events after submit); a distributive `Omit` was needed for `RunEventInput`; demo now echoes masked
+  values.
+- **Verified:** hero → chat morph; live "Working…" log; plan → Progress; Yes/No and money asks; review +
+  confirm cards; follow-up message via Enter (real keydown). Automation's synthetic "Return" key does not
+  reach React; a dispatched `Enter` keydown does.
+- **Gates:** tsc 0 · vitest 203/203 (18 files).
+
+## [2026-09-03 06:20] claude (Phase 2 — the harness, end to end)
+
+- **Built:** task schemas with plain-language questions (`lib/harness/tasks.ts`), the deterministic slot
+  interview (`interview.ts`), the offline planner (`offline.ts`), the Gemini adapter (`model.ts`), the
+  zod tool registry (`tools.ts`), memory with the identifier/amount guard (`memory.ts`), run + event +
+  output persistence (`runs.ts`, `returns.ts`), the orchestrator (`engine.ts`), the SSE route
+  (`/api/agent/stream`), the vault (`lib/server/vault.ts`, AES-256-GCM per-user keys, audit per read),
+  `/api/vault/slots|documents`, DigiLocker mock (`lib/server/digilocker.ts`, consent page, routes, wired
+  into the source chain), ITR JSON + ITR-V builders (`lib/itr`). The client (`use-run.ts`) writes values
+  to the vault first and passes only the mask to the harness.
+- **Verified in the browser:** "I got a job with a 14 lakh package…" → classified, planned, 19 questions
+  (onboarding proposals folded in), comparison + review cards from the engine, confirm → filed:
+  `DEMO242945880274`, refund ₹27,086, ITR-1 JSON + ITR-V HTML in Outputs, 8 memories recorded.
+- **Model findings:** `gemini-3.5-flash` exists for this key but answered 503 "high demand" and empty
+  replies during testing; the offline planner carried the run as designed. Adapter now retries once,
+  falls back to `AGENT_FALLBACK_MODEL` (set to `gemini-3.5-flash-lite` in `.env`), phrases without
+  thought tokens, and rejects truncated rephrasings. A fallback mid-run is now a visible recoverable
+  error event.
+- **Gates:** tsc 0 · vitest 216/216 (20 files).
+
+## [2026-09-03 07:10] claude (Phases 3–6: DigiLocker, vault page, manual grid, tools, docs)
+
+- **Vault page** `/vault` (per-task matrix, uploads, memories with delete, DigiLocker link, audit).
+  Fix: `node:sqlite` rows have a null prototype and cannot cross the server→client boundary; list
+  functions now return plain copies. Fix: `db()` re-runs migrations on every access so a migration
+  added during `next dev` applies to the cached handle (the refund chat had failed on the new table).
+- **DigiLocker mock** verified in the browser: connect → consent → Allow → `/vault?digilocker=connected`,
+  PAN/Aadhaar/name/DOB pulled as verified, typed values kept.
+- **Manual grid** (`task-grid.tsx`, 18 tiles) + **tool drawer** (calculator, regime comparison,
+  advance tax, HRA, capital gains, calendar, TDS check, e-Verify with `949494`, filing history) +
+  `lib/tools` helpers with tests + `/api/returns` (GET, POST e-verify).
+- **Engine integration test** (`engine.test.ts`): offline filing run to acknowledgement, confirm flag
+  true/false, DigiLocker pull, vault reuse on a second chat, secrets never in events, business
+  (44ADA) and notice tasks.
+- **Docs:** `docs/CONTEXT.md` rewritten; `docs/AGENTIC.md` replaces `docs/MODES.md` (git rm, not
+  committed); `README.md` rewritten; `/honesty` corrected (account + vault, harness, invented
+  Aadhaar/DigiLocker/DEMO ack, no self-hosted model, SQLite not a production DB); `.env.example` gains
+  `WAPSI_DB_PATH`, `VAULT_MASTER_KEY`, `SESSION_TTL_DAYS`, `DIGILOCKER_MODE`, `AGENT_TIMEOUT_MS`,
+  `AGENT_FALLBACK_MODEL`. `.env` gained `AGENT_FALLBACK_MODEL=gemini-3.5-flash-lite`.
+- **Removed:** `lib/harness/demo.ts` (scripted fixture superseded by the harness).
+- **Flagged, not changed:** `lib/auth-client.ts pushModePreference` and the Java preference endpoint
+  are now unused by the UI (mode lives on the account).
+- **Gates:** tsc 0 · vitest 226/226 (23 files).
+
+## [2026-09-03 07:30] claude (plan complete — final gates, handover, shutdown)
+
+- **Final gates on the working tree:** `npx tsc --noEmit` 0 · `npx vitest run` 226/226 across 23 files ·
+  `npx next build` exit 0 (routes: `/`, `/app`, `/vault`, `/signin`, `/welcome`, `/digilocker/consent`,
+  `/reconcile`, `/honesty`, `/architecture`, and the API routes).
+- **Browser walkthrough:** sign-in (`asabs`/`12345`) → five-page onboarding once → agentic run "I got a
+  job with a 14 lakh package…" through 19 questions to the confirm card → filed `DEMO242945880274`,
+  refund ₹27,086, ITR-1 JSON + ITR-V opened from Outputs → "Where is my refund?" in a fresh chat found
+  the filed return → `/vault` matrix, DigiLocker consent → connected and pulled → manual grid on the
+  landing and on Sunita Devi's dashboard, calculator/comparison/e-Verify drawers.
+- **Not committed, not pushed** (plan D12). The tree is the user's to review: `git status` shows the
+  new `lib/server`, `lib/harness`, `lib/validation`, `lib/tools`, `lib/itr`, `components/agentic`,
+  `components/vault`, `components/tools`, `components/auth`, the moved `app/(gated)/page.tsx`, the new
+  routes, `plan.md`, docs, and the removed `docs/MODES.md` and `lib/harness/demo.ts`.
+- **Known limits to read before demoing:** Gemini answered 503 "high demand" repeatedly during the
+  build; the offline planner covers it, and `AGENT_FALLBACK_MODEL=gemini-3.5-flash-lite` is set.
+  `data/wapsi.db` and `data/master.key` are local and gitignored; on Vercel the store is ephemeral.
+  The 23-language dictionaries do not yet carry the new agentic copy (plan K4); hi/ta have the
+  onboarding strings via `localize()`.
+- **Shutdown:** issued per plan 6.3 (user instruction) after the dev server was stopped.
+
+## [2026-09-03 08:10] claude (voice: continuous dictation, 3 s silence stop)
+
+- **Symptom (user, Chrome):** the mic stopped mid-sentence / "could not hear anything". Cause: one-phrase
+  mode (`continuous=false`) let Chrome end the session on its own idle timeout, and the composer showed
+  one catch-all message for every error.
+- **Change:** `lib/speech.ts` now listens continuously, accumulates settled phrases, reopens the session
+  when Chrome closes it early, and stops itself 3 s after the last recognised words (8 s grace before
+  the first). Tapping the mic again delivers what was heard so far. `components/agentic/composer.tsx`
+  maps each Chrome error code (`not-allowed`, `service-not-allowed`, `audio-capture`, `network`,
+  `no-speech`) to its own plain-language note.
+- **Not testable here:** the Claude Browser pane blocks microphone capture (permission "denied"); the
+  change was typechecked (0 errors) and hot-reloaded for the user's Chrome.
+
+## [2026-09-03 08:40] claude (voice fallback: local recording → Gemini transcription)
+
+- **Symptom (user, Chrome):** "Chrome's speech service could not be reached": the Web Speech API's
+  Google endpoint is blocked on the user's network. Nothing in the page can fix that path.
+- **Change:** `lib/speech-recorder.ts` captures 16 kHz mono PCM via getUserMedia + ScriptProcessor,
+  measures RMS for silence, stops 3 s after the last voice (8 s grace, 90 s cap), encodes WAV.
+  `app/api/speech` (signed-in only, 4 MB) sends it inline to Gemini (`transcribeAudio` in
+  `lib/harness/model.ts`, primary + fallback model, 503 retry). `composer.tsx` switches to the
+  recorder automatically when Chrome reports `network`/`service-not-allowed`, remembers the choice
+  in `localStorage.wapsi_voice_mode`, shows "Transcribing…" and drops the text into the box.
+- **Verified:** plumbing from the Browser pane with a synthetic 1 s WAV → HTTP 200, transcript in ~7 s.
+  Real microphone capture cannot run in the pane. `/honesty` dictation row rewritten. tsc 0.

@@ -21,8 +21,8 @@ export const asDict: Dict = {
   dir: "ltr",
 
   common: {
-    modeSimple: "সৰল",
-    modeDetailed: "বিতং",
+    modeAgentic: "Agentic",
+    modeManual: "Manual",
     continue: "আগবাঢ়ক",
     back: "পিছলৈ",
     yesThatsRight: "হয়, এইটো শুদ্ধ",

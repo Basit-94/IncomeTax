@@ -21,8 +21,8 @@ export const hi: Dict = {
   dir: "ltr",
 
   common: {
-    modeSimple: "सरल",
-    modeDetailed: "विस्तृत",
+    modeAgentic: "एजेंटिक",
+    modeManual: "मैन्युअल",
     continue: "आगे बढ़ें",
     back: "पीछे",
     yesThatsRight: "हाँ, यह सही है",

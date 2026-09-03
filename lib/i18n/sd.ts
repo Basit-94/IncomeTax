@@ -21,8 +21,8 @@ export const sd: Dict = {
   dir: "rtl",
 
   common: {
-    modeSimple: "سادو",
-    modeDetailed: "تفصيلي",
+    modeAgentic: "Agentic",
+    modeManual: "Manual",
     continue: "اڳتي وڌو",
     back: "پوئتي",
     yesThatsRight: "ها، اهو صحيح آهي",

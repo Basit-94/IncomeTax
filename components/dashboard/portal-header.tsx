@@ -2,6 +2,7 @@
 
 import { Settings, Sun, Moon } from "lucide-react";
 import { type Dict } from "../../lib/i18n";
+import { UI_MODES, type UiMode } from "../../lib/mode";
 import type { Lang } from "../../lib/types";
 import { LogoMark } from "../brand/logo";
 import LanguageMenu from "../ui/language-menu";
@@ -20,10 +21,10 @@ interface PortalHeaderProps {
    * never offered twice on one screen. See the "one task, one control" rule in docs/DESIGN.md.
    */
   showLanguage?: boolean;
-  /** Simple/Detailed switch - shown only while a return is open. The header is
-      the ONE control for this task (user directive 2026-08-29). */
-  mode?: "simple" | "full";
-  onModeChange?: (mode: "simple" | "full") => void;
+  /** Agentic/Manual switch (plan D5). The header is the ONE control for this task
+      (user directive 2026-08-29); it follows the account, not the page. */
+  uiMode?: UiMode;
+  onUiModeChange?: (mode: UiMode) => void;
 }
 
 export default function PortalHeader({
@@ -36,8 +37,8 @@ export default function PortalHeader({
   setShowConsole,
   onLogoClick,
   showLanguage = true,
-  mode,
-  onModeChange,
+  uiMode,
+  onUiModeChange,
 }: PortalHeaderProps) {
   return (
     <header className="border-b border-line bg-paper text-ink z-10 relative print:hidden">
@@ -70,17 +71,18 @@ export default function PortalHeader({
             </div>
           </div>
 
-          {mode && onModeChange && (
-            <div className="seg ms-auto" role="group" aria-label={t.onboarding.modeQuestion}>
-              {(["simple", "full"] as const).map((m) => (
+          {uiMode && onUiModeChange && (
+            <div className="seg ms-auto" role="group" aria-label="Agentic or Manual" data-testid="mode-switch">
+              {UI_MODES.map((m) => (
                 <button
                   key={m}
                   type="button"
                   className="min-h-[44px] min-w-[44px]"
-                  aria-pressed={mode === m}
-                  onClick={() => mode !== m && onModeChange(m)}
+                  aria-pressed={uiMode === m}
+                  data-mode={m}
+                  onClick={() => uiMode !== m && onUiModeChange(m)}
                 >
-                  {m === "simple" ? t.common.modeSimple : t.common.modeDetailed}
+                  {m === "agentic" ? t.common.modeAgentic : t.common.modeManual}
                 </button>
               ))}
             </div>

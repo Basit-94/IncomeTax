@@ -1,107 +1,85 @@
 # Wapsi (वापसी)
 
-Wapsi is a synthetic, trilingual prototype for a simpler Indian income-tax
-filing journey. Its core idea is that every number is a fact awaiting
-confirmation: each fact carries its source, plain-language meaning, and one
-citizen action—confirm or correct.
+Wapsi is a synthetic prototype of a simpler Indian income-tax filing journey for AY 2026-27.
+Its thesis has not changed: every number is a fact awaiting confirmation, with a source, a
+plain-language meaning and one citizen action. What changed on 2026-09-03 is *who does the
+work*. Sign in, answer five onboarding pages once, and pick a surface:
 
-This repository contains two deliberately separate parts:
+- **Agentic** (`/app`): one line, "Explain your situation". Type it the way you would to a friend.
+  The assistant works out which job it is, shows its plan top-right, asks only for what it cannot
+  find in your vault or (simulated) DigiLocker, computes both regimes with the tax engine, shows the
+  return in plain words, and files after you press one button. Every step it takes is visible in a
+  "Worked for 12s" log under each reply; every file it produces lands in Outputs; every chat is kept.
+- **Manual** (`/`): the dashboard, the five-step filing flow, and a grid of tasks that each work end
+  to end (calculator, regime comparison, advance-tax dates, rent-allowance check, capital gains,
+  tax calendar, TDS check, e-Verify, filing history, vault, DigiLocker).
 
-- The Next.js citizen-facing prototype. It runs locally, persists demo state in
-  the browser, and does not contact the Income Tax Department, UIDAI, banks,
-  CBDT, or any other official system.
-- An additive Spring Boot / Java 21 engineering boundary under `backend/`.
-  It demonstrates exact-paise money, versioned rules, an append-only
-  PostgreSQL ledger adapter, and an asynchronous idempotent submission API.
-  The Next.js UI **does** call this backend where one is reachable — it signs in
-  against `/api/v1/auth/*` (`lib/auth-client.ts`), reads filing history, and
-  POSTs `/api/v1/returns/submit` before the UI ever says "filed"
-  (`app/page.tsx`). With no backend running, sign-in falls back to a session
-  flagged `isMock: true` and the demo continues locally. Either way the backend
-  does not submit a real return to any official system.
+Everything is invented and nothing contacts the Income Tax Department, UIDAI, DigiLocker or a
+bank. `/honesty` says exactly what is real.
 
-## Run the frontend
+## Run it
 
-Requirements: Node.js and npm.
+Requirements: Node.js 24 (the database is Node's built-in SQLite) and npm.
 
-```powershell
+```bash
 npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. The app includes seeded synthetic personas,
-English, Hindi, and Tamil UI states, a reviewer sandbox, and the disclosure
-pages at `/honesty` and `/architecture`.
+Open `http://localhost:3000`, sign in with the reviewer account **`asabs` / `12345`** (or create your
+own), answer the five onboarding pages, and try:
 
-On a new browser, Wapsi starts with a short onboarding profile. Language is
-asked first, followed by intent, work situation, rough income, filing history,
-and the tax topics that may matter. The answers are saved locally and tailor
-the starting path, dashboard destination, next action, and amount of
-explanation. Unfiled returns remain facts-first; filed users open on the
-refund tracker, reported facts, or pending actions that match their intent.
-The answers narrow the journey; the actual regime comparison still uses
-confirmed facts and claims.
+- "I got a job with a 14 lakh package and I need to file my taxes. What is the best play here?"
+- "I have a small business with 40 lakh revenue. What are the best tax benefits I could get?"
+- "I got a letter from the income tax department and I am not sure what it means."
+- "Where is my refund?" (after filing)
+- "Show me a demo" (loads one of three sample citizens into your vault)
 
-## Verify the frontend
+The assistant needs `GEMINI_API_KEY` and `AGENT_MODEL` in `.env` (see `.env.example`). Without a
+key, or when the model is overloaded, an **offline planner** runs the same interview from the task
+templates and the run is labelled as such; the demo never depends on the model being up.
 
-```powershell
+## What is where
+
+| Piece | Path |
+|---|---|
+| Accounts, sessions, the gate | `lib/server/auth.ts`, `lib/server/session.ts`, `app/(gated)/layout.tsx`, `/signin`, `/welcome` |
+| The vault (AES-256-GCM, per-account key, audit per read) | `lib/server/vault.ts`, `/vault`, `/api/vault/*` |
+| DigiLocker (mock consent flow) | `lib/server/digilocker.ts`, `/digilocker/consent` |
+| The harness | `lib/harness/` — `tasks.ts` (what is asked), `interview.ts` (state machine), `engine.ts` (orchestrator), `model.ts` (Gemini), `offline.ts`, `tools.ts` (zod-typed), `memory.ts`, `runs.ts` |
+| The agentic surface | `components/agentic/`, `app/(gated)/app/page.tsx`, `/api/agent/stream` (SSE) |
+| The manual grid and tools | `components/dashboard/task-grid.tsx`, `components/tools/tool-drawer.tsx`, `lib/tools/` |
+| The tax engine (unchanged) | `lib/engine/`, pinned to the Java engine by `fixtures/golden/` |
+| Validation (PAN, Aadhaar+Verhoeff, GSTIN+mod-36, …) | `lib/validation/` |
+| Outputs (ITR JSON, ITR-V) | `lib/itr/`, `/api/outputs/:id` |
+
+`docs/CONTEXT.md` is the one-file orientation for anyone (or any agent) working on the repo;
+`plan.md` is the plan that produced this version and its status table; `docs/AGENTIC.md` explains
+the two surfaces; `log.md` is the history.
+
+## Verify
+
+```bash
 npm run typecheck
 npx vitest run
 npm run build
 ```
 
-The TypeScript engine and return-state tests are the product contract. The
-golden-vector export under `fixtures/golden/` is also consumed by the Java
-engine; see [fixtures/golden/README.md](fixtures/golden/README.md).
+Typecheck is zero-error and zero-`any`; the suite covers the engine, the ledger, the harness
+(interview, planner, tools, memory, vault crypto, DigiLocker, the full offline filing run), the
+validators and onboarding. Anything visual is checked in a browser; the `data-testid` hooks are
+listed in `docs/CONTEXT.md`.
 
-## Run the backend checks
+## Privacy model, in one paragraph
 
-The verified environment uses Temurin Java 21 and an isolated Maven 3.9.11
-distribution. From the repository root:
+Identifiers and amounts you type go straight into the vault, encrypted with a key wrapped by
+`VAULT_MASTER_KEY`; the assistant is told only that the box is filled and sees a masked form. The
+figures sent to the model carry no name, PAN, Aadhaar, account or email. Memories are facts
+("has a PF account"), never values, and you can read and delete them on `/vault`. Voice uses the
+browser's own recognition, which in Chrome sends audio to Google; the mic button says so.
 
-```powershell
-$env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot'
-$mavenRoot = Join-Path $env:TEMP 'wapsi-maven\apache-maven-3.9.11'
-$env:Path = "$env:JAVA_HOME\bin;$mavenRoot\bin;$env:Path"
-mvn -q -f backend/pom.xml test
-```
+## The Java backend
 
-The test suite covers integer-paise arithmetic, the Java/TypeScript golden
-vectors, async submission idempotency, the in-memory ledger contract, and an
-embedded PostgreSQL migration/history/projection test.
-
-## Run the owned load harness
-
-These commands exercise only locally owned Spring Boot processes with
-deterministic synthetic `DEMP-` references:
-
-```powershell
-pwsh -File loadtest/run.ps1 -Requests 100 -Concurrency 8
-pwsh -File loadtest/run-linearity.ps1
-pwsh -File loadtest/run-degradation.ps1
-pwsh -File loadtest/run-soak.ps1
-pwsh -File loadtest/run-chaos.ps1
-```
-
-The first command is a small journey smoke. The other commands are bounded
-local-process experiments; they are not evidence of official-portal capacity,
-production pod sizing, or national-scale readiness.
-
-## Evidence and design notes
-
-- [Project context](docs/CONTEXT.md) — the one-stop brief for anyone (or any agent) joining the repo: architecture, state models, engine rules, personas, verification.
-- [Capacity model](docs/scale/capacity-model.md) — published workload inputs and labeled assumptions.
-- [Rule-source audit](docs/scale/rules-audit.md) — current primary-source mapping for modeled AY 2026–27 values and explicit scope gaps.
-- [Architecture case](docs/scale/architecture-case.md) — evidence-led adoption case and limitations.
-- [Scale reproduction](docs/scale/reproduce.md) — environment and commands.
-- [Honesty disclosure](app/(docs)/honesty/page.tsx) — what is real, invented, stubbed, or not built.
-- [Living plan](plan.md) — milestone status and remaining evidence work.
-
-## Important limitations
-
-The tax engine is not legal advice and is not a complete tax implementation.
-Surcharge, special capital-gains rates, late-filing interest/fees, full 80GG
-eligibility, residency conditions, durable outbox delivery, Redis/PgBouncer,
-and production datasource/security operations remain outside this prototype.
-The UI and all identifiers, people, figures, documents, bank names, and PANs
-are synthetic.
+`backend/` is the Spring Boot / Java 21 reference for exact-paise money, versioned rules and the
+append-only ledger, pinned to the TypeScript engine by the golden vectors. The agentic build does not
+depend on it (plan D1). See `backend/README.md`.

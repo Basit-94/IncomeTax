@@ -19,8 +19,8 @@ export const te: Dict = {
   dir: "ltr",
 
   common: {
-    modeSimple: "సరళం",
-    modeDetailed: "వివరంగా",
+    modeAgentic: "Agentic",
+    modeManual: "Manual",
     continue: "కొనసాగించండి",
     back: "వెనక్కి",
     yesThatsRight: "అవును, ఇది సరైనదే",

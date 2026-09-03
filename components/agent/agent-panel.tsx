@@ -16,6 +16,7 @@ import { MessageCircle, Send, X, Wrench } from "lucide-react";
 
 import type { Dict } from "../../lib/i18n";
 import type { Lang, Persona } from "../../lib/types";
+import { isUiMode, type UiMode } from "../../lib/mode";
 import { formatMoney } from "../../lib/money";
 import { MockFill } from "../dev/mock-fill";
 import { renderAssistantText } from "./format";
@@ -60,7 +61,10 @@ export interface AgentPanelProps {
   /** The user's own backend session - the agent can never see more than they can. */
   sessionToken?: string;
   onSetTheme: (theme: "light" | "dark") => void;
-  onSetMode: (mode: "simple" | "full") => void;
+  /** set_mode now switches the surface: "agentic" goes to /app (plan D5). */
+  onSetMode: (mode: UiMode) => void;
+  /** Signed-in accounts have no question cap (plan §4.1); the server enforces the same rule. */
+  unlimited?: boolean;
   onNavigate: (section: "overview" | "documents" | "history" | "filing") => void;
   /** The SAME commit path the filing step uses — no agent backdoor. */
   onConfirmFiling: () => void | Promise<void>;
@@ -75,6 +79,7 @@ export default function AgentPanel({
   sessionToken,
   onSetTheme,
   onSetMode,
+  unlimited = false,
   onNavigate,
   onConfirmFiling,
 }: AgentPanelProps) {
@@ -94,7 +99,7 @@ export default function AgentPanel({
 
   // No reset path on purpose: the site is public and the cap protects the API key.
   const questionsUsed = messages.filter((m) => m.role === "user").length;
-  const atLimit = limitReached || questionsUsed >= MAX_QUESTIONS_PER_SESSION;
+  const atLimit = !unlimited && (limitReached || questionsUsed >= MAX_QUESTIONS_PER_SESSION);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -109,7 +114,7 @@ export default function AgentPanel({
           }
           break;
         case "set_mode":
-          if (action.args.mode === "simple" || action.args.mode === "full") {
+          if (isUiMode(action.args.mode)) {
             onSetMode(action.args.mode);
           }
           break;

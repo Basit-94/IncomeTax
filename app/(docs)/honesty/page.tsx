@@ -154,13 +154,23 @@ export default function HonestyPage() {
         />
         <Row
           state="real"
+          what="An account, a vault, and a record of every read"
+          detail="Sign in (the reviewer account is asabs / 12345), answer five onboarding pages once, and what you type is encrypted with AES-256-GCM under a key that only your account unwraps. The assistant is told that a box is filled and sees a masked form; every decryption writes an audit row you can read on /vault. The store is a SQLite file next to the app, so on the hosted demo it does not survive a redeploy — said here so nobody mistakes it for a production database."
+        />
+        <Row
+          state="real"
+          what="The assistant's harness"
+          detail="What is asked, in which order, comes from a task schema; the answers go to the vault, not to the model; every figure comes from the same tax engine the manual side uses; filing waits for one click. A language model (Gemini, through a server-side key) classifies your first line and rephrases questions, and it is sent onboarding facts and slot names, never names, identifiers or account numbers. When the model is unavailable an offline planner runs the same interview from the templates and the run says so on screen."
+        />
+        <Row
+          state="real"
           what="Your progress surviving a closed tab"
           detail="Journey state is mirrored into your browser's local storage under wapsi_active_id, wapsi_active_data and wapsi_lang. Close the tab, come back, and you are where you left off. The reviewer console can clear it."
         />
         <Row
           state="real"
-          what="Dictation, where the browser has it"
-          detail="The microphone on the dispute and reply fields uses the browser's own speech recognition, in Indian English, Hindi or Tamil to match your chosen language, with text appearing as you speak. Where the browser has no recognition — Firefox for Android, Opera Mini, roughly one browser in eight — it falls back to a worked example and says on screen that what you are seeing is an example rather than your voice. Worth knowing: Chrome's implementation sends audio to a remote service, so this is a no-API-key choice, not an offline one."
+          what="Dictation, two ways"
+          detail="The microphone on the assistant's box and on the free-text fields first tries the browser's own speech recognition (Chrome sends the audio to Google's speech service). It listens continuously and stops on its own after three seconds of silence. When that service cannot be reached, which some networks block, the page records the audio itself and the assistant's model transcribes it; either way the audio leaves your machine, and the note under the box says which path is in use."
         />
         <Row
           state="real"
@@ -201,8 +211,13 @@ export default function HonestyPage() {
         />
         <Row
           state="invented"
-          what="No Aadhaar number appears anywhere"
-          detail="Not a real one, not a fake one, not a masked one. Mobile numbers use a reserved-looking 90000 000NN pattern. No payment details and no health data."
+          what="Every Aadhaar number here is invented"
+          detail="The three sample citizens carry none. What you type into the assistant is checked against the Verhoeff checksum, encrypted, and shown back only as XXXX XXXX 1234. The simulated DigiLocker issues a checksum-valid number that belongs to nobody, so the flow can be watched end to end. Mobile numbers in the samples use a reserved-looking 90000 000NN pattern."
+        />
+        <Row
+          state="invented"
+          what="DigiLocker, and every acknowledgement number"
+          detail="The consent screen, the one-time code and the issued PAN and Aadhaar are all produced by this app; the real requester API needs a registered organisation we are not. Acknowledgement numbers begin DEMO and the ITR-V carries a MOCK SPECIMEN stamp."
         />
       </Section>
 
@@ -240,23 +255,23 @@ export default function HonestyPage() {
       >
         <Row
           state="absent"
-          what="Voice anywhere except the two free-text fields"
-          detail="Dictation works on the dispute reason and the notice reply. It does not fill in an amount, navigate a screen, or complete a return end to end by voice — which is what a citizen who cannot read the form would actually need, and is the largest single gap between this prototype and the product it argues for."
+          what="A return completed end to end by voice"
+          detail="Dictation now works on the assistant's text box as well as the dispute and reply fields, but the answers to the assistant's questions are still typed or tapped. A citizen who cannot read the form would need the whole interview by voice, and that remains the largest single gap between this prototype and the product it argues for."
         />
         <Row
           state="absent"
-          what="Any language model"
-          detail="Notice explanations and draft replies are deterministic templates written by hand, not generated. The code puts them behind a single interface so a model could be dropped in without touching a screen, but today there is no model, no key and no inference."
+          what="A model that never leaves the building"
+          detail="Figures reach Gemini pseudonymised, but they do reach it. Full data residency means a self-hosted model, which is a hosting decision this prototype has not made. Notice replies and the review copy stay deterministic templates so nothing a citizen relies on depends on the model being up."
         />
         <Row
           state="absent"
-          what="A connected production server, database, or account"
-          detail="The citizen UI is deliberately browser-only: its demo return state lives in per-browser storage, so reviewers cannot watch one another's refund advance. An additive local Spring Boot service and load harness now live under backend/ and loadtest/ for exact-money, asynchronous submission, idempotency, and owned-load evidence. They are not connected to this Next.js UI, do not persist production data, and do not contact official systems."
+          what="A production database"
+          detail="Accounts, the vault, memories and chats live in one SQLite file beside the app; the manual journey's draft still lives in the browser. There is no Postgres, no backups, no multi-instance story. The Spring Boot service under backend/ remains a reference for exact-paise money and the append-only ledger; the agentic build does not depend on it."
         />
         <Row
           state="absent"
           what="Real filing, in any sense"
-          detail="Nothing is submitted anywhere. Sending a return in this prototype writes a value to your own browser."
+          detail="Nothing is submitted anywhere. When the assistant files, it writes a row in the prototype's own database, produces an ITR-shaped JSON file and a DEMO acknowledgement, and starts a refund tracker that advances on a timer."
         />
       </Section>
 

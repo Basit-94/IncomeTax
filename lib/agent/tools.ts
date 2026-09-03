@@ -229,10 +229,10 @@ export const AGENT_TOOLS: AgentToolSpec[] = [
   {
     name: "set_mode",
     description:
-      "Switch between Simple mode (guided, plain words) and Full detail mode (everything at once, for professionals).",
+      "Switch the citizen's surface: 'agentic' is the conversational assistant that does the work, 'manual' is the dashboard where they do it themselves.",
     parameters: {
       type: "object",
-      properties: { mode: { type: "string", enum: ["simple", "full"] } },
+      properties: { mode: { type: "string", enum: ["agentic", "manual"] } },
       required: ["mode"],
     },
     kind: "write",

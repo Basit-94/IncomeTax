@@ -18,8 +18,8 @@ export const bn: Dict = {
   dir: "ltr",
 
   common: {
-    modeSimple: "সহজ",
-    modeDetailed: "বিস্তারিত",
+    modeAgentic: "Agentic",
+    modeManual: "Manual",
     continue: "এগিয়ে যান",
     back: "পিছনে",
     yesThatsRight: "হ্যাঁ, এটা ঠিক",

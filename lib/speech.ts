@@ -102,86 +102,146 @@ export type Dictation = {
 
 type DictationOptions = {
   lang: Lang;
-  /** Fires repeatedly as the phrase forms, so the user can see it working. */
+  /** Fires as speech is recognised: everything settled so far plus the phrase forming now. */
   onPartial(text: string): void;
-  /** Fires once with the settled phrase. */
+  /** Fires once, with everything recognised, when the person has been silent for `silenceMs`. */
   onFinal(text: string): void;
   /** Permission refused, no network, nothing audible. */
   onError(reason: string): void;
   /** Always fires last, whether the run succeeded or not. */
   onEnd(): void;
+  /** Stop after this much silence once speech has been heard (default 3 s). */
+  silenceMs?: number;
+  /** How long to wait for the first words before giving up (default 8 s). */
+  initialMs?: number;
 };
 
+const DEFAULT_SILENCE_MS = 3_000;
+const DEFAULT_INITIAL_MS = 8_000;
+
 /**
- * Starts one utterance and returns a handle to cancel it. Returns `null` if the
- * browser has no recognition at all — the caller is expected to check
- * `isSpeechSupported()` first and say so in the interface, but returning `null`
- * means a missed check degrades to nothing happening rather than to a throw.
+ * Listens continuously: keeps the microphone open while the person speaks, accumulates
+ * every settled phrase, and stops on its own after `silenceMs` without a new word. Chrome
+ * closes a continuous session on its own every so often; while the person is still within
+ * the silence window the session is reopened transparently, so a pause for breath does not
+ * end the dictation. Returns `null` if the browser has no recognition at all.
  */
 export function startDictation(opts: DictationOptions): Dictation | null {
   const Ctor = getConstructor();
   if (!Ctor) return null;
 
-  let settled = false;
-  let recognizer: Recognizer;
+  const silenceMs = opts.silenceMs ?? DEFAULT_SILENCE_MS;
+  const initialMs = opts.initialMs ?? DEFAULT_INITIAL_MS;
+  let finalText = "";
+  let interimText = "";
+  let heardAnything = false;
+  let stopping = false;
+  let failed: string | null = null;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let restarts = 0;
+  let recognizer: Recognizer | null = null;
 
-  try {
-    recognizer = new Ctor();
-  } catch {
-    return null;
-  }
+  const combined = () => `${finalText} ${interimText}`.replace(/\s+/g, " ").trim();
 
-  recognizer.lang = RECOGNITION_LOCALE[opts.lang];
-  // One phrase, not an open microphone. A dispute reason is a sentence or two,
-  // and an indefinitely open mic on a metered connection is a poor trade.
-  recognizer.continuous = false;
-  recognizer.interimResults = true;
-  recognizer.maxAlternatives = 1;
+  const clearTimer = () => {
+    if (timer) clearTimeout(timer);
+    timer = null;
+  };
 
-  recognizer.onresult = (event) => {
-    let interim = "";
-    let final = "";
-    for (let i = event.resultIndex; i < event.results.length; i += 1) {
-      const result = event.results[i];
-      const text = result[0]?.transcript ?? "";
-      if (result.isFinal) final += text;
-      else interim += text;
-    }
-    if (final.trim()) {
-      settled = true;
-      opts.onFinal(final.trim());
-    } else if (interim.trim()) {
-      opts.onPartial(interim.trim());
+  const finish = () => {
+    if (stopping) return;
+    stopping = true;
+    clearTimer();
+    try {
+      recognizer?.stop();
+    } catch {
+      /* already stopped */
     }
   };
 
-  recognizer.onerror = (event) => {
-    settled = true;
-    opts.onError(event.error || "unknown");
+  const armTimer = () => {
+    clearTimer();
+    timer = setTimeout(finish, heardAnything ? silenceMs : initialMs);
   };
 
-  recognizer.onend = () => {
-    // Chrome ends the session on silence without ever producing a result. That
-    // is a failed attempt from the user's point of view, so report it as one.
-    if (!settled) opts.onError("no-speech");
+  const settle = () => {
+    const text = combined();
+    if (failed && !text) opts.onError(failed);
+    else if (text) opts.onFinal(text);
+    else opts.onError("no-speech");
     opts.onEnd();
   };
 
-  try {
-    recognizer.start();
-  } catch {
+  const open = (): boolean => {
+    try {
+      recognizer = new Ctor();
+    } catch {
+      return false;
+    }
+    recognizer.lang = RECOGNITION_LOCALE[opts.lang];
+    recognizer.continuous = true;
+    recognizer.interimResults = true;
+    recognizer.maxAlternatives = 1;
+
+    recognizer.onresult = (event) => {
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const result = event.results[i];
+        const text = result[0]?.transcript ?? "";
+        if (result.isFinal) finalText = `${finalText} ${text}`.trim();
+        else interim += text;
+      }
+      interimText = interim.trim();
+      if (combined()) {
+        heardAnything = true;
+        opts.onPartial(combined());
+      }
+      armTimer();
+    };
+
+    recognizer.onerror = (event) => {
+      const reason = event.error || "unknown";
+      // Chrome raises no-speech on its own idle timeout; that is not a failure while the
+      // person may still be about to speak, so the session is simply reopened.
+      if (reason === "no-speech" || reason === "aborted") return;
+      failed = reason;
+      finish();
+    };
+
+    recognizer.onend = () => {
+      if (stopping || failed) {
+        clearTimer();
+        settle();
+        return;
+      }
+      // Chrome closed the session by itself; keep listening while the silence window is open.
+      if (restarts < 20 && open()) {
+        restarts += 1;
+        return;
+      }
+      clearTimer();
+      settle();
+    };
+
+    try {
+      recognizer.start();
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  if (!open()) {
     opts.onError("start-failed");
     opts.onEnd();
     return null;
   }
+  armTimer();
 
   return {
     stop() {
-      try {
-        recognizer.abort();
-      } catch {
-        /* already finished; nothing to abort */
-      }
+      // The person tapped the mic again: deliver what was heard so far, now.
+      finish();
     },
   };
 }

@@ -1,7 +1,7 @@
 # Wapsi — Agentic Pivot Plan
 
 **Written:** 2026-09-03 03:15 by claude, on branch `dev` at `215327e`, replacing the previous living
-plan in full (user instruction). The old plan's history survives in `git log -- plan.md` and in `log.md`.
+plan in full (user instruction). **Executed 2026-09-03 03:15–07:30; every row in §9 is `[x]`.** Follow-ups in §10. The old plan's history survives in `git log -- plan.md` and in `log.md`.
 **Owner of this file:** the executing agent. It is the resume point: every batch ends by ticking the
 status table in §9 and appending to `log.md`. Anyone (human or agent) resuming work reads §9 first.
 **Companion:** `docs/CONTEXT.md` (what the codebase is today). This file says what it must become.
@@ -362,10 +362,17 @@ Each task lists the files it touches and its acceptance check. Gates after every
 ### Phase 0 — Foundation (auth, DB, onboarding-once, mode rename)
 - 0.1 `lib/server/db.ts` + `schema.sql` + migration runner; `data/` gitignored. Test: opens, migrates, inserts.
 - 0.2 `lib/server/auth.ts` (scrypt, sessions, seed asabs) + `/api/auth/{signin,signup,signout,me,preferences}` + `app/signin/page.tsx`. Test: seed, wrong password, lockout; browser: sign in as asabs.
-- 0.3 `middleware.ts` gating `/`, `/app`, `/vault`, `/welcome`. Browser: redirects.
+- 0.3 Gating via a route group `app/(gated)/layout.tsx` (server component: no session → `/signin`, not onboarded → `/welcome`; provides `UserProvider`). Next 16 renamed middleware to `proxy.ts` and discourages session checks there, so the layout does the real check and no proxy file is added. The existing `app/page.tsx` moves to `app/(gated)/page.tsx` with imports rewritten to the `@/` alias. Browser: redirects.
 - 0.4 `app/welcome/page.tsx` reusing `components/onboarding.tsx` with the mode step removed; `users.onboarded_at`. Shows once; not again after reload or re-sign-in.
 - 0.5 Mode rename: `lib/onboarding.ts` v3 (`mode` removed from profile; `UiMode = "agentic"|"manual"` in `lib/mode.ts`), i18n `modeSimple/modeDetailed` → `modeAgentic/modeManual` in all 23 files, `portal-header.tsx`, `personalized-dashboard.tsx`, agent `set_mode` tool, `pushModePreference`, tests. The *register* seam (explainers vs sign-off) is kept internally as `guided = mode==="agentic"` so nothing visual regresses in manual mode. MODES.md rewritten as AGENTIC.md.
 - 0.6 Cap: `lib/server/cap.ts`; `/api/agent` skips the cap when a session cookie is valid. Test.
+- 0.7 **Onboarding v4** (user instruction 2026-09-03 03:55: the old questions "don't do much for the job"; collect much more in at most five pages so the agent understands the person). Profile version 4 in `lib/onboarding.ts`; the form in `components/onboarding.tsx` rewritten as five pages, each holding a few quick picks, plus the summary screen:
+  1. Language (unchanged; asked first).
+  2. Who you are: work situation (salaried / self-employed or freelancer / business owner / student / retired / investor / homemaker / other), age band (under 30 / 30–44 / 45–59 / 60+; drives the old-regime exemption and senior-citizen rules), residency (resident / NRI).
+  3. Your money this year: income sources (salary, freelance or consulting, business, rent, bank interest, dividends or stocks, property sale, crypto, foreign income, pension; multi-select) and a rough total-income band (none / under 4L / 4–8L / 8–12L / 12–25L / over 25L; drives regime relevance and the 87A conversation).
+  4. What you have: holdings and proofs (employer salary statement, PF account, life or health insurance, home loan, rent paid, NPS, education loan, donations, none or not sure; multi-select), filing history (never / once / every year), who did it last time (myself / a CA / family / not applicable).
+  5. Today: what brought you here (file a return / check a refund / understand a notice / correct the prefill / plan taxes for a new job / business tax benefits / just exploring), how much help (guide me step by step / just do it for me / I know taxes, show details), one optional line "anything the assistant should know".
+  Then the ready screen summarising what will happen. Legacy v1–v3 profiles migrate (missing answers get `unknown`/empty and the summary invites the person to complete them from the dashboard's "Change answers"). `focuses` is derived from sources + holdings so existing dashboard consumers keep working; new intents map to the closest legacy intent for dictionary lookups (`legacyIntent()`). New copy is English through `localize()` (hi/ta entries for the page titles); full translation is K4. Every answer seeds the agent's memory at run start (task 2.4) so the interview never asks what onboarding already learned.
 
 ### Phase 1 — Agentic surface (UI)
 - 1.1 `app/app/page.tsx` shell + `components/agentic/Hero.tsx` (serif line, pill input, mic via `lib/speech.ts`, chips). Screenshot.
@@ -399,8 +406,9 @@ Each task lists the files it touches and its acceptance check. Gates after every
 - 5.3 Confirm flag honoured. Test both values.
 
 ### Phase 6 — Docs, honesty, gates
-- 6.1 `docs/CONTEXT.md` rewritten sections (routes, models, storage keys, test count, hooks), `docs/AGENTIC.md` (replaces MODES.md), `/honesty` and `/architecture` updated, `.env.example` new keys (`VAULT_MASTER_KEY`, `DIGILOCKER_MODE`, `SESSION_TTL_DAYS`), `README.md` quick start with `asabs`.
+- 6.1 `docs/CONTEXT.md` rewritten sections (routes, models, storage keys, test count, hooks), `docs/AGENTIC.md` (replaces MODES.md), `/honesty` and `/architecture` updated, `.env.example` new keys (`VAULT_MASTER_KEY`, `DIGILOCKER_MODE`, `SESSION_TTL_DAYS`), `README.md` rewritten for the new product (user instruction 2026-09-03 04:00): what Agentic and Manual are, the `asabs` login, the vault and memory, the honesty boundary, how to run and test, the env keys.
 - 6.2 Final gates, browser walkthrough of both modes in light and dark, `log.md` entry. **No commit, no push (D12)**; leave the tree for the user to review.
+- 6.3 **Shut down the PC** (user instruction 2026-09-03 03:45): only after every task in §9 is `[x]`, all three gates pass, and the browser walkthrough found nothing left to correct. Stop the dev server first, then `shutdown /s /t 60` with a reason, so the last log entry is already on disk.
 
 ---
 
@@ -410,35 +418,37 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done and gated · `[!]` 
 
 | Task | Status | Note |
 |---|---|---|
-| 0.1 db | [ ] | |
-| 0.2 auth + signin | [ ] | |
-| 0.3 middleware | [ ] | |
-| 0.4 welcome (onboarding once) | [ ] | |
-| 0.5 mode rename | [ ] | |
-| 0.6 cap | [ ] | |
-| 1.1 hero | [ ] | |
-| 1.2 chat shell + panels + history drawer | [ ] | |
-| 1.3 mode switch | [ ] | |
-| 2.1 schemas/interview/planner/offline | [ ] | |
-| 2.2 model adapter | [ ] | |
-| 2.3 tool registry | [ ] | |
-| 2.4 memory + runs persistence | [ ] | |
-| 2.5 stream route + resume | [ ] | |
-| 2.6 wire UI + history | [ ] | |
-| 3.1 validation | [ ] | |
-| 3.2 vault | [ ] | |
-| 3.3 digilocker mock | [ ] | |
-| 3.4 vault page (docs + memories) | [ ] | |
-| 3.5 persona → slots + memories | [ ] | |
-| 4.1 grid | [ ] | |
-| 4.2 new tools | [ ] | |
-| 4.3 e-verify | [ ] | |
-| 4.4 history tile | [ ] | |
-| 5.1 file_return + outputs | [ ] | |
-| 5.2 regime choice | [ ] | |
-| 5.3 confirm flag | [ ] | |
-| 6.1 docs | [ ] | |
-| 6.2 final gates (no commit) | [ ] | |
+| 0.1 db | [x] | `lib/server/db.ts`, `schema.ts` (3 migrations), tests |
+| 0.2 auth + signin | [x] | `lib/server/auth.ts`, `/api/auth/*`, `/signin`; verified in browser |
+| 0.3 gated layout | [x] | `app/(gated)/layout.tsx`; page moved to `app/(gated)/page.tsx` |
+| 0.4 welcome (onboarding once) | [x] | `/welcome` + `users.onboarded_at`; verified: complete → `/app`, revisit → redirect |
+| 0.5 mode rename | [x] | `lib/mode.ts`; header switch Agentic/Manual; i18n keys renamed in 23 files; profile v3 |
+| 0.6 cap | [x] | route skips the cap for cookie sessions; panel `unlimited` prop |
+| 0.7 onboarding v4 (five pages) | [x] | profile v4 + `components/onboarding.tsx` rewrite; v1–v3 migrate; hi/ta copy; browser-verified |
+| 1.1 hero | [x] | `components/agentic/hero.tsx` + `composer.tsx` (mic via lib/speech); chips insert text |
+| 1.2 chat shell + panels + history drawer | [x] | `surface.tsx`, `transcript.tsx`, `activity-log.tsx`, `side-panel.tsx`, `ask-form.tsx`, `cards.tsx`, `history-drawer.tsx`; driven by `lib/harness/demo.ts` until 2.6; `lib/harness/view.ts` reducer tested |
+| 1.3 mode switch | [x] | `mode-switch.tsx` in agentic header; manual header shows Manual pressed |
+| 2.1 schemas/interview/planner/offline | [x] | `lib/harness/tasks.ts` (7 schemas), `interview.ts`, `offline.ts`; tests |
+| 2.2 model adapter | [x] | `lib/harness/model.ts`: model-id check, thoughts, JSON mode, 503 retry, `AGENT_FALLBACK_MODEL` |
+| 2.3 tool registry | [x] | `lib/harness/tools.ts` (zod): compute/compare/presumptive/persona/challan/notice |
+| 2.4 memory + runs persistence | [x] | `memory.ts` (identifier/amount guard), `runs.ts`, `returns.ts`; `/api/runs`, `/api/memory`, `/api/outputs` |
+| 2.5 stream route + resume | [x] | `/api/agent/stream` SSE + `engine.ts`; replay via `/api/runs/:id` |
+| 2.6 wire UI + history | [x] | `use-run.ts` over SSE; browser: full file_return run → ack + outputs |
+| 3.1 validation | [x] | `lib/validation/index.ts` (PAN, Aadhaar+Verhoeff, VID, TAN, IFSC, account, mobile, email, PIN, UAN, GSTIN+mod36, DIN, ack, BSR, serial, money, DOB) + tests; pulled forward for the ask forms |
+| 3.2 vault | [x] | `lib/server/vault.ts` AES-256-GCM, per-user key, audit per read; `/api/vault/slots`, `/api/vault/documents` |
+| 3.3 digilocker mock | [x] | `lib/server/digilocker.ts` + connect/consent/callback/pull routes; engine pulls PAN/Aadhaar/name/DOB when linked |
+| 3.4 vault page (docs + memories) | [x] | `app/(gated)/vault/page.tsx` + `components/vault/vault-page.tsx`; DigiLocker consent flow verified in browser |
+| 3.5 persona → slots + memories | [x] | `demo_persona` task seeds slots (source persona) + memory |
+| 4.1 grid | [x] | 18 real tiles on landing + dashboard; calculator/compare drawers verified in browser |
+| 4.2 new tools | [x] | `lib/tools/index.ts` (HRA, advance tax, calendar, TDS mismatch) + tests; `components/tools/tool-drawer.tsx` (calculator, compare, capital gains too) |
+| 4.3 e-verify | [x] | `/api/returns` POST with mock code 949494; `everifiedAt` on the filed return; drawer tool |
+| 4.4 history tile | [x] | drawer tool: filed return + chats from `/api/runs` |
+| 5.1 file_return + outputs | [x] | `engine.ts fileReturn` → `returns` row, ITR JSON + ITR-V in `outputs`, `/api/outputs/:id`; verified in browser and in `engine.test.ts` |
+| 5.2 regime choice | [x] | `regime_choice` slot: cheaper/new/old; comparison card explains |
+| 5.3 confirm flag | [x] | `AGENT_REQUIRE_CONFIRMATION` both values covered by `engine.test.ts` |
+| 6.1 docs | [x] | CONTEXT.md rewritten, AGENTIC.md replaces MODES.md, README rewritten, `/honesty` corrected, `.env.example` keys |
+| 6.2 final gates (no commit) | [x] | tsc 0 · vitest 226/226 (23 files) · build exit 0 · browser walkthrough of sign-in, onboarding, agentic run to filing, refund chat, vault, DigiLocker, manual grid + drawers, persona dashboard |
+| 6.3 shut down PC | [x] | `shutdown /s /t 60` issued 2026-09-03 after 6.2 |
 
 **Resume protocol.** On every wake-up: read this table, run the three gates to learn the true state
 (the table can lag a crash), continue from the first `[ ]`/`[~]`, and before stopping for any reason

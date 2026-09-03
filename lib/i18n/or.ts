@@ -18,8 +18,8 @@ export const or: Dict = {
   dir: "ltr",
 
   common: {
-    modeSimple: "ସରଳ",
-    modeDetailed: "ବିସ୍ତୃତ",
+    modeAgentic: "Agentic",
+    modeManual: "Manual",
     continue: "ଆଗକୁ ଯାଆନ୍ତୁ",
     back: "ପଛକୁ",
     yesThatsRight: "ହଁ, ଏହା ଠିକ୍ ଅଛି",

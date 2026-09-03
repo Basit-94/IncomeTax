@@ -6,191 +6,147 @@ are, what is real and what is mocked, and how to verify a change. Keep it curren
 architecture, a contract, a storage key, a route, or a test count, update the matching line here and
 append the detail to `log.md` (append-only, `## [YYYY-MM-DD HH:MM] who (title)` entries).
 
-**Last verified against the tree:** 2026-09-03 (branch `dev`, commit `215327e`). Gates at that
-point: `npx tsc --noEmit` 0 errors · `npx vitest run` 182/182 across 15 files · `npx next build` exit 0.
+**Last verified against the tree:** 2026-09-03 (branch `dev`, uncommitted working tree on top of
+`215327e`; the agent never commits, plan D12). Gates at that point: `npx tsc --noEmit` 0 errors ·
+`npx vitest run` 226/226 across 23 files · `npx next build` exit 0.
+
+**The plan that produced this version:** `plan.md` (decisions D1–D12, phases, the status table).
+**The two surfaces:** `docs/AGENTIC.md`.
 
 ---
 
 ## 1. What Wapsi is
 
 Wapsi (वापसी, "return") is an independent, synthetic prototype of a simpler Indian income-tax filing
-journey for **AY 2026-27 (FY 2025-26)**. Thesis: every number is a *fact awaiting confirmation* — it
-carries who reported it (provenance), a plain-language meaning, and one citizen action: confirm or
-correct. Live demo: https://wapsi-amber.vercel.app/ (deploys from `main`; work happens on `dev`).
+journey for **AY 2026-27 (FY 2025-26)**. Thesis: every number is a *fact awaiting confirmation*, with
+provenance, a plain-language meaning, and one citizen action: confirm or correct. Since 2026-09-03
+the product has an **agentic surface** that does the work through a deterministic harness, and a
+**manual surface** (the original dashboard plus a task grid). Live demo: https://wapsi-amber.vercel.app/
+(deploys from `main`; work happens on `dev`).
 
-Everything is invented: personas, PANs (`DEMP…` prefix), employers, banks, amounts, notices. Nothing
-contacts the Income Tax Department, UIDAI, NPCI or any bank. The disclosure pages `/honesty` and
-`/architecture` say so on the site; keep them true.
+Everything is invented: personas, PANs (`DEMP…` prefix), employers, banks, amounts, notices, the
+DigiLocker consent flow, the acknowledgement numbers (`DEMO…`). Nothing contacts the Income Tax
+Department, UIDAI, DigiLocker, NPCI or any bank. `/honesty` and `/architecture` say so; keep them true.
 
 ## 2. Stack
 
 | Layer | Choice | Notes |
 |---|---|---|
-| Framework | Next.js **16.3** (App Router, Turbopack), React **19.2**, TypeScript **7** strict | `AGENTS.md` warns: APIs differ from training data — read `node_modules/next/dist/docs/` when unsure |
-| Styling | Tailwind **4** via `@tailwindcss/postcss`; design tokens in `app/globals.css`; the "Direction 13" index-card look in `app/d13.css` | Money classes: `.tabular` (journey) or `font-mono tabular-nums` (spec surfaces) |
-| Motion | `motion` v13 (framer-motion's successor). `m.*` components under `<LazyMotion features={domMax} strict>` | Rule: never gate correctness or the visibility of a figure on an animation (`AnimatePresence mode="wait"` is banned where content matters — see log 2026-09-02 22:32) |
-| Icons / QR | `lucide-react`, `qrcode.react` | |
-| Tests | `vitest` 4, node environment, **no jsdom** — nothing mounts a component; browser checks are done live (agent-browser CLI or the Chrome extension) | |
-| Backend (optional) | Spring Boot / Java 21 under `backend/` — integer-paise money, versioned rule sets, append-only Postgres ledger, idempotent async `POST /api/v1/returns/submit`, auth, preferences | Not required to run the UI; sign-in falls back to a mock session flagged `isMock`. `mvn` is not installed on the dev machine; last Java run 103/103 on 2026-08-29 |
-| AI copilot | Gemini via `app/api/agent/route.ts` (server-only key) | See §8 |
+| Framework | Next.js **16.3** (App Router, Turbopack; middleware is called `proxy` and is not used), React **19.2**, TypeScript **7** strict | `AGENTS.md` warns: APIs differ from training data — read `node_modules/next/dist/docs/` when unsure |
+| Styling | Tailwind **4**; tokens in `app/globals.css`; the "Direction 13" index-card look in `app/d13.css` | Money: `.tabular` / `font-mono tabular-nums`, always via `formatMoney` |
+| Motion | `motion` v13, `m.*` under `<LazyMotion features={domMax} strict>` | Never gate correctness or a figure's visibility on an animation |
+| Storage | **SQLite via Node's built-in `node:sqlite`** (`lib/server/db.ts`, `schema.ts`, 4 migrations), file `data/wapsi.db` (gitignored); tests use `:memory:` | On Vercel the file is ephemeral (documented on `/honesty`); Postgres is plan K1 |
+| Auth | Username + password (scrypt), hashed session cookie `wapsi_session`, seeded reviewer account **`asabs` / `12345`** (`lib/server/auth.ts`, `session.ts`) | Signed-in sessions have no question cap; anonymous `/api/agent` keeps the cap of 4 |
+| Vault | AES-256-GCM per account, key wrapped by `VAULT_MASTER_KEY` (dev: generated into `data/master.key`); audit row per read (`lib/server/vault.ts`) | The model never sees a value, only a mask |
+| Model | Gemini via `lib/harness/model.ts`: `AGENT_MODEL` (currently `gemini-3.5-flash`), `AGENT_FALLBACK_MODEL` (`gemini-3.5-flash-lite`), model-id check, thought summaries, JSON mode, 503 retry | Offline planner (`lib/harness/offline.ts`) runs when the model is unavailable; the run is labelled |
+| Tests | `vitest` 4, node, **no jsdom**; browser checks are done live | |
+| Backend (optional) | Spring Boot / Java 21 under `backend/`; reference for integer-paise money and the ledger | Not used by the agentic build (plan D1). `mvn` is not installed here |
 
-Scripts: `npm run dev` · `npm run typecheck` · `npm test` (`vitest run`) · `npm run build`.
-Env (see `.env.example`): `NEXT_PUBLIC_BACKEND_URL` (default `http://localhost:8080`),
-`NEXT_PUBLIC_MOCK_MODE` (tester autofill buttons), `GEMINI_API_KEY`, `AGENT_MODEL`,
-`AGENT_MAX_TOKENS_PER_REPLY` (2048), `AGENT_MAX_TURNS_PER_SESSION`, `AGENT_MAX_QUESTIONS_PER_SESSION`
-(hard-clamped to 4), `AGENT_DAILY_TOKEN_BUDGET`.
+Scripts: `npm run dev` · `npm run typecheck` · `npm test` · `npm run build`.
+Env (see `.env.example`): `GEMINI_API_KEY`, `AGENT_MODEL`, `AGENT_FALLBACK_MODEL`, `AGENT_MAX_TOKENS_PER_REPLY`,
+`AGENT_TIMEOUT_MS`, `AGENT_REQUIRE_CONFIRMATION` (true: one click before filing), `WAPSI_DB_PATH`,
+`VAULT_MASTER_KEY`, `SESSION_TTL_DAYS`, `DIGILOCKER_MODE` (`mock`|`real`), `NEXT_PUBLIC_MOCK_MODE`,
+`NEXT_PUBLIC_BACKEND_URL`.
 
 ## 3. Routes
 
 | Route | File | What it is |
 |---|---|---|
-| `/` | `app/page.tsx` (~2,100 lines, `"use client"`) | The main citizen journey: onboarding → landing (PAN or one of three personas) → OTP (`949494`) → dashboard. Unfiled returns walk a 5-step flow (facts → deductions → regime → check → file); filed returns get three tabs (overview/refund tracker, tax prefills, pending actions). |
-| `/reconcile` | `app/reconcile/page.tsx` → `components/InteractiveTaxDashboard.tsx` | The flat **reconciliation matrix**: 13 AIS/26AS rows, confirm/dispute per row, net-position headline, calculation dock, Challan 280, s.139(9) card, CASS radar, PDF dropzone, ITR-V preview. Starts from a synthetic prefill (₹15,00,000 salary etc.). Reachable by URL only. |
+| `/signin` | `app/signin/page.tsx` + `components/auth/signin-form.tsx` | The site gate. Sign in or create an account. Redirects a signed-in user to `/welcome` (first time) or their surface. |
+| `/welcome` | `app/welcome/page.tsx` + `components/auth/welcome-client.tsx` + `components/onboarding.tsx` | Onboarding v4, five pages, **once per account** (`users.onboarded_at`); `?edit=1` reopens without resetting. |
+| `/app` | `app/(gated)/app/page.tsx` → `components/agentic/surface.tsx` | The agentic surface: hero → chat, activity log, side panel (Progress/Outputs/Context), history drawer. |
+| `/` | `app/(gated)/page.tsx` (~2,200 lines, client) | The manual surface: landing (PAN or persona) → OTP (`949494`) → dashboard; plus `components/dashboard/task-grid.tsx` and `components/tools/tool-drawer.tsx`. |
+| `/vault` | `app/(gated)/vault/page.tsx` → `components/vault/vault-page.tsx` | Per-task requirement matrix, documents + upload, memories (delete), DigiLocker link, audit trail. |
+| `/digilocker/consent` | `app/digilocker/consent/page.tsx` | The mock consent screen (Allow/Deny). |
+| `/reconcile` | `components/InteractiveTaxDashboard.tsx` | The AIS/26AS reconciliation matrix (unchanged). |
 | `/honesty`, `/architecture` | `app/(docs)/…` | Zero-JS disclosure pages. |
-| `/api/agent` | `app/api/agent/route.ts` | The copilot endpoint. |
+| `/api/auth/*` | `signin`, `signup`, `signout`, `me`, `preferences` (mode/lang/theme), `onboarding` | |
+| `/api/agent/stream` | `app/api/agent/stream/route.ts` | **The harness.** POST `{runId?, text?, answer?, confirm?, cancel?}` → SSE of `RunEvent`s, each persisted before it is streamed. |
+| `/api/agent` | legacy one-shot copilot for the manual panel | cap applies to anonymous sessions only |
+| `/api/vault/slots` (GET/PUT/DELETE), `/api/vault/documents` (GET/POST), `/api/vault/digilocker` (+ `connect`, `callback`) | the isolated write path: values go here, never to the model | |
+| `/api/runs`, `/api/runs/:id` (GET replay, DELETE), `/api/memory` (GET/POST/DELETE), `/api/outputs/:id`, `/api/returns` (GET, POST e-verify with `949494`) | | |
 
-## 4. The two state models, and the bridge between them (the most important thing to understand)
+The gate is `app/(gated)/layout.tsx` (server): no session → `/signin`; not onboarded → `/welcome`;
+otherwise `UserProvider` (`lib/user-context.tsx`, `useUser()`).
 
-There are **two** models of "the return", deliberately kept separate, joined one way.
+## 4. State models
 
-### 4a. The ledger (main journey, `/`) — `lib/return/state.ts`
-`ReturnState { baselinePersona, persona, corrections: Correction[], confirmedFactIds, regime, filedAt, lang, version }`.
-`baselinePersona` is the department's prefill, never mutated by a correction; `persona` is the
-*effective* return = baseline replayed through non-reverted corrections (`effectivePersona`).
-A `Correction` is `{ id, factId, field: "amount"|"existence", previous, next, reason, feedbackCode?, at, reverted?, target?: "fact"|"tax"|"claim" }`.
-Reverting marks, never deletes (forgiveness ladder). `applyCorrection` also removes the fact from
-`confirmedFactIds` — "yes" and "no" are mutually exclusive answers. Persisted to localStorage
-`wapsi_active_data` (`lib/return/persist.ts`, versioned, migrates v0/v1, undo cap 25).
-Arithmetic: `lib/return/compute.ts` → `lib/engine/tax.ts` (§6). Nothing in the UI does its own math.
+### 4a. The ledger (manual journey) — `lib/return/state.ts` (unchanged)
+`ReturnState` in localStorage `wapsi_active_data`; arithmetic via `lib/return/compute.ts` → `lib/engine/tax.ts`.
 
-### 4b. The reconciliation context (spec surface) — `context/TaxReturnContext.tsx`
-`TaxProvider` is mounted in `app/layout.tsx`, so the context is shared by `/` and `/reconcile` and
-outlives navigation. Schema (per the AY 2026-27 upgrade spec):
-- `TaxFact { id: FactId, label, category: income|tax_paid|deduction, reportedAmount, declaredAmount, status: PENDING|CONFIRMED|DISPUTED, feedbackCode?: CODE_1..CODE_5, disputeReason?, hasAttachment?, attachmentName?, reportedBy?, statement?, capitalGains?, supersededAmount?, origin?: "upstream" }`
-- 13 `FactId`s: `salary, consulting, savings_interest, dividend, capital_gains, rental, tds_salary, tds_bank, tds_other, advance_tax, sec_80c, sec_80d, sec_80ccd2`.
-- State also holds `selectedRegime`, `selfAssessmentPayments` (Challan 280), `filingSection: "139(1)"|"139(5)"`, `revisedReturnStaged`, `ingestedDocuments`, `additionalClaims` (VI-A claims with no row, forwarded by section), `filedAt`, `history` (25-level undo of the mutable slice), `hydrated`.
-- Actions: `CONFIRM_FACT`, `DISPUTE_FACT` (requires a CBDT code), `RESET_FACT`, `ATTACH_EVIDENCE`, `ADD_SELF_ASSESSMENT_PAYMENT`, `UNDO_LAST_ACTION`, `SET_REGIME`, `INGEST_DOCUMENT`, `STAGE_REVISED_RETURN`, `MARK_FILED`, `HYDRATE`, `RESET`, `SYNC_STATE`.
-- `deriveTaxReturn(state)` is one memo per dispatch: both regimes' results, `netPayable`/`netRefund`/`isPayable`/`isSettled` (three positions — nil is not a refund), CASS assessment over **DISPUTED** income rows, progress counts, `incomeReported`/`incomeDeclared`.
-- Persisted to localStorage `wapsi_reconciliation` (`PERSIST_VERSION` 1), hydrated in an effect after mount (never in the initialiser: the server renders `INITIAL_STATE`). `RESET` on logout.
+### 4b. The reconciliation context — `context/TaxReturnContext.tsx` (unchanged)
+Persisted to `wapsi_reconciliation`; bridged one way from the ledger by `lib/return/upstreamSync.ts`.
 
-### 4c. The bridge — `lib/return/upstreamSync.ts` (pure, tested)
-`buildSyncPayload(returnState)` is dispatched as `SYNC_STATE` from an effect in `app/page.tsx`
-whenever `returnState` changes. For every row it sends **both sides**: `reported` (Σ baseline items),
-`declared` (Σ effective items; a denied fact counts 0), `disputed` (an active correction touches the
-row) with its `feedbackCode`/`disputeReason`, `confirmed` (every item confirmed), `reportedBy`,
-`statement`; plus `age`, `regime`, `capitalGainsMeta`, `filedAt`, `additionalClaims`.
-Reducer rule: `reportedAmount` always follows the ledger. If the ledger holds a correction → row
-DISPUTED at the ledger's figure (`origin: "upstream"`); if confirmed → CONFIRMED; if the ledger says
-nothing → a row answered on `/reconcile` keeps its answer, a row the ledger answered earlier goes back
-to PENDING, a PENDING row follows the reported figure. The ledger wins conflicts.
-Mappings: income by kind (`other`→`consulting`, `interest`→`savings_interest`, `rent`→`rental`);
-TDS by section (`192`→`tds_salary`, `194A`→`tds_bank`, else `tds_other`, **`140A` excluded** — the
-context records challans itself, so the credit is never counted twice); claims `80C`, `80D`/`80D_SELF`,
-`80CCD(2)`; everything else (`80GG`, `80E`, `80TTA`, `24(b)`, `80D_PARENTS`) → `additionalClaims`.
-History: the one-sided version of this bridge was the root cause of "No, this is wrong changes the
-card but not the summary" (log 2026-09-02 and 2026-09-03 00:50).
+### 4c. The account (server) — SQLite tables (`lib/server/schema.ts`)
+`users` (mode `agentic|manual`, lang, theme, `onboarding_json`, `onboarded_at`, wrapped vault key) ·
+`sessions` · `slots` (ciphertext, iv, tag, `masked`, `source` user|digilocker|document|persona, verified) ·
+`documents` (bytes, sha256 dedupe, `extracted_json`) · `vault_audit` · `memories` (key, value; facts only) ·
+`runs` (`state_json` = `InterviewState`, plan) · `run_events` (append-only, `seq`) · `outputs` ·
+`returns` (the `FiledReturn` JSON, incl. `everifiedAt`) · `digilocker_links` · `question_usage`.
 
-### 4d. Which surfaces read which model
-- Ledger (`persona` + `computeForPersona`): fact cards (`components/fact-row.tsx` via
-  `components/dashboard/statement-tab.tsx`), `check-screen.tsx`, `before-filing.tsx`, `filing-step.tsx`,
-  `overview-tab.tsx` headline channels and refund ticket, `regime-step.tsx`, `deductions-step.tsx`.
-- Context (`useTax()`): everything in `components/InteractiveTaxDashboard.tsx`, and on `/`:
-  `ItrVReceipt` (inside the filed overview), `AuditRiskRadar` (facts, check, statement views),
-  `DefectiveNoticeCard` (Actions tab), `Challan280Modal`, `PdfIngestionDropzone` (top of the facts step).
-- Where `/` mounts a context component that changes state, `app/page.tsx` mirrors the change into the
-  ledger through a callback so the next sync agrees: `handleAutoReconcile` (reverts the short rows'
-  corrections and confirms them), `handleChallanPaid` (adds a `140A` tax-paid row, confirmed),
-  `handlePdfIngested` (writes salary/TDS-192 into the baseline, adds them for a first-time filer).
+### 4d. The harness — `lib/harness/`
+- `events.ts`: the `RunEvent` protocol (run.start, thinking, plan, step.*, tool.*, message, ask,
+  answered, card, output, context, memory, error, run.done) and `Card`/`SlotInput` types.
+- `tasks.ts`: seven `TaskSchema`s (`file_return`, `compare_regimes`, `business_benefits`,
+  `respond_notice`, `pay_tax`, `check_refund`, `demo_persona`) with ordered `SlotSpec`s: plain-language
+  question, `input`, `required`, `secret`, `memoryKey`, `dependsOn`, `sources`, `fromOnboarding`, `fills`.
+- `interview.ts`: `nextSlot` (first open required slot whose dependencies hold), `applyAnswer`,
+  `reopen`, `proposeFromText`, `parseIndianAmount`. State holds masks and choices, never values.
+- `engine.ts`: `runTurn(TurnInput)` async generator. Source chain per slot: vault → DigiLocker (when
+  linked, for pan/aadhaar/full_name/dob) → onboarding proposal → ask. Model (or offline) classifies
+  the first message and rephrases questions; everything else is deterministic. Completion per task:
+  compare/review/confirm cards → `fileReturn` (ITR JSON + ITR-V into `outputs`, `returns` row,
+  memories). `AGENT_REQUIRE_CONFIRMATION=false` files without the click.
+- `tools.ts`: zod-validated `callTool` (`compute_tax`, `compare_regimes`, `presumptive_income`,
+  `load_demo_persona`, `pay_challan`, `draft_notice_response`); numbers only ever come from `lib/engine`.
+- `model.ts`, `offline.ts`, `memory.ts` (refuses identifiers/amounts), `runs.ts`, `returns.ts`, `view.ts`
+  (pure reducer events → `RunView`, the shape the surface renders).
+- Client: `components/agentic/use-run.ts` streams SSE; on an answer it PUTs the value to
+  `/api/vault/slots` (or POSTs the file to `/api/vault/documents`) and sends only the mask to the harness.
 
-## 5. The seeded personas (`lib/personas.ts`, `TODAY = 2026-08-22`)
+## 5. The seeded personas (`lib/personas.ts`, `TODAY = 2026-08-22`) — unchanged
+Sunita Devi `DEMPS4417K` (unfiled, refund ₹8,400) · Rakesh Kumar `DEMPK8823R` (filed, two notices) ·
+Priya Sharma `DEMPS9052M` (filed, rent-receipt hold). "Show me a demo" in the assistant seeds one of
+them into the vault (`source: persona`).
 
-| Persona | PAN | Act | Facts | Refund state |
-|---|---|---|---|---|
-| Sunita Devi | `DEMPS4417K` | 1 — confirm, don't compose | salary ₹4,20,000, interest ₹1,240, TDS-192 ₹8,400 | not filed, refund ₹8,400 |
-| Rakesh Kumar | `DEMPK8823R` | 2 — a letter came | salary ₹18,60,000, interest ₹22,400, dividend ₹9,150, STCG (s.111A) ₹1,10,000 mis-tagged by the broker, TDS ₹2,84,600 + ₹2,240, 80C ₹1,50,000, 80D ₹25,000 | filed, under review, two notices (143(1)(a), 245 set-off), AIS-mismatch hold |
-| Priya Sharma | `DEMPS9052M` | 3 — the wait | salary ₹9,80,000, interest ₹6,700, TDS ₹34,800, 80C ₹48,000, 80GG ₹60,000 (no receipt) | filed, under review, rent-receipt hold, stale-IFSC bank |
+## 6. The tax engine — `lib/engine/` (unchanged)
+New-regime slabs 0–4L nil … >24L 30%; standard deduction ₹75,000 new / ₹50,000 old capped at salary;
+s.87A full rebate ≤ ₹12L with marginal relief; s.111A 20%, s.112A 12.5% above ₹1.25L, s.112 12.5%; 4% cess.
+72 golden vectors pin it to the Java engine. Known gaps: surcharge, s.234A/B/C, s.234F.
+Presumptive scheme (s.44AD 8%/6%, s.44ADA 50%, limits ₹2/3 crore and ₹50/75 lakh) lives in `lib/harness/tools.ts`.
 
-A typed PAN that is not one of these builds a blank `custom` persona and opens the real-user wizard
-(`components/flow/real-user-wizard.tsx`).
+## 7. Compliance and helpers
+`lib/compliance/` (CBDT codes, CASS radar, Challan 280 identifiers, PDF extraction) unchanged.
+`lib/validation/index.ts`: PAN (holder-type letter, surname-initial warning), Aadhaar/VID (Verhoeff),
+TAN, IFSC, bank account, mobile, email, PIN, UAN, GSTIN (state, embedded PAN, mod-36), DIN, ack, BSR,
+challan serial, money, DOB; issue codes, plain-language `issueText`. `lib/tools/index.ts`: HRA
+exemption, advance-tax schedule, tax calendar, TDS mismatch. `lib/itr/index.ts`: ITR JSON subset, ITR-V HTML.
 
-## 6. The tax engine (pure, framework-free) — `lib/engine/`
+## 8. Product rules that are not obvious from the code
+- The Agentic|Manual switch shows the surface being viewed and persists the preference (`users.mode`).
+- Onboarding shows once per account. "Change answers" edits without re-gating.
+- Questions never lead with a form name; the name goes in brackets at the end (`tasks.ts`).
+- The model never sees a value: `pseudonymisedContext` in `engine.ts` sends onboarding facts, memories
+  and slot *ids*, never masks with digits or names; identifiers are stripped by construction.
+- Memories are facts. `remember` throws on anything that validates as an identifier or reads as an amount.
+- Filing with tax owing shows "Pay the balance first" (mock challan) before filing.
+- Citizen-facing copy never names a section as the subject; consequence, not rule.
+- New UI copy goes through `localize()` (`components/mock-i18n.ts`, en/hi/ta); `Dict` keys need all 23 files.
 
-`constants.ts` (every rate/threshold, sourced), `slab.ts`, `tax.ts` (`computeTax`, `compareRegimes`),
-`types.ts`. `lib/taxEngineAY2026.ts` is a flat adapter over it for the context; `lib/return/compute.ts`
-adapts personas. Money is whole rupees; slices rounded half-up per slab; cess rounded after rebate.
-Pinned to the Java engine by **72 golden vectors** (`fixtures/golden/`, 11 fields incl. slab breakdown).
-
-AY 2026-27 rules as implemented:
-- New regime slabs 0–4L nil, 4–8L 5%, 8–12L 10%, 12–16L 15%, 16–20L 20%, 20–24L 25%, >24L 30%.
-  Old regime 2.5L/5L/10L at 5/20/30% with age-banded basic exemption.
-- Standard deduction u/s 16(ia): ₹75,000 new / ₹50,000 old, **capped at the salary**, nil without salary.
-- New regime allows only `80CCD(2)`; old regime caps per section (`80C` 1.5L, `80D` 25k, `80D_PARENTS` 50k, `80GG` 60k, `24B` 2L, `80TTA` 10k).
-- s.87A: full rebate (cap ₹60,000) when total income ≤ ₹12,00,000; above it, marginal relief caps
-  pre-cess slab tax at the excess over ₹12,00,000 (spec-conformant; the Act-literal variant that counts
-  special-rate tax is a noted P2). Old regime: ₹12,500 rebate ≤ ₹5,00,000.
-- Special rates (Finance (No. 2) Act 2024): s.111A 20%, s.112A 12.5% above a ₹1,25,000 annual
-  threshold, s.112 12.5%. **Total income carries the whole s.112A gain**; the threshold is a tax rule,
-  reported as `specialExemptTotal` / `specialExemptAmount`. Deductions cannot erode special-rate gains.
-- 4% cess after rebate/relief. Net = liability − (TDS + advance tax + self-assessment).
-- Known gaps (documented, not modelled): surcharge, s.234A/B/C interest, s.234F fee, full 80GG test.
-
-Mandatory vectors (all tested in `lib/__tests__/taxEngineAY2026.test.ts` and the context tests):
-₹12,75,000 salary + ₹30,000 TDS → refund ₹30,000 · ₹12,85,000 → payable ₹10,400 (₹10,000 + ₹400 cess)
-· prefilled ₹15,00,000 disputed to ₹10,00,000 → payable flips to refund and CASS goes HIGH.
-
-## 7. Compliance modules — `lib/compliance/`
-
-- `aisFeedback.ts` — the single CBDT code table: CODE_1 correct · CODE_2 not taxable/exempt · CODE_3 not fully correct · CODE_4 other PAN/joint · CODE_5 denied/duplicate. Dispute UIs map plain-language choices to these; `inferFeedbackCode` in the context covers old corrections without one.
-- `cass.ts` — Computer-Assisted Scrutiny Selection radar: HIGH if any disputed income row is >20% below reported or the aggregate shortfall exceeds ₹1,00,000; the "94%" is an illustrative label, said so on screen. Attach-proof keeps only the file name.
-- `challan280.ts` — ITNS 280 heads (major `0021`, minor `300` self-assessment u/s 140A), 4/104 base+cess split of the amount, synthetic 7-digit BSR and 5-digit serial seeded by amount + PAN + payment ordinal, UPI intent string, 300-second QR TTL (expired → cannot pay).
-- `pdfExtract.ts` — byte-level regex over uncompressed PDF text (no pdf.js by design): PAN label-anchored then bounded, gross salary, TDS, document-kind sniffing. Compressed/scanned PDFs honestly return nothing.
-
-## 8. The copilot (`app/api/agent/route.ts`, `lib/agent/`, `components/agent/`)
-
-Gemini with a typed tool registry (`lib/agent/tools.ts`): `compute_tax_ay2026`, `reconcile_fact`
-(CBDT codes), `predict_audit_risk` (shares `cass.ts` thresholds), `generate_statutory_artifact`,
-sandboxed `hypothetical_tax`, backend reads as the user. Filing is never done by the agent — it
-returns a confirmation card the human must click. Limits: hard cap **4 questions per session** (server
-counts user turns, returns `limitReached: true`; the panel locks with "Sorry, we have limited our chat"),
-turns and daily-token ceilings from env. Replies are rendered by `components/agent/format.tsx`
-(paragraphs, lists, bold, code, tabular rupees; React elements only). The system prompt is
-brevity-first: answer only what is asked, one or two sentences, long form only for a walk-through,
-procedure or regime comparison.
-
-## 9. Product rules that are not obvious from the code
-
-- **Simple vs Full detail** is a real seam, not a density slider (`docs/MODES.md`, `lib/onboarding.ts`
-  `mode`). Simple mode gates confirmation behind reading the pencil note once.
-- Citizen-facing copy never names a form or a section; consequence, not rule (`lib/i18n/en.ts` header).
-  `Dict` is derived from `en`, so a new key must exist in all 23 language files — for one-off strings
-  in components use `localize()` from `components/mock-i18n.ts` and add hi/ta there.
-- Money: Indian grouping via `Intl` `en-IN` (`lib/money.ts`), always through `formatMoney` /
-  `<Rupees>` / `<AnimatedAmount>`; never a raw float; Latin digits in every language.
-- Provenance is the differentiator: every figure says who reported it and whether only the reporter
-  can fix it.
-- Filing with tax outstanding is defective u/s 139(9): while a balance is due, the file button becomes
-  "Pay outstanding tax (Challan 280)" (`before-filing.tsx`, `filing-step.tsx`, the `/reconcile` dock).
-- A revised return u/s 139(5) is staged, never silently rewritten: superseded figures are kept on the
-  row and the whole stage is one undo step.
-- Tester chrome (mock-fill buttons) exists but "is not part of the product"; it disappears with
-  `NEXT_PUBLIC_MOCK_MODE=false`.
-
-## 10. Verification protocol
-
-1. `npx tsc --noEmit` (0 errors) — zero `any` is a project rule.
-2. `npx vitest run` — 15 files / 182 tests: engine + slab, golden export, return state/persist/compute,
-   `upstreamSync`, context reducer, compliance (cass, pdfExtract), agent, onboarding, submission key.
+## 9. Verification protocol
+1. `npx tsc --noEmit` (0 errors; zero `any`).
+2. `npx vitest run` — 23 files / 226 tests: engine + slab, golden export, return state/persist/compute,
+   upstreamSync, context reducer, compliance, agent, onboarding v4, submission key, db, auth, view
+   reducer, validation, interview + offline planner, vault/memory/runs/tools, DigiLocker, engine
+   integration (offline filing run, confirm flag both ways, DigiLocker pull, business + notice), tools.
 3. `npx next build`.
-4. Anything visual or animation-related must be checked in a browser; unit tests cannot see it. Test
-   hooks exist for automation: `data-testid="net-position"` + `data-position`, `data-fact-id`,
-   `data-fact-status`, `data-action="confirm|dispute|save-dispute|auto-reconcile|attach-proof|pay-outstanding|download-itrv"`,
-   `data-testid="cass-radar"` + `data-risk`, `data-testid="itrv-timestamp"`, `#fact-<personaFactId>`,
-   `#dashboard-tabs`. Note the fixed dock on `/reconcile` covers the bottom ~90px; scroll before clicking.
-5. Append what you did to `log.md`; update this file if a contract changed.
+4. Browser hooks: `data-testid="signin-card|onboarding|onboarding-next|hero|composer|composer-input|composer-submit|composer-mic|hero-chip|chat-shell|run-status|transcript|msg-user|msg-assistant|activity-log|ask-form|ask-answered|ask-yes|ask-no|ask-submit|ask-skip|ask-issue|card-review|card-confirm|card-comparison|card-itrv|card-document|confirm-action|side-panel|progress-list|outputs-list|history-button|history-drawer|new-chat|run-problem|mode-switch|task-grid|tool-drawer|vault-page|vault-matrix|vault-documents|vault-memories|vault-audit|digilocker-consent|consent-allow|everify-code|everify-submit"`,
+   `data-slot-id`, `data-tile`, `data-tool`, `data-step-status`, `data-mode`, plus the older
+   `net-position`, `cass-radar`, `itrv-timestamp`, `#fact-<id>`, `#dashboard-tabs`.
+   The automation's synthetic "Return" key does not reach React's `onKeyDown`; dispatch a real
+   `KeyboardEvent("keydown", {key:"Enter"})` when scripting the composer.
+5. Append what you did to `log.md`; update this file if a contract changed. **Never `git commit` or `git push`** (plan D12).
 
-## 11. Where else to look
-
-`docs/PROTOTYPE.md` (stack narrative), `docs/PLAN.md` + `plan.md` (milestones, resume protocol),
-`docs/DESIGN.md` (Direction 13 design language), `docs/MODES.md`, `docs/ISSUES.md` (backend/UX audit
-2026-08-25), `docs/scale/*` (capacity, load, rule-source audit), `fixtures/golden/README.md`,
-`backend/README.md`, `critics/*` (round-by-round critiques), `log.md` (the full history).
+## 10. Where else to look
+`plan.md` (the executed plan), `docs/AGENTIC.md`, `docs/PROTOTYPE.md`, `docs/PLAN.md`, `docs/DESIGN.md`,
+`docs/ISSUES.md`, `docs/scale/*`, `fixtures/golden/README.md`, `backend/README.md`, `critics/*`, `log.md`.

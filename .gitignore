@@ -24,3 +24,6 @@ video/
 !.env.example
 
 .agent-transcripts/
+
+# SQLite database and vault master key (plan D2)
+data/

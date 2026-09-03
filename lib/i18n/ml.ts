@@ -19,8 +19,8 @@ export const ml: Dict = {
   dir: "ltr",
 
   common: {
-    modeSimple: "ലളിതം",
-    modeDetailed: "വിശദമായി",
+    modeAgentic: "Agentic",
+    modeManual: "Manual",
     continue: "തുടരുക",
     back: "പിന്നോട്ട്",
     yesThatsRight: "അതെ, ഇത് ശരിയാണ്",

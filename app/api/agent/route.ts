@@ -28,6 +28,7 @@ import type { TaxInput, TaxInputFact } from "../../../lib/engine/types";
 import type { Claim } from "../../../lib/types";
 import { functionDeclarations, toolByName } from "../../../lib/agent/tools";
 import { languageOption } from "../../../lib/i18n/languages";
+import { userFromRequest } from "../../../lib/server/session";
 import {
   executeComputeTaxAy2026,
   executeReconcileFact,
@@ -500,9 +501,12 @@ export async function POST(request: NextRequest) {
       { status: 200 },
     );
   }
+  // Plan §4.1: the cap protects the API key from anonymous traffic only. A signed-in
+  // account (cookie session, lib/server/auth.ts) has no limit.
+  const signedIn = userFromRequest(request) !== null;
   const maxQuestions = maxQuestionsPerSession();
   const questionsAsked = messages.filter((m) => m.role === "user").length;
-  if (questionsAsked > maxQuestions) {
+  if (!signedIn && questionsAsked > maxQuestions) {
     appendTranscript(sessionId, { type: "limit", questionsAsked, maxQuestions });
     return NextResponse.json(
       {

@@ -21,8 +21,8 @@ export const ur: Dict = {
   dir: "rtl",
 
   common: {
-    modeSimple: "سادہ",
-    modeDetailed: "تفصیلی",
+    modeAgentic: "Agentic",
+    modeManual: "Manual",
     continue: "آگے بڑھیں",
     back: "پیچھے",
     yesThatsRight: "ہاں، یہ ٹھیک ہے",

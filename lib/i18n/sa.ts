@@ -20,8 +20,8 @@ export const sa: Dict = {
   dir: "ltr",
 
   common: {
-    modeSimple: "सरलम्",
-    modeDetailed: "विस्तृतम्",
+    modeAgentic: "Agentic",
+    modeManual: "Manual",
     continue: "अग्रे गच्छतु",
     back: "पृष्ठतः",
     yesThatsRight: "आम्, एतत् सम्यक् अस्ति",

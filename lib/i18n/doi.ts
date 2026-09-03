@@ -22,8 +22,8 @@ export const doi: Dict = {
   dir: "ltr",
 
   common: {
-    modeSimple: "सादा",
-    modeDetailed: "ब्योरेदार",
+    modeAgentic: "Agentic",
+    modeManual: "Manual",
     continue: "अग्गें बधो",
     back: "पिच्छें",
     yesThatsRight: "आहो, एह् ठीक ऐ",

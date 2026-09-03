@@ -18,8 +18,8 @@ export const ne: Dict = {
   dir: "ltr",
 
   common: {
-    modeSimple: "सरल",
-    modeDetailed: "विस्तृत",
+    modeAgentic: "Agentic",
+    modeManual: "Manual",
     continue: "अगाडि बढ्नुहोस्",
     back: "पछाडि",
     yesThatsRight: "हो, यो ठीक हो",

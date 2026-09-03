@@ -20,8 +20,8 @@ export const mai: Dict = {
   dir: "ltr",
 
   common: {
-    modeSimple: "सरल",
-    modeDetailed: "विस्तृत",
+    modeAgentic: "Agentic",
+    modeManual: "Manual",
     continue: "आगू बढ़ू",
     back: "पाछू",
     yesThatsRight: "हँ, ई ठीक अछि",

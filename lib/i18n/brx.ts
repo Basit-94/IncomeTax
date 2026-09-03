@@ -23,8 +23,8 @@ export const brx: Dict = {
   dir: "ltr",
 
   common: {
-    modeSimple: "गोरलै",
-    modeDetailed: "गुवारै",
+    modeAgentic: "Agentic",
+    modeManual: "Manual",
     continue: "सिगांथिं थां",
     back: "उनथिं",
     yesThatsRight: "नंगौ, बेयो थार",

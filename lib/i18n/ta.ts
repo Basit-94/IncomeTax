@@ -18,8 +18,8 @@ export const ta: Dict = {
   dir: "ltr",
 
   common: {
-    modeSimple: "எளிய",
-    modeDetailed: "விரிவான",
+    modeAgentic: "ஏஜென்டிக்",
+    modeManual: "கைமுறை",
     continue: "தொடரவும்",
     back: "பின்செல்",
     yesThatsRight: "ஆம், இது சரி",

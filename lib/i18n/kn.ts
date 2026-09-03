@@ -19,8 +19,8 @@ export const kn: Dict = {
   dir: "ltr",
 
   common: {
-    modeSimple: "ಸರಳ",
-    modeDetailed: "ವಿವರವಾಗಿ",
+    modeAgentic: "Agentic",
+    modeManual: "Manual",
     continue: "ಮುಂದುವರಿಸಿ",
     back: "ಹಿಂದೆ",
     yesThatsRight: "ಹೌದು, ಇದು ಸರಿ",

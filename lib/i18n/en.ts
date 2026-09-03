@@ -24,8 +24,8 @@ export const en = {
   dir: "ltr",
 
   common: {
-    modeSimple: "Simple",
-    modeDetailed: "Detailed",
+    modeAgentic: "Agentic",
+    modeManual: "Manual",
     continue: "Continue",
     back: "Back",
     yesThatsRight: "Yes, that's right",

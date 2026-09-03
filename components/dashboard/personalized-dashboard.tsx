@@ -4,6 +4,8 @@ import { ArrowRight } from "lucide-react";
 import type { Dict } from "../../lib/i18n";
 import {
   getPersonalization,
+  legacyIntent,
+  legacyProfession,
   type DashboardDestination,
   type OnboardingProfile,
 } from "../../lib/onboarding";
@@ -16,8 +18,6 @@ interface PersonalizedDashboardProps {
   onPrimaryAction: () => void;
   onEdit: () => void;
   isRealMode?: boolean;
-  /** T5.1: switching Simple / Full detail is one tap here, not a re-run of onboarding. */
-  onModeChange?: (mode: OnboardingProfile["mode"]) => void;
 }
 
 /**
@@ -33,7 +33,6 @@ export default function PersonalizedDashboard({
   onPrimaryAction,
   onEdit,
   isRealMode = false,
-  onModeChange,
 }: PersonalizedDashboardProps) {
   const personalization = getPersonalization(profile);
   const focusLabels = profile.focuses
@@ -63,7 +62,7 @@ export default function PersonalizedDashboard({
                 return ready" — the filed state owns the headline. */}
             {hasFiled
               ? t.dashboard.personalized.headingFiled
-              : t.dashboard.personalized.heading[profile.intent]}
+              : t.dashboard.personalized.heading[legacyIntent(profile.intent)]}
           </h2>
           <p className="text-sm leading-relaxed text-ink-2">
             {hasFiled
@@ -102,33 +101,16 @@ export default function PersonalizedDashboard({
             {t.dashboard.personalized.profileLabels.work}
           </span>
           <strong className="block text-sm text-ink">
-            {t.onboarding.professionOptions[profile.profession]}
+            {t.onboarding.professionOptions[legacyProfession(profile.profession)]}
           </strong>
         </div>
         <div className="space-y-1">
           <span className="block text-[0.68rem] font-mono font-semibold uppercase tracking-wider text-ink-3">
-            {t.onboarding.modeQuestion}
+            {t.onboarding.intentQuestion}
           </span>
-          {onModeChange ? (
-            /* A live switch, not an echo: changing modes must never require
-               re-running onboarding (T5.1). */
-            <div className="seg" role="group" aria-label={t.onboarding.modeQuestion}>
-              {(["simple", "full"] as const).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  aria-pressed={profile.mode === mode}
-                  onClick={() => profile.mode !== mode && onModeChange(mode)}
-                >
-                  {t.onboarding.modeOptions[mode].label}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <strong className="block text-sm text-ink">
-              {t.onboarding.modeOptions[profile.mode].label}
-            </strong>
-          )}
+          <strong className="block text-sm text-ink">
+            {t.onboarding.intentOptions[legacyIntent(profile.intent)].label}
+          </strong>
         </div>
         <div className="space-y-1">
           <span className="block text-[0.68rem] font-mono font-semibold uppercase tracking-wider text-ink-3">

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronRight, Cpu, BookOpen } from "lucide-react";
 import type { Dict } from "../lib/i18n";
 import type { OnboardingProfile } from "../lib/onboarding";
-import { getPersonalization } from "../lib/onboarding";
+import { getPersonalization, legacyIntent } from "../lib/onboarding";
 import { PERSONAS } from "../lib/personas";
 import { MockField, MockFill, MOCK } from "@/components/dev/mock-fill";
 
@@ -41,7 +41,7 @@ export default function Landing({
 }: LandingProps) {
   const personalization = onboardingProfile ? getPersonalization(onboardingProfile) : null;
   const primaryAction = onboardingProfile
-    ? t.onboarding.intentCta[onboardingProfile.intent]
+    ? t.onboarding.intentCta[legacyIntent(onboardingProfile.intent)]
     : t.landing.check;
 
   /* Same rise the fact cards use: the class lands on the next frame so the
@@ -97,7 +97,7 @@ export default function Landing({
           <div className="space-y-1 text-start">
             <span className="cap block">{t.onboarding.tailoredBadge}</span>
             <p className="pencil m-0 text-[21px] leading-tight text-ink">
-              {t.onboarding.tailoredIntent(t.onboarding.intentOptions[onboardingProfile.intent].label)}
+              {t.onboarding.tailoredIntent(t.onboarding.intentOptions[legacyIntent(onboardingProfile.intent)].label)}
             </p>
             <p className="m-0 text-[13.5px] leading-relaxed text-ink-2">
               {personalization.guided ? t.onboarding.tailoredGuided : t.onboarding.tailoredQuick}.{" "}
