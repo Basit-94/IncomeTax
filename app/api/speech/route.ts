@@ -25,6 +25,13 @@ export async function POST(request: NextRequest) {
   if (file.size > MAX_BYTES) return NextResponse.json({ error: "too_large", message: "Recording too long." }, { status: 413 });
   const bytes = Buffer.from(await file.arrayBuffer());
   const result = await transcribeAudio({ bytes, mimeType: file.type || "audio/wav", lang: isLang(lang) ? lang : "en" });
-  if (!result.ok) return NextResponse.json({ error: "transcription_failed", message: result.error }, { status: 502 });
+  if (!result.ok) {
+    const correlationId = crypto.randomUUID();
+    console.error(`[speech:${correlationId}] Transcription error:`, result.error);
+    return NextResponse.json(
+      { error: "transcription_failed", message: "Audio transcription failed. Please try typing instead.", correlationId },
+      { status: 502 },
+    );
+  }
   return NextResponse.json({ text: result.text });
 }

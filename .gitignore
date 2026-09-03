@@ -19,10 +19,6 @@ loadtest/results/
 # (base64-embedded fonts make these large). Kept on disk, out of the repo.
 video/
 
-.vercel
-.env*
-!.env.example
-
 .agent-transcripts/
 
 # SQLite database and vault master key (plan D2)

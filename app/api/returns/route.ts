@@ -3,6 +3,7 @@ import { userFromRequest } from "@/lib/server/session";
 import { getFiledReturn, saveFiledReturn } from "@/lib/harness/returns";
 import { everifyDeadline } from "@/lib/tools";
 import { audit } from "@/lib/server/vault";
+import { checkRateLimit, getClientIp } from "@/lib/server/rate-limit";
 
 /** The account's filed return, and the mock e-verification step (plan task 4.3). */
 export async function GET(request: NextRequest) {
@@ -19,6 +20,15 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const user = userFromRequest(request);
   if (!user) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+
+  const ip = getClientIp(request);
+  const rate = checkRateLimit(`otp:${user.id}:${ip}`, 5, 60_000);
+  if (!rate.ok) {
+    return NextResponse.json(
+      { error: "rate_limited", message: "Too many verification attempts. Please wait a minute." },
+      { status: 429, headers: { "Retry-After": String(rate.resetSeconds) } },
+    );
+  }
   let body: { code?: unknown };
   try {
     body = await request.json();

@@ -919,13 +919,6 @@ export default function WapsiPrototype() {
       target: fact ? "fact" : tax ? "tax" : "claim",
     };
 
-    console.log("Ledger Event [OVERRIDE_FACT]:", {
-      type: "OVERRIDE_FACT",
-      factId: activeDisputeId,
-      reported: source.amount,
-      declared: correction.next,
-    });
-
     let next = applyCorrection(returnState, correction);
 
     // Rakesh AIS-mismatch hold releases when the capital-gains figure goes to zero.
@@ -976,13 +969,6 @@ export default function WapsiPrototype() {
       at: new Date().toISOString(),
       target: fact ? "fact" : tax ? "tax" : "claim",
     };
-
-    console.log("Ledger Event [OVERRIDE_FACT]:", {
-      type: "OVERRIDE_FACT",
-      factId,
-      reported: source.amount,
-      declared: correction.next,
-    });
 
     let next = applyCorrection(returnState, correction);
 

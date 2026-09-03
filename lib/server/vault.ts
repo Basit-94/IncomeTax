@@ -198,6 +198,7 @@ export function deleteSlot(userId: string, slotId: string, actor: AuditActor = "
 /* ------------------------------------------------------------ documents -- */
 
 export const DOCUMENT_MAX_BYTES = 5 * 1024 * 1024;
+export const MAX_DOCUMENTS_PER_USER = 50;
 export const DOCUMENT_TYPES = new Set(["application/pdf", "image/png", "image/jpeg"]);
 
 export function putDocument(
@@ -213,6 +214,8 @@ export function putDocument(
     audit(userId, { actor: doc.actor ?? "user", action: "document.reused", documentId: existing.id, runId: doc.runId });
     return getDocumentMeta(userId, existing.id)!;
   }
+  const count = (db().prepare("SELECT COUNT(*) as count FROM documents WHERE user_id = ?").get(userId) as { count: number }).count;
+  if (count >= MAX_DOCUMENTS_PER_USER) throw new Error("storage_limit_reached");
   const id = randomUUID();
   const uploadedAt = nowIso();
   db()

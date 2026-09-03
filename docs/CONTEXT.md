@@ -8,7 +8,7 @@ append the detail to `log.md` (append-only, `## [YYYY-MM-DD HH:MM] who (title)` 
 
 **Last verified against the tree:** 2026-09-03 (branch `dev`, uncommitted working tree on top of
 `215327e`; the agent never commits, plan D12). Gates at that point: `npx tsc --noEmit` 0 errors ·
-`npx vitest run` 226/226 across 23 files · `npx next build` exit 0.
+`npx vitest run` 231/231 across 25 files · `npx next build` exit 0.
 
 **The plan that produced this version:** `plan.md` (decisions D1–D12, phases, the status table).
 **The two surfaces:** `docs/AGENTIC.md`.
@@ -60,7 +60,7 @@ Env (see `.env.example`): `GEMINI_API_KEY`, `AGENT_MODEL`, `AGENT_FALLBACK_MODEL
 | `/digilocker/consent` | `app/digilocker/consent/page.tsx` | The mock consent screen (Allow/Deny). |
 | `/reconcile` | `components/InteractiveTaxDashboard.tsx` | The AIS/26AS reconciliation matrix (unchanged). |
 | `/honesty`, `/architecture` | `app/(docs)/…` | Zero-JS disclosure pages. |
-| `/api/auth/*` | `signin`, `signup`, `signout`, `me`, `preferences` (mode/lang/theme), `onboarding` | |
+| `/api/auth/*` | `signin`, `signup`, `signout`, `me` (GET/DELETE account), `preferences` (mode/lang/theme), `onboarding` | |
 | `/api/agent/stream` | `app/api/agent/stream/route.ts` | **The harness.** POST `{runId?, text?, answer?, confirm?, cancel?}` → SSE of `RunEvent`s, each persisted before it is streamed. |
 | `/api/agent` | legacy one-shot copilot for the manual panel | cap applies to anonymous sessions only |
 | `/api/vault/slots` (GET/PUT/DELETE), `/api/vault/documents` (GET/POST), `/api/vault/digilocker` (+ `connect`, `callback`) | the isolated write path: values go here, never to the model | |
@@ -135,12 +135,12 @@ exemption, advance-tax schedule, tax calendar, TDS mismatch. `lib/itr/index.ts`:
 
 ## 9. Verification protocol
 1. `npx tsc --noEmit` (0 errors; zero `any`).
-2. `npx vitest run` — 23 files / 226 tests: engine + slab, golden export, return state/persist/compute,
+2. `npx vitest run` — 25 files / 231 tests: engine + slab, golden export, return state/persist/compute,
    upstreamSync, context reducer, compliance, agent, onboarding v4, submission key, db, auth, view
    reducer, validation, interview + offline planner, vault/memory/runs/tools, DigiLocker, engine
-   integration (offline filing run, confirm flag both ways, DigiLocker pull, business + notice), tools.
+   integration (offline filing run, confirm flag both ways, DigiLocker pull, business + notice), rate-limit, env, tools.
 3. `npx next build`.
-4. Browser hooks: `data-testid="signin-card|onboarding|onboarding-next|hero|composer|composer-input|composer-submit|composer-mic|hero-chip|chat-shell|run-status|transcript|msg-user|msg-assistant|activity-log|ask-form|ask-answered|ask-yes|ask-no|ask-submit|ask-skip|ask-issue|card-review|card-confirm|card-comparison|card-itrv|card-document|confirm-action|side-panel|progress-list|outputs-list|history-button|history-drawer|new-chat|run-problem|mode-switch|task-grid|tool-drawer|vault-page|vault-matrix|vault-documents|vault-memories|vault-audit|digilocker-consent|consent-allow|everify-code|everify-submit"`,
+4. Browser hooks: `data-testid="signin-card|onboarding|onboarding-next|hero|composer|composer-input|composer-submit|composer-mic|hero-chip|chat-shell|run-status|transcript|msg-user|msg-assistant|activity-log|ask-form|ask-answered|ask-yes|ask-no|ask-submit|ask-skip|ask-issue|card-review|card-confirm|card-comparison|card-itrv|card-document|confirm-action|side-panel|progress-list|outputs-list|history-button|history-drawer|new-chat|run-problem|mode-switch|task-grid|tool-drawer|vault-page|vault-matrix|vault-documents|vault-memories|vault-audit|vault-danger-zone|digilocker-consent|consent-allow|everify-code|everify-submit"`,
    `data-slot-id`, `data-tile`, `data-tool`, `data-step-status`, `data-mode`, plus the older
    `net-position`, `cass-radar`, `itrv-timestamp`, `#fact-<id>`, `#dashboard-tabs`.
    The automation's synthetic "Return" key does not reach React's `onKeyDown`; dispatch a real

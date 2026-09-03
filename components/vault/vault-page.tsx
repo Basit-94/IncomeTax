@@ -130,6 +130,19 @@ export default function VaultPage({ initial }: { initial: VaultInitial }) {
     setBusy(null);
   };
 
+  const deleteAccount = async () => {
+    if (!window.confirm("Are you sure? This will permanently delete your account, encrypted vault slots, documents, memories, and chat runs.")) return;
+    setBusy("delete-account");
+    const res = await fetch("/api/auth/me", { method: "DELETE" });
+    if (res.ok) {
+      localStorage.clear();
+      window.location.href = "/signin";
+    } else {
+      setMessage("Failed to delete account.");
+      setBusy(null);
+    }
+  };
+
   const filledCount = Object.keys(slots).length;
 
   return (
@@ -333,6 +346,23 @@ export default function VaultPage({ initial }: { initial: VaultInitial }) {
               ))}
             </ul>
           )}
+        </section>
+
+        <section className="surface-panel border-alarm/30 p-5" data-testid="vault-danger-zone">
+          <h2 className="text-lg font-bold text-alarm">Delete account and all personal data</h2>
+          <p className="mt-1 text-sm text-ink-2">
+            Permanently remove your account, encrypted vault slots, uploaded documents, learned memories, and interview sessions from the server.
+          </p>
+          <div className="mt-4">
+            <button
+              type="button"
+              disabled={busy === "delete-account"}
+              onClick={() => void deleteAccount()}
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-alarm px-4 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+            >
+              <Trash2 size={14} /> Delete everything
+            </button>
+          </div>
         </section>
       </main>
     </div>

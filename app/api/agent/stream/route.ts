@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { userFromRequest } from "@/lib/server/session";
 import { appendEvent, resolveRunId, runTurn, type TurnInput } from "@/lib/harness/engine";
+import { checkRateLimit, getClientIp } from "@/lib/server/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,16 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   const user = userFromRequest(request);
   if (!user) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+
+  const ip = getClientIp(request);
+  const rate = checkRateLimit(`stream:${user.id}:${ip}`, 30, 60_000);
+  if (!rate.ok) {
+    return NextResponse.json(
+      { error: "rate_limited", message: "Too many requests. Please wait a moment before sending another message." },
+      { status: 429, headers: { "Retry-After": String(rate.resetSeconds) } },
+    );
+  }
+
   let body: Partial<Omit<TurnInput, "userId" | "profile" | "lang">>;
   try {
     body = await request.json();
@@ -48,8 +59,20 @@ export async function POST(request: NextRequest) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
         }
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "error", message, recoverable: false, at: new Date().toISOString() })}\n\n`));
+        const correlationId = crypto.randomUUID();
+        console.error(`[agent:stream:${correlationId}]`, error);
+        const userMessage = "An unexpected error occurred while processing your request. Please try again.";
+        controller.enqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({
+              type: "error",
+              message: `${userMessage} (Ref: ${correlationId})`,
+              correlationId,
+              recoverable: false,
+              at: new Date().toISOString(),
+            })}\n\n`,
+          ),
+        );
       } finally {
         clearInterval(heartbeat);
         controller.close();

@@ -17,9 +17,15 @@ export type ModelOutcome = { ok: true; result: ModelResult } | { ok: false; erro
 const TIMEOUT_MS = Number(process.env.AGENT_TIMEOUT_MS || 12_000);
 
 function apiKey(): string | null {
-  const raw = process.env.GEMINI_API_KEY?.trim().replace(/^["']|["']$/g, "");
-  if (!raw || raw.includes("REPLACE_ME")) return null;
-  return raw;
+  const keys = [
+    process.env.GEMINI_API_KEY,
+    process.env.GEMINI_FALLBACK_API_KEY,
+    process.env.GEMINI_FALLBACK_API_KEY_2,
+    process.env.GEMINI_FALLBACK_API_KEY_3,
+  ]
+    .map((k) => k?.trim().replace(/^["']|["']$/g, ""))
+    .filter((k): k is string => !!k && !k.includes("REPLACE_ME"));
+  return keys[0] ?? null;
 }
 
 export function modelId(): string {

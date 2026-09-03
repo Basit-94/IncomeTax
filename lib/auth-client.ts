@@ -62,9 +62,11 @@ function demoPassword(pan: string): string {
 
 const DEMO_MESSAGE = "My money comes back.";
 
-/** Mock mode is ON unless explicitly switched off. Only gates the fallback. */
+/** Mock mode is OFF in production unless explicitly enabled. */
 function mockModeEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_MOCK_MODE !== "false";
+  return process.env.NODE_ENV === "production"
+    ? process.env.NEXT_PUBLIC_MOCK_MODE === "true"
+    : process.env.NEXT_PUBLIC_MOCK_MODE !== "false";
 }
 
 /**

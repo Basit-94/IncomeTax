@@ -1,9 +1,19 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { seedDemoAccount, signIn } from "@/lib/server/auth";
 import { homeFor, SESSION_COOKIE, sessionCookieOptions } from "@/lib/server/session";
+import { checkRateLimit, getClientIp } from "@/lib/server/rate-limit";
 import { publicUser } from "../public-user";
 
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request);
+  const rate = checkRateLimit(`signin:${ip}`, 5, 60_000);
+  if (!rate.ok) {
+    return NextResponse.json(
+      { error: "rate_limited", message: "Too many sign-in attempts. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(rate.resetSeconds) } },
+    );
+  }
+
   let body: { username?: unknown; password?: unknown };
   try {
     body = await request.json();

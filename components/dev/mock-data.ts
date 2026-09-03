@@ -62,8 +62,10 @@ export const MOCK = {
 export type MockKey = keyof typeof MOCK;
 
 /**
- * The autofill affordance is a testing tool. It defaults on because this is a mock site, but
- * setting NEXT_PUBLIC_MOCK_MODE="false" removes it everywhere — an autofill button reaching a
- * real deployment would be a defect, not a feature.
+ * The autofill affordance is a testing tool. In production, it defaults to OFF (false)
+ * unless explicitly enabled via NEXT_PUBLIC_MOCK_MODE="true".
  */
-export const MOCK_MODE = process.env.NEXT_PUBLIC_MOCK_MODE !== "false";
+export const MOCK_MODE =
+  process.env.NODE_ENV === "production"
+    ? process.env.NEXT_PUBLIC_MOCK_MODE === "true"
+    : process.env.NEXT_PUBLIC_MOCK_MODE !== "false";

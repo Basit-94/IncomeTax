@@ -78,8 +78,20 @@ figures sent to the model carry no name, PAN, Aadhaar, account or email. Memorie
 ("has a PF account"), never values, and you can read and delete them on `/vault`. Voice uses the
 browser's own recognition, which in Chrome sends audio to Google; the mic button says so.
 
+## Security and Secret Management Pass
+
+Before deploying to staging or production:
+1. **Never commit real secrets.** All API keys, database connection strings, JWT/session keys, and vault encryption keys must be configured solely via server-side environment variables (see `.env.example`).
+2. **Frontend Exposure Guard:** Only variables prefixed with `NEXT_PUBLIC_` are bundled into client-side JavaScript. No private API keys (e.g. Gemini, Supabase Service Role, Stripe Secret, DB credentials) should ever have a `NEXT_PUBLIC_` or `REACT_APP_` prefix.
+3. **Vault & Database:** Ensure `VAULT_MASTER_KEY` is provided as a 64-character hex key in production. Production will refuse to start without it. Set `SEED_DEMO_ACCOUNT=false` or change `DEMO_PASSWORD` in production.
+
+> [!WARNING]
+> **Git History Secret Rotation Warning:**
+> If any API key, database credential, token, or secret was previously hardcoded or committed to any git branch or local environment in history, that value remains discoverable in git history. **Rotate all previously used keys and credentials immediately** in the respective provider consoles (Google AI Studio, database providers, etc.) before any public or production deployment.
+
 ## The Java backend
 
 `backend/` is the Spring Boot / Java 21 reference for exact-paise money, versioned rules and the
 append-only ledger, pinned to the TypeScript engine by the golden vectors. The agentic build does not
 depend on it (plan D1). See `backend/README.md`.
+

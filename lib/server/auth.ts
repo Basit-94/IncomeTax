@@ -15,8 +15,8 @@ import type { UiMode } from "../mode";
 import type { Lang } from "../types";
 import { isLang } from "../i18n";
 
-export const DEMO_USERNAME = "asabs";
-export const DEMO_PASSWORD = "12345";
+export const DEMO_USERNAME = process.env.DEMO_USERNAME || "asabs";
+export const DEMO_PASSWORD = process.env.DEMO_PASSWORD || "12345";
 
 const SCRYPT_N = 2 ** 15;
 const SESSION_DAYS = Number(process.env.SESSION_TTL_DAYS || 30);
@@ -134,8 +134,14 @@ export function getUserByUsername(usernameRaw: string): User | null {
   return row ? toUser(row) : null;
 }
 
-/** The demo account from the plan (D4). Idempotent; runs at first request. */
+/** Permanently delete an account and cascade-delete all associated vault data, runs, documents, and sessions. */
+export function deleteUser(id: string): void {
+  db().prepare("DELETE FROM users WHERE id = ?").run(id);
+}
+
+/** The demo account from the plan (D4). Idempotent; runs at first request unless disabled. */
 export function seedDemoAccount(): void {
+  if (process.env.SEED_DEMO_ACCOUNT === "false") return;
   if (!getUserByUsername(DEMO_USERNAME)) createUser(DEMO_USERNAME, DEMO_PASSWORD);
 }
 

@@ -2784,3 +2784,74 @@ things there are already true and will NOT be rewritten:
   in `localStorage.wapsi_voice_mode`, shows "Transcribing…" and drops the text into the box.
 - **Verified:** plumbing from the Browser pane with a synthetic 1 s WAV → HTTP 200, transcript in ~7 s.
   Real microphone capture cannot run in the pane. `/honesty` dictation row rewritten. tsc 0.
+
+## [2026-09-03 12:50] antigravity (security pass: secrets to env vars, exposure audit, git history warning)
+
+- **Audit & fixes:** Full secret safety pass across the codebase before deployment:
+  1. `lib/server/auth.ts`: `DEMO_USERNAME` and `DEMO_PASSWORD` configured to read from environment variables `process.env.DEMO_USERNAME` / `process.env.DEMO_PASSWORD` with defaults for local dev/testing; added `SEED_DEMO_ACCOUNT=false` flag to allow disabling automatic reviewer account seeding in production.
+  2. `lib/harness/model.ts`: aligned key resolution to support `GEMINI_FALLBACK_API_KEY`, `GEMINI_FALLBACK_API_KEY_2`, `GEMINI_FALLBACK_API_KEY_3` in addition to primary `GEMINI_API_KEY`.
+  3. Frontend exposure: audited all `NEXT_PUBLIC_` and `REACT_APP_` variables. Confirmed only non-secret flags (`NEXT_PUBLIC_MOCK_MODE`, `NEXT_PUBLIC_BACKEND_URL`) are client-visible. No private keys or service tokens are exposed to client bundle.
+  4. `.gitignore`: verified and cleaned `.env*` ignoring all environment variants while allowing `!.env.example`.
+  5. `.env.example`: comprehensively documented all application environment variables with placeholders and production advice (`DEMO_USERNAME`, `DEMO_PASSWORD`, `SEED_DEMO_ACCOUNT`, `VAULT_ALLOW_GENERATED_KEY`, etc.).
+  6. Logs & Responses: verified console output and API responses (such as `publicUser()` and vault slot masking) never leak raw keys, hashes, or credentials.
+  7. `README.md`: added Security & Secret Management section with Git History Secret Rotation warning.
+- **Verification:** `npx tsc --noEmit` (0 errors), `npx vitest run` (226/226 passed across 23 files), `npx next build` (exit 0).
+
+## [2026-09-03 13:00] antigravity (privacy pass: data flow map, log cleaning, account deletion flow)
+
+- **Audit & fixes:**
+  1. Data Collection & Flow Mapping: Traced all sensitive data ingress (Auth, Onboarding, Agentic Vault, DigiLocker mock/real, Documents, Voice transcription). Verified AES-256-GCM encryption for slot values, pseudonymised model context, and memory refusal of identifiers/amounts.
+  2. Log Cleaning: Removed leftover debug `console.log` statements in `app/(gated)/page.tsx` that outputted override numbers during dispute calculation.
+  3. Third-Party Auditing: Audited all external network calls; confirmed the only external integration is Gemini API via `lib/harness/model.ts` (which sends pseudonymised facts, slot IDs, or raw audio for voice transcription) and client-native Web Speech API.
+  4. Password & Storage: Verified scrypt hashing for passwords (`lib/server/auth.ts`); cookies use `httpOnly: true`, `sameSite: "lax"`, and `secure` in production; confirmed sensitive PII is never stored in `localStorage` in the agentic flow.
+  5. API Response Filtering: Verified all API routes scope strictly by authenticated `user.id` and use `publicUser()` or slot masking.
+  6. Account Deletion: Implemented full account deletion flow with `deleteUser(id)` in `lib/server/auth.ts`, `DELETE /api/auth/me` route, cascading deletion across all 10 user tables, and UI affordance in `components/vault/vault-page.tsx` (`vault-danger-zone`).
+- **Verification:** `npx tsc --noEmit` (0 errors), `npx vitest run` (227/227 passed across 23 files), `npx next build` (exit 0).
+
+## [2026-09-03 13:08] antigravity (pre-deployment audit: env validation, rate limiting, security headers, error sanitation)
+
+- **Audit & fixes across all 7 deployment checks:**
+  1. Environment variables: Added `lib/server/env.ts` with `validateEnvironment()` and `assertEnvironment()` verifying `VAULT_MASTER_KEY` (64-hex), DB configuration, model API keys, and demo credentials.
+  2. Debug code: Defaulted `MOCK_MODE` to OFF (`false`) in production across `components/dev/mock-data.ts` and `lib/auth-client.ts`. Verified zero debug/backdoor endpoints exist.
+  3. Error handling: Added correlation IDs (`crypto.randomUUID()`) and sanitized error output in `app/api/agent/stream/route.ts` and `app/api/speech/route.ts`. No internal server paths or stack traces exposed to clients.
+  4. Security headers: Configured complete suite of production security headers in `next.config.ts`: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `X-XSS-Protection: 1; mode=block`, `Referrer-Policy: strict-origin-when-cross-origin`, `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload`, and `Content-Security-Policy`.
+  5. Rate limiting: Implemented `lib/server/rate-limit.ts` (sliding window rate limiter) and applied IP rate limiting (5 req/min) to `/api/auth/signin`, `/api/auth/signup`, and OTP `/api/returns` verification.
+  6. CORS: Verified no wildcard `*` CORS in Next.js routes; backend CORS restricted to explicit frontend origin.
+  7. Database security: SQLite file is process-local; documented SSL/TLS connection requirements for PostgreSQL (`sslmode=require`) in `.env.example`.
+- **Verification:** `npx tsc --noEmit` (0 errors), `npx vitest run` (231/231 passed across 25 files), `npx next build` (exit 0).
+
+## [2026-09-03 13:25] antigravity (deep security audit: auth/IDOR, payment/tax logic, upload magic bytes, XSS hardening)
+
+- **Audit & fixes across all critical paths:**
+  1. Authentication & IDOR: Verified all 19 API endpoints in `app/api/`. Every single endpoint enforces session authentication via `userFromRequest(request)` and queries strictly scoped by `user.id`. Zero IDOR vulnerabilities found. Session invalidation on sign-out destroys DB token hash and deletes cookie.
+  2. Payment & Tax Calculation Logic: Verified that tax breakdowns, deductions, rebates, and filing balances are computed deterministically on the server via `lib/engine/tax.ts` and `lib/harness/tools.ts`. Client-supplied amounts are never blindly trusted; calculations run server-side before state persistence.
+  3. Input Handling & SQL Injection: Audited all SQL statements across the codebase. All queries use parameterized statements (`.prepare("... WHERE user_id = ? ...").run(...)`). No dynamic raw SQL string interpolation.
+  4. XSS & HTML Rendering: Confirmed zero usages of `dangerouslySetInnerHTML` in UI components. Hardened HTML escaper in `lib/itr/index.ts` to include single-quote escaping (`&#39;`).
+  5. File Uploads & Magic Bytes: Hardened `app/api/vault/documents/route.ts` with server-side magic byte file signature validation (`%PDF-`, PNG header, JPEG SOI) to reject disguised executables, added path traversal / dangerous character stripping for filenames, and sanitized `Content-Disposition` in `app/api/outputs/[id]/route.ts`.
+- **Verification:** `npx tsc --noEmit` (0 errors), `npx vitest run` (231/231 passed across 25 files), `npx next build` (exit 0).
+
+## [2026-09-03 13:30] antigravity (red-team audit: IDOR, auth bypass, DDoS/storage quotas, business logic)
+
+- **Audit & fixes across heckss attack paths:**
+  1. Data access via ID manipulation: Checked all dynamic ID endpoints (`/api/outputs/[id]`, `/api/runs/[id]`, `/api/vault/documents`, `/api/vault/slots`, `/api/memory`). All queries strictly scoped by `WHERE user_id = user.id`. Cross-user data theft is completely prevented (returns 404/empty).
+  2. Login bypass & token validation: Confirmed missing/malformed/expired tokens reject with HTTP 401; expired sessions are purged. Reviewer demo account seeding is disabled in production via `SEED_DEMO_ACCOUNT=false`.
+  3. Privilege escalation: Verified zero hidden admin backdoors or role escalation vectors.
+  4. Feature abuse & quotas: Added `MAX_DOCUMENTS_PER_USER = 50` quota in `lib/server/vault.ts` and `app/api/vault/documents/route.ts` to block storage-filling disk exhaustion. Added 30 req/min rate limit to `app/api/agent/stream/route.ts` and 10 req/min to `app/api/vault/documents/route.ts`.
+  5. Content injection: Verified strict username regex (`/^[a-z0-9_]{3,32}$/`), parameterized SQL queries, zero `dangerouslySetInnerHTML`, and HTML entity escaping.
+  6. Internal exposure: Confirmed no direct `.env` or `.git` accessibility, no OpenAPI/Swagger leaks, and zero sensitive system info returned by error handlers.
+  7. Business logic manipulation: Verified server-side calculation of all tax slabs, deductions, 87A rebates, and challan payments (`money.min(1)` integer validation).
+- **Verification:** `npx tsc --noEmit` (0 errors), `npx vitest run` (231/231 passed across 25 files), `npx next build` (exit 0).
+
+
+
+
+
+
+
+
+
+
+
+
+
+

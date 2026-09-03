@@ -10,10 +10,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   const output = getOutput(user.id, id);
   if (!output) return NextResponse.json({ error: "not_found" }, { status: 404 });
   const inline = request.nextUrl.searchParams.get("download") !== "1";
+  const safeFilename = output.meta.name.replace(/[/\\?%*:|"<>]/g, "-").replace(/[\x00-\x1f\x80-\x9f\r\n]/g, "").slice(0, 120) || "download";
   return new NextResponse(new Uint8Array(output.bytes), {
     headers: {
       "Content-Type": output.meta.contentType,
-      "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${output.meta.name.replace(/"/g, "")}"`,
+      "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${safeFilename}"`,
       "Cache-Control": "private, no-store",
     },
   });

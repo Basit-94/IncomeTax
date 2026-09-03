@@ -5,6 +5,7 @@ import {
   authenticate,
   createSession,
   createUser,
+  deleteUser,
   DEMO_PASSWORD,
   DEMO_USERNAME,
   destroySession,
@@ -117,5 +118,14 @@ describe("auth", () => {
     expect(prefs.mode).toBe("manual");
     expect(prefs.theme).toBe("dark");
     expect(prefs.lang).toBe("ta");
+  });
+
+  it("deletes a user and removes sessions and data", () => {
+    const user = createUser("todelete", "secret1");
+    const token = createSession(user.id);
+    expect(authenticate(token)?.id).toBe(user.id);
+    deleteUser(user.id);
+    expect(getUserByUsername("todelete")).toBeNull();
+    expect(authenticate(token)).toBeNull();
   });
 });
