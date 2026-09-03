@@ -24,3 +24,6 @@ video/
 !.env.example
 
 .agent-transcripts/
+
+# Local data & SQLite databases
+data/

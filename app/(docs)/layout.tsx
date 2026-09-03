@@ -26,9 +26,6 @@ export default function DocsLayout({
       <nav className="mb-10 flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-line pb-4 text-[0.82rem]">
         <LogoLink size="sm" />
         <span className="text-ink-3">/</span>
-        <Link href="/honesty" className="text-ink-2 hover:text-ink">
-          What&apos;s real
-        </Link>
         <Link href="/architecture" className="text-ink-2 hover:text-ink">
           How it would be built
         </Link>

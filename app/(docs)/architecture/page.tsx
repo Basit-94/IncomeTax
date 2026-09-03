@@ -87,14 +87,7 @@ export default function ArchitecturePage() {
         <p className="text-[0.95rem] leading-relaxed text-warn">
           <strong className="font-semibold">None of this is running.</strong>{" "}
           The prototype you clicked through has no server and makes no network
-          calls. This page is a design, written to be argued with — see{" "}
-          <Link
-            href="/honesty"
-            className="font-medium underline decoration-warn/40 underline-offset-2 hover:decoration-warn"
-          >
-            what&apos;s real
-          </Link>{" "}
-          for the line-by-line separation.
+          calls. This page is a design, written to be argued with.
         </p>
       </div>
 

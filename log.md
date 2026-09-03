@@ -2642,9 +2642,29 @@ things there are already true and will NOT be rewritten:
 - **Verified:** `npx tsc --noEmit` 0 errors · `npx next build` exit 0, all routes present in
   `.next/server/app-paths-manifest.json` (`/`, `/reconcile`, `/honesty`, `/architecture`, `/api/agent`).
 
-## [2026-09-03 04:02] antigravity (commit and merge dev to main)
-- **Action:** COMMIT | MERGE | PUSH
-- **Target:** `docs/CONTEXT.md`, `AGENTS.md`, `README.md`, `plan.md`, `package-lock.json`, `log.md`
-- **Intent:** Commit project context, agent rules, and updated dependency lock to `dev`, push to `origin/dev`, merge into `main`, and push to `origin/main`.
-- **Verified:** `npx tsc --noEmit` 0 errors · `npx vitest run` 182/182 passed · `npx next build` exit 0.
+## [2026-09-03 16:24] antigravity (remove prototype disclaimer text from footer on dev-2)
+- **Action:** EDIT
+- **Target:** `components/disclaimer.tsx`
+- **Intent:** Remove the "Independent concept prototype. Not affiliated with, endorsed by, or connected to the Income Tax Department..." disclaimer text from the footer, keeping the UI intact and preserving all 23 language dictionaries.
+- **Verified:** `npx tsc --noEmit` 0 errors · `npx vitest run` 182/182 passed across 14 test files.
+
+## [2026-09-03 16:28] antigravity (remove honesty link and /honesty route on dev-2)
+- **Action:** DELETE | EDIT
+- **Target:** `app/(docs)/honesty/page.tsx` (deleted), `components/disclaimer.tsx`, `components/landing.tsx`, `app/(docs)/layout.tsx`, `app/(docs)/architecture/page.tsx`
+- **Intent:** Remove "See exactly what is real and what is mocked" and all references to `/honesty`, and delete the `/honesty` page entirely.
+- **Verified:** `npx tsc --noEmit` 0 errors · `npx vitest run` 182/182 passed across 14 test files · `npx next build` exit 0 (routes `/`, `/_not-found`, `/api/agent`, `/architecture`, `/reconcile`).
+
+## [2026-09-03 16:30] antigravity (persist non-negotiable user rules in AGENTS.md)
+- **Action:** EDIT
+- **Target:** `AGENTS.md`, `log.md`
+- **Intent:** Store user non-negotiable instructions permanently in `AGENTS.md` (active system prompt rule):
+  1. Mandatory `log.md` update for every single task performed.
+  2. Strict UI preservation: do not degrade or modify existing UI design/layout unless explicitly instructed.
+  3. Strict preservation of all 23 language options and dictionaries across all pages.
+  4. Branch isolation: remain on `dev-2` branched from clean `main`, never merge `dev`.
+  5. Never commit or push without explicit user instruction.
+- **Verified:** `npx tsc --noEmit` 0 errors · `npx vitest run` 182/182 passed across 14 test files.
+
+
+
 

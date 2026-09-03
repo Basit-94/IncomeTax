@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
-import { ChevronRight, Cpu, BookOpen } from "lucide-react";
+import { ChevronRight, Cpu } from "lucide-react";
 import type { Dict } from "../lib/i18n";
 import type { OnboardingProfile } from "../lib/onboarding";
 import { getPersonalization } from "../lib/onboarding";
@@ -227,13 +227,6 @@ export default function Landing({
         >
           <Cpu size={12} aria-hidden="true" />
           <span>{t.landing.architectureLink}</span>
-        </Link>
-        <Link
-          href="/honesty"
-          className="inline-flex min-h-11 items-center gap-1.5 font-mono text-xs text-ink-2 hover:text-money hover:underline"
-        >
-          <BookOpen size={12} aria-hidden="true" />
-          <span>{t.landing.honestyLink}</span>
         </Link>
       </div>
     </div>
