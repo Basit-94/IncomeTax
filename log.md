@@ -3299,3 +3299,5 @@ things there are already true and will NOT be rewritten:
   - `npx vitest run` passed all 192 tests across 18 test suites.
   - `npm run build` compiled all routes in 1.9s with zero errors.
   - Live dev server verified returning `HTTP/1.1 200 OK`.
+- **Git:** Committed (`2acfe57`) and pushed cleanly to `origin/dev-2` per user instruction.
+
