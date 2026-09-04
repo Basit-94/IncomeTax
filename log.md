@@ -3817,3 +3817,54 @@ things there are already true and will NOT be rewritten:
 - **Git Actions:**
   - Branch: `dev-2`.
   - Pushed to: `origin/dev-2`.
+
+---
+
+## 2026-09-05 01:12 - Mobile Device Universal Compatibility & Touch Language Bottom Sheet
+- **Intent & User Requirements:**
+  - User directive: "now make it compatible in all devices , in mobile when in see i cant select olang properly etc.... fix"
+  - Resolve mobile inability to select languages properly on touch devices.
+  - Eliminate layout regressions, z-index clipping, and text wrapping issues across all devices and screen viewports (320px, 375px, 390px, 414px, 768px, 1280px+).
+- **Root Cause Analysis:**
+  1. *Language Selection on Mobile*:
+     - In `components/dashboard/portal-header.tsx`, `<header>` had `z-10 relative` while `<main>` contained children with `z-10 relative`. In CSS stacking context, `<main>` content was painted OVER the header's language menu. Verified via `document.elementFromPoint(100, 250)` that tap events on language options were intercepted by hero span elements underneath.
+     - `LanguageMenu` floating dropdown used `absolute right-0 ... w-60 (240px)`. On small phones, aligning `right-0` with a centered button pushed the dropdown 20-40px off the left screen edge, clipping native language names.
+     - Desktop scrollable menu was small (32px item heights) with no search filter, making touch scrolling through 23 languages clumsy on small mobile screens.
+  2. *Header Wrapping*:
+     - On mobile screens, the header elements wrapped into 5 jagged, cluttered rows.
+  3. *Horizontal Scrollbars Over Modal Tabs*:
+     - Global CSS `* { scrollbar-width: thin; }` and `::-webkit-scrollbar { height: 10px; }` created prominent 10px scrollbars directly covering the tabs in `FileReturnModal` and `CitizenVaultModal` on mobile.
+  4. *OTP Screen Overflow*:
+     - Fixed `w-12 h-14` (48px) boxes with `space-x-2` inside `p-6` exceeded 375px viewports, squishing the 6th input box.
+- **Actions Taken:**
+  - **Touch-Optimized Language Bottom Sheet (`components/ui/language-menu.tsx`):**
+    * Desktop (`>= 640px`): Preserved the compact, floating dropdown anchored to the trigger button with `z-50` and smooth scrolling.
+    * Mobile (`< 640px`): Implemented a full-featured, thumb-friendly slide-up bottom sheet drawer with backdrop overlay (`fixed inset-0 z-[100] bg-black/65 backdrop-blur-xs`):
+      - Top drag handle bar.
+      - Sheet title: Native language + "Language / भाषा" + "23 Official Indian Languages".
+      - Quick Search Filter: Real-time search matching English names ("Tamil", "Hindi", "Bengali"), native scripts ("தமிழ்", "বাংলা", "ગુજરાતી"), or language codes ("ta", "hi", "gu").
+      - 52px high touch-friendly list items displaying native script, English name, and selected checkmark.
+      - Body scroll lock during open state to prevent page scroll-trapping.
+      - Immediate tap-to-select with tactile feedback, auto-closing the sheet and propagating the language change portal-wide.
+  - **Header Restructuring & Z-Index Elevation (`components/dashboard/portal-header.tsx`):**
+    * Elevated `<header>` to `z-30 relative` so its interactive controls and dropdowns never get occluded by `<main>` content.
+    * Restructured mobile layout:
+      - Row 1: Brand logo on left; Agentic/Manual toggle + Theme toggle on right.
+      - Row 2 (if citizen logged in): `Portal Hub` and `My Return` tabs as clean 50/50 segmented buttons.
+      - Row 3: Citizen identity badge with Log out on left; Tax Vault, Language Selector, Mobile Theme icon, and Sandbox Settings gear aligned cleanly on right.
+  - **Scrollbar-None Utility (`app/globals.css`):**
+    * Added `.scrollbar-none` utility hiding intrusive WebKit and Firefox scrollbars while preserving touch panning on tab carousels.
+    * Applied `.scrollbar-none` to `FileReturnModal`, `CitizenVaultModal`, and `LanguageMenu`.
+  - **OTP Input Responsiveness (`components/otp-screen.tsx`):**
+    * Updated OTP boxes to `w-9 h-12 sm:w-12 sm:h-14` and `space-x-1 sm:space-x-2` so all 6 inputs fit comfortably on any 320px-375px mobile screen.
+- **Automated Verification:**
+  - `npm run typecheck` (`tsc --noEmit`): Exit code 0 (0 errors).
+  - `npm test` (`vitest run`): 18/18 test suites passed, 193/193 tests passed (100% green).
+  - Playwright E2E Multi-Device Verification:
+    * Mobile Viewport (375x667): Verified new clean header layout without jagged wrapping.
+    * Clicked Language trigger: Verified slide-up mobile sheet opens cleanly without overflow.
+    * Typed "Tamil" in search: Verified instant filter to `தமிழ் / Tamil`.
+    * Clicked `தமிழ்`: Verified sheet closes, header updates to `🌐 தமிழ் v`, Tax Vault button updates to `வரி பெட்டகம்`, and all portal text updates to Tamil.
+    * Switched to `ગુજરાતી`: Verified sheet opens, selection works immediately, and portal updates to Gujarati (`કર તિજોરી`, `પોર્ટલ હબ`).
+    * Desktop Viewport (1280x800): Verified desktop dropdown renders cleanly without regressions.
+- **Git Policy:** Preserved branch isolation on `dev-2`. No commit/push performed per non-negotiable rule.
