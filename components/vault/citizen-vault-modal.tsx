@@ -158,11 +158,11 @@ export default function CitizenVaultModal({
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-line bg-paper-2 px-4 gap-2 overflow-x-auto text-xs font-semibold">
+        <div className="flex border-b border-line bg-paper-2 px-2 sm:px-4 gap-1 sm:gap-2 overflow-x-auto scrollbar-none text-xs font-semibold">
           <button
             type="button"
             onClick={() => setActiveTab("kyc")}
-            className={`flex items-center gap-1.5 py-3 px-3 border-b-2 transition whitespace-nowrap cursor-pointer ${
+            className={`flex items-center gap-1.5 py-2.5 sm:py-3 px-2 sm:px-3 border-b-2 transition whitespace-nowrap cursor-pointer text-[11px] sm:text-xs ${
               activeTab === "kyc"
                 ? "border-money text-money font-bold"
                 : "border-transparent text-ink-2 hover:text-ink"
@@ -175,7 +175,7 @@ export default function CitizenVaultModal({
           <button
             type="button"
             onClick={() => setActiveTab("tax_assets")}
-            className={`flex items-center gap-1.5 py-3 px-3 border-b-2 transition whitespace-nowrap cursor-pointer ${
+            className={`flex items-center gap-1.5 py-2.5 sm:py-3 px-2 sm:px-3 border-b-2 transition whitespace-nowrap cursor-pointer text-[11px] sm:text-xs ${
               activeTab === "tax_assets"
                 ? "border-money text-money font-bold"
                 : "border-transparent text-ink-2 hover:text-ink"
@@ -188,7 +188,7 @@ export default function CitizenVaultModal({
           <button
             type="button"
             onClick={() => setActiveTab("documents")}
-            className={`flex items-center gap-1.5 py-3 px-3 border-b-2 transition whitespace-nowrap cursor-pointer ${
+            className={`flex items-center gap-1.5 py-2.5 sm:py-3 px-2 sm:px-3 border-b-2 transition whitespace-nowrap cursor-pointer text-[11px] sm:text-xs ${
               activeTab === "documents"
                 ? "border-money text-money font-bold"
                 : "border-transparent text-ink-2 hover:text-ink"

@@ -55,7 +55,7 @@ export default function OtpScreen({
           dir="ltr"
           role="group"
           aria-label={t.login.otpGroupLabel}
-          className="flex justify-center space-x-2"
+          className="flex justify-center space-x-1 sm:space-x-2"
         >
           {otp.map((digit, idx) => (
             <input
@@ -75,9 +75,9 @@ export default function OtpScreen({
                   prevInput?.focus();
                 }
               }}
-              className={`w-12 h-14 bg-paper-2 border ${
+              className={`w-9 h-12 sm:w-12 sm:h-14 bg-paper-2 border ${
                 otpError ? "border-alarm" : "border-line focus:border-money"
-              } text-xl font-semibold text-center rounded-lg focus:outline-none transition-colors`}
+              } text-lg sm:text-xl font-semibold text-center rounded-lg focus:outline-none transition-colors`}
             />
           ))}
         </div>

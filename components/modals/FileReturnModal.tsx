@@ -160,21 +160,21 @@ export default function FileReturnModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="file-return-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
     >
-      <div className="surface-panel relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl bg-paper p-6 shadow-2xl border border-line text-start">
+      <div className="surface-panel relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl bg-paper p-4 sm:p-6 shadow-2xl border border-line text-start">
         {/* Header */}
         <div className="flex items-start justify-between border-b border-line pb-4">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300">
-              <FileText size={22} aria-hidden="true" />
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="flex size-9 sm:size-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 shrink-0">
+              <FileText size={20} aria-hidden="true" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 id="file-return-title" className="font-sans text-xl font-bold text-ink">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <h2 id="file-return-title" className="font-sans text-lg sm:text-xl font-bold text-ink">
                   {ps.fileReturnModalTitle}
                 </h2>
-                <span className="rounded-md border border-line bg-paper-3 px-2 py-0.5 text-[11px] font-mono font-semibold text-emerald-700 dark:text-emerald-300">
+                <span className="rounded-md border border-line bg-paper-3 px-1.5 py-0.5 text-[10px] sm:text-[11px] font-mono font-semibold text-emerald-700 dark:text-emerald-300">
                   ITR-1 / Form 16
                 </span>
               </div>
@@ -187,18 +187,18 @@ export default function FileReturnModal({
             type="button"
             onClick={onClose}
             aria-label={ps.closeDialog}
-            className="rounded-lg p-1.5 text-ink-3 hover:bg-paper-3 hover:text-ink transition"
+            className="rounded-lg p-1.5 text-ink-3 hover:bg-paper-3 hover:text-ink transition shrink-0 cursor-pointer"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Navigation Tabs - CUSTOM PAN FIRST */}
-        <div className="mt-4 flex border-b border-line gap-2 overflow-x-auto">
+        <div className="mt-4 flex border-b border-line gap-1 sm:gap-2 overflow-x-auto scrollbar-none">
           <button
             type="button"
             onClick={() => setActiveTab("custom_pan")}
-            className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
+            className={`flex items-center gap-1.5 border-b-2 px-2.5 sm:px-3 py-2 text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
               activeTab === "custom_pan"
                 ? "border-emerald-600 text-emerald-700 dark:text-emerald-400"
                 : "border-transparent text-ink-2 hover:text-ink"
