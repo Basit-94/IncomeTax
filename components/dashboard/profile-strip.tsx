@@ -1,6 +1,6 @@
 "use client";
 
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, ShieldCheck } from "lucide-react";
 import type { Persona, Lang } from "../../lib/types";
 import type { Dict } from "../../lib/i18n";
 import { localize } from "../mock-i18n";
@@ -15,6 +15,7 @@ interface ProfileStripProps {
   onEditOnboarding?: () => void;
   /** The anti-phishing phrase (T2.1): shown ONLY on a live server session. */
   greeting?: string;
+  onOpenVault?: () => void;
 }
 
 export default function ProfileStrip({
@@ -25,6 +26,7 @@ export default function ProfileStrip({
   isRealMode = false,
   onEditOnboarding,
   greeting,
+  onOpenVault,
 }: ProfileStripProps) {
   return (
     /* D13 hero: the cover sits directly on the graph paper - no card box. */

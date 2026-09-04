@@ -9,6 +9,7 @@ import { REFUND_SEQUENCE } from "../lib/types";
 import { dict, isLang } from "../lib/i18n";
 import { isRtl } from "../lib/i18n/languages";
 import { mulberry32, pick } from "../lib/rng";
+import { formatMoney } from "../lib/money";
 import { validatePan, validateIfsc } from "../lib/validate";
 import {
   applyCorrection,
@@ -83,8 +84,17 @@ import { PdfIngestionDropzone } from "../components/PdfIngestionDropzone";
 import { Challan280Modal } from "../components/Challan280Modal";
 import { stableIdempotencyKey } from "@/lib/submission-key";
 import { CheckCircle2 } from "lucide-react";
-import { formatMoney } from "../lib/money";
+import CitizenVaultModal from "../components/vault/citizen-vault-modal";
+import AuthPortal from "../components/auth/auth-portal";
+import {
+  getSeededVaultForPersona,
+  fetchVaultUser,
+  addDocumentToVault,
+  type CitizenVaultUser,
+} from "../lib/vault/vault-store";
 import type { ReconcileRow } from "../components/modals/MatchRecordsModal";
+import AgenticModeModal from "../components/modals/AgenticModeModal";
+import PortalFooter from "../components/layout/portal-footer";
 
 // --- VALIDATION (lib/validate.ts issue codes → dictionary messages) ---
 function panIssueMessage(raw: string, t: ReturnType<typeof dict>): string {
@@ -136,7 +146,7 @@ export default function WapsiPrototype() {
   const [lang, setLang] = useState<Lang>("en");
   const [theme, setTheme] = useState<"dark" | "light">("light");
   const [antigravityUi, setAntigravityUi] = useState(false);
-  const [step, setStep] = useState<"onboarding" | "landing" | "otp" | "dashboard">("landing");
+  const [step, setStep] = useState<"auth" | "onboarding" | "landing" | "otp" | "dashboard">("auth");
   const [activePersonaId, setActivePersonaId] = useState<PersonaId | "custom" | null>(null);
   const [onboardingProfile, setOnboardingProfile] = useState<OnboardingProfile | null>(null);
   const [onboardingDraft, setOnboardingDraft] = useState<OnboardingDraft>({});
@@ -166,14 +176,38 @@ export default function WapsiPrototype() {
   const [restoredFrom, setRestoredFrom] = useState<string | null>(null);
   const [ingestedDoc, setIngestedDoc] = useState<IngestedDocument | null>(null);
 
+  // Citizen Tax Vault state
+  const [isVaultOpen, setIsVaultOpen] = useState(false);
+  const [vaultUser, setVaultUser] = useState<CitizenVaultUser | null>(null);
+
+  useEffect(() => {
+    if (persona) {
+      const seeded = getSeededVaultForPersona(persona);
+      setVaultUser((prev) => (prev && prev.pan === persona.pan ? prev : seeded));
+      void fetchVaultUser(persona.pan).then((u) => {
+        if (u) setVaultUser(u);
+      });
+    }
+  }, [persona?.pan]);
+
   // Tab control inside dashboard (filed view) + default-path flow control
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
   const [flowStep, setFlowStep] = useState<FlowStepName>("facts");
 
   const t = dict(lang);
   const isHindi = lang === "hi";
-  const [userMode, setUserMode] = useState<"simple" | "full">("full");
-  const uiMode = userMode;
+  const [userMode, setUserMode] = useState<"agentic" | "manual">("manual");
+  const uiMode: "full" | "simple" = userMode === "manual" ? "full" : "simple";
+  const [isAgenticModalOpen, setIsAgenticModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.classList.toggle("dark", theme === "dark");
+      document.documentElement.classList.toggle("dark-mode", theme === "dark");
+      document.body?.classList.toggle("dark", theme === "dark");
+      document.body?.classList.toggle("dark-mode", theme === "dark");
+    }
+  }, [theme]);
 
   const breakdown = useMemo(
     () => (persona ? computeForPersona(persona, regime) : null),
@@ -282,17 +316,20 @@ export default function WapsiPrototype() {
       setTheme(savedTheme as "dark" | "light");
     }
 
-    const savedMode = localStorage.getItem("wapsi_ui_mode");
-    if (savedMode === "simple" || savedMode === "full") {
-      setUserMode(savedMode);
-    } else if (savedOnboarding?.mode) {
-      setUserMode(savedOnboarding.mode);
+    const savedUserMode = localStorage.getItem("wapsi_user_mode");
+    if (savedUserMode === "agentic" || savedUserMode === "manual") {
+      setUserMode(savedUserMode);
     } else {
-      setUserMode("full");
+      const savedMode = localStorage.getItem("wapsi_ui_mode");
+      if (savedMode === "simple") {
+        setUserMode("agentic");
+      } else {
+        setUserMode("manual");
+      }
     }
 
     const result = loadPersist();
-    if (result && "state" in result) {
+    if (savedSession && result && "state" in result) {
       try {
         const raw = localStorage.getItem("wapsi_active_data");
         const savedAt: string | undefined = raw ? JSON.parse(raw)?.savedAt : undefined;
@@ -323,7 +360,7 @@ export default function WapsiPrototype() {
       }
       setStep("dashboard");
     } else {
-      setStep("landing");
+      setStep("auth");
     }
   }, []);
 
@@ -360,7 +397,11 @@ export default function WapsiPrototype() {
 
     const handlePopState = (event: PopStateEvent) => {
       if (event.state && event.state.page === "home") {
-        setStep("landing");
+        if (!persona && !session) {
+          setStep("auth");
+        } else {
+          setStep("landing");
+        }
       }
     };
 
@@ -368,17 +409,28 @@ export default function WapsiPrototype() {
     return () => {
       window.removeEventListener("popstate", handlePopState);
     };
-  }, []);
+  }, [persona, session]);
+
+  // Enforce authentication gatekeeper: without login no one can enter internal tools
+  useEffect(() => {
+    if (!persona && !session && step !== "auth" && step !== "otp") {
+      setStep("auth");
+    }
+  }, [step, persona, session]);
 
   // Whenever step advances to dashboard/otp, push a new state to browser history
   useEffect(() => {
-    if (step !== "landing") {
+    if (step !== "landing" && step !== "auth") {
       window.history.pushState({ page: "wizard" }, "");
     }
   }, [step]);
 
   const goHome = () => {
-    setStep("landing");
+    if (!persona && !session) {
+      setStep("auth");
+    } else {
+      setStep("landing");
+    }
     window.history.replaceState({ page: "home" }, "");
   };
 
@@ -638,13 +690,91 @@ export default function WapsiPrototype() {
     setStep("dashboard");
   };
 
+  const handleSignUpComplete = async (newUser: CitizenVaultUser) => {
+    setVaultUser(newUser);
+
+    // 1. Authenticate the citizen session
+    const newSession: SessionInfo = {
+      token: `vault_session_${newUser.pan}_${Date.now()}`,
+      pan: newUser.pan,
+      fullName: newUser.fullName || `Citizen ${newUser.pan.slice(5, 9)}`,
+      personalisedMessage: "Welcome to Wapsi",
+      isMock: true,
+    };
+    setSession(newSession);
+    saveSession(newSession);
+
+    // 2. Initialize with ZERO prefilled numbers or dummy facts
+    setCustomPan(newUser.pan);
+    setIsRealMode(true);
+    setWizardCompleted(false);
+
+    const cleanUser: Persona = {
+      id: "custom",
+      name: newUser.fullName || `Citizen ${newUser.pan.slice(5, 9)}`,
+      age: 30,
+      city: "",
+      state: "",
+      occupation: "Taxpayer",
+      pan: newUser.pan,
+      mobile: newUser.mobile || "",
+      preferredLang: lang,
+      situation: "Registered Citizen Account",
+      act: 1,
+      actLabel: "Act I",
+      embodies: "Registered Citizen",
+      assessmentYear: "2026-27",
+      facts: [], // Clean: zero prefilled facts / numbers
+      taxPaid: [], // Clean: zero prefilled TDS
+      claims: [], // Clean: zero prefilled claims
+      banks: newUser.banks && newUser.banks.length > 0 ? newUser.banks : [
+        {
+          id: `bank_${newUser.pan.slice(-4)}`,
+          bank: "Primary Bank Account",
+          maskedNumber: `••••••••${newUser.pan.slice(-4)}`,
+          ifsc: "SBIN0001234",
+          status: "validated",
+          nominatedForRefund: true,
+        },
+      ],
+      refund: {
+        state: "not_filed",
+        amount: 0, // Clean: zero prefilled refund
+        holds: [],
+        timeline: [],
+      },
+      notices: [],
+    };
+
+    setActivePersonaId("custom");
+    const nextState: ReturnState = {
+      version: CURRENT_VERSION,
+      lang,
+      personaId: "custom",
+      baselinePersona: cleanUser,
+      persona: cleanUser,
+      corrections: [],
+      confirmedFactIds: [],
+      regime: "new",
+    };
+    setReturnState(nextState);
+    saveState({ ...nextState, lang });
+    setUndoStack([]);
+
+    // 3. Keep vault modal closed
+    setIsVaultOpen(false);
+
+    // 4. Navigate directly to main portal page (landing action grid)
+    setStep("landing");
+  };
+
   const launchWithForm16 = (doc: IngestedDocument) => {
     const extractedPan = doc.extracted.pan?.trim().toUpperCase();
     const seeded = extractedPan ? findPersonaByPan(extractedPan) : null;
     
     // Exact citizen identity extracted from Form 16 / AIS document
-    const citizenName = doc.extracted.name?.trim() || (seeded ? seeded.name : "Taxpayer");
-    const citizenPan = extractedPan || (seeded ? seeded.pan : "ABCDE1234F");
+    const citizenName = doc.extracted.name?.trim() || (seeded ? seeded.name : (session?.fullName || "Taxpayer"));
+    const citizenPan = extractedPan || customPan || session?.pan || (seeded ? seeded.pan : "ABCDE1234F");
     const employerName = doc.extracted.employerName?.trim() || "Employer";
     const personaId: PersonaId | "custom" = seeded ? seeded.id : "custom";
 
@@ -776,6 +906,18 @@ export default function WapsiPrototype() {
     setOtp(["9", "4", "9", "4", "9", "4"]);
     saveState({ ...nextState, lang });
     setIngestedDoc(doc);
+
+    // Automatically store uploaded document into user's Citizen Tax Vault by default (never ask permission)
+    void addDocumentToVault(citizenPan, {
+      id: `doc_${doc.kind.toLowerCase()}_${Date.now()}`,
+      title: `${doc.fileName} (${citizenName})`,
+      docType: doc.kind === "AIS" ? "ANNUAL_INFO_STATEMENT" : "FORM_16",
+      issuer: employerName || "Deductor / Employer",
+      uploadedAt: new Date().toISOString().slice(0, 10),
+      sizeKb: 140,
+      status: "verified",
+    });
+
     setFlowStep("facts");
     setStep("dashboard");
   };
@@ -1260,7 +1402,7 @@ export default function WapsiPrototype() {
     // page. Nothing of the previous citizen may survive there either.
     taxDispatch({ type: "RESET" });
     setChallanOpen(false);
-    setStep("landing");
+    setStep("auth");
     setActivePersonaId(null);
     setOnboardingProfile(null);
     setOnboardingDraft({});
@@ -2295,27 +2437,37 @@ export default function WapsiPrototype() {
           setShowConsole={setShowConsole}
           onLogoClick={goHome}
           showLanguage={true}
-          mode={uiMode}
+          mode={userMode}
           onModeChange={(newMode) => {
             setUserMode(newMode);
-            localStorage.setItem("wapsi_ui_mode", newMode);
+            localStorage.setItem("wapsi_user_mode", newMode);
+            if (newMode === "agentic") {
+              setIsAgenticModalOpen(true);
+            }
+            const underlyingMode: "full" | "simple" = newMode === "manual" ? "full" : "simple";
+            localStorage.setItem("wapsi_ui_mode", underlyingMode);
             if (onboardingProfile) {
-              const nextProfile = { ...onboardingProfile, mode: newMode };
+              const nextProfile = { ...onboardingProfile, mode: underlyingMode };
               setOnboardingProfile(nextProfile);
               saveOnboardingProfile(nextProfile);
             }
-            if (session) void pushModePreference(session.token, newMode);
+            if (session) void pushModePreference(session.token, underlyingMode);
           }}
           activeCitizen={persona ? { name: persona.name, pan: persona.pan } : null}
           currentView={step === "dashboard" ? "dashboard" : "hub"}
           onViewChange={(view) => {
+            if (!persona && !session) {
+              setStep("auth");
+              return;
+            }
             setStep(view === "hub" ? "landing" : "dashboard");
           }}
           onLogout={handleLogOut}
+          onOpenVault={() => setIsVaultOpen(true)}
         />
 
         {/* --- MAIN BODY --- */}
-        <main id="main-content" className="flex-1 max-w-6xl mx-auto w-full px-4 py-8 md:px-6 md:py-10 relative">
+        <main id="main-content" className="flex-1 max-w-6xl mx-auto w-full px-4 pt-6 pb-20 sm:pb-28 md:px-6 md:pt-8 md:pb-32 relative">
           
           {/* Phase 6, wired LAST per user directive: the assistant floats over the
               finished dashboard. It acts through /api/agent and the same handlers
@@ -2333,6 +2485,7 @@ export default function WapsiPrototype() {
                 localStorage.setItem("wapsi_theme", next);
               }}
               onSetMode={(next) => {
+                setUserMode(next === "full" ? "manual" : "agentic");
                 if (!onboardingProfile) return;
                 const nextProfile = { ...onboardingProfile, mode: next };
                 setOnboardingProfile(nextProfile);
@@ -2359,6 +2512,30 @@ export default function WapsiPrototype() {
           <MiniBurstHost />
 
           <AnimatePresence mode="wait">
+            {/* STEP 0: SEPARATE DEDICATED SIGN IN / SIGN UP LANDING PAGE */}
+            {step === "auth" && (
+              <m.div
+                key="auth"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="space-y-6"
+              >
+                <AuthPortal
+                  t={t}
+                  lang={lang}
+                  panInput={panInput}
+                  panInputError={panInputError}
+                  onPanChange={handlePanInputChange}
+                  onPanSubmit={handlePanSubmit}
+                  onLaunchPersona={(personaId, direct) => void launchPersonaDirect(personaId, direct)}
+                  onSignUpComplete={handleSignUpComplete}
+                  onLaunchWithForm16={launchWithForm16}
+                />
+              </m.div>
+            )}
+
             {/* STEP 1: LANDING */}
             {step === "landing" && (
               <m.div
@@ -2380,6 +2557,7 @@ export default function WapsiPrototype() {
                   onLaunchPersona={(personaId, direct) => void launchPersonaDirect(personaId, direct)}
                   onLaunchPan={launchWithPan}
                   onLaunchWithForm16={launchWithForm16}
+                  onNavigateToAuth={() => setStep("auth")}
                   activeCitizen={
                     (persona || returnState?.persona)
                       ? {
@@ -2389,6 +2567,10 @@ export default function WapsiPrototype() {
                           tds: (persona || returnState?.persona)!.taxPaid.reduce((sum, t) => sum + t.amount, 0),
                           totalTaxesPaid: (persona || returnState?.persona)!.taxPaid.reduce((sum, t) => sum + t.amount, 0),
                           taxDue: Math.max(0, -computeForPersona(persona || returnState!.persona, regime).refundOrDue),
+                          grossTax: computeForPersona(persona || returnState!.persona, regime).totalTax,
+                          hasPaidChallan: (persona || returnState?.persona)!.taxPaid.some((t) => t.section === "140A"),
+                          challanPayments: (persona || returnState?.persona)!.taxPaid.filter((t) => t.section === "140A"),
+                          taxPaidEntries: (persona || returnState?.persona)!.taxPaid,
                           notices: (persona || returnState?.persona)!.notices,
                           banks: (persona || returnState?.persona)!.banks,
                           refund: (persona || returnState?.persona)!.refund,
@@ -2402,12 +2584,18 @@ export default function WapsiPrototype() {
                       : null
                   }
                   onResumeReturn={() => setStep("dashboard")}
+                  onStartFreshFiling={() => {
+                    setFlowStep("facts");
+                    setStep("dashboard");
+                  }}
                   onLogout={handleLogOut}
                   onApplyReconciliation={handleApplyReconciliation}
                   onApplyOptimizer={handleApplyOptimizer}
                   onApplyChallan={handleChallanPaid}
                   onResolveNotice={handleResolveNotice}
                   currentRegime={regime}
+                  onOpenVault={() => setIsVaultOpen(true)}
+                  onSignUpComplete={handleSignUpComplete}
                 />
               </m.div>
             )}
@@ -2452,7 +2640,16 @@ export default function WapsiPrototype() {
               >
                 
                 {/* ACTIVE PROFILE STRIP */}
-                <ProfileStrip persona={persona} lang={lang} t={t} onLogOut={handleLogOut} isRealMode={isRealMode} onEditOnboarding={handleEditOnboarding} greeting={session?.pan === persona.pan ? session.personalisedMessage : undefined} />
+                <ProfileStrip
+                  persona={persona}
+                  lang={lang}
+                  t={t}
+                  onLogOut={handleLogOut}
+                  isRealMode={isRealMode}
+                  onEditOnboarding={handleEditOnboarding}
+                  greeting={session?.pan === persona.pan ? session.personalisedMessage : undefined}
+                  onOpenVault={() => setIsVaultOpen(true)}
+                />
 
                 {/* Portal chrome removed (user directive 2026-08-29): the D13
                     case-file hero above is the cover; tabs are the nav; the
@@ -2925,6 +3122,28 @@ export default function WapsiPrototype() {
             t={t}
           />
         )}
+
+        {/* --- CITIZEN TAX VAULT MODAL (SECURE CLOUD STORAGE) --- */}
+        <CitizenVaultModal
+          isOpen={isVaultOpen}
+          onClose={() => setIsVaultOpen(false)}
+          vaultUser={vaultUser}
+          onUpdateUser={setVaultUser}
+          lang={lang}
+        />
+
+        {/* --- AGENTIC MODE MODAL --- */}
+        <AgenticModeModal
+          isOpen={isAgenticModalOpen}
+          onClose={() => setIsAgenticModalOpen(false)}
+          lang={lang}
+          onOpenStandardFiling={() => {
+            setIsAgenticModalOpen(false);
+          }}
+        />
+
+        {/* --- SOVEREIGN MATCHING FOOTER (FULL WIDTH EDGE-TO-EDGE) --- */}
+        <PortalFooter t={t} lang={lang} />
           </>
         )}
 

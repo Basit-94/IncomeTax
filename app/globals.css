@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "./d13.css";
 
+@custom-variant dark (&:where(.dark, .dark-mode, .dark *, .dark-mode *));
+
 /* There was a @font-face for a variable font called DIN here, pointing at
    fonts/DINish[slnt,wdth,wght].woff2. That file was never a font: its first
    bytes are eight newlines followed by `<!DOCTYPE html>`, and it is a 305 KB
@@ -38,10 +40,10 @@
   --color-warn-soft: var(--warn-soft-color);
   --color-alarm: var(--alarm-color);
   --color-alarm-soft: var(--alarm-soft-color);
-  --color-navy: var(--text-color);
+  --color-navy: var(--navy-color);
   --color-navy-light: var(--primary-accent);
   --color-navy-dark: var(--navy-dark-override);
-  --color-white: var(--white-override);
+  --color-white: #ffffff;
   --color-slate-50: var(--slate-50-override);
   --color-slate-100: var(--slate-100-override);
   --color-slate-200: var(--slate-200-override);
@@ -92,6 +94,7 @@
     --slate-300-override: #A9A28A;
     --slate-700-override: #1C2233;
     --navy-dark-override: #1C2233;
+    --navy-color: #0F172A;
     --card-radius: 4px;
     /* D13 SS2.3: blue is the accent and link colour; green is reserved for
        confirmed / coming-back semantics (use --d13-green / --flow-keep). */
@@ -121,7 +124,7 @@
     --flow-keep: #149B67;
   }
 
-  .dark-mode {
+  .dark-mode, .dark {
     --bg-color: #12141A;
     --surface-color: #1A1E27;
     --input-color: #171B23;
@@ -132,13 +135,14 @@
     --edge-color: #333B4B;
     --grid-color: #232833;
     --accent-soft-bg: #1B2A3C;
-    --white-override: #1A1E27;
+    --white-override: #ffffff;
     --slate-50-override: #171B23;
     --slate-100-override: #1E2330;
     --slate-200-override: #2A3140;
-    --slate-300-override: #55607A;
+    --slate-300-override: #94A3B8;
     --slate-700-override: #E9ECF2;
     --navy-dark-override: #0D0F14;
+    --navy-color: #1E3A8A;
     --primary-accent: #7FA9D8;
     --primary-accent-deep: #A5C4E4;
     --primary-accent-soft: #1B2A3C;

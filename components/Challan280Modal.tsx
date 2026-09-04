@@ -197,66 +197,66 @@ export function Challan280Modal({ open, onClose, onPaid, amount }: Challan280Mod
 
           <div className="space-y-6 p-6">
             {/* Challan face — the fields a real ITNS 280 carries. */}
-            <section className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5">
+            <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60 p-5">
               <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
                 <div>
-                  <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+                  <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 font-mono">
                     Assessment year
                   </dt>
-                  <dd className="text-sm font-bold text-slate-900 font-mono tabular-nums">
+                  <dd className="text-sm font-bold text-slate-900 dark:text-slate-100 font-mono tabular-nums">
                     AY {ASSESSMENT_YEAR}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+                  <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 font-mono">
                     Financial year
                   </dt>
-                  <dd className="text-sm font-bold text-slate-900 font-mono tabular-nums">
+                  <dd className="text-sm font-bold text-slate-900 dark:text-slate-100 font-mono tabular-nums">
                     FY {FINANCIAL_YEAR}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+                  <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 font-mono">
                     PAN
                   </dt>
-                  <dd className="text-sm font-bold text-slate-900 font-mono">{state.pan}</dd>
+                  <dd className="text-sm font-bold text-slate-900 dark:text-slate-100 font-mono">{state.pan}</dd>
                 </div>
                 <div>
-                  <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+                  <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 font-mono">
                     Assessee
                   </dt>
-                  <dd className="text-sm font-bold text-slate-900">{state.name}</dd>
+                  <dd className="text-sm font-bold text-slate-900 dark:text-slate-100">{state.name}</dd>
                 </div>
                 <div>
-                  <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+                  <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 font-mono">
                     Major head
                   </dt>
-                  <dd className="text-sm font-semibold text-slate-800">
+                  <dd className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                     {CHALLAN_MAJOR_HEAD_LABEL}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+                  <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 font-mono">
                     Minor head
                   </dt>
-                  <dd className="text-sm font-semibold text-slate-800">
+                  <dd className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                     {CHALLAN_MINOR_HEAD_LABEL}
                   </dd>
                 </div>
               </dl>
 
-              <div className="mt-5 space-y-2 border-t border-slate-200 pt-4">
+              <div className="mt-5 space-y-2 border-t border-slate-200 dark:border-slate-800 pt-4">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-600">Tax</span>
-                  <Rupees value={baseTax} className="font-semibold text-slate-900" />
+                  <span className="text-slate-600 dark:text-slate-400">Tax</span>
+                  <Rupees value={baseTax} className="font-semibold text-slate-900 dark:text-slate-100" />
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-600">Health &amp; education cess @ 4%</span>
-                  <Rupees value={cess} className="font-semibold text-slate-900" />
+                  <span className="text-slate-600 dark:text-slate-400">Health &amp; education cess @ 4%</span>
+                  <Rupees value={cess} className="font-semibold text-slate-900 dark:text-slate-100" />
                 </div>
-                <div className="flex items-center justify-between border-t border-slate-300 pt-2.5">
-                  <span className="text-sm font-bold text-slate-900">Total payable</span>
-                  <Rupees value={amountDue} className="text-xl font-extrabold text-slate-950" />
+                <div className="flex items-center justify-between border-t border-slate-300 dark:border-slate-700 pt-2.5">
+                  <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Total payable</span>
+                  <Rupees value={amountDue} className="text-xl font-extrabold text-slate-950 dark:text-white" />
                 </div>
               </div>
             </section>

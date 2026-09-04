@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { ChevronRight, UserCheck, LogOut, ArrowRight, Sparkles } from "lucide-react";
+import { ChevronRight, UserCheck, LogOut, ArrowRight, Sparkles, ShieldCheck } from "lucide-react";
 import type { Dict } from "../lib/i18n";
-import type { Lang, Notice, BankAccount, Persona } from "../lib/types";
+import type { Lang, Notice, BankAccount, Persona, TaxAlreadyPaid } from "../lib/types";
 import type { OnboardingProfile } from "../lib/onboarding";
 import { getPersonalization } from "../lib/onboarding";
 import { PERSONAS } from "../lib/personas";
-import { MockField, MockFill, MOCK } from "@/components/dev/mock-fill";
 import LandingActionGrid from "./landing-action-grid";
 import type { LandingActionCard } from "@/lib/landingCards";
+import type { CitizenVaultUser } from "@/lib/vault/vault-store";
+import { getPortalStrings } from "@/lib/i18n/portalTranslations";
 
 import type { IngestedDocument, SelfAssessmentPayment } from "@/context/TaxReturnContext";
 import type { ReconcileRow } from "./modals/MatchRecordsModal";
@@ -23,9 +24,10 @@ interface LandingProps {
   handlePanSubmit: (e: React.FormEvent) => void;
   onboardingProfile: OnboardingProfile | null;
   onEditOnboarding: () => void;
-  onLaunchPersona?: (personaId: "sunita" | "rakesh" | "priya", directToDashboard?: boolean) => void;
+  onLaunchPersona?: (personaId: "sunita" | "rakesh" | "priya" | "custom", directToDashboard?: boolean) => void;
   onLaunchPan?: (pan: string) => void;
   onLaunchWithForm16?: (doc: IngestedDocument) => void;
+  onNavigateToAuth?: () => void;
   activeCitizen?: {
     name: string;
     pan: string;
@@ -33,12 +35,17 @@ interface LandingProps {
     tds?: number;
     totalTaxesPaid?: number;
     taxDue?: number;
+    grossTax?: number;
+    hasPaidChallan?: boolean;
+    challanPayments?: TaxAlreadyPaid[];
+    taxPaidEntries?: TaxAlreadyPaid[];
     notices?: Notice[];
     banks?: BankAccount[];
     refund?: Persona["refund"];
     hasDiscrepancies?: boolean;
   } | null;
   onResumeReturn?: () => void;
+  onStartFreshFiling?: () => void;
   onLogout?: () => void;
   onApplyReconciliation?: (reconciledRows: ReconcileRow[]) => void;
   onApplyOptimizer?: (
@@ -55,6 +62,8 @@ interface LandingProps {
   onApplyChallan?: (payment: SelfAssessmentPayment) => void;
   onResolveNotice?: (noticeId: string, resolution: "agree" | "disagree", responseStatement?: string) => void;
   currentRegime?: "new" | "old";
+  onOpenVault?: () => void;
+  onSignUpComplete?: (user: CitizenVaultUser) => void;
 }
 
 /** D13 index cards are never perfectly square to the desk. */
@@ -88,8 +97,12 @@ export default function Landing({
   onApplyChallan,
   onResolveNotice,
   currentRegime,
+  onOpenVault,
+  onSignUpComplete,
+  onNavigateToAuth,
+  onStartFreshFiling,
 }: LandingProps) {
-  const isHindi = lang === "hi";
+  const ps = getPortalStrings(lang || "en");
   const personalization = onboardingProfile ? getPersonalization(onboardingProfile) : null;
   const primaryAction = onboardingProfile
     ? t.onboarding.intentCta[onboardingProfile.intent]
@@ -190,102 +203,86 @@ export default function Landing({
       )}
 
       {/* ========================================================================= */}
-      {/* AUTHENTICATED ACTIVE SESSION BANNER vs LOGIN CARD                         */}
+      {/* RETURNING CITIZEN WITH ACTIVE DRAFT vs GUEST PROMPT                       */}
+      {/* (First-time citizens enter directly via Card 01 without banner clutter)   */}
       {/* ========================================================================= */}
-      {activeCitizen ? (
-        <div className="surface-panel rounded-2xl border-2 border-emerald-500/40 bg-gradient-to-br from-emerald-50/80 via-paper to-teal-50/40 dark:from-emerald-950/30 dark:via-paper-2 dark:to-teal-950/20 p-5 sm:p-6 text-start shadow-md animate-in fade-in duration-200">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="relative flex size-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full size-2.5 bg-emerald-500" />
-                </span>
-                <span className="font-mono text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
-                  {isHindi ? "सक्रिय करदाता सत्र (लॉग इन)" : "Active Citizen Session (Logged In)"}
-                </span>
-              </div>
-              <h3 className="font-sans text-xl font-bold text-ink">
-                {isHindi ? `स्वागत है, ${activeCitizen.name}` : `Welcome back, ${activeCitizen.name}`}
-              </h3>
-              <p className="font-mono text-xs text-ink-2">
-                PAN: <span className="font-bold text-ink">{activeCitizen.pan}</span> · {t.shell.taxYear} · {isHindi ? "ड्राफ्ट रिटर्न सक्रिय" : "Draft Return Active"}
-              </p>
-            </div>
+      {(() => {
+        const hasActiveDraft = Boolean(
+          activeCitizen &&
+            ((activeCitizen.salary ?? 0) > 0 ||
+              (activeCitizen.totalTaxesPaid ?? 0) > 0 ||
+              (activeCitizen.taxPaidEntries && activeCitizen.taxPaidEntries.length > 0) ||
+              (activeCitizen.refund && activeCitizen.refund.state !== "not_filed") ||
+              (activeCitizen.refund && (activeCitizen.refund.amount ?? 0) > 0) ||
+              activeCitizen.hasDiscrepancies)
+        );
 
-            <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+        if (hasActiveDraft && activeCitizen) {
+          return (
+            <div className="surface-panel rounded-2xl border-2 border-emerald-500/40 bg-gradient-to-br from-emerald-50/80 via-paper to-teal-50/40 dark:from-emerald-950/30 dark:via-paper-2 dark:to-teal-950/20 p-5 sm:p-6 text-start shadow-md animate-in fade-in duration-200">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="relative flex size-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full size-2.5 bg-emerald-500" />
+                    </span>
+                    <span className="font-mono text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
+                      {ps.activeSession}
+                    </span>
+                  </div>
+                  <h3 className="font-sans text-xl font-bold text-ink">
+                    {`${ps.welcome}, ${activeCitizen.name}`}
+                  </h3>
+                  <p className="font-mono text-xs text-ink-2">
+                    PAN: <span className="font-bold text-ink">{activeCitizen.pan}</span> · {t.shell.taxYear} · {ps.draftActive}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+                  {onResumeReturn && (
+                    <button
+                      type="button"
+                      onClick={onResumeReturn}
+                      className="flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-xl bg-navy px-5 py-2.5 text-xs font-bold text-white shadow-md transition hover:opacity-90 cursor-pointer"
+                    >
+                      <span>{ps.continueFiling}</span>
+                      <ChevronRight size={15} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        if (!activeCitizen && onNavigateToAuth) {
+          return (
+            /* Unauthenticated Guest Banner linking to Dedicated Sign In / Sign Up Page */
+            <div className="surface-panel rounded-2xl border border-line bg-paper-2 p-5 sm:p-6 text-start shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <span className="stamp-chip -rotate-[1deg] text-[10px]">{t.shell.taxYear} · {ps.taxVault}</span>
+                <h3 className="font-sans text-lg sm:text-xl font-bold text-ink">
+                  {ps.guestBannerTitle}
+                </h3>
+                <p className="font-mono text-xs text-ink-2 max-w-[60ch]">
+                  {ps.guestBannerSub}
+                </p>
+              </div>
               <button
                 type="button"
-                onClick={onResumeReturn}
-                className="flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-xl bg-navy px-5 py-2.5 text-xs font-bold text-white shadow-md transition hover:opacity-90 cursor-pointer"
+                onClick={onNavigateToAuth}
+                className="shrink-0 flex items-center gap-2 rounded-xl bg-navy px-5 py-3 text-xs font-bold text-white shadow-md hover:opacity-90 transition cursor-pointer"
               >
-                <span>{isHindi ? "रिटर्न फॉर्म पर जाएं →" : "Continue Filing Return →"}</span>
+                <span>{ps.signInOrRegister}</span>
                 <ChevronRight size={15} />
               </button>
-              {onLogout && (
-                <button
-                  type="button"
-                  onClick={onLogout}
-                  className="px-3.5 py-2.5 text-xs font-medium text-ink-3 hover:text-alarm hover:bg-alarm/10 rounded-xl transition cursor-pointer flex items-center gap-1.5"
-                  title={isHindi ? "सत्र समाप्त करें" : "Clear session and sign out"}
-                >
-                  <LogOut size={13} />
-                  <span>{isHindi ? "लॉग आउट" : "Log out"}</span>
-                </button>
-              )}
             </div>
-          </div>
-        </div>
-      ) : (
-        /* Unauthenticated Login Card */
-        <form onSubmit={handlePanSubmit} className="surface-panel max-w-md space-y-5 p-5 text-start sm:p-6">
-          <div>
-            <label
-              htmlFor={PAN_INPUT_ID}
-              className="mb-2 block font-mono text-xs font-semibold uppercase tracking-wider text-ink-2"
-            >
-              {t.landing.panLabel}
-            </label>
-            <MockField>
-              <input
-                id={PAN_INPUT_ID}
-                ref={panRef}
-                type="text"
-                value={panInput}
-                onChange={(e) => handlePanInputChange(e.target.value)}
-                maxLength={10}
-                placeholder={t.landing.panPlaceholder}
-                inputMode="text"
-                autoCapitalize="characters"
-                autoComplete="off"
-                spellCheck={false}
-                aria-invalid={panInputError ? true : undefined}
-                aria-describedby={panInputError ? `${PAN_ERROR_ID} ${PAN_HELP_ID}` : PAN_HELP_ID}
-                className={`min-h-12 w-full rounded-lg border bg-paper-3 px-4 py-3 text-center font-mono text-lg uppercase tracking-widest text-ink transition-colors ${
-                  panInputError ? "border-alarm" : "border-line focus:border-money"
-                }`}
-              />
-              <MockFill onFill={() => handlePanInputChange(MOCK.pan)} />
-            </MockField>
-            {panInputError && (
-              <p id={PAN_ERROR_ID} role="alert" className="m-0 mt-1.5 text-xs font-medium text-alarm">
-                {panInputError}
-              </p>
-            )}
-            <p id={PAN_HELP_ID} className="m-0 mt-1.5 text-[0.72rem] leading-snug text-ink-3">
-              {t.landing.panHelp}
-            </p>
-          </div>
+          );
+        }
 
-          <button
-            type="submit"
-            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-navy px-4 py-3 font-sans text-sm font-bold text-white shadow-sm transition hover:opacity-90"
-          >
-            <span>{primaryAction}</span>
-            <ChevronRight size={16} aria-hidden="true" className="rtl:rotate-180" />
-          </button>
-        </form>
-      )}
+        return null;
+      })()}
 
       {/* ── 7-Action Capability Grid + Agentic Mode Hero Box ─────────────── */}
       <LandingActionGrid
@@ -296,6 +293,7 @@ export default function Landing({
         onLaunchWithForm16={onLaunchWithForm16}
         activeCitizen={activeCitizen}
         onResumeReturn={onResumeReturn}
+        onStartFreshFiling={onStartFreshFiling}
         onApplyReconciliation={onApplyReconciliation}
         onApplyOptimizer={onApplyOptimizer}
         onApplyChallan={onApplyChallan}

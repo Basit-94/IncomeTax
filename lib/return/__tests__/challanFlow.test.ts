@@ -129,4 +129,37 @@ describe("Card 4 - Pay Tax Due & Challan 280 End-to-End Flow", () => {
     expect(derived.netPayable).toBe(0);
     expect(derived.isSettled).toBe(true);
   });
+
+  it("identifies already-paid self-assessment tax and asserts zero balance due u/s 140A", () => {
+    // A taxpayer who previously paid Challan 280
+    const challanPaidEntry = {
+      id: "sat-0002148-04921",
+      label: "Self-assessment tax paid (Challan 280)",
+      amount: 18_280,
+      section: "140A",
+      provenance: {
+        reporter: "Self — Challan 280",
+        reporterKind: "self" as const,
+        identifier: "BSR 0002148 · serial 04921",
+        filedOn: "2026-06-18",
+        statement: "self" as const,
+        onlyReporterCanFix: false,
+      },
+    };
+
+    const personaWithPaidChallan: Persona = {
+      ...PERSONAS.rakesh,
+      taxPaid: [...PERSONAS.rakesh.taxPaid, challanPaidEntry],
+    };
+
+    const breakdown = computeForPersona(personaWithPaidChallan, "new");
+    const taxDue = Math.max(0, -breakdown.refundOrDue);
+
+    // Tax Due MUST be strictly 0 (settled)
+    expect(taxDue).toBe(0);
+
+    // Has Paid Challan flag is true
+    const hasPaidChallan = personaWithPaidChallan.taxPaid.some((t) => t.section === "140A");
+    expect(hasPaidChallan).toBe(true);
+  });
 });

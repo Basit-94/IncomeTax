@@ -1,8 +1,9 @@
 "use client";
 
-import { Settings, Sun, Moon, LayoutGrid, FileText, LogOut, User } from "lucide-react";
+import { Settings, Sun, Moon, LayoutGrid, FileText, LogOut, User, ShieldCheck, Sparkles } from "lucide-react";
 import { type Dict } from "../../lib/i18n";
 import type { Lang } from "../../lib/types";
+import { getPortalStrings } from "@/lib/i18n/portalTranslations";
 import { LogoMark } from "../brand/logo";
 import LanguageMenu from "../ui/language-menu";
 
@@ -22,13 +23,14 @@ interface PortalHeaderProps {
   showLanguage?: boolean;
   /** Simple/Detailed switch - shown only while a return is open. The header is
       the ONE control for this task (user directive 2026-08-29). */
-  mode?: "simple" | "full";
-  onModeChange?: (mode: "simple" | "full") => void;
+  mode?: "agentic" | "manual" | "simple" | "full";
+  onModeChange?: (mode: "agentic" | "manual") => void;
   /** Authenticated citizen session */
   activeCitizen?: { name: string; pan: string } | null;
   currentView?: "hub" | "dashboard";
   onViewChange?: (view: "hub" | "dashboard") => void;
   onLogout?: () => void;
+  onOpenVault?: () => void;
 }
 
 export default function PortalHeader({
@@ -41,28 +43,29 @@ export default function PortalHeader({
   setShowConsole,
   onLogoClick,
   showLanguage = true,
-  mode,
+  mode = "manual",
   onModeChange,
   activeCitizen,
   currentView,
   onViewChange,
   onLogout,
+  onOpenVault,
 }: PortalHeaderProps) {
-  const isHindi = lang === "hi";
+  const ps = getPortalStrings(lang);
 
   return (
     <header className="border-b border-line bg-paper text-ink z-10 relative print:hidden">
       {/* Top small banner */}
-      <div className="bg-navy-dark px-4 py-2 text-[0.68rem] flex items-center justify-between font-mono text-paper/70">
+      <div className="bg-[#0a101d] dark:bg-[#060a14] border-b border-white/10 px-4 py-1.5 text-[0.68rem] flex items-center justify-between font-mono text-slate-300 dark:text-slate-300">
         <span className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-navy" aria-hidden="true" />
-          <span>{t.shell.independent}</span>
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" aria-hidden="true" />
+          <span className="font-semibold">{t.shell.independent}</span>
         </span>
-        <span className="hidden md:inline">{t.shell.taxYear}</span>
+        <span className="hidden md:inline font-semibold">{t.shell.taxYear}</span>
       </div>
       
       <div className="px-4 py-3.5 max-w-6xl mx-auto w-full space-y-3">
-        {/* Row 1: brand left, Hub/Return switch in middle if logged in, Simple/Detailed switch in the top-right */}
+        {/* Row 1: brand left, Hub/Return switch in middle if logged in, Agentic/Manual switch in top-right */}
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5">
           <div className="flex min-w-0 items-center space-x-3">
             <button
@@ -91,7 +94,7 @@ export default function PortalHeader({
                 }`}
               >
                 <LayoutGrid size={13} />
-                <span>{isHindi ? "सेवा हब (7 कार्ड)" : "Portal Hub"}</span>
+                <span>{ps.portalHub}</span>
               </button>
               <button
                 type="button"
@@ -103,35 +106,43 @@ export default function PortalHeader({
                 }`}
               >
                 <FileText size={13} />
-                <span>{isHindi ? "मेरा रिटर्न (ITR-1)" : "My Return"}</span>
+                <span>{ps.myReturn}</span>
               </button>
             </div>
           )}
 
-          {/* Simple vs Detailed mode switch */}
-          {mode && onModeChange && (
-            <div className="seg ms-auto" role="group" aria-label={t.onboarding.modeQuestion}>
-              {(["simple", "full"] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  className="min-h-[38px] px-3 text-xs"
-                  aria-pressed={mode === m}
-                  onClick={() => mode !== m && onModeChange(m)}
-                >
-                  {m === "simple" ? t.common.modeSimple : t.common.modeDetailed}
-                </button>
-              ))}
+          {/* Agentic vs Manual mode switch */}
+          {onModeChange && (
+            <div className="seg ms-auto" role="group" aria-label={ps.filingMode}>
+              {(["agentic", "manual"] as const).map((m) => {
+                const isSelected = mode === m || (m === "manual" && (mode === "full" || !mode));
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    className="min-h-[38px] px-3 text-xs flex items-center gap-1.5"
+                    aria-pressed={isSelected}
+                    onClick={() => onModeChange(m)}
+                  >
+                    {m === "agentic" && <Sparkles size={12} className="text-amber-500" />}
+                    <span>
+                      {m === "agentic" ? ps.agentic : ps.manual}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
 
-        {/* Row 2: citizen identity badge, language, theme, and sandbox controls */}
+        {/* Row 2: citizen identity badge, Tax Vault, language, theme */}
         <div className="flex flex-wrap items-center gap-2.5 justify-end pt-1 border-t border-line/40">
           {/* Authenticated Citizen Badge */}
           {activeCitizen && (
             <div className="me-auto flex items-center gap-2">
-              <div className="flex items-center gap-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800/60 px-2.5 py-1 text-xs">
+              <div
+                className="flex items-center gap-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800/60 px-2.5 py-1 text-xs"
+              >
                 <span className="size-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                 <span className="font-bold text-emerald-900 dark:text-emerald-200 max-w-[140px] truncate">
                   {activeCitizen.name}
@@ -145,13 +156,26 @@ export default function PortalHeader({
                   type="button"
                   onClick={onLogout}
                   className="px-2 py-1 text-[11px] font-semibold text-ink-3 hover:text-alarm hover:bg-alarm/10 rounded-lg transition flex items-center gap-1 cursor-pointer"
-                  title={isHindi ? "लॉग आउट करें / दूसरा करदाता चुनें" : "Log out / Switch taxpayer"}
+                  title={ps.logOut}
                 >
                   <LogOut size={12} />
-                  <span>{isHindi ? "लॉग आउट" : "Log out"}</span>
+                  <span>{ps.logOut}</span>
                 </button>
               )}
             </div>
+          )}
+
+          {/* Citizen Tax Vault Button */}
+          {onOpenVault && (
+            <button
+              type="button"
+              onClick={onOpenVault}
+              className="px-2.5 py-1.5 bg-gradient-to-r from-amber-500/15 via-emerald-500/10 to-amber-500/15 border border-amber-400/40 hover:border-amber-400/80 rounded-lg text-ink hover:text-amber-700 dark:hover:text-amber-300 transition-colors flex items-center gap-1.5 text-xs font-mono font-bold cursor-pointer shadow-xs"
+              title={ps.taxVault}
+            >
+              <ShieldCheck size={14} className="text-amber-500" />
+              <span>{ps.taxVault}</span>
+            </button>
           )}
 
           {showLanguage && (

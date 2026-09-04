@@ -27,7 +27,7 @@
   --disp:'Space Grotesk',system-ui,sans-serif; --serif:'Source Serif 4',Georgia,serif;
   --mono:'JetBrains Mono',ui-monospace,monospace; --hand:'Caveat',cursive;
 }
-.dark-mode{
+.dark-mode, .dark{
   --paper:#12141A; --grid:#232833; --card:#1A1E27; --card-2:#171B23;
   --ink:#E9ECF2; --ink-2:#B0B6C4; --ink-3:#8890A0;
   --edge:#333B4B; --hair:#282E3A;
@@ -301,7 +301,7 @@ main{max-width:1080px;margin:0 auto;padding:0 24px}
   transition:opacity .2s}
 .file:disabled{background:var(--hair);color:var(--ink-3);cursor:not-allowed}
 .file .pg{position:absolute;inset-inline-start:0;bottom:0;height:3px;background:var(--keep);width:0}
-footer{max-width:1080px;margin:0 auto;padding:22px 24px 40px;color:var(--ink-3);font-size:13px}
+footer{width:100%;margin-left:0;margin-right:0;margin-bottom:0;color:var(--ink-3);font-size:13px}
 .tag{position:fixed;left:12px;bottom:12px;z-index:60;font-family:var(--mono);font-size:10px;
   letter-spacing:.14em;text-transform:uppercase;background:var(--ink);color:var(--paper);padding:7px 11px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}

@@ -27,3 +27,6 @@ video/
 
 # Local data & SQLite databases
 data/
+
+# Playwright MCP temp artifacts
+.playwright-mcp/

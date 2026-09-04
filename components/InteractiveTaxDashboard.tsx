@@ -44,6 +44,7 @@ import {
   ArrowRight,
   Banknote,
   CheckCheck,
+  ShieldCheck,
 } from "lucide-react";
 import {
   useTax,
@@ -57,6 +58,9 @@ import { AuditRiskRadar } from "./AuditRiskRadar";
 import { DefectiveNoticeCard } from "./DefectiveNoticeCard";
 import { PdfIngestionDropzone } from "./PdfIngestionDropzone";
 import { Challan280Modal } from "./Challan280Modal";
+import CitizenVaultModal from "./vault/citizen-vault-modal";
+import { getSeededVaultForPersona, type CitizenVaultUser } from "@/lib/vault/vault-store";
+import { PERSONAS } from "@/lib/personas";
 import { Rupees } from "./Rupees";
 import { AnimatedAmount } from "./ui/animated-amount";
 import { MockField, MockFill, MOCK } from "@/components/dev/mock-fill";
@@ -267,6 +271,8 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
   });
   const [showItrV, setShowItrV] = useState(false);
   const [challanOpen, setChallanOpen] = useState(false);
+  const [isVaultOpen, setIsVaultOpen] = useState(false);
+  const [vaultUser, setVaultUser] = useState<CitizenVaultUser>(() => getSeededVaultForPersona(PERSONAS.priya));
   const [lang, setLang] = useState<Lang>("EN");
 
   const t = TRANSLATIONS[lang];
@@ -335,20 +341,20 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
   const answered = progress.confirmed + progress.disputed;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-32 text-slate-800 font-sans selection:bg-teal-500/20 antialiased">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0D0F14] pb-32 text-slate-800 dark:text-slate-100 font-sans selection:bg-teal-500/20 antialiased">
       {/* Sticky top header */}
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-6 py-4 shadow-sm print:hidden">
+      <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-6 py-4 shadow-sm print:hidden">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <LogoLink size="sm" className="mb-1" />
-            <span className="text-[10px] font-bold tracking-widest text-teal-800 uppercase block">
+            <span className="text-[10px] font-bold tracking-widest text-teal-800 dark:text-teal-400 uppercase block">
               {t.eyebrow}
             </span>
-            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
+            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
               <span>{t.title}</span>
-              <Sparkles size={18} className="text-teal-700" />
+              <Sparkles size={18} className="text-teal-700 dark:text-teal-400" />
             </h1>
-            <p className="text-xs text-slate-500 max-w-xl">{t.sub}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl">{t.sub}</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -358,14 +364,14 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
               aria-label="Language"
               value={lang}
               onChange={(e) => setLang(e.target.value as Lang)}
-              className="bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-700 cursor-pointer"
+              className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer"
             >
               <option value="EN">English</option>
               <option value="HI">{"हिन्दी"}</option>
               <option value="TA">{"தமிழ்"}</option>
             </select>
 
-            <div className="bg-slate-100 p-0.5 rounded-lg flex border border-slate-200">
+            <div className="bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg flex border border-slate-200 dark:border-slate-700">
               {(["NEW", "OLD"] as const).map((regime) => (
                 <button
                   key={regime}
@@ -373,7 +379,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                   className={`px-3.5 py-1 text-xs font-bold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
                     activeRegime === regime
                       ? "bg-teal-800 text-white shadow-xs"
-                      : "text-slate-500 hover:text-slate-900"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
                   <span>{regime === "NEW" ? t.newRegime : t.oldRegime}</span>
@@ -398,6 +404,15 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
               className="px-3 py-1.5 border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-lg transition cursor-pointer inline-flex items-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <RotateCcw size={12} /> {t.undo}
+            </button>
+
+            <button
+              onClick={() => setIsVaultOpen(true)}
+              className="px-3 py-1.5 border border-amber-300 bg-gradient-to-r from-amber-50 to-emerald-50 text-amber-900 hover:border-amber-500 text-xs font-bold rounded-lg transition cursor-pointer inline-flex items-center gap-1.5 shadow-xs"
+              title="Encrypted Tax Vault"
+            >
+              <ShieldCheck size={14} className="text-amber-600" />
+              <span>Tax Vault</span>
             </button>
 
             {onLogOut && (
@@ -687,9 +702,9 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                                   onChange={(e) =>
                                     setDraft((d) => ({ ...d, amount: e.target.value }))
                                   }
-                                  className="w-full px-4 py-2.5 bg-white border border-slate-250 rounded-xl text-sm font-mono tabular-nums font-semibold text-slate-900 focus:ring-2 focus:ring-teal-700 focus:outline-none transition-all"
+                                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-xl text-sm font-mono tabular-nums font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-700 focus:outline-none transition-all"
                                 />
-                                <p className="text-[11px] text-slate-500">
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
                                   Nothing is committed until you save. The department
                                   keeps <Rupees value={fact.reportedAmount} /> on its side
                                   of the row either way.
@@ -699,7 +714,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                               <div className="space-y-1.5">
                                 <label
                                   htmlFor={`code-${fact.id}`}
-                                  className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block"
+                                  className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block"
                                 >
                                   {t.disputeCodeLabel}
                                 </label>
@@ -712,7 +727,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                                       feedbackCode: e.target.value as AISFeedbackCode,
                                     }))
                                   }
-                                  className="w-full px-4 py-2.5 bg-white border border-slate-250 rounded-xl text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-teal-700 focus:outline-none transition-all cursor-pointer"
+                                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-700 focus:outline-none transition-all cursor-pointer"
                                 >
                                   {DISPUTE_FEEDBACK_CODES.map((code) => (
                                     <option key={code} value={code}>
@@ -892,6 +907,13 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
       </footer>
 
       <Challan280Modal open={challanOpen} onClose={() => setChallanOpen(false)} />
+      <CitizenVaultModal
+        isOpen={isVaultOpen}
+        onClose={() => setIsVaultOpen(false)}
+        vaultUser={vaultUser}
+        onUpdateUser={setVaultUser}
+        lang={lang.toLowerCase()}
+      />
     </div>
   );
 }

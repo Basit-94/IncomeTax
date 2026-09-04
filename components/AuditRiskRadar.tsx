@@ -59,15 +59,15 @@ function FindingRow({ finding }: { finding: CassRowFinding }) {
   };
 
   return (
-    <li className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/80 px-4 py-3">
+    <li className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/80 dark:bg-slate-800/80 px-4 py-3">
       <div className="min-w-0 space-y-0.5">
-        <p className="truncate text-xs font-bold text-slate-900">{finding.label}</p>
-        <p className="text-[11px] text-slate-600">
+        <p className="truncate text-xs font-bold text-slate-900 dark:text-slate-100">{finding.label}</p>
+        <p className="text-[11px] text-slate-600 dark:text-slate-300">
           <Rupees value={finding.reportedAmount} className="font-semibold" /> reported
           {finding.reportedBy ? ` by ${finding.reportedBy}` : ""} ·{" "}
           <Rupees value={finding.declaredAmount} className="font-semibold" /> declared
           {" · "}
-          <span className="font-mono font-bold tabular-nums text-amber-800">
+          <span className="font-mono font-bold tabular-nums text-amber-800 dark:text-amber-300">
             {Math.round(finding.variance * 100)}% lower
           </span>
         </p>
@@ -123,14 +123,14 @@ export function AuditRiskRadar({ quietWhenClear = false }: AuditRiskRadarProps =
       data-testid="cass-radar"
       data-risk={cass.riskLevel}
       className={`overflow-hidden rounded-2xl border p-5 transition-colors ${
-        isHigh ? "border-amber-300 bg-amber-50/70" : "border-slate-200 bg-white"
+        isHigh ? "border-amber-300 bg-amber-50/70 dark:bg-amber-950/40 dark:border-amber-800" : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
       }`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <span
             className={`mt-0.5 rounded-lg p-2 ${
-              isHigh ? "bg-amber-200 text-amber-800" : "bg-slate-100 text-slate-500"
+              isHigh ? "bg-amber-200 dark:bg-amber-900 text-amber-800 dark:text-amber-200" : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
             }`}
           >
             {isHigh ? <TriangleAlert size={16} /> : <Radar size={16} />}
@@ -138,7 +138,7 @@ export function AuditRiskRadar({ quietWhenClear = false }: AuditRiskRadarProps =
           <div className="space-y-1">
             <h3
               className={`text-sm font-extrabold ${
-                isHigh ? "text-amber-950" : "text-slate-900"
+                isHigh ? "text-amber-950 dark:text-amber-200" : "text-slate-900 dark:text-slate-100"
               }`}
             >
               {isHigh
@@ -147,7 +147,7 @@ export function AuditRiskRadar({ quietWhenClear = false }: AuditRiskRadarProps =
             </h3>
             <p
               className={`max-w-2xl text-xs leading-relaxed ${
-                isHigh ? "text-amber-900" : "text-slate-500"
+                isHigh ? "text-amber-900 dark:text-amber-300" : "text-slate-500 dark:text-slate-400"
               }`}
             >
               {isHigh ? (

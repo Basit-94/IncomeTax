@@ -137,7 +137,7 @@ export default function DisputeModal({
                 {disputeTarget === "tax" ? (
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                      <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5 font-mono">
                         What was the actual TDS deducted?
                       </label>
                       <MockField>
@@ -146,14 +146,14 @@ export default function DisputeModal({
                         placeholder="Enter actual TDS amount (e.g. 0)"
                         value={disputeAmount}
                         onChange={(e) => setDisputeAmount(e.target.value)}
-                        className="w-full px-3 py-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-700 focus:outline-none"
+                        className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-paper-3 text-ink focus:ring-2 focus:ring-money focus:outline-none"
                       />
                         <MockFill onFill={() => setDisputeAmount(String(MOCK.savingsInterest))} />
                       </MockField>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                      <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5 font-mono">
                         Reason for discrepancy
                       </label>
                       <select
@@ -162,7 +162,7 @@ export default function DisputeModal({
                           setDisputeReason(e.target.value);
                           setDisputeFeedbackCode(TDS_REASON_CODE[e.target.value] ?? "CODE_3");
                         }}
-                        className="w-full px-3 py-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-700 focus:outline-none"
+                        className="w-full px-3 py-2 border border-line rounded-lg text-sm bg-paper-3 text-ink focus:ring-2 focus:ring-money focus:outline-none cursor-pointer"
                       >
                         <option value="Amount differs from Form 26AS/AIS">
                           Amount differs from my Form 16 / 26AS
