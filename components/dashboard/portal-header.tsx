@@ -1,10 +1,11 @@
 "use client";
 
-import { Sun, Moon, LayoutGrid, FileText, LogOut, User, ShieldCheck, Sparkles } from "lucide-react";
+import { Sun, Moon, LayoutGrid, FileText, LogOut, User, ShieldCheck } from "lucide-react";
 import { type Dict } from "../../lib/i18n";
 import type { Lang } from "../../lib/types";
 import { getPortalStrings } from "@/lib/i18n/portalTranslations";
-import { LogoMark } from "../brand/logo";
+import { agenticStrings } from "@/lib/i18n/agenticStrings";
+import { HeaderBar, PrototypeBanner } from "../agentic/header-frame";
 import LanguageMenu from "../ui/language-menu";
 
 interface PortalHeaderProps {
@@ -96,109 +97,80 @@ export default function PortalHeader({
     );
   }
 
+  // The same frame the Agentic surfaces use, so the Agentic/Manual switch sits at the
+  // identical x/y on every route (user directive 2026-09-05).
+  const workMode = mode === "agentic" ? "agentic" : "manual";
+  const hubReturnSwitcher = activeCitizen && onViewChange && (
+    <div className="hidden md:flex items-center gap-1 rounded-xl border border-line bg-paper-2 p-1 font-sans text-xs shrink-0">
+      <button
+        type="button"
+        onClick={() => onViewChange("hub")}
+        className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition cursor-pointer ${
+          currentView === "hub"
+            ? "bg-paper text-money shadow-sm border border-line"
+            : "text-ink-2 hover:text-ink"
+        }`}
+      >
+        <LayoutGrid size={13} />
+        <span>{ps.portalHub}</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => onViewChange("dashboard")}
+        className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition cursor-pointer ${
+          currentView === "dashboard"
+            ? "bg-paper text-money shadow-sm border border-line"
+            : "text-ink-2 hover:text-ink"
+        }`}
+      >
+        <FileText size={13} />
+        <span>{ps.myReturn}</span>
+      </button>
+    </div>
+  );
+
   return (
     <header className="border-b border-line bg-paper text-ink z-30 relative print:hidden">
-      {/* Top small banner */}
-      <div className="bg-[#0a101d] dark:bg-[#060a14] border-b border-white/10 px-4 py-1.5 text-[0.68rem] flex items-center justify-between font-mono text-slate-300 dark:text-slate-300">
-        <span className="flex items-center gap-2">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" aria-hidden="true" />
-          <span className="font-semibold">{t.shell.independent}</span>
-        </span>
-        <span className="hidden md:inline font-semibold">{t.shell.taxYear}</span>
-      </div>
+      <PrototypeBanner t={t} />
 
-      <div className="px-4 py-2.5 sm:py-3 max-w-6xl mx-auto w-full space-y-2.5">
-        {/* Row 1: brand left, Hub/Return switch in middle if logged in (desktop), Agentic/Manual switch in top-right */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center space-x-3 shrink-0">
-            <button
-              onClick={onLogoClick}
-              className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left bg-transparent border-0 p-0 cursor-pointer"
-            >
-              <LogoMark t={t} size="md" />
-            </button>
-            <div className="h-6 w-[1px] bg-line hidden md:block" />
-            <div className="space-y-0.5 hidden sm:block">
-              <h1 className="font-bold text-sm tracking-wide text-ink">{t.shell.subtitle}</h1>
+      {/* Row 1: the shared frame — brand box, Agentic/Manual switch, subtitle; theme toggle right */}
+      <HeaderBar
+        t={t}
+        s={agenticStrings(lang)}
+        mode={workMode}
+        onModeChange={(m) => onModeChange?.(m)}
+        onBrandClick={onLogoClick}
+        after={
+          <div className="hidden md:flex items-center gap-3 min-w-0">
+            <div className="h-6 w-[1px] bg-line" />
+            <div className="space-y-0.5 min-w-0">
+              <h1 className="font-bold text-sm tracking-wide text-ink truncate">{t.shell.subtitle}</h1>
               <p className="text-[0.65rem] text-ink-2 tracking-wider">{t.shell.taxYear}</p>
             </div>
           </div>
-
-          {/* Desktop Logged-in Hub / Return Switcher */}
-          {activeCitizen && onViewChange && (
-            <div className="hidden md:flex items-center gap-1 rounded-xl border border-line bg-paper-2 p-1 font-sans text-xs">
-              <button
-                type="button"
-                onClick={() => onViewChange("hub")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition cursor-pointer ${
-                  currentView === "hub"
-                    ? "bg-paper text-money shadow-sm border border-line"
-                    : "text-ink-2 hover:text-ink"
-                }`}
-              >
-                <LayoutGrid size={13} />
-                <span>{ps.portalHub}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onViewChange("dashboard")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition cursor-pointer ${
-                  currentView === "dashboard"
-                    ? "bg-paper text-money shadow-sm border border-line"
-                    : "text-ink-2 hover:text-ink"
-                }`}
-              >
-                <FileText size={13} />
-                <span>{ps.myReturn}</span>
-              </button>
-            </div>
+        }
+      >
+        {/* Desktop Theme Toggler */}
+        <button
+          onClick={toggleTheme}
+          className="hidden sm:flex px-2.5 py-1.5 bg-paper-2 border border-line rounded text-ink-2 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors items-center gap-1.5 text-xs font-mono cursor-pointer"
+          aria-label={theme === "dark" ? t.shell.light : t.shell.dark}
+        >
+          {theme === "dark" ? (
+            <>
+              <Sun size={14} className="text-money" />
+              <span className="hidden lg:inline">{t.shell.light}</span>
+            </>
+          ) : (
+            <>
+              <Moon size={14} className="text-money" />
+              <span className="hidden lg:inline">{t.shell.dark}</span>
+            </>
           )}
+        </button>
+      </HeaderBar>
 
-          {/* Agentic vs Manual mode switch + desktop theme toggle */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            {onModeChange && (
-              <div className="seg" role="group" aria-label={ps.filingMode}>
-                {(["agentic", "manual"] as const).map((m) => {
-                  const isSelected = mode === m || (m === "manual" && (mode === "full" || !mode));
-                  return (
-                    <button
-                      key={m}
-                      type="button"
-                      className="min-h-[34px] sm:min-h-[38px] px-2.5 sm:px-3 text-xs flex items-center gap-1.5"
-                      aria-pressed={isSelected}
-                      onClick={() => onModeChange(m)}
-                    >
-                      {m === "agentic" && <Sparkles size={12} className="text-amber-500" />}
-                      <span>
-                        {m === "agentic" ? ps.agentic : ps.manual}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Desktop Theme Toggler */}
-            <button
-              onClick={toggleTheme}
-              className="hidden sm:flex px-2.5 py-1.5 bg-paper-2 border border-line rounded text-ink-2 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors items-center gap-1.5 text-xs font-mono cursor-pointer"
-              aria-label={theme === "dark" ? t.shell.light : t.shell.dark}
-            >
-              {theme === "dark" ? (
-                <>
-                  <Sun size={14} className="text-money" />
-                  <span className="hidden lg:inline">{t.shell.light}</span>
-                </>
-              ) : (
-                <>
-                  <Moon size={14} className="text-money" />
-                  <span className="hidden lg:inline">{t.shell.dark}</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
+      <div className="px-4 pb-2.5 sm:pb-3 max-w-6xl mx-auto w-full space-y-2.5">
         {/* Mobile Logged-in Hub / Return Switcher (< md) */}
         {activeCitizen && onViewChange && (
           <div className="flex md:hidden items-center rounded-xl border border-line bg-paper-2 p-1 font-sans text-xs w-full">
@@ -229,8 +201,9 @@ export default function PortalHeader({
           </div>
         )}
 
-        {/* Row 2: Citizen identity badge on left, Action buttons on right */}
+        {/* Row 2: Hub/Return switcher (desktop) + citizen identity badge on left, Action buttons on right */}
         <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-line/40">
+          {hubReturnSwitcher}
           {/* Authenticated Citizen Badge */}
           {activeCitizen ? (
             <div className="flex items-center gap-2 min-w-0">

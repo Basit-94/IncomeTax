@@ -21,6 +21,8 @@
 import { PERIOD_FY_2025_26 } from "../knowledge/provisions";
 import { evaluateSalariedSlice } from "../knowledge/applicability";
 import { cite } from "../knowledge/retrieval";
+import { answerTaxQuestion } from "../knowledge/rag";
+import { assessAdvice } from "../knowledge/advice";
 import type { TaxpayerFacts } from "../knowledge/types";
 import { CURRENT_VERSION } from "../return/persist";
 import { applyReturnCommand, type ReturnCommand } from "../return/commands";
@@ -32,10 +34,11 @@ import type { Lang, Persona } from "../types";
 import { formatMoney } from "../money";
 import type { VaultService } from "../vault/service";
 import { KNOWLEDGE_RELEASE } from "./flags";
+import { hasIntakeSignal, intakeAcknowledgement, isDocumentAnswer, nextIntakeQuestion, parseSituation } from "./intake";
 import type { ModelAdapter } from "./model";
-import { buildPlan, classifyByRules, nextStep, setStep, taskTitle, type PlanningFacts } from "./planner";
+import { buildPlan, classifyByRules, isTaxInformationQuestion, nextStep, setStep, taskTitle, type PlanningFacts } from "./planner";
 import { redactText, stripInjection } from "./redact";
-import { recommendationText, regimeName, say, strings } from "./response";
+import { recommendationText, regimeName, strings } from "./response";
 import { newId, snapshotHash, type RunStore } from "./store";
 import { personaForOwner, runTool, type ToolContext } from "./tools";
 import type { PlanStep, Question, ReviewCard, Run, RunEventPayload, RunStatus, RunTask, SourceRef, runBudget } from "./types";
@@ -133,6 +136,8 @@ export async function advance(deps: RuntimeDeps, owner: Owner, runId: string, in
         run.state.pendingCard = undefined;
         run.state.pendingQuestion = undefined;
         run.state.pendingCommands = undefined;
+        run.state.advice = undefined;
+        run.state.taxAnswer = undefined;
         run.state.steps = buildPlan(planningFacts("explain", null, null), s);
         run.status = "running";
       }
@@ -173,7 +178,7 @@ export async function advance(deps: RuntimeDeps, owner: Owner, runId: string, in
 
       switch (step.id) {
         case "classify":
-          await stepClassify(deps, owner, run, s);
+          await stepClassify(deps, owner, run, s, emit);
           break;
         case "plan": {
           run.state.steps = buildPlan(planningFacts(run.task, null, deps.vault ? true : null), s, run.state.steps);
@@ -233,10 +238,18 @@ export async function cancelRun(deps: RuntimeDeps, owner: Owner, runId: string):
 
 /* ------------------------------------------------------------------ steps -- */
 
-async function stepClassify(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnType<typeof strings>) {
+async function stepClassify(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>) {
   const text = run.state.lastUserMessage ?? "";
   let task = classifyByRules(text);
-  if (text && deps.model.name !== "none") {
+  // Plain-English intake: what the sentence says about the situation, parsed deterministically.
+  if (text) {
+    run.state.situation = parseSituation(text);
+    // A salaried situation that asks for the "best play" is a comparison-plus-filing job, not a lookup.
+    if (task === "explain" && run.state.situation.employment && !run.state.situation.business && (run.state.situation.wantsFiling || run.state.situation.wantsBest)) {
+      task = "prepare_salaried_return";
+    }
+  }
+  if (text && deps.model.name !== "none" && !isTaxInformationQuestion(text)) {
     run.state.usage.modelCalls += 1;
     const guess = await deps.model.classify(text, run.lang);
     if (guess) {
@@ -248,6 +261,10 @@ async function stepClassify(deps: RuntimeDeps, owner: Owner, run: Run, s: Return
   run.task = task;
   run.title = text ? run.title : taskTitle(task, s);
   run.state.steps = buildPlan(planningFacts(task, null, deps.vault ? true : null), s, setStep(run.state.steps, "classify", "done"));
+  // Say what was understood before asking anything (§5.8: the citizen should never wonder what the agent is doing).
+  if (run.state.situation && hasIntakeSignal(run.state.situation) && task !== "explain") {
+    await emit({ type: "message", role: "assistant", text: intakeAcknowledgement(run.state.situation, s, run.lang) });
+  }
 }
 
 async function ensureSnapshot(deps: RuntimeDeps, owner: Owner, run: Run): Promise<VersionedReturn | null> {
@@ -296,6 +313,8 @@ function blankPersona(owner: Owner): Persona {
 }
 
 async function stepGather(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>) {
+  // Public rule questions need neither a private document read nor a new return snapshot.
+  if (run.task === "explain") return;
   const snapshot = await ensureSnapshot(deps, owner, run);
   if (!snapshot) {
     await emit({ type: "message", role: "assistant", text: s.errorGeneric });
@@ -304,7 +323,7 @@ async function stepGather(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnTy
   }
   run.state.returnRevision = snapshot.revision;
   const sources: SourceRef[] = [];
-  const ctx: ToolContext = { owner, runId: run.id, assessmentYear: AY, vault: deps.vault, returns: deps.returns, store: deps.store };
+  const ctx: ToolContext = { owner, runId: run.id, assessmentYear: AY, vault: deps.vault, returns: deps.returns, store: deps.store, today: deps.today() };
 
   const listed = await runTool("list_vault_documents", {}, ctx);
   run.state.usage.toolCalls += 1;
@@ -325,38 +344,66 @@ async function stepGather(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnTy
           metadataOnlyNoted = true;
           await emit({ type: "activity", text: s.metadataOnly });
         }
-        if (d.docType === "FORM_16" && d.hasOriginal) {
-          const read = await runTool("read_document_fields", { documentId: d.id }, ctx);
-          run.state.usage.toolCalls += 1;
-          if (read.ok) {
-            const rr = read.result as { readable?: boolean; fields?: { grossSalary?: number; tds?: number }; issues?: string[]; subjectMatchesOwner?: boolean };
-            const suspicious = (rr.issues ?? []).some((i) => stripInjection(i).suspicious);
-            if (suspicious) await emit({ type: "message", role: "assistant", text: s.injectionNotice });
-            if (rr.readable && rr.fields && rr.subjectMatchesOwner !== false) {
-              const salary = snapshot.state.baselinePersona.facts.find((f) => f.kind === "salary")?.amount;
-              const tds = snapshot.state.baselinePersona.taxPaid.find((t) => t.section.includes("192"))?.amount;
-              if ((rr.fields.grossSalary !== undefined && rr.fields.grossSalary !== salary) || (rr.fields.tds !== undefined && rr.fields.tds !== tds)) {
-                run.state.pendingCommands = [
-                  ...(run.state.pendingCommands ?? []),
-                  { type: "import_document", today: deps.today(), document: { fileName: "document.pdf", kind: "FORM_16", ingestedAt: deps.clock(), extracted: { grossSalary: rr.fields.grossSalary, tds: rr.fields.tds } } },
-                ];
-              }
-            }
-            await emit({ type: "tool_outcome", tool: "read_document_fields", ok: true, summary: rr.readable ? "fields read" : "not readable" });
-          }
-        }
+        if (d.docType === "FORM_16" && d.hasOriginal) await stageForm16(deps, run, ctx, snapshot, d.id, s, emit);
       }
     }
+    run.state.documentTypes = r.documents.map((d) => d.docType);
   }
   run.state.sources = dedupeSources([...run.state.sources, ...sources]);
   await emit({ type: "source_lookup", sources: run.state.sources });
   run.state.steps = buildPlan(planningFacts(run.task, snapshot, documentsAvailable), s, run.state.steps);
 }
 
+/** Read a stored Form 16 and stage an import when its figures differ from the employer's prefill. */
+async function stageForm16(deps: RuntimeDeps, run: Run, ctx: ToolContext, snapshot: VersionedReturn, documentId: string, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>) {
+  const read = await runTool("read_document_fields", { documentId }, ctx);
+  run.state.usage.toolCalls += 1;
+  if (!read.ok) return;
+  const rr = read.result as { readable?: boolean; fields?: { grossSalary?: number; tds?: number }; issues?: string[]; subjectMatchesOwner?: boolean };
+  const suspicious = (rr.issues ?? []).some((i) => stripInjection(i).suspicious);
+  if (suspicious) await emit({ type: "message", role: "assistant", text: s.injectionNotice });
+  if (rr.readable && rr.fields && rr.subjectMatchesOwner !== false) {
+    const salary = snapshot.state.baselinePersona.facts.find((f) => f.kind === "salary")?.amount;
+    const tds = snapshot.state.baselinePersona.taxPaid.find((t) => t.section.includes("192"))?.amount;
+    const already = (run.state.pendingCommands ?? []).some((c) => c.type === "import_document");
+    if (!already && ((rr.fields.grossSalary !== undefined && rr.fields.grossSalary !== salary) || (rr.fields.tds !== undefined && rr.fields.tds !== tds))) {
+      run.state.pendingCommands = [
+        ...(run.state.pendingCommands ?? []),
+        { type: "import_document", today: deps.today(), document: { fileName: "document.pdf", kind: "FORM_16", ingestedAt: deps.clock(), extracted: { grossSalary: rr.fields.grossSalary, tds: rr.fields.tds } } },
+      ];
+    }
+  }
+  await emit({ type: "tool_outcome", tool: "read_document_fields", ok: true, summary: rr.readable ? "fields read" : "not readable" });
+}
+
+/** A document the citizen just uploaded in answer to a question: record it as a source, read it if it is a Form 16. */
+async function recordUploadedDocument(deps: RuntimeDeps, owner: Owner, run: Run, snapshot: VersionedReturn, documentId: string, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>) {
+  if (!deps.vault) return false;
+  const meta = await deps.vault.getMeta(owner, documentId, "agent", run.id);
+  if (!meta) return false;
+  run.state.sources = dedupeSources([
+    ...run.state.sources,
+    { kind: "document", id: meta.id, label: meta.title, detail: meta.provenance, verified: meta.provenance === "uploaded" && meta.hasBytes, url: meta.hasBytes ? `/api/vault/documents/${meta.id}/bytes` : undefined },
+  ]);
+  run.state.documentTypes = [...new Set([...(run.state.documentTypes ?? []), meta.docType])];
+  if (meta.docType === "FORM_16" && meta.hasBytes) {
+    const ctx: ToolContext = { owner, runId: run.id, assessmentYear: AY, vault: deps.vault, returns: deps.returns, store: deps.store, today: deps.today() };
+    await stageForm16(deps, run, ctx, snapshot, meta.id, s, emit);
+  }
+  await emit({ type: "source_lookup", sources: run.state.sources });
+  await emit({ type: "message", role: "assistant", text: s.intakeDocumentRecorded });
+  return true;
+}
+
 /** The one question at a time that resolves the most consequential unknown (§5.1). */
-function nextQuestion(run: Run, snapshot: VersionedReturn, s: ReturnType<typeof strings>): Question | null {
+function nextQuestion(run: Run, snapshot: VersionedReturn, s: ReturnType<typeof strings>, vaultAvailable: boolean): Question | null {
   const p = snapshot.state.persona;
   const a = run.state.answers;
+  // The situation the citizen described drives the first questions; the generic ones follow.
+  if (run.state.situation && (run.task === "prepare_salaried_return" || run.task === "compare_regimes")) {
+    const q = nextIntakeQuestion({ situation: run.state.situation, snapshot, answers: a, vaultAvailable, documentTypes: run.state.documentTypes ?? [], s, lang: run.lang });
+    if (q) return q;
+  }
   if (run.task === "prepare_salaried_return" || run.task === "reconcile_facts") {
     if (a.other_income === undefined) {
       return { id: newId("q"), text: s.askOtherIncome, why: s.askOtherIncomeWhy, expects: "yes_no", resolves: "other_income", choices: [{ value: "yes", label: s.yes }, { value: "no", label: s.no }] };
@@ -368,8 +415,9 @@ function nextQuestion(run: Run, snapshot: VersionedReturn, s: ReturnType<typeof 
   if (run.task === "prepare_salaried_return" || run.task === "compare_regimes") {
     const has80C = p.claims.some((c) => c.section === "80C");
     const has80D = p.claims.some((c) => c.section.startsWith("80D"));
-    if (!has80C && a.claim_80C === undefined) return { id: newId("q"), text: s.ask80C, why: s.ask80CWhy, expects: "number", resolves: "claim_80C" };
-    if (!has80D && a.claim_80D === undefined) return { id: newId("q"), text: s.ask80D, why: s.ask80DWhy, expects: "number", resolves: "claim_80D" };
+    // The intake's PF / health-insurance questions cover the same ground in plain words; do not ask twice.
+    if (!has80C && a.claim_80C === undefined && a.pf === undefined) return { id: newId("q"), text: s.ask80C, why: s.ask80CWhy, expects: "number", resolves: "claim_80C" };
+    if (!has80D && a.claim_80D === undefined && a.health === undefined) return { id: newId("q"), text: s.ask80D, why: s.ask80DWhy, expects: "number", resolves: "claim_80D" };
   }
   return null;
 }
@@ -377,7 +425,21 @@ function nextQuestion(run: Run, snapshot: VersionedReturn, s: ReturnType<typeof 
 async function stepResolve(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>) {
   const snapshot = await deps.returns.get(owner, AY);
   if (!snapshot) return;
-  const q = nextQuestion(run, snapshot, s);
+  // A business situation is outside this release: said once, plainly, and the run ends without figures.
+  if (run.state.situation?.business && run.task !== "explain") {
+    for (const step of ["compute", "review", "confirm", "act", "outputs"] as const) run.state.steps = setStep(run.state.steps, step, "skipped", s.intakeBusinessUnsupported);
+    return;
+  }
+  // A document uploaded in answer to the previous question is recorded before the next question is chosen.
+  const a = run.state.answers;
+  for (const key of ["form16", "pf_proof", "health_proof"] as const) {
+    const v = a[key];
+    if (isDocumentAnswer(v) && !run.state.sources.some((src) => src.kind === "document" && src.id === v)) {
+      const ok = await recordUploadedDocument(deps, owner, run, snapshot, v, s, emit);
+      if (!ok) a[key] = "none";
+    }
+  }
+  const q = nextQuestion(run, snapshot, s, !!deps.vault);
   if (q) {
     run.state.pendingQuestion = q;
     await emit({ type: "question", question: q });
@@ -387,11 +449,22 @@ async function stepResolve(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
   }
   // Answers become staged commands — reviewable, never applied here (§5.2).
   const cmds: ReturnCommand[] = run.state.pendingCommands ?? [];
-  const a = run.state.answers;
   const hasKind = (t: ReturnCommand["type"], pred: (c: ReturnCommand) => boolean) => cmds.some((c) => c.type === t && pred(c));
+  if (a.salary_figure === "stated" && run.state.situation?.salaryAmount && !hasKind("correct_fact", () => true)) {
+    const salaryFact = snapshot.state.persona.facts.find((f) => f.kind === "salary");
+    if (salaryFact) cmds.push({ type: "correct_fact", factId: salaryFact.id, amount: run.state.situation.salaryAmount, reason: "Stated by the citizen in conversation; to be checked against Form 16" });
+  }
   if (a.other_income === true && typeof a.other_income_amount === "number" && a.other_income_amount > 0 && !hasKind("declare_income", () => true)) {
     cmds.push({ type: "declare_income", kind: "other", amount: a.other_income_amount, label: "Other income (self-declared)", today: deps.today() });
   }
+  // Deductions from the intake count only with a record behind them; otherwise they are left out and said so.
+  const stageClaim = async (section: "80C" | "80D_SELF", amount: unknown, proof: unknown, label: string, plain: string) => {
+    if (typeof amount !== "number" || amount <= 0 || hasKind("declare_claim", (c) => c.type === "declare_claim" && c.section === section)) return;
+    if (isDocumentAnswer(proof)) cmds.push({ type: "declare_claim", section, amount, label, evidenceAttached: true });
+    else await emit({ type: "message", role: "assistant", text: s.intakeClaimSkipped.replace("{section}", plain) });
+  };
+  await stageClaim("80C", a.pf_amount, a.pf_proof, "Provident Fund (section 80C)", "PF");
+  await stageClaim("80D_SELF", a.health_amount, a.health_proof, "Health insurance (section 80D)", "80D");
   if (typeof a.claim_80C === "number" && a.claim_80C > 0 && !hasKind("declare_claim", (c) => c.type === "declare_claim" && c.section === "80C")) {
     cmds.push({ type: "declare_claim", section: "80C", amount: a.claim_80C, label: "Section 80C (self-declared)", evidenceAttached: false });
   }
@@ -412,9 +485,39 @@ function projected(snapshot: VersionedReturn, cmds: ReturnCommand[] | undefined)
 }
 
 async function stepCompute(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>) {
+  if (run.task === "explain") {
+    if (run.state.situation?.business) await emit({ type: "message", role: "assistant", text: s.intakeBusinessUnsupported });
+    const answer = answerTaxQuestion(run.state.lastUserMessage ?? "", deps.today());
+    run.state.taxAnswer = answer;
+    run.knowledgeRelease = answer.release;
+    run.state.sources = answer.citations.map((c) => ({ kind: "rule", id: c.id, label: c.title,
+      detail: `${c.locator} · ${c.reviewer} · ${c.contentHash}`, verified: false, url: c.url }));
+    await emit({ type: "source_lookup", sources: run.state.sources });
+    // Exact evidence text is not passed through a model that can remove qualifications.
+    await emit({ type: "message", role: "assistant", text: answer.text });
+    return;
+  }
   const snapshot = await deps.returns.get(owner, AY);
   if (!snapshot) return;
   const state = projected(snapshot, run.state.pendingCommands);
+  const advice = assessAdvice(state.persona, { ownerKind: owner.kind, today: deps.today(),
+    resident: typeof run.state.answers.resident === "boolean" ? run.state.answers.resident : undefined,
+    returnByDueDate: typeof run.state.answers.return_by_due_date === "boolean" ? run.state.answers.return_by_due_date : undefined });
+  run.state.advice = advice;
+  run.knowledgeRelease = advice.release;
+  if (!advice.canRecommend) {
+    run.state.applicability = advice.applicability;
+    const ids = [...new Set(advice.issues.flatMap((i) => i.provisions))];
+    run.state.sources = dedupeSources([...run.state.sources, ...cite(ids).map((c) => ({ kind: "rule" as const,
+      id: c.id, label: c.title, detail: `${c.locator} · ${c.reviewer}`, verified: false, url: c.url }))]);
+    await emit({ type: "source_lookup", sources: run.state.sources });
+    await emit({ type: "message", role: "assistant", text: `${s.noteAdviceUnavailable}\n\n${advice.issues.map((i) => `• ${i.reason}`).join("\n")}` });
+    run.state.pendingCard = undefined;
+    run.state.pendingCommands = undefined;
+    for (const step of ["review", "confirm", "act", "outputs"] as const)
+      run.state.steps = setStep(run.state.steps, step, "skipped", s.noteAdviceUnavailable);
+    return;
+  }
   const both = compareForPersona(state.persona);
   const cheaper: "new" | "old" = both.new.totalTax <= both.old.totalTax ? "new" : "old";
   const chosen = run.task === "compare_regimes" ? cheaper : (state.regime ?? "new");
@@ -424,7 +527,7 @@ async function stepCompute(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
   const facts: TaxpayerFacts = {
     period: PERIOD_FY_2025_26,
     category: "individual",
-    resident: true,
+    resident: owner.kind === "demo" ? true : typeof run.state.answers.resident === "boolean" ? run.state.answers.resident : undefined,
     hasSalaryIncome: state.persona.facts.some((f) => f.kind === "salary"),
     grossSalary: state.persona.facts.filter((f) => f.kind === "salary").reduce((x, f) => x + f.amount, 0),
     hasBusinessOrProfessionIncome: state.persona.facts.some((f) => f.kind === "other"),
@@ -446,16 +549,16 @@ async function stepCompute(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
   await emit({ type: "source_lookup", sources: run.state.sources });
 
   const brief = recommendationText({ cheaper, saving: Math.abs(both.new.totalTax - both.old.totalTax), taxableIncome: b.taxableIncome, totalTax: b.totalTax, refundOrDue: b.refundOrDue }, run.lang);
-  const shape = run.task === "explain" ? "explanation" : "recommendation";
-  const spoken = await speak(deps, owner, run, brief, shape);
-  await emit({ type: "message", role: "assistant", text: spoken });
-  if (run.task === "explain" || run.task === "load_demo") {
+  // Financial conclusions and their caveats stay deterministic: no model rephrases them.
+  await emit({ type: "message", role: "assistant", text: `${s.simulatedBadge}\n${brief}` });
+  if (run.task === "load_demo") {
     // Nothing to confirm; outputs (if any) follow.
     run.state.steps = setStep(setStep(run.state.steps, "review", "skipped", s.noteNoAction), "confirm", "skipped", s.noteNoAction);
   }
 }
 
 async function stepReview(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>) {
+  if (!run.state.advice?.canAct) return;
   const snapshot = await deps.returns.get(owner, AY);
   if (!snapshot) return;
   if (run.task === "prepare_salaried_return" && snapshot.state.filedAt) {
@@ -531,7 +634,21 @@ async function handleConfirmation(deps: RuntimeDeps, owner: Owner, run: Run, con
   if (!current || current.revision !== card.boundTo.revision || snapshotHash(current.state) !== card.boundTo.snapshotHash) {
     await emit({ type: "message", role: "assistant", text: s.staleReview });
     run.state.pendingCard = undefined;
-    run.state.steps = setStep(run.state.steps, "review", "pending");
+    run.state.steps = setStep(setStep(run.state.steps, "compute", "pending"), "review", "pending");
+    run.status = "running";
+    return;
+  }
+  // Recheck knowledge freshness/release and projected facts at the action boundary, even on replay.
+  const rechecked = assessAdvice(projected(current, run.state.pendingCommands).persona,
+    { ownerKind: owner.kind, today: deps.today(),
+      resident: typeof run.state.answers.resident === "boolean" ? run.state.answers.resident : undefined,
+      returnByDueDate: typeof run.state.answers.return_by_due_date === "boolean" ? run.state.answers.return_by_due_date : undefined });
+  if (!rechecked.canAct || run.knowledgeRelease !== rechecked.release || run.state.advice?.corpusHash !== rechecked.corpusHash) {
+    run.state.pendingCard = undefined;
+    run.state.pendingCommands = undefined;
+    run.state.advice = rechecked;
+    await emit({ type: "message", role: "assistant", text: `${s.noteAdviceUnavailable}\n\n${rechecked.issues.map((i) => `• ${i.reason}`).join("\n")}` });
+    for (const step of ["review", "confirm", "act", "outputs"] as const) run.state.steps = setStep(run.state.steps, step, "skipped", s.noteAdviceUnavailable);
     run.status = "running";
     return;
   }
@@ -565,6 +682,7 @@ async function handleConfirmation(deps: RuntimeDeps, owner: Owner, run: Run, con
 }
 
 async function stepOutputs(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>) {
+  if (!run.state.advice?.canRecommend) return;
   const snapshot = await deps.returns.get(owner, AY);
   if (!snapshot) return;
   if (run.task === "explain") return;
@@ -574,6 +692,7 @@ async function stepOutputs(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
     synthetic: true,
     disclosure: s.simulatedBadge,
     knowledgeRelease: run.knowledgeRelease,
+    advice: run.state.advice,
     snapshot: { revision: snapshot.revision, hash: snapshotHash(snapshot.state) },
     regime,
     figures: { grossIncome: b.grossIncome, standardDeduction: b.standardDeduction, totalDeductions: b.totalDeductions, taxableIncome: b.taxableIncome, rebate87A: b.rebate87A, cess: b.cess, totalTax: b.totalTax, tdsCredits: b.tdsCredits, refundOrDue: b.refundOrDue },
@@ -600,15 +719,6 @@ async function stepOutputs(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
 }
 
 /* ---------------------------------------------------------------- helpers -- */
-
-async function speak(deps: RuntimeDeps, owner: Owner, run: Run, brief: string, shape: "recommendation" | "explanation") {
-  if (deps.model.name === "none" || run.state.usage.modelCalls >= deps.budget.maxModelCallsPerRun) return brief;
-  run.state.usage.modelCalls += 1;
-  const out = await say(deps.model, brief, shape, run.lang);
-  run.state.usage.tokens += out.tokens;
-  if (out.tokens) await deps.store.addDailyUsage(owner, deps.today(), out.tokens, 1);
-  return out.text;
-}
 
 function parseAnswer(q: Question, text: string, s: ReturnType<typeof strings>): string | number | boolean | null {
   const t = text.trim().toLowerCase();

@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Check, CircleDot, FileText, Mic, MicOff, Send, ShieldAlert, Sparkles, X } from "lucide-react";
+import { ArrowRight, Check, CircleDot, FileText, Mic, MicOff, Send, ShieldAlert, Sparkles, Upload, X } from "lucide-react";
 import type { PublicRun } from "@/lib/agentic/runtime";
 import type { OutputRef, Question, ReviewCard, RunEvent, RunTask } from "@/lib/agentic/types";
 import type { AgenticStrings } from "@/lib/i18n/agenticStrings";
@@ -49,6 +49,8 @@ export default function Workspace(props: WorkspaceProps) {
 
   const answeredIds = useMemo(() => new Set(events.filter((e) => e.payload.type === "answer").map((e) => (e.payload as { questionId: string }).questionId)), [events]);
   const confirmedIds = useMemo(() => new Set(events.filter((e) => e.payload.type === "confirmation").map((e) => (e.payload as { cardId: string }).cardId)), [events]);
+  // Questions by id, so an answer bubble can show the label the citizen chose rather than the stored value.
+  const questionsById = useMemo(() => new Map(events.filter((e) => e.payload.type === "question").map((e) => { const q = (e.payload as { question: Question }).question; return [q.id, q] as const; })), [events]);
 
   if (!run) {
     return (
@@ -59,7 +61,7 @@ export default function Workspace(props: WorkspaceProps) {
               <span className="size-1.5 rounded-full bg-money" aria-hidden="true" /> {s.simulatedBadge}
             </span>
             <h1 className="font-serif text-4xl sm:text-5xl leading-[1.08] tracking-tight text-ink text-balance">
-              {props.citizenName ? `${props.citizenName.split(" ")[0]} — ` : ""}{s.welcomeTitle}
+              {s.welcomeTitle}
             </h1>
             <p className="text-base sm:text-lg text-ink-2 leading-relaxed max-w-xl mx-auto">{s.welcomeBody}</p>
             <div className="flex flex-wrap justify-center gap-2 pt-2">
@@ -95,7 +97,7 @@ export default function Workspace(props: WorkspaceProps) {
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4">
         <div className="mx-auto w-full max-w-3xl space-y-3">
           {events.map((e) => (
-            <EventRow key={e.seq} event={e} s={s} answered={answeredIds} confirmed={confirmedIds} />
+            <EventRow key={e.seq} event={e} s={s} answered={answeredIds} confirmed={confirmedIds} questions={questionsById} />
           ))}
           {run.pendingQuestion && !answeredIds.has(run.pendingQuestion.id) && (
             <QuestionCard q={run.pendingQuestion} s={s} disabled={props.loading} onAnswer={(value) => props.onSend({ answer: { questionId: run.pendingQuestion!.id, value } })} />
@@ -119,7 +121,13 @@ export default function Workspace(props: WorkspaceProps) {
 
 /* ------------------------------------------------------------------ pieces -- */
 
-function EventRow({ event, s, answered, confirmed }: { event: RunEvent; s: AgenticStrings; answered: Set<string>; confirmed: Set<string> }) {
+function answerLabel(value: string | number | boolean, q: Question | undefined, s: AgenticStrings): string {
+  if (typeof value === "boolean") return value ? s.yes : s.no;
+  if (q?.expects === "file") return value === "none" ? (q.skipLabel ?? s.dontHaveIt) : s.uploaded;
+  return q?.choices?.find((c) => c.value === String(value))?.label ?? String(value);
+}
+
+function EventRow({ event, s, answered, confirmed, questions }: { event: RunEvent; s: AgenticStrings; answered: Set<string>; confirmed: Set<string>; questions: Map<string, Question> }) {
   const p = event.payload;
   switch (p.type) {
     case "message":
@@ -154,7 +162,7 @@ function EventRow({ event, s, answered, confirmed }: { event: RunEvent; s: Agent
     case "answer":
       return (
         <div className="flex justify-end">
-          <div className="rounded-2xl rounded-br-md bg-amber-bg border border-amber-500/30 px-4 py-2 text-sm text-ink">{typeof p.value === "boolean" ? (p.value ? s.yes : s.no) : String(p.value)}</div>
+          <div className="rounded-2xl rounded-br-md bg-amber-bg border border-amber-500/30 px-4 py-2 text-sm text-ink">{answerLabel(p.value, questions.get(p.questionId), s)}</div>
         </div>
       );
     case "review_card":
@@ -199,13 +207,51 @@ function Avatar() {
 
 function QuestionCard({ q, s, disabled, onAnswer }: { q: Question; s: AgenticStrings; disabled: boolean; onAnswer: (v: string | number | boolean) => void }) {
   const [value, setValue] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  /** A document answered inline: stored in the citizen's vault, then its id is the answer. */
+  const upload = async (file: File | undefined) => {
+    if (!file || uploading) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("docType", q.docType ?? "OTHER");
+      form.append("assessmentYear", "2026-27");
+      const res = await fetch("/api/vault/documents", { method: "POST", credentials: "same-origin", body: form });
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; document?: { id: string } };
+      if (!res.ok || !body.ok || !body.document?.id) throw new Error("refused");
+      onAnswer(body.document.id);
+    } catch {
+      setUploadError(s.uploadFailed);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div className="flex items-start gap-3">
       <Avatar />
       <div className="w-full max-w-[85%] rounded-2xl rounded-tl-md border border-amber-500/40 bg-paper-2 px-4 py-3 space-y-3">
         <p className="text-[15px] text-ink leading-relaxed">{q.text}</p>
+        {q.docHint && <p className="text-sm text-ink-2 leading-relaxed">{q.docHint}</p>}
         <p className="text-xs text-ink-3">{q.why}</p>
-        {q.expects === "yes_no" ? (
+        {q.expects === "file" ? (
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              <label className={`inline-flex items-center gap-2 rounded-lg bg-ink text-paper px-4 py-2 text-sm font-semibold ${disabled || uploading ? "opacity-50 cursor-wait" : "hover:opacity-90 cursor-pointer"}`}>
+                <Upload size={14} aria-hidden="true" /> {uploading ? s.uploading : s.uploadDocument}
+                <input type="file" accept=".pdf,image/*" className="sr-only" disabled={disabled || uploading} onChange={(e) => void upload(e.target.files?.[0])} />
+              </label>
+              <button type="button" disabled={disabled || uploading} onClick={() => onAnswer("none")} className="rounded-lg border border-line bg-paper px-4 py-2 text-sm font-semibold text-ink hover:bg-paper-3 disabled:opacity-50 cursor-pointer">
+                {q.skipLabel ?? s.dontHaveIt}
+              </button>
+            </div>
+            {uploadError && <p className="text-xs font-semibold text-alarm">{uploadError}</p>}
+          </div>
+        ) : q.expects === "yes_no" ? (
           <div className="flex gap-2">
             <button type="button" disabled={disabled} onClick={() => onAnswer(true)} className="rounded-lg bg-ink text-paper px-4 py-2 text-sm font-semibold hover:opacity-90 disabled:opacity-50 cursor-pointer">{s.yes}</button>
             <button type="button" disabled={disabled} onClick={() => onAnswer(false)} className="rounded-lg border border-line bg-paper px-4 py-2 text-sm font-semibold text-ink hover:bg-paper-3 disabled:opacity-50 cursor-pointer">{s.no}</button>
@@ -269,9 +315,10 @@ function ReviewCardView({ card, s, disabled, inert = false, onDecide }: { card: 
 }
 
 /** `variant="ask"` is the landing's single pill box with an "Ask →" button; `"chat"` is the transcript composer. */
-export function Composer({ s, lang, disabled, onSubmit, variant = "chat" }: { s: AgenticStrings; lang: Lang; disabled: boolean; onSubmit: (message: string) => void; variant?: "chat" | "ask" }) {
+export function Composer({ s, lang, disabled, onSubmit, variant = "chat", placeholder }: { s: AgenticStrings; lang: Lang; disabled: boolean; onSubmit: (message: string) => void; variant?: "chat" | "ask"; placeholder?: string }) {
   const [text, setText] = useState("");
   const ask = variant === "ask";
+  const hint = placeholder ?? s.composerPlaceholder;
   const [listening, setListening] = useState(false);
   const dictation = useRef<Dictation | null>(null);
   const speech = typeof window !== "undefined" && isSpeechSupported();
@@ -320,8 +367,8 @@ export function Composer({ s, lang, disabled, onSubmit, variant = "chat" }: { s:
             }
           }}
           rows={1}
-          placeholder={s.composerPlaceholder}
-          aria-label={s.composerPlaceholder}
+          placeholder={hint}
+          aria-label={hint}
           disabled={disabled}
           className="flex-1 resize-none bg-transparent px-2 py-2 text-[15px] text-ink placeholder:text-ink-3 outline-none max-h-40 disabled:opacity-60"
           style={{ height: `${Math.min(160, 40 + (text.split("\n").length - 1) * 22)}px` }}

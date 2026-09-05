@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "backend",
+      "runtimeExecutable": "java",
+      "runtimeArgs": ["-jar", "backend/target/wapsi-backend-0.1.0-SNAPSHOT.jar"],
+      "port": 8080
     }
   ]
 }

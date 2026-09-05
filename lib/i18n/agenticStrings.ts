@@ -77,6 +77,8 @@ export interface AgenticStrings {
   noteNoAction: string;
   noteAlreadyFiled: string;
   noteRegimeNotExecuted: string;
+  /** The shared guard found the return outside what this release can advise on; figures may still be shown. */
+  noteAdviceUnavailable: string;
   /** The landing's submit button ("Ask →"). */
   ask: string;
   // Tasks
@@ -96,6 +98,39 @@ export interface AgenticStrings {
   ask80CWhy: string;
   ask80D: string;
   ask80DWhy: string;
+  // Plain-English intake (2026-09-05)
+  landingPlaceholder: string;
+  intakeAckSalaried: string;
+  intakeAckAmount: string;
+  intakeAckGeneric: string;
+  intakeNoteRentHomeLoan: string;
+  intakeNoteCapitalGains: string;
+  intakeBusinessUnsupported: string;
+  askSalaryFigure: string;
+  askSalaryFigureWhy: string;
+  intakeSalaryReported: string;
+  intakeSalaryStated: string;
+  intakeNotSure: string;
+  askForm16: string;
+  askForm16Hint: string;
+  askForm16Why: string;
+  askPf: string;
+  askPfWhy: string;
+  askPfAmount: string;
+  askProof: string;
+  askProofWhy: string;
+  askHealthInsurance: string;
+  askHealthInsuranceWhy: string;
+  askHealthAmount: string;
+  dontHaveIt: string;
+  skipForNow: string;
+  uploadDocument: string;
+  uploading: string;
+  /** Answer bubble for a document the citizen uploaded. */
+  uploaded: string;
+  uploadFailed: string;
+  intakeDocumentRecorded: string;
+  intakeClaimSkipped: string;
   recommendRegime: string;
   regimesEqual: string;
   reviewFilingTitle: string;
@@ -164,7 +199,7 @@ const en: AgenticStrings = {
   notDurable: "Demo session: this history clears when the server restarts.",
   signInPrompt: "Sign in to start a chat about your return.",
   demoSignIn: "Try a demo citizen",
-  welcomeTitle: "What would you like to do with your return?",
+  welcomeTitle: "Explain your situation",
   welcomeBody: "I check your vault first, ask only what I cannot find, show every figure and its source, and never file or pay without your explicit confirmation.",
   statusRunning: "Working",
   statusWaitingInput: "Needs your answer",
@@ -187,6 +222,7 @@ const en: AgenticStrings = {
   noteAlreadyFiled: "This return is already filed; it cannot be filed again.",
   noteRegimeNotExecuted: "The old regime is cheaper for you, but it can only be chosen in a return filed by the due date, and I cannot confirm that here. I have shown the comparison and not switched — confirm the filing date with a professional, or switch in Manual mode.",
   ask: "Ask",
+  noteAdviceUnavailable: "I can show what the calculator produces, but this release cannot make a recommendation or take an action for this return yet. Why:",
   taskPrepareReturn: "Prepare my return",
   taskCompareRegimes: "Compare the two regimes",
   taskReconcile: "Check reported figures",
@@ -202,6 +238,37 @@ const en: AgenticStrings = {
   ask80CWhy: "Only under the old regime, and only what was actually paid, counts.",
   ask80D: "How much health-insurance premium did you pay this year (section 80D)? Enter 0 if none.",
   ask80DWhy: "It reduces tax under the old regime only.",
+  landingPlaceholder: "Tell me your situation — e.g. “I got a job with a 12 LPA package and need to file my taxes”",
+  intakeAckSalaried: "Got it — you're salaried{amount}. I'll check what your employer has already reported, ask a few short questions, and only then show you the figures. Nothing is filed without your say-so.",
+  intakeAckAmount: ", at about {amount} a year",
+  intakeAckGeneric: "Got it. Let me check what is already on record for you and ask only what I cannot find.",
+  intakeNoteRentHomeLoan: "You mentioned rent or a home loan. This release cannot compute house-rent allowance or home-loan interest yet, so I will leave those out and say so in the figures.",
+  intakeNoteCapitalGains: "You mentioned shares, funds or a property sale. Capital gains need checks this release does not make, so I will show the rules but not a recommendation that depends on them.",
+  intakeBusinessUnsupported: "You mentioned business or freelance income. This release prepares salaried returns only — I can answer questions about the rules (ask me about presumptive taxation or which ITR form applies), but I will not compute or file a business return here.",
+  askSalaryFigure: "Your return already shows {reported} of salary reported by your employer. Your message mentions about {stated}. Which figure applies to this year?",
+  askSalaryFigureWhy: "A new package usually starts mid-year; the return counts only what was actually paid in the year.",
+  intakeSalaryReported: "Use the reported {amount}",
+  intakeSalaryStated: "My figure — {amount}",
+  intakeNotSure: "I'm not sure",
+  askForm16: "Do you have a document called Form 16?",
+  askForm16Hint: "It's the certificate your employer gives you around June — one or two pages showing your salary for the year and the tax already deducted from it. If you have it, upload it here; if not, tell me and we'll work from your salary figure instead.",
+  askForm16Why: "It lets me use your employer's own numbers instead of asking you for them.",
+  askPf: "Does your employer deduct Provident Fund (PF) from your salary? It shows on your salary slip as 'PF' or 'EPF'.",
+  askPfWhy: "Your own PF contribution can reduce tax under the old regime.",
+  askPfAmount: "Roughly how much PF was deducted from your salary over the whole year? Add up the monthly 'PF' line on your slips.",
+  askProof: "Can you upload something that shows that amount — a salary slip, the PF passbook, or the policy receipt? If you skip, I'll compare the regimes without this deduction.",
+  askProofWhy: "A deduction only counts once there is a record behind it.",
+  askHealthInsurance: "Do you pay for a health insurance policy — for yourself, your family or your parents?",
+  askHealthInsuranceWhy: "The premium can reduce tax under the old regime.",
+  askHealthAmount: "How much premium did you pay this year, in total?",
+  dontHaveIt: "I don't have it",
+  skipForNow: "Skip for now",
+  uploadDocument: "Upload the document",
+  uploading: "Uploading…",
+  uploaded: "Document uploaded",
+  uploadFailed: "That upload was refused. Try a PDF or an image under 5 MB.",
+  intakeDocumentRecorded: "Thanks — I've stored that document in your vault and read the figures from it.",
+  intakeClaimSkipped: "Noted — without a record behind it, I have left the {section} amount out of the comparison.",
   recommendRegime: "The {regime} regime costs less for your figures, by {saving}.",
   regimesEqual: "Both regimes give the same tax for your figures.",
   reviewFilingTitle: "Ready to file — confirm the figures",
@@ -270,7 +337,7 @@ const hi: AgenticStrings = {
   notDurable: "डेमो सत्र: सर्वर पुनः आरंभ होने पर यह इतिहास मिट जाता है।",
   signInPrompt: "अपने रिटर्न पर बातचीत शुरू करने के लिए साइन इन करें।",
   demoSignIn: "डेमो नागरिक आज़माएँ",
-  welcomeTitle: "आप अपने रिटर्न के साथ क्या करना चाहेंगे?",
+  welcomeTitle: "अपनी स्थिति बताइए",
   welcomeBody: "मैं पहले आपका वॉल्ट देखता हूँ, केवल वही पूछता हूँ जो नहीं मिलता, हर आंकड़ा और उसका स्रोत दिखाता हूँ, और आपकी स्पष्ट पुष्टि के बिना कभी दाखिल या भुगतान नहीं करता।",
   statusRunning: "काम चल रहा है",
   statusWaitingInput: "आपके उत्तर की प्रतीक्षा",
@@ -293,6 +360,7 @@ const hi: AgenticStrings = {
   noteAlreadyFiled: "यह रिटर्न पहले ही दाखिल है; दोबारा दाखिल नहीं हो सकता।",
   noteRegimeNotExecuted: "आपके लिए पुरानी व्यवस्था सस्ती है, पर उसे केवल नियत तारीख तक दाखिल रिटर्न में ही चुना जा सकता है, और यह मैं यहाँ पुष्ट नहीं कर सकता। मैंने तुलना दिखाई है, बदलाव नहीं किया — दाखिल करने की तारीख किसी पेशेवर से पुष्ट करें, या मैनुअल मोड में बदलें।",
   ask: "पूछें",
+  noteAdviceUnavailable: "कैलकुलेटर के आंकड़े दिखा सकता हूँ, पर इस रिटर्न के लिए यह रिलीज़ अभी कोई सिफ़ारिश या कार्रवाई नहीं कर सकता। कारण:",
   taskPrepareReturn: "मेरा रिटर्न तैयार करें",
   taskCompareRegimes: "दोनों व्यवस्थाओं की तुलना",
   taskReconcile: "रिपोर्ट किए आंकड़े जाँचें",
@@ -308,6 +376,37 @@ const hi: AgenticStrings = {
   ask80CWhy: "केवल पुरानी व्यवस्था में, और केवल वास्तव में भरी राशि गिनी जाती है।",
   ask80D: "इस वर्ष स्वास्थ्य बीमा प्रीमियम (धारा 80D) कितना भरा? नहीं तो 0 लिखें।",
   ask80DWhy: "यह केवल पुरानी व्यवस्था में कर घटाता है।",
+  landingPlaceholder: "अपनी स्थिति बताइए — जैसे “मुझे 12 LPA पैकेज की नौकरी मिली है और टैक्स भरना है”",
+  intakeAckSalaried: "समझ गया — आप वेतनभोगी हैं{amount}। पहले देखूँगा कि आपके नियोक्ता ने क्या रिपोर्ट किया है, कुछ छोटे सवाल पूछूँगा, और तभी आंकड़े दिखाऊँगा। आपकी सहमति बिना कुछ दाखिल नहीं होगा।",
+  intakeAckAmount: ", लगभग {amount} सालाना",
+  intakeAckGeneric: "समझ गया। देखता हूँ आपके रिकॉर्ड में पहले से क्या है, और केवल वही पूछूँगा जो न मिले।",
+  intakeNoteRentHomeLoan: "आपने किराया या होम लोन बताया। यह रिलीज़ अभी HRA या होम-लोन ब्याज की गणना नहीं करता, इसलिए इन्हें छोड़कर आंकड़ों में स्पष्ट लिखूँगा।",
+  intakeNoteCapitalGains: "आपने शेयर, फंड या प्रॉपर्टी बिक्री बताई। पूँजीगत लाभ के लिए जो जाँच चाहिए वह यह रिलीज़ नहीं करता, इसलिए नियम दिखाऊँगा पर उन पर निर्भर सिफ़ारिश नहीं।",
+  intakeBusinessUnsupported: "आपने व्यवसाय या फ्रीलांस आय बताई। यह रिलीज़ केवल वेतन रिटर्न तैयार करता है — नियमों पर सवालों के जवाब दे सकता हूँ (अनुमानित कराधान या कौन-सा ITR फॉर्म), पर व्यवसाय रिटर्न की गणना या दाखिला यहाँ नहीं करूँगा।",
+  askSalaryFigure: "आपके रिटर्न में नियोक्ता द्वारा रिपोर्ट किया वेतन {reported} पहले से है। आपके संदेश में लगभग {stated} का उल्लेख है। इस साल कौन-सा आंकड़ा लागू है?",
+  askSalaryFigureWhy: "नया पैकेज अक्सर साल के बीच से शुरू होता है; रिटर्न में केवल इस साल वास्तव में मिला वेतन गिना जाता है।",
+  intakeSalaryReported: "रिपोर्ट किया {amount} लें",
+  intakeSalaryStated: "मेरा आंकड़ा — {amount}",
+  intakeNotSure: "पक्का नहीं",
+  askForm16: "क्या आपके पास फॉर्म 16 नाम का दस्तावेज़ है?",
+  askForm16Hint: "यह वह प्रमाणपत्र है जो नियोक्ता जून के आसपास देता है — एक-दो पन्ने, जिनमें साल का वेतन और उससे कटा टैक्स लिखा होता है। हो तो यहाँ अपलोड करें; न हो तो बताइए, हम आपके वेतन आंकड़े से काम करेंगे।",
+  askForm16Why: "इससे मैं आपसे पूछने के बजाय नियोक्ता के अपने आंकड़े इस्तेमाल कर सकता हूँ।",
+  askPf: "क्या आपका नियोक्ता वेतन से भविष्य निधि (PF) काटता है? सैलरी स्लिप में यह 'PF' या 'EPF' के रूप में दिखता है।",
+  askPfWhy: "आपका अपना PF अंशदान पुरानी व्यवस्था में कर घटा सकता है।",
+  askPfAmount: "पूरे साल में वेतन से लगभग कितना PF कटा? स्लिप की मासिक 'PF' पंक्ति जोड़ लें।",
+  askProof: "क्या आप वह रकम दिखाने वाला कोई दस्तावेज़ अपलोड कर सकते हैं — सैलरी स्लिप, PF पासबुक या पॉलिसी रसीद? छोड़ेंगे तो मैं इस कटौती के बिना तुलना करूँगा।",
+  askProofWhy: "कटौती तभी गिनती है जब उसके पीछे कोई रिकॉर्ड हो।",
+  askHealthInsurance: "क्या आप स्वास्थ्य बीमा पॉलिसी का प्रीमियम भरते हैं — अपने, परिवार या माता-पिता के लिए?",
+  askHealthInsuranceWhy: "प्रीमियम पुरानी व्यवस्था में कर घटा सकता है।",
+  askHealthAmount: "इस साल कुल कितना प्रीमियम भरा?",
+  dontHaveIt: "मेरे पास नहीं है",
+  skipForNow: "अभी छोड़ें",
+  uploadDocument: "दस्तावेज़ अपलोड करें",
+  uploading: "अपलोड हो रहा है…",
+  uploaded: "दस्तावेज़ अपलोड किया",
+  uploadFailed: "यह अपलोड अस्वीकार हुआ। 5 MB से छोटी PDF या छवि आज़माएँ।",
+  intakeDocumentRecorded: "धन्यवाद — दस्तावेज़ आपके वॉल्ट में रख लिया और उसके आंकड़े पढ़ लिए।",
+  intakeClaimSkipped: "नोट कर लिया — बिना रिकॉर्ड के मैंने {section} की रकम तुलना से बाहर रखी है।",
   recommendRegime: "आपके आंकड़ों पर {regime} व्यवस्था में {saving} कम कर लगता है।",
   regimesEqual: "आपके आंकड़ों पर दोनों व्यवस्थाओं में कर समान है।",
   reviewFilingTitle: "दाखिल करने को तैयार — आंकड़े पुष्ट करें",
@@ -376,7 +475,7 @@ const ta: AgenticStrings = {
   notDurable: "டெமோ அமர்வு: சர்வர் மறுதொடக்கத்தில் இந்த வரலாறு அழியும்.",
   signInPrompt: "உங்கள் ரிட்டர்ன் பற்றிய உரையாடலைத் தொடங்க உள்நுழையவும்.",
   demoSignIn: "டெமோ குடிமகனை முயற்சிக்க",
-  welcomeTitle: "உங்கள் ரிட்டர்னில் என்ன செய்ய விரும்புகிறீர்கள்?",
+  welcomeTitle: "உங்கள் நிலையைச் சொல்லுங்கள்",
   welcomeBody: "முதலில் உங்கள் பெட்டகத்தைப் பார்க்கிறேன், கிடைக்காததை மட்டும் கேட்கிறேன், ஒவ்வொரு எண்ணையும் அதன் ஆதாரத்தையும் காட்டுகிறேன், உங்கள் தெளிவான உறுதிப்படுத்தல் இல்லாமல் ஒருபோதும் தாக்கல் செய்யவோ செலுத்தவோ மாட்டேன்.",
   statusRunning: "வேலை நடக்கிறது",
   statusWaitingInput: "உங்கள் பதில் தேவை",
@@ -399,6 +498,7 @@ const ta: AgenticStrings = {
   noteAlreadyFiled: "இந்த ரிட்டர்ன் ஏற்கனவே தாக்கல் செய்யப்பட்டது; மீண்டும் தாக்கல் செய்ய முடியாது.",
   noteRegimeNotExecuted: "உங்களுக்கு பழைய முறை குறைவான வரி, ஆனால் அதை உரிய தேதிக்குள் தாக்கல் செய்யும் ரிட்டர்னில் மட்டுமே தேர்வு செய்யலாம்; அதை நான் இங்கு உறுதிப்படுத்த முடியாது. ஒப்பீட்டைக் காட்டியுள்ளேன், மாற்றவில்லை — தாக்கல் தேதியை ஒரு நிபுணரிடம் உறுதிப்படுத்தவும், அல்லது கைமுறை பயன்முறையில் மாற்றவும்.",
   ask: "கேளுங்கள்",
+  noteAdviceUnavailable: "கணிப்பான் தரும் எண்களைக் காட்ட முடியும், ஆனால் இந்த ரிட்டர்னுக்கு இந்த வெளியீடு இன்னும் பரிந்துரையோ செயலோ செய்ய முடியாது. காரணம்:",
   taskPrepareReturn: "என் ரிட்டர்னைத் தயாரிக்க",
   taskCompareRegimes: "இரு முறைகளையும் ஒப்பிட",
   taskReconcile: "அறிவிக்கப்பட்ட எண்களைச் சரிபார்க்க",
@@ -414,6 +514,37 @@ const ta: AgenticStrings = {
   ask80CWhy: "பழைய முறையில் மட்டும், உண்மையில் செலுத்தியது மட்டுமே கணக்கில் வரும்.",
   ask80D: "இந்த ஆண்டு சுகாதாரக் காப்பீட்டுப் பிரீமியம் (பிரிவு 80D) எவ்வளவு செலுத்தினீர்கள்? இல்லையெனில் 0.",
   ask80DWhy: "இது பழைய முறையில் மட்டுமே வரியைக் குறைக்கும்.",
+  landingPlaceholder: "உங்கள் நிலையைச் சொல்லுங்கள் — எ.கா. “12 LPA பேக்கேஜில் வேலை கிடைத்தது, வரி தாக்கல் செய்ய வேண்டும்”",
+  intakeAckSalaried: "புரிந்தது — நீங்கள் சம்பளதாரர்{amount}. உங்கள் முதலாளி ஏற்கனவே அறிவித்ததைப் பார்த்து, சில சிறிய கேள்விகள் கேட்டு, அதன் பிறகே எண்களைக் காட்டுவேன். உங்கள் ஒப்புதல் இல்லாமல் எதுவும் தாக்கல் ஆகாது.",
+  intakeAckAmount: ", ஆண்டுக்கு சுமார் {amount}",
+  intakeAckGeneric: "புரிந்தது. உங்கள் பதிவில் ஏற்கனவே என்ன உள்ளது என்று பார்த்து, கிடைக்காததை மட்டும் கேட்பேன்.",
+  intakeNoteRentHomeLoan: "வாடகை அல்லது வீட்டுக் கடனைக் குறிப்பிட்டீர்கள். இந்த வெளியீடு HRA அல்லது வீட்டுக் கடன் வட்டியைக் கணிக்காது; அவற்றை விட்டு, எண்களில் அதைத் தெளிவாகச் சொல்வேன்.",
+  intakeNoteCapitalGains: "பங்குகள், நிதிகள் அல்லது சொத்து விற்பனையைக் குறிப்பிட்டீர்கள். மூலதன ஆதாயத்திற்குத் தேவையான சரிபார்ப்புகளை இந்த வெளியீடு செய்யாது; விதிகளைக் காட்டுவேன், ஆனால் அவற்றைச் சார்ந்த பரிந்துரை இல்லை.",
+  intakeBusinessUnsupported: "வணிகம் அல்லது ஃப்ரீலான்ஸ் வருமானத்தைக் குறிப்பிட்டீர்கள். இந்த வெளியீடு சம்பள ரிட்டர்ன்களை மட்டுமே தயாரிக்கிறது — விதிகள் பற்றிய கேள்விகளுக்கு (ஊக வரிவிதிப்பு, எந்த ITR படிவம்) பதிலளிக்கலாம், ஆனால் வணிக ரிட்டர்னைக் கணிக்கவோ தாக்கல் செய்யவோ இங்கு மாட்டேன்.",
+  askSalaryFigure: "உங்கள் ரிட்டர்னில் முதலாளி அறிவித்த சம்பளம் {reported} ஏற்கனவே உள்ளது. உங்கள் செய்தியில் சுமார் {stated} குறிப்பிடப்பட்டுள்ளது. இந்த ஆண்டிற்கு எந்த எண் பொருந்தும்?",
+  askSalaryFigureWhy: "புதிய பேக்கேஜ் பெரும்பாலும் ஆண்டின் நடுவில் தொடங்கும்; ரிட்டர்னில் இந்த ஆண்டு உண்மையில் பெற்றது மட்டுமே கணக்கிடப்படும்.",
+  intakeSalaryReported: "அறிவிக்கப்பட்ட {amount} பயன்படுத்து",
+  intakeSalaryStated: "என் எண் — {amount}",
+  intakeNotSure: "உறுதியாகத் தெரியவில்லை",
+  askForm16: "படிவம் 16 என்ற ஆவணம் உங்களிடம் உள்ளதா?",
+  askForm16Hint: "இது ஜூன் மாதத்தில் முதலாளி தரும் சான்றிதழ் — ஆண்டின் சம்பளமும் அதிலிருந்து பிடித்த வரியும் உள்ள ஒன்று அல்லது இரண்டு பக்கங்கள். இருந்தால் இங்கே பதிவேற்றுங்கள்; இல்லையென்றால் சொல்லுங்கள், உங்கள் சம்பள எண்ணிலிருந்து தொடர்வோம்.",
+  askForm16Why: "உங்களைக் கேட்பதற்குப் பதிலாக முதலாளியின் எண்களையே பயன்படுத்த இது உதவும்.",
+  askPf: "உங்கள் முதலாளி சம்பளத்திலிருந்து வருங்கால வைப்பு நிதி (PF) பிடிக்கிறாரா? சம்பளச் சீட்டில் இது 'PF' அல்லது 'EPF' என்று காட்டும்.",
+  askPfWhy: "உங்கள் சொந்த PF பங்களிப்பு பழைய முறையில் வரியைக் குறைக்கலாம்.",
+  askPfAmount: "இந்த முழு ஆண்டில் சம்பளத்திலிருந்து சுமார் எவ்வளவு PF பிடிக்கப்பட்டது? சீட்டுகளின் மாதாந்திர 'PF' வரியைக் கூட்டுங்கள்.",
+  askProof: "அந்தத் தொகையைக் காட்டும் ஒன்றைப் பதிவேற்ற முடியுமா — சம்பளச் சீட்டு, PF பாஸ்புக் அல்லது பாலிசி ரசீது? தவிர்த்தால், இந்தக் கழிவு இல்லாமல் முறைகளை ஒப்பிடுவேன்.",
+  askProofWhy: "பின்னால் பதிவு இருந்தால் மட்டுமே கழிவு கணக்கில் வரும்.",
+  askHealthInsurance: "உங்களுக்கோ, குடும்பத்திற்கோ, பெற்றோருக்கோ சுகாதாரக் காப்பீட்டுப் பிரீமியம் செலுத்துகிறீர்களா?",
+  askHealthInsuranceWhy: "பிரீமியம் பழைய முறையில் வரியைக் குறைக்கலாம்.",
+  askHealthAmount: "இந்த ஆண்டு மொத்தம் எவ்வளவு பிரீமியம் செலுத்தினீர்கள்?",
+  dontHaveIt: "என்னிடம் இல்லை",
+  skipForNow: "இப்போது தவிர்",
+  uploadDocument: "ஆவணத்தைப் பதிவேற்று",
+  uploading: "பதிவேற்றுகிறது…",
+  uploaded: "ஆவணம் பதிவேற்றப்பட்டது",
+  uploadFailed: "அந்தப் பதிவேற்றம் நிராகரிக்கப்பட்டது. 5 MB-க்குக் குறைவான PDF அல்லது படத்தை முயற்சிக்கவும்.",
+  intakeDocumentRecorded: "நன்றி — அந்த ஆவணத்தை உங்கள் வால்ட்டில் சேமித்து, அதன் எண்களைப் படித்தேன்.",
+  intakeClaimSkipped: "குறித்துக்கொண்டேன் — பின்னால் பதிவு இல்லாததால், {section} தொகையை ஒப்பீட்டிலிருந்து விட்டுவிட்டேன்.",
   recommendRegime: "உங்கள் எண்களுக்கு {regime} முறையில் {saving} குறைவான வரி.",
   regimesEqual: "உங்கள் எண்களுக்கு இரு முறைகளிலும் வரி சமம்.",
   reviewFilingTitle: "தாக்கல் செய்யத் தயார் — எண்களை உறுதிப்படுத்துங்கள்",

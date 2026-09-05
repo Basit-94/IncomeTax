@@ -11,6 +11,8 @@
 import type { Lang } from "../types";
 import type { ReturnCommand } from "../return/commands";
 import type { ApplicabilityResult } from "../knowledge/types";
+import type { AdviceAssessment } from "../knowledge/advice";
+import type { TaxAnswer } from "../knowledge/rag";
 
 export type RunTask =
   | "prepare_salaried_return"
@@ -59,6 +61,12 @@ export interface Question {
   choices?: { value: string; label: string }[];
   /** The fact this answer resolves, so it lands in the right place. */
   resolves: string;
+  /** For `file` questions: what the document is and where it comes from, in plain words. */
+  docHint?: string;
+  /** For `file` questions: the vault document type the upload is stored as. */
+  docType?: string;
+  /** For `file` questions: the label of the "I don't have it / skip" choice. */
+  skipLabel?: string;
 }
 
 export interface ReviewCard {
@@ -136,8 +144,15 @@ export interface RunWorkingState {
   actionTaken?: { kind: "filing" | "payment"; id: string; at: string };
   /** The last user message, for classification and phrasing. */
   lastUserMessage?: string;
+  /** What the opening message said about the citizen's situation (deterministic parse, no identifiers). */
+  situation?: import("./intake").Situation;
+  /** Document types the vault already holds for the year, so the intake never asks for what it has. */
+  documentTypes?: string[];
   /** Applicability results computed for this run. */
   applicability?: ApplicabilityResult[];
+  /** Exact retrieved evidence and guarded decision persisted for audit/replay. */
+  taxAnswer?: TaxAnswer;
+  advice?: AdviceAssessment;
   /** Commands the run intends to apply once confirmed. */
   pendingCommands?: ReturnCommand[];
 }

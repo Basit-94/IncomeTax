@@ -28,16 +28,18 @@ session token yet, so localStorage remains the client's source of truth for now)
 
 This is a different axis from Simple/Full detail. Simple/Full changes *how much is
 explained* inside the Manual journey; Manual/Agentic changes *who drives*. Both Manual
-(`/`) and Agentic (`/app`) render inside the same `components/agentic/app-shell.tsx`: one header with the
-Agentic/Manual switch in a reserved slot of identical size on both routes
-(`data-testid="mode-slot"`, 210×38 px), and the top-right Progress/Outputs/Sources inspector,
-live in Agentic and a note in Manual. The chat sidebar (New chat, Tax Vault, My return, recent
-chats, account/language/theme/memory) is **Agentic only** — Manual keeps its own PortalHeader
-navigation and shows the brand in place of the hamburger (user, 2026-09-05).
+(`/`) and Agentic (`/app`) start with the same frame, `components/agentic/header-frame.tsx`: a 28 px banner strip,
+then a 56 px full-width bar whose first two items are a 128 px brand box and the Agentic/Manual
+switch (`data-testid="mode-slot"`). That pins the switch to the identical x/y on every route —
+measured `x=158 y=39 210×38` at 1200 px on `/`, `/app` and `/app?run=…` (user directive
+2026-09-05: "the toggle must be in the same spot in both modes"). Manual `/` renders the legacy
+full-width `PortalHeader` on top of that frame (the Manual-in-shell variant exists behind
+`NEXT_PUBLIC_WAPSI_MANUAL_SHELL=true`); the chat sidebar, hamburger and Progress/Outputs/Sources
+inspector are **Agentic only**, and the sidebar sits below the shared bar.
 
 | Surface | Manual (`/`) | Agentic (`/app`) | Shared |
 |---|---|---|---|
-| Centre | The existing citizen journey, unchanged (PortalHeader compact `inShell` variant). | With no active run: a standalone **landing** (`components/agentic/landing.tsx`, no sidebar — serif question, one "Ask →" box with dictation, four icon shortcuts, header with My return / Tax Vault / language / theme / citizen). The first question or shortcut creates a run and only then the chat shell (sidebar + transcript + inspector) appears; **New chat** returns to the landing. | Language, theme, RTL, all 23 languages. |
+| Centre | The existing citizen journey, unchanged (PortalHeader compact `inShell` variant). | With no active run: a standalone **landing** (`components/agentic/landing.tsx`, no sidebar — serif question, one "Ask →" box with dictation, four icon shortcuts, header with My return / Tax Vault / language / theme / citizen). The first question or shortcut creates a run and only then the chat shell (sidebar + transcript + inspector) appears; **New chat** returns to the landing. A plain-English opening ("I got a job with a 12 LPA package and need to file") is parsed into a situation, acknowledged, and followed by one plain question at a time — documents described in words with an inline upload, proof before any deduction counts (`lib/agentic/intake.ts`). | Language, theme, RTL, all 23 languages. |
 | Tax Vault | `CitizenVaultModal` from the sidebar. | The same `CitizenVaultModal`, same records (user request 2026-09-05). | One vault, one owner check. |
 | The return | Local `ReturnState`, mirrored to `PUT /api/return` with the last-seen revision; 409 → adopt. | Server-side `applyReturnCommand` via the run; every mutation is a command. | One snapshot store, monotonic revision, idempotency keys. |
 | Filing | OTP flow → `submitReturn`; unreachable backend → explicit `simulatedFiling`. | Review card bound to `{revision, snapshotHash}`; confirm → the same `finalize_filing` command. | Manual shows the agent's filing on arrival (`pullReturn`). |

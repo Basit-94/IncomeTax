@@ -24,9 +24,9 @@ export async function POST(req: NextRequest) {
     const status = verified.reason === "backend_unreachable" ? 503 : 401;
     return NextResponse.json({ ok: false, error: verified.reason }, { status });
   }
-  const { sessions } = await getServices();
+  const { sessions, dbConfigured } = await getServices();
   const session = await sessions.issueBridged(verified.owner);
-  const res = NextResponse.json({ ok: true, owner: session.owner, kind: session.kind, expiresAt: session.expiresAt });
+  const res = NextResponse.json({ ok: true, owner: session.owner, kind: session.kind, expiresAt: session.expiresAt, durable: dbConfigured });
   res.headers.set("Set-Cookie", sessionCookie(session, isSecureRequest(req)));
   return res;
 }

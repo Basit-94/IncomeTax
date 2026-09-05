@@ -1,19 +1,6 @@
-/**
- * Retrieval over the public corpus (plan.md §5.6): identify the period →
- * filter by Act/version → exact section + keyword search → expand linked
- * definitions and exceptions → supply an evidence bundle.
- *
- * This is the deterministic half of the hybrid design. Semantic retrieval
- * (§5.7: PostgreSQL text search or a vector extension, a multilingual embedding
- * benchmark) needs infrastructure that is not configured in this deployment;
- * the interface below is what it plugs into. Attribute filters that cannot be
- * evaluated because a fact is unknown RETAIN the candidate and record what is
- * missing — filtering on an unknown would silently drop the rule a question
- * should have surfaced.
- */
-
 import { KNOWLEDGE_RELEASE } from "../agentic/flags";
 import { PROVISIONS, provisionById } from "./provisions";
+import { expandQuery, tokens, normalize, explicitSections } from "./query";
 import type { EvidenceBundle, IncomeHead, LegalProvision, TaxPeriod, TaxpayerCategory } from "./types";
 
 export interface RetrievalQuery {
@@ -21,96 +8,65 @@ export interface RetrievalQuery {
   period: TaxPeriod;
   category?: TaxpayerCategory;
   incomeHeads?: IncomeHead[];
-  /** Exact sections to pull regardless of keyword score, e.g. ["87A"]. */
   sections?: string[];
   limit?: number;
 }
 
-function tokens(text: string): string[] {
-  return text
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}().%-]+/gu, " ")
-    .split(" ")
-    .filter((t) => t.length > 1);
-}
+const documentTokens = (p: LegalProvision) => tokens(p.title + " " + p.summary + " " + p.ruleText + " " + p.keywords.join(" "));
+const documents = PROVISIONS.map(documentTokens);
+const averageLength = documents.reduce((n, d) => n + d.length, 0) / documents.length;
 
-/** Simple lexical score: exact section hit, then keyword and title/summary overlap. */
+/** BM25 plus exact sections and phrases. Ranking scores are not confidence probabilities. */
 export function scoreProvision(p: LegalProvision, query: RetrievalQuery): number {
-  const q = tokens(query.text);
-  if (q.length === 0 && !query.sections?.length) return 0;
-  let score = 0;
-  const sectionKey = `${p.section}${p.subsection ?? ""}`.toLowerCase();
-  if (query.sections?.some((s) => s.toLowerCase() === sectionKey || s.toLowerCase() === p.section.toLowerCase())) score += 10;
-  if (q.includes(sectionKey) || q.includes(p.section.toLowerCase())) score += 6;
-  const kw = p.keywords.map((k) => k.toLowerCase());
-  for (const t of q) {
-    if (kw.includes(t)) score += 3;
-    else if (kw.some((k) => k.includes(t) && t.length > 3)) score += 1.5;
+  const expanded = expandQuery(query.text);
+  const terms = [...new Set(tokens(expanded))];
+  const key = normalize(p.section + (p.subsection ?? ""));
+  const requested = [...(query.sections ?? []), ...explicitSections(expanded)].map(normalize);
+  let score = requested.includes(key) ? 100 : 0;
+  const doc = documentTokens(p);
+  for (const term of terms) {
+    const tf = doc.filter((t) => t === term).length;
+    if (!tf) continue;
+    const df = documents.filter((d) => d.includes(term)).length;
+    const idf = Math.log(1 + (documents.length - df + 0.5) / (df + 0.5));
+    score += idf * tf * 2.2 / (tf + 1.2 * (0.25 + 0.75 * doc.length / averageLength));
   }
-  const prose = tokens(`${p.title} ${p.summary}`);
-  for (const t of q) if (prose.includes(t)) score += 1;
+  if (p.keywords.some((kw) => kw.includes(" ") && (" " + expanded + " ").includes(" " + normalize(kw) + " "))) score += 5;
   return score;
 }
 
 export function retrieve(query: RetrievalQuery): EvidenceBundle {
-  const limit = query.limit ?? 5;
-  const retainedForMissing: EvidenceBundle["retainedForMissing"] = [];
-
-  const candidates = PROVISIONS.filter((p) => {
-    // Version filter: the period's Act and financial year. Always known.
-    if (p.act !== query.period.act && p.id !== "transition:1961-to-2025") return false;
-    if (!p.financialYears.includes(query.period.financialYear)) return false;
-    return true;
-  }).filter((p) => {
-    // Attribute filters retain, rather than drop, when the attribute is unknown.
-    const missing: string[] = [];
-    if (query.category === undefined) missing.push("taxpayer category");
-    else if (!p.categories.includes(query.category)) return false;
-    if (query.incomeHeads === undefined) missing.push("income heads");
-    else if (!p.incomeHeads.some((h) => query.incomeHeads!.includes(h))) return false;
-    if (missing.length) retainedForMissing.push({ provision: p, missing });
-    return true;
-  });
-
-  const scored = candidates
+  const limit = Number.isFinite(query.limit) ? Math.max(1, Math.min(8, Math.floor(query.limit!))) : 4;
+  const compatible = (p: LegalProvision) =>
+    !p.supersededBy && (p.act === query.period.act || p.id === "transition:1961-to-2025") &&
+    p.financialYears.includes(query.period.financialYear) &&
+    (query.category === undefined || p.categories.includes(query.category));
+  const ranked = PROVISIONS.filter(compatible)
+    .filter((p) => !query.incomeHeads || p.incomeHeads.some((h) => query.incomeHeads!.includes(h)))
     .map((p) => ({ p, score: scoreProvision(p, query) }))
-    .filter((x) => x.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map((x) => x.p);
-
-  // A period this release has no reviewed rules for must still return the
-  // note that says so, or an empty bundle would read as "nothing applies".
-  const transition = provisionById("transition:1961-to-2025");
-  if (query.period.act === "IT_ACT_2025" && transition && !scored.includes(transition)) scored.push(transition);
-
-  // Expand linked provisions one hop: a deduction without its regime exception is not evidence.
-  // A linked rule still has to apply to this taxpayer: an HUF asking about s.115BAC must not
-  // receive the resident-individual rebate as unqualified evidence.
-  const expanded = new Map<string, LegalProvision>();
-  for (const p of scored) {
-    expanded.set(p.id, p);
-    for (const id of p.linked) {
-      const l = provisionById(id);
-      if (!l || !l.financialYears.includes(query.period.financialYear)) continue;
-      if (query.category !== undefined && !l.categories.includes(query.category)) continue;
-      expanded.set(l.id, l);
-    }
+    .filter((r) => r.score >= 1.2)
+    .sort((a, b) => b.score - a.score || a.p.id.localeCompare(b.p.id))
+    .slice(0, limit);
+  const primaryIds = ranked.map((r) => r.p.id);
+  if (query.period.act === "IT_ACT_2025") {
+    const transition = provisionById("transition:1961-to-2025")!;
+    return { release: KNOWLEDGE_RELEASE, period: query.period, query: query.text,
+      provisions: [transition], primaryIds: [transition.id], retainedForMissing: [] };
   }
-
-  return {
-    release: KNOWLEDGE_RELEASE,
-    period: query.period,
-    query: query.text,
-    provisions: [...expanded.values()],
-    retainedForMissing: retainedForMissing.filter((r) => expanded.has(r.provision.id)),
-  };
+  const expanded = new Map(ranked.map((r) => [r.p.id, r.p]));
+  for (const { p } of ranked) for (const id of p.linked) {
+    const linked = provisionById(id);
+    if (linked && compatible(linked)) expanded.set(id, linked);
+  }
+  const provisions = [...expanded.values()];
+  const missing = [query.category === undefined ? "taxpayer category" : "", query.incomeHeads === undefined ? "income heads" : ""].filter(Boolean);
+  return { release: KNOWLEDGE_RELEASE, period: query.period, query: query.text, primaryIds, provisions,
+    retainedForMissing: missing.length ? provisions.map((provision) => ({ provision, missing })) : [] };
 }
 
-/** Citations for a recommendation: id, title, locator, URL and review status — what the Sources panel shows. */
-export function cite(ids: string[]): { id: string; title: string; locator: string; url: string; section: string; reviewer: string }[] {
-  return ids
-    .map(provisionById)
-    .filter((p): p is LegalProvision => !!p)
-    .map((p) => ({ id: p.id, title: p.title, locator: p.locator, url: p.sourceUrl, section: `s.${p.section}${p.subsection ?? ""}`, reviewer: p.reviewer }));
+export function cite(ids: string[]) {
+  return [...new Set(ids)].map(provisionById).filter((p): p is LegalProvision => !!p)
+    .map((p) => ({ id: p.id, title: p.title, locator: p.locator, url: p.sourceUrl,
+      section: "s." + p.section + (p.subsection ?? ""), reviewer: p.reviewer, reviewedOn: p.reviewedOn,
+      contentHash: p.contentHash, sourceKind: p.sourceKind }));
 }

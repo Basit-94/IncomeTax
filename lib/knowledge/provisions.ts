@@ -15,25 +15,19 @@
  */
 
 import { createHash } from "crypto";
-import {
-  LTCG_112A_EXEMPTION,
-  LTCG_112A_RATE,
-  LTCG_112_RATE,
-  OLD_REGIME_CLAIM_CAPS,
-  REBATE_87A_NEW_MAX_AMOUNT,
-  REBATE_87A_NEW_THRESHOLD,
-  REBATE_87A_OLD_MAX_AMOUNT,
-  REBATE_87A_OLD_THRESHOLD,
-  STANDARD_DEDUCTION_NEW,
-  STANDARD_DEDUCTION_OLD,
-  STCG_111A_RATE,
-} from "../engine/constants";
+import { SUPPLEMENTAL_PROVISIONS } from "./supplemental";
 import type { LegalProvision, TaxPeriod } from "./types";
 
 const REVIEWER = "engineering draft — awaiting qualified tax reviewer (plan §5.7)";
 const REVIEWED_ON = "2026-09-05";
 const FY = "2025-26";
 const IT_PORTAL = "https://www.incometax.gov.in";
+// Independently transcribed legal values, deliberately NOT imported from the calculator.
+const STANDARD_DEDUCTION_NEW = 75000, STANDARD_DEDUCTION_OLD = 50000;
+const REBATE_87A_NEW_THRESHOLD = 1200000, REBATE_87A_NEW_MAX_AMOUNT = 60000;
+const REBATE_87A_OLD_THRESHOLD = 500000, REBATE_87A_OLD_MAX_AMOUNT = 12500;
+const LTCG_112A_EXEMPTION = 125000, LTCG_112A_RATE = 0.125, LTCG_112_RATE = 0.125, STCG_111A_RATE = 0.20;
+const OLD_REGIME_CLAIM_CAPS: Record<string, number> = { "80C": 150000, "80D": 25000, "80D_PARENTS": 50000 };
 
 export const PERIOD_FY_2025_26: TaxPeriod = { financialYear: "2025-26", label: "AY 2026-27", act: "IT_ACT_1961" };
 export const PERIOD_FY_2026_27: TaxPeriod = { financialYear: "2026-27", label: "TY 2026-27", act: "IT_ACT_2025" };
@@ -46,6 +40,7 @@ export function periodForFinancialYear(fy: string): TaxPeriod | null {
   const m = /^(\d{4})-(\d{2})$/.exec(fy);
   if (!m) return null;
   const start = Number(m[1]);
+  if (Number(m[2]) !== (start + 1) % 100 || start < 1961) return null;
   if (start < 2025) return { financialYear: fy, label: `AY ${start + 1}-${String(start + 2).slice(2)}`, act: "IT_ACT_1961" };
   return { financialYear: fy, label: `TY ${fy}`, act: "IT_ACT_2025" };
 }
@@ -60,7 +55,9 @@ export function provisionHash(p: Pick<LegalProvision, "ruleText" | "summary">) {
 }
 
 function provision(p: Omit<LegalProvision, "contentHash" | "jurisdiction" | "reviewer" | "reviewedOn">): LegalProvision {
-  return { ...p, jurisdiction: "IN", reviewer: REVIEWER, reviewedOn: REVIEWED_ON, contentHash: provisionHash(p) };
+  // A portal help page is explanatory guidance, never mislabel it as an enactment.
+  const sourceKind = p.sourceUrl.includes("/help/") ? "departmental_faq" as const : p.sourceKind;
+  return { ...p, sourceKind, jurisdiction: "IN", reviewer: REVIEWER, reviewedOn: REVIEWED_ON, contentHash: provisionHash(p) };
 }
 
 const rupees = (n: number) => `₹${n.toLocaleString("en-IN")}`;
@@ -90,12 +87,12 @@ export const PROVISIONS: readonly LegalProvision[] = [
     section: "87A",
     title: "Rebate for resident individuals",
     summary: "Below a total-income threshold the slab tax is waived; just above it, relief tapers so an extra rupee of income cannot cost more than a rupee of tax.",
-    ruleText: `New regime: full rebate up to ${rupees(REBATE_87A_NEW_MAX_AMOUNT)} where total income does not exceed ${rupees(REBATE_87A_NEW_THRESHOLD)}; marginal relief above it caps pre-cess slab tax at the excess over the threshold. Old regime: rebate up to ${rupees(REBATE_87A_OLD_MAX_AMOUNT)} where total income does not exceed ${rupees(REBATE_87A_OLD_THRESHOLD)}. Resident individuals only. Under the new regime the rebate is limited to tax computed at the s.115BAC(1A) slab rates, so it does not reach tax on income chargeable at special rates (ss.111A, 112, 112A and the like); marginal relief likewise only arises where that slab tax exceeds the excess of total income over the threshold.`,
+    ruleText: `Resident individuals only. New regime: rebate up to ${rupees(REBATE_87A_NEW_MAX_AMOUNT)} when total income does not exceed ${rupees(REBATE_87A_NEW_THRESHOLD)}, limited to tax at s.115BAC(1A) slab rates. Above the threshold, marginal relief requires the statutory comparison of income-tax with excess income; it is not available at every higher income. Special-rate tax cannot itself be rebated under the new regime. Old regime: rebate up to ${rupees(REBATE_87A_OLD_MAX_AMOUNT)} when total income does not exceed ${rupees(REBATE_87A_OLD_THRESHOLD)}; s.112A tax is excluded. Mixed-rate marginal relief needs a separately validated computation.`,
     financialYears: [FY],
     effectiveFrom: "2025-04-01",
     sourceKind: "act",
     sourceUrl: `${IT_PORTAL}/iec/foportal/help/individual/return-applicable-1`,
-    locator: "Income-tax Act, 1961, s.87A as amended by Finance Act, 2025",
+    locator: "AY 2026-27 guidance: Applicable Rebate u/s 87A; Finance Act 2025 s.20 (special-rate restriction)",
     categories: ["individual", "senior", "super_senior"],
     incomeHeads: ["salary", "other_sources", "house_property", "capital_gains", "business_profession"],
     keywords: ["rebate", "87A", "marginal relief", "12 lakh", "1200000", "60000", "12500", "resident"],
@@ -141,7 +138,7 @@ export const PROVISIONS: readonly LegalProvision[] = [
     section: "80D",
     title: "Deduction for health insurance premium",
     summary: "Medical insurance premium for self and family, and separately for parents, comes off taxable income — under the old regime only.",
-    ruleText: `Self, spouse and dependent children: up to ${rupees(OLD_REGIME_CLAIM_CAPS["80D"] ?? 25000)} (${rupees(50000)} if the assessee or spouse is a senior citizen). Parents: up to ${rupees(OLD_REGIME_CLAIM_CAPS["80D_PARENTS"] ?? 50000)} where a parent is a senior citizen, else ${rupees(25000)}. Payment other than in cash. Not available under s.115BAC.`,
+    ruleText: "Old regime only. Individual: self/spouse/dependent children up to ₹25,000, increased to ₹50,000 for qualifying resident senior cover; parents have a separate ₹25,000/₹50,000 limit. Senior means resident aged at least 60 in the year. Preventive check-ups: ₹5,000 combined within the overall limits, cash permitted. Other payments must be non-cash. Qualifying uninsured senior medical expenditure is subject to the ₹50,000 limit and conditions. HUF: eligible member expenditure has one ₹25,000/₹50,000 limit, not separate parent/family limits. Multi-year premiums are apportioned over the covered years.",
     financialYears: [FY],
     effectiveFrom: "2025-04-01",
     sourceKind: "act",
@@ -176,7 +173,7 @@ export const PROVISIONS: readonly LegalProvision[] = [
     section: "111A",
     title: "Short-term capital gains on listed equity with STT",
     summary: "Profit on shares or equity funds sold within a year is taxed at a flat rate, not at slab.",
-    ruleText: `Short-term capital gains on transfer of equity shares, equity-oriented fund units or business-trust units on which STT was paid are taxed at ${STCG_111A_RATE * 100}% for transfers on or after 23 July 2024. Chapter VI-A deductions do not reduce such gains.`,
+    ruleText: `Qualifying short-term gains on equity shares, equity-oriented fund units or business-trust units are taxed at ${STCG_111A_RATE * 100}% for transfers on or after 23 July 2024, subject to STT conditions and statutory exceptions. Chapter VI-A deductions do not reduce these gains. Resident individuals/HUFs may adjust unused basic exemption before calculating special-rate tax. Not every share or fund sale qualifies.`,
     financialYears: [FY],
     effectiveFrom: "2024-07-23",
     sourceKind: "finance_act",
@@ -274,6 +271,7 @@ export const PROVISIONS: readonly LegalProvision[] = [
     keywords: ["transition", "Income-tax Act 2025", "tax year", "assessment year", "1961", "2025 Act", "new act"],
     linked: [],
   }),
+  ...SUPPLEMENTAL_PROVISIONS.map(provision),
 ];
 
 export function provisionById(id: string): LegalProvision | undefined {

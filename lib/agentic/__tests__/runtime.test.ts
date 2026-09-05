@@ -135,22 +135,28 @@ describe("runtime — the first end-to-end milestone (plan §7)", () => {
     expect(r.state.actionTaken).toBeUndefined();
   });
 
-  it("compare_regimes: Rakesh's claims mean no 80C/80D question; the card applies the cheaper regime", async () => {
+  it("compare_regimes: Rakesh's capital gains and 80D claim are outside this release — the run explains why, stages nothing, changes nothing", async () => {
     const d = deps();
     const run = await createRun(d, rakesh, { message: "which regime is better for me?", lang: "en" });
-    let r = (await advance(d, rakesh, run.id))!;
+    const r = (await advance(d, rakesh, run.id))!;
     expect(r.task).toBe("compare_regimes");
-    expect(r.status).toBe("waiting_for_review"); // no question: Rakesh already has 80C and 80D claims
-    const card = r.state.pendingCard!;
-    expect(card.kind).toBe("regime");
-    r = (await advance(d, rakesh, r.id, { confirm: { cardId: card.id, accepted: true } }))!;
     expect(r.status).toBe("completed");
-    const both = { new: computeForPersona(PERSONAS.rakesh, "new").totalTax, old: computeForPersona(PERSONAS.rakesh, "old").totalTax };
-    const applied = (await d.returns.get(rakesh, "2026-27"))!.state.regime;
-    expect(applied).toBe(both.new <= both.old ? "new" : "old");
+    expect(r.state.pendingCard).toBeUndefined();
+    expect(r.state.pendingCommands).toBeUndefined();
+    expect(r.state.advice?.canRecommend).toBe(false);
+    expect(r.state.advice?.comparison).toBeUndefined(); // no "cheaper" figure leaks when the guard says no
+    const codes = r.state.advice!.issues.map((i) => i.code);
+    expect(codes).toContain("capital_gains_unsupported");
+    expect(codes).toContain("deduction_unsupported");
+    expect((await d.returns.get(rakesh, "2026-27"))!.state.regime).toBe("new");
+    expect(await d.store.listOutputs(rakesh, r.id)).toHaveLength(0);
+    const log = await events(d, rakesh, r);
+    expect(log.some((e) => e.type === "review_card")).toBe(false);
+    expect(log.some((e) => e.type === "message" && e.role === "assistant" && /cannot make a recommendation/.test(e.text))).toBe(true);
+    expect(r.state.steps.find((p) => p.id === "review")?.state).toBe("skipped");
   });
 
-  it("an answer typed as a message is parsed against the pending question, in words or figures", async () => {
+  it("an answer typed as a message is parsed against the pending question, in words or figures — and an unsupported income head then abstains", async () => {
     const d = deps();
     const run = await createRun(d, sunita, { task: "prepare_salaried_return", lang: "en" });
     let r = (await advance(d, sunita, run.id))!;
@@ -161,9 +167,14 @@ describe("runtime — the first end-to-end milestone (plan §7)", () => {
     r = (await advance(d, sunita, r.id, { message: "about 1.5 lakh" }))!;
     expect(r.state.answers.other_income_amount).toBe(150000);
     r = await answerUntilReview(d, sunita, r, { claim_80C: 0, claim_80D: 0 });
-    // The declared income is staged, not applied, until confirmation — but it is in the review figures.
+    // Self-declared "other" income is an income head this release does not compute: the guard abstains,
+    // nothing is staged for confirmation and nothing is applied to the return.
+    expect(r.status).toBe("completed");
+    expect(r.state.pendingCard).toBeUndefined();
+    expect(r.state.pendingCommands).toBeUndefined();
+    expect(r.state.advice?.issues.map((i) => i.code)).toContain("income_head_unsupported");
     expect((await d.returns.get(sunita, "2026-27"))!.state.persona.facts).toHaveLength(2);
-    expect(r.state.pendingCommands?.some((c) => c.type === "declare_income")).toBe(true);
+    expect((await d.returns.get(sunita, "2026-27"))!.revision).toBe(1);
   });
 
   it("with a vault: an uploaded Form 16 that disagrees with the return is found, read and staged as an import", async () => {

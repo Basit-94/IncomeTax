@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   if (typeof body.personaId !== "string") {
     return NextResponse.json({ ok: false, error: "personaId required" }, { status: 400 });
   }
-  const { sessions } = await getServices();
+  const { sessions, dbConfigured } = await getServices();
   const session = await sessions.issueDemo(body.personaId);
   if (!session) {
     return NextResponse.json(
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       { status: 404 },
     );
   }
-  const res = NextResponse.json({ ok: true, owner: session.owner, kind: session.kind, expiresAt: session.expiresAt });
+  const res = NextResponse.json({ ok: true, owner: session.owner, kind: session.kind, expiresAt: session.expiresAt, durable: dbConfigured });
   res.headers.set("Set-Cookie", sessionCookie(session, isSecureRequest(req)));
   return res;
 }

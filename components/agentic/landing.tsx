@@ -13,10 +13,10 @@ import type { Dict } from "@/lib/i18n";
 import type { AgenticStrings } from "@/lib/i18n/agenticStrings";
 import type { RunTask } from "@/lib/agentic/types";
 import type { Lang } from "@/lib/types";
-import { LogoMark } from "../brand/logo";
 import LanguageMenu from "../ui/language-menu";
 import type { ShellCitizen } from "./app-shell";
-import ModeSwitch, { type WorkMode } from "./mode-switch";
+import { HeaderBar, PrototypeBanner } from "./header-frame";
+import type { WorkMode } from "./mode-switch";
 import { Composer } from "./workspace";
 
 export interface AgenticLandingProps {
@@ -50,14 +50,9 @@ export default function AgenticLanding(props: AgenticLandingProps) {
 
   return (
     <div className="min-h-dvh flex flex-col bg-paper text-ink">
-      <header className="shrink-0 h-16 px-3 sm:px-5 flex items-center gap-3" data-testid="landing-header">
-        <a href="/" className="flex items-center shrink-0" aria-label={t.shell.productName}>
-          <LogoMark t={t} size="sm" />
-        </a>
-        <div className="shrink-0" data-testid="mode-slot">
-          <ModeSwitch mode="agentic" onChange={props.onModeChange} s={s} busy={props.busy} />
-        </div>
-        <div className="flex-1" />
+      <PrototypeBanner t={t} />
+      <header className="shrink-0" data-testid="landing-header">
+      <HeaderBar t={t} s={s} mode="agentic" onModeChange={props.onModeChange} busy={props.busy}>
         <nav className="hidden lg:flex items-center gap-1.5 shrink-0" aria-label={t.shell.productName}>
           <button type="button" onClick={props.onMyReturn} className="h-[38px] whitespace-nowrap rounded-full border border-line bg-paper-2 px-4 text-sm text-ink hover:border-money/60 hover:shadow-sm cursor-pointer">
             {s.myReturn}
@@ -84,6 +79,7 @@ export default function AgenticLanding(props: AgenticLandingProps) {
             )}
           </div>
         )}
+      </HeaderBar>
       </header>
 
       <main id="main-content" className="flex-1 flex flex-col items-center justify-center px-4 py-10">
@@ -92,13 +88,13 @@ export default function AgenticLanding(props: AgenticLandingProps) {
             <span className="size-1.5 rounded-full bg-money" aria-hidden="true" /> {s.simulatedBadge}
           </span>
           <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl leading-[1.05] tracking-tight text-ink text-balance">
-            {citizen ? `${citizen.name.split(" ")[0]} — ` : ""}{s.welcomeTitle}
+            {s.welcomeTitle}
           </h1>
           <p className="text-base sm:text-lg lg:text-xl text-ink-2 leading-relaxed max-w-2xl mx-auto">{s.welcomeBody}</p>
 
           {props.signIn ?? (
             <>
-              <Composer s={s} lang={props.lang} disabled={!!props.busy} onSubmit={(message) => props.onStart({ message })} variant="ask" />
+              <Composer s={s} lang={props.lang} disabled={!!props.busy} onSubmit={(message) => props.onStart({ message })} variant="ask" placeholder={s.landingPlaceholder} />
               <div className="flex flex-wrap justify-center gap-6 sm:gap-10 pt-2">
                 {shortcuts.map((sc) => (
                   <button

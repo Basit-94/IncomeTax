@@ -166,8 +166,9 @@ export class PostgresRunStore implements RunStore {
   }
   async saveRun(run: Run) {
     await this.pool.query(
-      "UPDATE agent_runs SET status = $2, state = $3::jsonb, title = $4, updated_at = $5 WHERE id = $1",
-      [run.id, run.status, JSON.stringify(run.state), run.title, this.clock()],
+      // Every field the runtime mutates after creation: the classifier sets task/title, compute sets the release.
+      "UPDATE agent_runs SET status = $2, state = $3::jsonb, title = $4, task = $5, knowledge_release = $6, updated_at = $7 WHERE id = $1",
+      [run.id, run.status, JSON.stringify(run.state), run.title, run.task, run.knowledgeRelease, this.clock()],
     );
   }
   async appendEvent(owner: Owner, runId: string, payload: RunEventPayload) {

@@ -58,7 +58,7 @@ export function redactText(input: string, knownNames: string[] = []): Redaction 
  * reads like an instruction to the assistant before it can reach a prompt,
  * and report that it was there so the run can tell the citizen.
  */
-const INJECTION_RE = /(ignore (all|any|the) (previous|prior|above) instructions?|you are now|system prompt|disregard (your|the) (rules|instructions)|as an ai|call the tool|execute (the )?(filing|payment)|confirm (the )?(filing|payment) (now|immediately))/gi;
+const INJECTION_RE = /(ignore (all |any |the |your |every )?(previous|prior|above|earlier) (instructions?|rules?|guidance)|you are now|system prompt|disregard (your|the) (rules|instructions)|as an ai|call the tool|execute (the )?(filing|payment)|confirm (the )?(filing|payment) (now|immediately))/gi;
 
 export function stripInjection(text: string): { text: string; suspicious: boolean } {
   const suspicious = INJECTION_RE.test(text);

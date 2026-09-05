@@ -103,6 +103,8 @@ export interface EvidenceBundle {
   period: TaxPeriod;
   query: string;
   provisions: LegalProvision[];
+  /** Ranked direct matches, excluding linked context. */
+  primaryIds?: string[];
   /** Candidate rules kept because a filtering attribute was unknown (§5.6). */
   retainedForMissing: { provision: LegalProvision; missing: string[] }[];
 }

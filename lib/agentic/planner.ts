@@ -119,11 +119,19 @@ export function setStep(steps: PlanStep[], id: StepId, state: StepState, note?: 
  */
 export function classifyByRules(text: string): RunTask {
   const t = text.toLowerCase();
+  if (isTaxInformationQuestion(t)) return "explain";
   if (/\b(demo|sample|show me an example|try it)\b/.test(t)) return "load_demo";
   if (/\b(regime|old vs new|new vs old|115bac|which is (better|cheaper)|compare)\b/.test(t)) return "compare_regimes";
   if (/\b(wrong|dispute|mismatch|ais|26as|reconcile|not mine|duplicate|correct(ion)?|reported)\b/.test(t)) return "reconcile_facts";
   if (/\b(file|filing|return|itr|prepare|submit|refund|form 16|salary)\b/.test(t)) return "prepare_salaried_return";
   return "explain";
+}
+
+/** Questions about a rule/deadline must not start filing just because they contain 'ITR'. */
+export function isTaxInformationQuestion(text: string): boolean {
+  return /^(what|when|why|how (does|do|is|are)|explain|tell me about)\b/i.test(text.trim()) ||
+    /\b(deadline|due date|standard deduction|87a|80d|80c|112a|111a|cess|surcharge)\b/i.test(text) &&
+    !/\b(file my|prepare my|compare|better for me|cheaper for me)\b/i.test(text);
 }
 
 export function taskTitle(task: RunTask, s: AgenticStrings): string {

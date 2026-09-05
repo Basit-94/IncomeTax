@@ -25,7 +25,9 @@ import type { ReturnSnapshotStore } from "../return/snapshot-store";
 import type { Owner } from "../server/session";
 import type { VaultService } from "../vault/service";
 import { evaluateSalariedSlice } from "../knowledge/applicability";
-import { PERIOD_FY_2025_26 } from "../knowledge/provisions";
+import { assessAdvice, type AdviceAssessment } from "../knowledge/advice";
+import { PERIOD_FY_2025_26, periodForFinancialYear } from "../knowledge/provisions";
+import { answerTaxQuestion } from "../knowledge/rag";
 import type { TaxpayerFacts } from "../knowledge/types";
 import { safeFilename } from "./redact";
 import type { RunStore } from "./store";
@@ -41,6 +43,8 @@ export interface ToolContext {
   vault: VaultService | null;
   returns: ReturnSnapshotStore;
   store: RunStore;
+  /** Today's date (YYYY-MM-DD), injected so the knowledge-release window check is deterministic in tests. */
+  today: string;
 }
 
 export interface ToolSpec<A extends z.ZodTypeAny = z.ZodTypeAny> {
@@ -52,6 +56,8 @@ export interface ToolSpec<A extends z.ZodTypeAny = z.ZodTypeAny> {
 }
 
 const none = z.object({}).strict();
+/** Whole rupees, finite, never negative, inside the safe-integer range. */
+const money = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 
 /** Lets each tool's `run` see its own inferred argument type. */
 function tool<A extends z.ZodTypeAny>(spec: ToolSpec<A>): ToolSpec<A> {
@@ -64,6 +70,27 @@ async function currentReturn(ctx: ToolContext) {
   const snap = await ctx.returns.get(ctx.owner, ctx.assessmentYear);
   if (!snap) return null;
   return snap;
+}
+
+/**
+ * The shared guard, applied INSIDE every arithmetic tool so a direct call cannot bypass it
+ * (docs/TAX-RAG-AGENT-HANDOFF-2026-09-05.md §7B). When the guard says no, the tool returns
+ * this structured limitation instead of figures — never a number the release cannot stand behind.
+ */
+function limitation(advice: AdviceAssessment, revision: number) {
+  return {
+    exists: true as const,
+    revision,
+    blocked: true as const,
+    status: advice.status,
+    release: advice.release,
+    corpusHash: advice.corpusHash,
+    issues: advice.issues.map((i) => ({ code: i.code, reason: i.reason, provisions: i.provisions })),
+  };
+}
+
+function guard(ctx: ToolContext, persona: Parameters<typeof computeForPersona>[0]): AdviceAssessment {
+  return assessAdvice(persona, { ownerKind: ctx.owner.kind, today: ctx.today });
 }
 
 /** The engine's view of a return without identifiers (§5.3). */
@@ -153,47 +180,54 @@ export const TOOLS = {
 
   get_current_return: tool({
     name: "get_current_return",
-    description: "The owner's return as the engine sees it: facts by kind, claims, credits, regime and revision. No identifiers.",
+    description: "The owner's return as recorded: facts by kind, claims, credits, regime and revision. No identifiers. Derived figures appear only when the shared guard allows them.",
     args: none,
     permission: "auto",
     async run(_args, ctx) {
       const snap = await currentReturn(ctx);
       if (!snap) return { exists: false };
       const p = snap.state.persona;
+      const advice = guard(ctx, p);
       return {
         exists: true,
         revision: snap.revision,
         regime: snap.state.regime ?? "new",
         filed: !!snap.state.filedAt,
+        // Raw, owner-scoped facts stay readable: they are the citizen's own records, not advice.
         facts: p.facts.map((f) => ({ id: f.id, kind: f.kind, amount: f.amount, confirmed: snap.state.confirmedFactIds.includes(f.id), reporterKind: f.provenance.reporterKind, statement: f.provenance.statement })),
         taxPaid: p.taxPaid.map((t) => ({ id: t.id, section: t.section, amount: t.amount })),
         claims: p.claims.map((c) => ({ id: c.id, section: c.section, amount: c.amount, evidenceAttached: c.evidenceAttached })),
         activeCorrections: snap.state.corrections.filter((c) => !c.reverted).length,
-        figures: figures(snap.state.regime, p),
+        figures: advice.canRecommend ? figures(snap.state.regime, p) : null,
+        limitation: advice.canRecommend ? null : limitation(advice, snap.revision),
       };
     },
   }),
 
   compute_current_tax: tool({
     name: "compute_current_tax",
-    description: "Every figure of the current return under its chosen regime, from the engine.",
+    description: "Every figure of the current return under its chosen regime, from the engine — or a structured limitation when the release cannot support them.",
     args: none,
     permission: "auto",
     async run(_args, ctx) {
       const snap = await currentReturn(ctx);
       if (!snap) return { exists: false };
-      return { exists: true, revision: snap.revision, ...figures(snap.state.regime, snap.state.persona) };
+      const advice = guard(ctx, snap.state.persona);
+      if (!advice.canRecommend) return limitation(advice, snap.revision);
+      return { exists: true, revision: snap.revision, release: advice.release, ...figures(snap.state.regime, snap.state.persona) };
     },
   }),
 
   compare_regimes: tool({
     name: "compare_regimes",
-    description: "Both regimes side by side for the current return, plus which is cheaper and by how much.",
+    description: "Both regimes side by side for the current return, plus which is cheaper and by how much — or a structured limitation.",
     args: none,
     permission: "auto",
     async run(_args, ctx) {
       const snap = await currentReturn(ctx);
       if (!snap) return { exists: false };
+      const advice = guard(ctx, snap.state.persona);
+      if (!advice.canRecommend) return limitation(advice, snap.revision);
       const both = compareForPersona(snap.state.persona);
       const cheaper = both.new.totalTax <= both.old.totalTax ? "new" : "old";
       return {
@@ -210,29 +244,55 @@ export const TOOLS = {
 
   check_applicability: tool({
     name: "check_applicability",
-    description: "Run the reviewed eligibility rules for the salaried slice against known facts. Missing facts come back named.",
+    description: "Run this release's draft eligibility rules (engineering draft, awaiting qualified tax review) for the salaried slice against known facts. Unknown facts come back named; nothing is defaulted to eligible.",
     args: z.object({ facts: z.object({
-      hasSalaryIncome: z.boolean().optional(), grossSalary: z.number().optional(), hasBusinessOrProfessionIncome: z.boolean().optional(),
-      totalIncome: z.number().optional(), regime: z.enum(["new", "old"]).optional(), resident: z.boolean().optional(),
-      priorRegimeOptOut: z.boolean().optional(), ltcg112A: z.number().optional(),
-      claims: z.array(z.object({ section: z.string(), amount: z.number(), evidence: z.boolean().optional() })).optional(),
+      financialYear: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+      category: z.enum(["individual", "huf", "senior", "super_senior"]).optional(),
+      age: z.number().int().min(0).max(120).optional(),
+      hasSalaryIncome: z.boolean().optional(), grossSalary: money.optional(), hasBusinessOrProfessionIncome: z.boolean().optional(),
+      totalIncome: money.optional(), regime: z.enum(["new", "old"]).optional(), resident: z.boolean().optional(),
+      priorRegimeOptOut: z.boolean().optional(), returnByDueDate: z.boolean().optional(),
+      ltcg112A: money.optional(), specialRateIncome: money.optional(),
+      claims: z.array(z.object({ section: z.string().min(2).max(16), amount: money, evidence: z.boolean().optional() }).strict()).max(20).optional(),
     }).strict() }).strict(),
     permission: "auto",
     async run(args) {
-      const facts: TaxpayerFacts = { period: PERIOD_FY_2025_26, category: "individual", ...args.facts };
-      return { results: evaluateSalariedSlice(facts) };
+      const { financialYear, ...rest } = args.facts;
+      const period = financialYear ? periodForFinancialYear(financialYear) ?? undefined : PERIOD_FY_2025_26;
+      const facts: TaxpayerFacts = { period, ...rest };
+      return { results: evaluateSalariedSlice(facts), period: period ?? null };
+    },
+  }),
+
+  retrieve_tax_knowledge: tool({
+    name: "retrieve_tax_knowledge",
+    description: "Answer a public tax question from this release's curated FY 2025-26 corpus: exact stored paraphrases with citations, or an explicit abstention. Never reads private documents; never invents a rule.",
+    args: z.object({ question: z.string().min(3).max(2000) }).strict(),
+    permission: "auto",
+    async run(args, ctx) {
+      const a = answerTaxQuestion(args.question, ctx.today);
+      return {
+        status: a.status,
+        release: a.release,
+        corpusHash: a.corpusHash,
+        period: a.period,
+        text: a.text,
+        citations: a.citations.map((c) => ({ id: c.id, section: c.section, title: c.title, url: c.url, reviewer: c.reviewer })),
+      };
     },
   }),
 
   review_return: tool({
     name: "review_return",
-    description: "Computed findings: TDS vs liability, unclassified gains, cheaper regime, missing old-regime claims, CASS risk.",
+    description: "Computed findings: TDS vs liability, unclassified gains, cheaper regime, missing old-regime claims, CASS risk — or a structured limitation.",
     args: none,
     permission: "auto",
     async run(_args, ctx) {
       const snap = await currentReturn(ctx);
       if (!snap) return { exists: false };
       const p = snap.state.persona;
+      const advice = guard(ctx, p);
+      if (!advice.canRecommend) return limitation(advice, snap.revision);
       const regime = snap.state.regime ?? "new";
       const both = compareForPersona(p);
       const findings: string[] = [];
@@ -264,26 +324,30 @@ export const TOOLS = {
 
   prepare_filing: tool({
     name: "prepare_filing",
-    description: "Compute the final figures and stage a SIMULATED filing for explicit confirmation. Never files by itself.",
+    description: "Compute the final figures and stage a SIMULATED filing for explicit confirmation. Never files by itself; refuses when the shared guard does not allow action.",
     args: none,
     permission: "confirm_required",
     async run(_args, ctx) {
       const snap = await currentReturn(ctx);
       if (!snap) return { exists: false };
-      return { exists: true, revision: snap.revision, ...figures(snap.state.regime, snap.state.persona) };
+      const advice = guard(ctx, snap.state.persona);
+      if (!advice.canAct) return limitation(advice, snap.revision);
+      return { exists: true, revision: snap.revision, release: advice.release, ...figures(snap.state.regime, snap.state.persona) };
     },
   }),
 
   prepare_simulated_payment: tool({
     name: "prepare_simulated_payment",
-    description: "Stage a SIMULATED Challan 280 for the balance payable, for explicit confirmation.",
+    description: "Stage a SIMULATED Challan 280 for the balance payable, for explicit confirmation. Refuses when the shared guard does not allow action.",
     args: none,
     permission: "confirm_required",
     async run(_args, ctx) {
       const snap = await currentReturn(ctx);
       if (!snap) return { exists: false };
+      const advice = guard(ctx, snap.state.persona);
+      if (!advice.canAct) return limitation(advice, snap.revision);
       const f = figures(snap.state.regime, snap.state.persona);
-      return { exists: true, revision: snap.revision, balancePayable: Math.max(0, -f.refundOrDue) };
+      return { exists: true, revision: snap.revision, release: advice.release, balancePayable: Math.max(0, -f.refundOrDue) };
     },
   }),
 

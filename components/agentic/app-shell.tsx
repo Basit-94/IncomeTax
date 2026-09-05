@@ -21,10 +21,10 @@ import type { AgenticStrings } from "@/lib/i18n/agenticStrings";
 import type { Lang } from "@/lib/types";
 import type { PublicRun } from "@/lib/agentic/runtime";
 import type { OutputRef, PlanStep, SourceRef } from "@/lib/agentic/types";
-import { LogoMark } from "../brand/logo";
 import LanguageMenu from "../ui/language-menu";
+import { HeaderBar, PrototypeBanner } from "./header-frame";
 import { InspectorControls, InspectorPanel, type InspectorTab } from "./inspector";
-import ModeSwitch, { type WorkMode } from "./mode-switch";
+import type { WorkMode } from "./mode-switch";
 
 export interface ShellCitizen {
   name: string;
@@ -91,11 +91,8 @@ export default function AppShell(props: AppShellProps) {
 
   const sidebar = (
     <nav aria-label="Wapsi" className="flex h-full flex-col bg-paper-2 border-e border-line">
-      {/* Brand */}
-      <div className="flex items-center justify-between px-3 pt-3 pb-2">
-        <a href="/" className="flex items-center gap-2 min-w-0" aria-label={t.shell.productName}>
-          <LogoMark t={t} size="sm" />
-        </a>
+      {/* The brand lives in the shared header bar above; this row only holds the collapse / close control. */}
+      <div className="flex items-center justify-end px-3 pt-3 pb-1">
         <button type="button" onClick={() => (drawer ? setDrawer(false) : toggleCollapsed())} className="hidden lg:flex size-8 items-center justify-center rounded-lg text-ink-3 hover:text-ink hover:bg-paper-3 cursor-pointer" aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}>
           <PanelLeftClose size={16} aria-hidden="true" />
         </button>
@@ -213,36 +210,32 @@ export default function AppShell(props: AppShellProps) {
   );
 
   return (
-    <div className="min-h-dvh flex bg-paper text-ink">
-      {/* Sidebar: fixed column on large screens, drawer below */}
-      {withSidebar && <div className={`hidden lg:block shrink-0 transition-[width] duration-200 ${collapsed ? "w-0 overflow-hidden" : "w-[272px]"}`}>{sidebar}</div>}
-      {withSidebar && drawer && (
-        <div className="lg:hidden fixed inset-0 z-50 flex" role="dialog" aria-modal="true">
-          <div className="w-[272px] max-w-[85vw] h-full">{sidebar}</div>
-          <button type="button" className="flex-1 bg-black/40" aria-label={s.cancel} onClick={() => setDrawer(false)} />
-        </div>
-      )}
-
-      <div className="flex-1 min-w-0 flex flex-col">
-        {/* Header: the reserved mode slot sits first, hard against the sidebar boundary. */}
-        <header className="h-[56px] shrink-0 border-b border-line bg-paper/95 backdrop-blur px-3 flex items-center gap-2" data-testid="shell-header">
-          {withSidebar ? (
+    <div className="min-h-dvh flex flex-col bg-paper text-ink">
+      {/* The shared frame: banner + header bar span the full width ABOVE the sidebar, so the
+          Agentic/Manual switch sits at the same x/y as on the landing and the Manual page. */}
+      <PrototypeBanner t={t} />
+      <header className="shrink-0 border-b border-line bg-paper/95 backdrop-blur" data-testid="shell-header">
+        <HeaderBar t={t} s={s} mode={mode} onModeChange={props.onModeChange} busy={props.modeBusy}>
+          {withSidebar && (
             <button type="button" onClick={() => (window.matchMedia("(min-width: 1024px)").matches ? toggleCollapsed() : setDrawer(true))} className="size-9 flex items-center justify-center rounded-lg text-ink-2 hover:text-ink hover:bg-paper-2 cursor-pointer shrink-0" aria-label="Menu">
               <Menu size={18} aria-hidden="true" />
             </button>
-          ) : (
-            <a href="/" className="flex items-center shrink-0 pe-1" aria-label={t.shell.productName}>
-              <LogoMark t={t} size="sm" />
-            </a>
           )}
-          <div className="shrink-0" data-testid="mode-slot">
-            <ModeSwitch mode={mode} onChange={props.onModeChange} s={s} busy={props.modeBusy} />
-          </div>
-          <div className="flex-1" />
           {withSidebar && <InspectorControls s={s} open={inspectorTab} onToggle={(tab) => setInspectorTab((cur) => (cur === tab ? null : tab))} steps={inspector.steps} outputs={inspector.outputs} sources={inspector.sources} />}
-        </header>
+        </HeaderBar>
+      </header>
 
-        <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
+      <div className="flex-1 min-h-0 flex">
+        {/* Sidebar: fixed column on large screens, drawer below */}
+        {withSidebar && <div className={`hidden lg:block shrink-0 transition-[width] duration-200 ${collapsed ? "w-0 overflow-hidden" : "w-[272px]"}`}>{sidebar}</div>}
+        {withSidebar && drawer && (
+          <div className="lg:hidden fixed inset-0 z-50 flex" role="dialog" aria-modal="true">
+            <div className="w-[272px] max-w-[85vw] h-full">{sidebar}</div>
+            <button type="button" className="flex-1 bg-black/40" aria-label={s.cancel} onClick={() => setDrawer(false)} />
+          </div>
+        )}
+
+        <div className="flex-1 min-w-0 min-h-0 flex flex-col lg:flex-row">
           <main id="main-content" className="flex-1 min-w-0 min-h-0 flex flex-col">{props.children}</main>
           {withSidebar && <InspectorPanel s={s} open={inspectorTab} onToggle={(tab) => setInspectorTab(tab)} steps={inspector.steps} outputs={inspector.outputs} sources={inspector.sources} runId={inspector.runId} manualNote={inspector.manualNote} />}
         </div>

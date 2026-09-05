@@ -17,7 +17,7 @@ export function agenticEnabled(): boolean {
  * lib/knowledge changes in a way that alters an answer; recorded on each run so
  * a later reader knows which rules produced which figure.
  */
-export const KNOWLEDGE_RELEASE = "2026-09-05.1";
+export const KNOWLEDGE_RELEASE = "2026-09-05.2";
 
 /** Parser version recorded on every extraction row (plan §4.1). */
 export const PDF_PARSER_VERSION = "pdfExtract@2026-09-03";

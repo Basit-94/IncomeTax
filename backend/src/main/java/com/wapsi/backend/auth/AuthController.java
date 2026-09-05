@@ -154,8 +154,8 @@ public final class AuthController {
     /**
      * The identity-verification contract the front end's session bridge needs (front-end plan
      * §3.2): 200 with the owning PAN for a live token, 401 for anything else. Nothing about the
-     * token itself is echoed back. Added 2026-09-05; not yet compiled here — mvn is not installed
-     * on the machine that wrote it.
+     * token itself is echoed back. Added 2026-09-05; compiled and exercised the same day against
+     * the Next.js bridge (401 without a token, 200 with the owning PAN for a live one).
      */
     @GetMapping("/session")
     public ResponseEntity<SessionOwner> session(

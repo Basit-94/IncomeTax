@@ -7,11 +7,16 @@ architecture, a contract, a storage key, a route, or a test count, update the ma
 append the detail to `log.md` (append-only, `## [YYYY-MM-DD HH:MM] who (title)` entries).
 
 **Last verified against the tree:** 2026-09-05 (branch `dev-2`, uncommitted working tree after the
-plan.md Phase A–G execution). Gates at that point: `npx tsc --noEmit` 0 errors · `npx vitest run`
-278/278 across 28 files · `npx next build` exit 0. Work happens on `dev-2`; nothing is merged or pushed
+plan.md Phase A–G execution and the tax-RAG continuation). Gates at that point: `npx tsc --noEmit`
+0 errors · `npx vitest run` 305/305 across 30 files · `npx next build` exit 0 · `git diff --check` clean. Work happens on `dev-2`; nothing is merged or pushed
 by agents.
 
 ---
+
+> **Tax knowledge RAG (2026-09-05, release `2026-09-05.2`):** implemented and verified — sealed corpus
+> digest, public QA from exact stored paraphrases, and a shared recommendation guard enforced in the
+> runtime and inside every arithmetic tool. Still an **engineering draft awaiting a qualified Indian
+> tax reviewer**; citizens get no personal recommendation until one is recorded. See `docs/TAX-RAG.md`.
 
 ## 1. What Wapsi is
 
@@ -34,7 +39,7 @@ and `/architecture` no longer exist on `dev-2`; the disclosure lives in `README.
 | Motion | `motion` v13 (framer-motion's successor). `m.*` components under `<LazyMotion features={domMax} strict>` | Rule: never gate correctness or the visibility of a figure on an animation (`AnimatePresence mode="wait"` is banned where content matters — see log 2026-09-02 22:32) |
 | Icons / QR | `lucide-react`, `qrcode.react` | |
 | Tests | `vitest` 4, node environment, **no jsdom** — nothing mounts a component; browser checks are done live (agent-browser CLI or the Chrome extension) | |
-| Backend (optional) | Spring Boot / Java 21 under `backend/` — integer-paise money, versioned rule sets, append-only Postgres ledger, idempotent async `POST /api/v1/returns/submit`, auth, preferences | Not required to run the UI; sign-in falls back to a mock session flagged `isMock`. `mvn` is not installed on the dev machine; last Java run 103/103 on 2026-08-29 |
+| Backend (optional) | Spring Boot / Java 21 under `backend/` — integer-paise money, versioned rule sets, append-only Postgres ledger, idempotent async `POST /api/v1/returns/submit`, auth, preferences | Not required to run the UI; sign-in falls back to a mock session flagged `isMock`. Maven 3.9.11 lives at `%TEMP%\wapsi-maven` (re-downloaded and SHA-512-verified 2026-09-05 after Temp cleanup emptied it); build with `mvn -q -f backend/pom.xml -DskipTests package`, run with `java -jar backend/target/wapsi-backend-0.1.0-SNAPSHOT.jar` (also `.claude/launch.json` → `backend`). Last Java test run 103/103 on 2026-08-29; jar rebuilt and run live 2026-09-05 |
 | AI copilot | Gemini via `app/api/agent/route.ts` (server-only key) | See §8 |
 
 Scripts: `npm run dev` · `npm run typecheck` · `npm test` (`vitest run`) · `npm run build`.
@@ -121,6 +126,10 @@ card but not the summary" (log 2026-09-02 and 2026-09-03 00:50).
   "demo" | "citizen", displayName }`. Every data route calls `requireSession` (`lib/server/context.ts`)
   and every store checks the owner. Client-minted `vault_session_*` / `mock-token-*` never authorise
   anything; `lib/session-client.ts` (`ensureServerSession`) turns the client copy into a server session.
+  With the Java backend running on 8080, the ordinary `/` OTP sign-in (`lib/auth-client.ts
+  ensureSession`) registers the PAN server-side and returns a real token, so even the seeded personas
+  become **citizen** sessions (verified 2026-09-05); without it they are **demo** sessions. A citizen
+  session with no `DATABASE_URL` gets `storage_unavailable` (503) — never a silent in-memory store.
 - **Storage reality** — no `DATABASE_URL` in this deployment. `isDbConfigured()` gates the Postgres
   stores; demo owners get process-memory stores and every response carries `durable: false` (the UI
   says "this history clears when the server restarts"); citizen owners get `storage_unavailable` (503).
@@ -143,15 +152,30 @@ card but not the summary" (log 2026-09-02 and 2026-09-03 00:50).
   only classifies and phrases a server-written brief (`model.ts`), `nullModel` fallback; budgets.
   Choosing the old regime is staged only when `regime_switch_115BAC` is `eligible`; otherwise the
   comparison is shown and the switch is not made (`noteRegimeNotExecuted`).
-- **Tax knowledge** — `lib/knowledge/`: 12 hash-checked provisions (FY 2025-26, 1961 Act) plus the
-  1961→2025 transition note, three-outcome predicates (`applicability.ts`), lexical retrieval that
-  retains candidates when an attribute is unknown. `KNOWLEDGE_RELEASE = "2026-09-05.1"`, reviewer
-  string "engineering draft — awaiting qualified tax reviewer". **Gate open:** plan §5.7 requires a
-  qualified Indian tax reviewer before rule-based recommendations reach citizens. The engineering
-  review `docs/knowledge-tax-review-2026-09-05.md` was applied to the corpus text and predicates on
-  2026-09-05; its engine-level findings (s.80CCE aggregation, 80D senior cap, 80CCD(2) salary
-  percentage, s.112A/112 basic-exemption adjustment) are **open** because `lib/engine` is pinned to
-  the 72 Java golden vectors and must change on both sides together.
+- **Tax knowledge** — `lib/knowledge/`: 19 provisions (FY 2025-26, 1961 Act; `provisions.ts` +
+  `supplemental.ts`) with legal values transcribed independently of the engine, a sealed release
+  manifest (`release.ts`: id `2026-09-05.2`, SHA-256 over full records, date window, `reviewer: null`),
+  BM25 retrieval with hard Act/year/category filters (`retrieval.ts`, `query.ts` — FY/AY/TY parsing and
+  aliases from all 23 dictionaries), public QA that returns exact stored paraphrases or an explicit stop
+  (`rag.ts`), three-outcome predicates (`applicability.ts`) and the shared guard (`advice.ts`).
+  **Plain-English intake** (`lib/agentic/intake.ts`, 2026-09-05): the opening sentence is parsed
+  deterministically into a `Situation` (employment, stated package, business, PF, health insurance,
+  rent, home loan, capital gains); the run acknowledges what it understood, then asks one question at a
+  time in plain words — a salary-figure conflict first, then "Do you have a document called Form 16?"
+  with a description and an inline upload (`Question.expects: "file"`, answered with the vault
+  document id, or `"none"`), then PF / health insurance, each followed by a proof upload before the
+  deduction is staged (`evidenceAttached: true`); unproven amounts are left out and said so. Business
+  situations are told plainly what the release will not do. `PostgresRunStore.saveRun` now persists
+  `task` and `knowledge_release` (it previously wrote only status/state/title, so a DB-backed run
+  re-read as `explain` after classification).
+  The guard is enforced in `lib/agentic/runtime.ts` (explain → public QA; recommendations abstain with
+  `noteAdviceUnavailable`, stage nothing, re-check at confirmation) and inside every arithmetic tool in
+  `lib/agentic/tools.ts` (structured `limitation` instead of figures; `retrieve_tax_knowledge` added).
+  **Gate open:** plan §5.7 requires a qualified Indian tax reviewer before rule-based recommendations
+  reach citizens. Engine-level findings from `docs/knowledge-tax-review-2026-09-05.md` (s.80CCE
+  aggregation, 80D senior cap, 80CCD(2) salary percentage, s.112A/112 basic-exemption adjustment) are
+  **guarded, not fixed**: `lib/engine` is pinned to the 72 Java golden vectors. Full description:
+  `docs/TAX-RAG.md`.
 
 ## 5. The seeded personas (`lib/personas.ts`, `TODAY = 2026-08-22`)
 
@@ -232,10 +256,10 @@ procedure or regime comparison.
 ## 10. Verification protocol
 
 1. `npx tsc --noEmit` (0 errors) — zero `any` is a project rule.
-2. `npx vitest run` — 28 files / 278 tests: engine + slab, golden export, return state/persist/compute/
+2. `npx vitest run` — 30 files / 305 tests: engine + slab, golden export, return state/persist/compute/
    commands/filing/snapshot store, `upstreamSync`, context reducer, compliance (cass, pdfExtract),
    agent, onboarding, submission key, server sessions, vault service, migrations, knowledge
-   (corpus integrity, predicates, retrieval), agentic (redact, planner, runtime).
+   (corpus integrity, predicates, retrieval, release/RAG/guard), agentic (redact, planner, runtime, tools).
 3. `npx next build`.
 4. Anything visual or animation-related must be checked in a browser; unit tests cannot see it. Test
    hooks exist for automation: `data-testid="net-position"` + `data-position`, `data-fact-id`,
@@ -248,6 +272,7 @@ procedure or regime comparison.
 
 `docs/PROTOTYPE.md` (stack narrative), `docs/PLAN.md` + `plan.md` (milestones, resume protocol),
 `docs/DESIGN.md` (Direction 13 design language), `docs/MODES.md` (Simple/Full and Manual/Agentic),
-`docs/knowledge-tax-review-2026-09-05.md` (open tax-knowledge findings), `docs/ISSUES.md` (backend/UX audit
+`docs/TAX-RAG.md` (knowledge release, retrieval, guard), `docs/knowledge-tax-review-2026-09-05.md`
+(tax-knowledge findings), `docs/TAX-RAG-AGENT-HANDOFF-2026-09-05.md` (completed handoff), `docs/ISSUES.md` (backend/UX audit
 2026-08-25), `docs/scale/*` (capacity, load, rule-source audit), `fixtures/golden/README.md`,
 `backend/README.md`, `critics/*` (round-by-round critiques), `log.md` (the full history).
