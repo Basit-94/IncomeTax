@@ -149,7 +149,8 @@ const ADVANCE_COPY: Partial<Record<Exclude<RefundState, "not_filed" | "filed_unv
 export default function WapsiPrototype() {
   const { dispatch: taxDispatch } = useTax();
   const router = useRouter();
-  const inShell = agenticEnabled();
+  const inShell = process.env.NEXT_PUBLIC_WAPSI_MANUAL_SHELL === "true";
+  const syncWithServer = true;
   const shellRuns = useRuns();
 
   // --- CORE UI STATES ---
@@ -290,7 +291,7 @@ export default function WapsiPrototype() {
   const serverSessionReady = useRef(false);
   const adoptingFromServer = useRef(false);
   useEffect(() => {
-    if (!inShell) return;
+    if (!syncWithServer) return;
     let cancelled = false;
     (async () => {
       const ok = (await ensureServerSession(session)).ok;
@@ -309,9 +310,9 @@ export default function WapsiPrototype() {
     return () => {
       cancelled = true;
     };
-  }, [session, inShell]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!inShell || !returnState || !serverSessionReady.current) return;
+    if (!syncWithServer || !returnState || !serverSessionReady.current) return;
     if (adoptingFromServer.current) {
       adoptingFromServer.current = false;
       return;
@@ -323,7 +324,7 @@ export default function WapsiPrototype() {
         savePersist(r.adopt);
       }
     });
-  }, [returnState, inShell]);
+  }, [returnState]);
   const [serverFilings, setServerFilings] = useState<ServerFiling[] | null>(null);
   const [autoFillCode, setAutoFillCode] = useState("949494");
 
@@ -2344,7 +2345,11 @@ export default function WapsiPrototype() {
             setUserMode(newMode);
             localStorage.setItem("wapsi_user_mode", newMode);
             if (newMode === "agentic") {
-              setIsAgenticModalOpen(true);
+              if (agenticEnabled()) {
+                router.push("/app");
+              } else {
+                setIsAgenticModalOpen(true);
+              }
             }
             const underlyingMode: "full" | "simple" = newMode === "manual" ? "full" : "simple";
             localStorage.setItem("wapsi_ui_mode", underlyingMode);
