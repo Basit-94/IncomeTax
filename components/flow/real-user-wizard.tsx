@@ -412,7 +412,7 @@ export default function RealUserTaxWizard({
       {/* Stepper Header */}
       <div className="mb-6 flex justify-between items-center border-b border-line pb-4">
         <div>
-          <h2 className="text-base font-extrabold text-navy">Interactive Tax Assistant</h2>
+          <h2 className="text-base font-extrabold text-navy dark:text-ink">Interactive Tax Assistant</h2>
           <p className="text-xs text-ink-3">Simple language tax filing for citizens</p>
         </div>
         <button
@@ -436,7 +436,7 @@ export default function RealUserTaxWizard({
       {wizardStep === 1 && (
         <div className="space-y-5">
           <div>
-            <h3 className="text-base font-bold text-navy">Let's start with your identity</h3>
+            <h3 className="text-base font-bold text-navy dark:text-ink">Let's start with your identity</h3>
             <p className="text-xs text-ink-2">Enter your basic credentials to verify tax eligibility.</p>
           </div>
 
@@ -515,7 +515,7 @@ export default function RealUserTaxWizard({
       {wizardStep === 2 && (
         <div className="space-y-5">
           <div>
-            <h3 className="text-base font-bold text-navy">How do you earn your living?</h3>
+            <h3 className="text-base font-bold text-navy dark:text-ink">How do you earn your living?</h3>
             <p className="text-xs text-ink-2">
               {initialEmploymentType
                 ? t.wizard.employmentConfirmHint
@@ -539,7 +539,7 @@ export default function RealUserTaxWizard({
                 }
                 className={`p-4 rounded-xl border text-left transition cursor-pointer ${
                   formData.employmentType === opt.id
-                    ? "border-money bg-money-soft/10 text-navy"
+                    ? "border-money bg-money-soft/10 text-navy dark:text-ink"
                     : "border-line bg-paper-2 hover:border-slate-400"
                 }`}
               >
@@ -727,7 +727,7 @@ export default function RealUserTaxWizard({
       {wizardStep === 3 && (
         <div className="space-y-5">
           <div>
-            <h3 className="text-base font-bold text-navy">Taxes Already Deducted & Savings</h3>
+            <h3 className="text-base font-bold text-navy dark:text-ink">Taxes Already Deducted & Savings</h3>
             <p className="text-xs text-ink-2">Enter what has already been paid and investments you made.</p>
           </div>
 
@@ -828,7 +828,7 @@ export default function RealUserTaxWizard({
       {wizardStep === 4 && (
         <div className="space-y-6">
           <div>
-            <h3 className="text-base font-bold text-navy">Live Tax Optimization</h3>
+            <h3 className="text-base font-bold text-navy dark:text-ink">Live Tax Optimization</h3>
             <p className="text-xs text-ink-2">We computed the results under both regimes. Choose what is best for you.</p>
           </div>
 
@@ -836,7 +836,7 @@ export default function RealUserTaxWizard({
           <div className="bg-money-soft border border-money/20 rounded-xl p-4 flex justify-between items-center text-xs">
             <div>
               <p className="font-mono text-money font-bold uppercase tracking-wider text-[10px]">Verified Filer Details</p>
-              <h4 className="font-bold text-navy mt-0.5">{formData.fullName} ({formData.pan})</h4>
+              <h4 className="font-bold text-navy dark:text-ink mt-0.5">{formData.fullName} ({formData.pan})</h4>
             </div>
             <button
               onClick={() => setWizardStep(1)}
@@ -859,7 +859,7 @@ export default function RealUserTaxWizard({
             >
               <div>
                 <div className="flex justify-between items-center mb-3">
-                  <span className="text-[10px] font-mono uppercase tracking-wider font-extrabold text-navy">
+                  <span className="text-[10px] font-mono uppercase tracking-wider font-extrabold text-navy dark:text-ink">
                     New Regime (AY 2026-27)
                   </span>
                   {newBreakdown.refundOrDue >= oldBreakdown.refundOrDue && (
@@ -911,7 +911,7 @@ export default function RealUserTaxWizard({
             >
               <div>
                 <div className="flex justify-between items-center mb-3">
-                  <span className="text-[10px] font-mono uppercase tracking-wider font-extrabold text-navy">
+                  <span className="text-[10px] font-mono uppercase tracking-wider font-extrabold text-navy dark:text-ink">
                     Old Regime
                   </span>
                   {oldBreakdown.refundOrDue > newBreakdown.refundOrDue && (
@@ -957,7 +957,7 @@ export default function RealUserTaxWizard({
           <div className="border border-line rounded-xl overflow-hidden bg-paper text-xs text-ink-2 text-left mt-4">
             {/* Header: Show source and calculation trail */}
             <div className="p-4 bg-paper-2 border-b border-line">
-              <span className="font-bold text-navy">Tax Calculation Trail</span>
+              <span className="font-bold text-navy dark:text-ink">Tax Calculation Trail</span>
             </div>
 
             <div className="p-4 space-y-3">
@@ -983,7 +983,7 @@ export default function RealUserTaxWizard({
                   </span>
                 </div>
               )}
-              <div className="flex justify-between border-b border-line pb-1 font-bold text-navy">
+              <div className="flex justify-between border-b border-line pb-1 font-bold text-navy dark:text-ink">
                 <span>Taxable Income:</span>
                 <span className="font-mono">{formatMoney(activeBreakdown.taxableIncome, lang)}</span>
               </div>
@@ -1003,7 +1003,7 @@ export default function RealUserTaxWizard({
 
             {/* Net Result - bottom padded row with color matching outer box */}
             <div className="flex justify-between items-center p-4 bg-money-soft border-t border-line">
-              <span className="font-bold text-navy">Net Refund / Due</span>
+              <span className="font-bold text-navy dark:text-ink">Net Refund / Due</span>
               <span className={`font-mono text-sm font-bold ${activeBreakdown.refundOrDue >= 0 ? "text-money" : "text-alarm"}`}>
                 {activeBreakdown.refundOrDue >= 0 ? "+" : "-"}
                 {formatMoney(Math.abs(activeBreakdown.refundOrDue), lang)}

@@ -342,7 +342,7 @@ export default function AuthPortal({
 
           {/* Bottom Trust Badge - Cleaned: Removed raw port number */}
           <div className="pt-6 border-t border-white/10 mt-6 flex items-center justify-between text-xs text-slate-300 font-mono">
-            <span className="flex items-center gap-2 font-sans font-semibold text-slate-200">
+            <span className="flex items-center gap-2 font-sans font-semibold text-slate-200 dark:text-ink">
               <ShieldCheck size={16} className="text-emerald-400 shrink-0" />
               <span>{ps.vaultBadge}</span>
             </span>
@@ -364,7 +364,7 @@ export default function AuthPortal({
                 onClick={() => setActiveTab("signin")}
                 className={`flex-1 flex items-center justify-center gap-1 py-2.5 rounded-xl transition-all cursor-pointer text-[11px] sm:text-xs ${
                   activeTab === "signin"
-                    ? "bg-paper text-navy shadow-xs border border-line font-bold"
+                    ? "bg-paper text-navy dark:text-ink shadow-xs border border-line font-bold"
                     : "text-ink-2 hover:text-ink font-semibold"
                 }`}
               >
@@ -546,7 +546,7 @@ export default function AuthPortal({
                 <button
                   type="submit"
                   disabled={isSubmittingSignUp}
-                  className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-money px-4 py-3 font-sans text-sm font-bold text-white shadow-md hover:opacity-90 transition cursor-pointer disabled:opacity-50"
+                  className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-money px-4 py-3 font-sans text-sm font-bold text-white dark:text-paper shadow-md hover:opacity-90 transition cursor-pointer disabled:opacity-50"
                 >
                   {isSubmittingSignUp ? (
                     <>

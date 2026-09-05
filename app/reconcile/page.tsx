@@ -21,9 +21,22 @@
  */
 
 import { LazyMotion, domMax } from "motion/react";
+import { useEffect } from "react";
 import InteractiveTaxDashboard from "../../components/InteractiveTaxDashboard";
 
 export default function ReconcilePage() {
+  /* The theme class is applied by an effect in app/page.tsx, so a client
+     navigation carries it here but a direct load of /reconcile — the only way
+     in, per docs/CONTEXT.md §3 — rendered light whatever the citizen chose.
+     Same toggle, same `wapsi_theme` key. */
+  useEffect(() => {
+    const dark = localStorage.getItem("wapsi_theme") === "dark";
+    document.documentElement.classList.toggle("dark", dark);
+    document.documentElement.classList.toggle("dark-mode", dark);
+    document.body?.classList.toggle("dark", dark);
+    document.body?.classList.toggle("dark-mode", dark);
+  }, []);
+
   return (
     <LazyMotion features={domMax} strict>
       <InteractiveTaxDashboard />

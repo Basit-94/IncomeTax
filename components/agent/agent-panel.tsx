@@ -254,7 +254,7 @@ export default function AgentPanel({
         {/* The filing confirmation card — the only path from "prepared" to "filed". */}
         {pendingFiling && (
           <div className="border-2 border-navy rounded-xl p-3.5 space-y-2 bg-paper-2">
-            <p className="text-sm font-bold text-navy">{t.agent.confirmTitle}</p>
+            <p className="text-sm font-bold text-navy dark:text-ink">{t.agent.confirmTitle}</p>
             <p className="text-xs text-ink-2">{t.agent.confirmBody}</p>
             <div className="space-y-1 text-xs">
               <div className="flex justify-between">

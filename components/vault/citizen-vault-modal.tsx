@@ -20,8 +20,9 @@ import {
   QrCode,
   Sparkles,
 } from "lucide-react";
-import type { CitizenVaultUser } from "@/lib/vault/vault-store";
+import type { CitizenVaultUser, VaultDocument } from "@/lib/vault/vault-store";
 import { syncVaultUser, createVaultUserFromPan } from "@/lib/vault/vault-store";
+import VaultDocumentPreview from "./vault-document-preview";
 import { formatMoney } from "@/lib/money";
 import { getPortalStrings } from "@/lib/i18n/portalTranslations";
 import type { Lang } from "@/lib/types";
@@ -46,6 +47,7 @@ export default function CitizenVaultModal({
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState<string | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<VaultDocument | null>(null);
 
   if (!isOpen) return null;
 
@@ -125,7 +127,7 @@ export default function CitizenVaultModal({
                   <span>AY 2026-27 SECURED</span>
                 </span>
               </div>
-              <p className="text-xs text-paper/70 font-mono">
+              <p className="text-xs text-paper/70 dark:text-white/70 font-mono">
                 {vaultUser.fullName} · PAN: {vaultUser.pan}
               </p>
             </div>
@@ -239,7 +241,7 @@ export default function CitizenVaultModal({
                     <span className="text-[10px] font-mono tracking-widest uppercase text-sky-300 block">
                       INCOME TAX DEPARTMENT · GOVT OF INDIA
                     </span>
-                    <h3 className="font-sans text-sm font-bold text-slate-200">
+                    <h3 className="font-sans text-sm font-bold text-slate-200 dark:text-ink">
                       PERMANENT ACCOUNT NUMBER CARD
                     </h3>
                   </div>
@@ -263,7 +265,7 @@ export default function CitizenVaultModal({
                       <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-mono">
                         Date of Birth / जन्म तिथि
                       </span>
-                      <p className="font-mono text-sm font-semibold text-slate-200">
+                      <p className="font-mono text-sm font-semibold text-slate-200 dark:text-ink">
                         {vaultUser.dateOfBirth || "12/04/1988"}
                       </p>
                     </div>
@@ -430,19 +432,19 @@ export default function CitizenVaultModal({
                   <div className="bg-paper-2 p-3 rounded-lg border border-line">
                     <span className="text-[10px] text-ink-3 block">TDS CREDITS (26AS)</span>
                     <span className="font-bold text-sm text-ink tabular">
-                      ₹{formatMoney(vaultUser.stats?.tdsPaid || 124800)}
+                      {formatMoney(vaultUser.stats?.tdsPaid || 124800)}
                     </span>
                   </div>
                   <div className="bg-paper-2 p-3 rounded-lg border border-line">
                     <span className="text-[10px] text-ink-3 block">ADVANCE TAX PAID</span>
                     <span className="font-bold text-sm text-ink tabular">
-                      ₹{formatMoney(vaultUser.stats?.advanceTaxPaid || 0)}
+                      {formatMoney(vaultUser.stats?.advanceTaxPaid || 0)}
                     </span>
                   </div>
                   <div className="bg-paper-2 p-3 rounded-lg border border-line">
                     <span className="text-[10px] text-money block font-sans font-bold">ESTIMATED REFUND</span>
                     <span className="font-bold text-base text-money tabular">
-                      ₹{formatMoney(vaultUser.stats?.refundDue || 31170)}
+                      {formatMoney(vaultUser.stats?.refundDue || 31170)}
                     </span>
                   </div>
                 </div>
@@ -480,12 +482,12 @@ export default function CitizenVaultModal({
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded border border-emerald-300">
+                        <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded border border-emerald-300">
                           {doc.status.toUpperCase()}
                         </span>
                         <button
                           type="button"
-                          onClick={() => alert(`Viewing ${doc.title}`)}
+                          onClick={() => setPreviewDoc(doc)}
                           className="p-1.5 text-ink-2 hover:text-ink transition cursor-pointer"
                           title="Open Document"
                         >
@@ -572,6 +574,13 @@ export default function CitizenVaultModal({
           </button>
         </div>
       </div>
+
+      <VaultDocumentPreview
+        doc={previewDoc}
+        vaultUser={vaultUser}
+        lang={safeLang}
+        onClose={() => setPreviewDoc(null)}
+      />
     </div>
   );
 }

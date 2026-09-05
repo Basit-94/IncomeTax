@@ -324,7 +324,6 @@ export default function LandingActionGrid({
           let cardTitle = c.title;
           let cardSubtitle = c.subtitle;
           let cardBadge = c.badge;
-          const isFullWidth = c.id === "tax_calendar";
 
           if (c.id === "pay_tax" && activeCitizen) {
             const isPaid = Boolean(
@@ -360,9 +359,7 @@ export default function LandingActionGrid({
               key={c.id}
               type="button"
               onClick={() => handleCardClick(c.id)}
-              className={`group surface-panel relative flex flex-col justify-between rounded-xl border border-line bg-paper-2 p-4 text-start transition-all hover:border-money/60 hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-money ${
-                isFullWidth ? "sm:col-span-2 lg:col-span-3 bg-paper-2/90" : ""
-              }`}
+              className="group surface-panel relative flex flex-col justify-between rounded-xl border border-line bg-paper-2 p-4 text-start transition-all hover:border-money/60 hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-money"
             >
               <div>
                 {/* Card Top: Number + Badge + Icon */}

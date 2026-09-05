@@ -50,7 +50,7 @@ export default function ActionsTab({
 
       {/* PENDING NOTICES */}
       {persona.notices.length > 0 ? (
-        <div className="bg-white border border-line rounded-xl p-5 space-y-4 shadow-sm">
+        <div className="bg-white dark:bg-paper-2 border border-line rounded-xl p-5 space-y-4 shadow-sm">
           <h3 className="text-xs font-mono uppercase tracking-wider text-ink-2 border-b border-line pb-2 font-bold">
             {localize("Outstanding Compliance Notices", lang)}
           </h3>
@@ -66,7 +66,7 @@ export default function ActionsTab({
                 }`}
               >
                 <div className="flex justify-between items-start">
-                  <span className="text-[0.65rem] font-mono bg-white border border-line text-ink-2 px-2 py-0.5 rounded">
+                  <span className="text-[0.65rem] font-mono bg-white dark:bg-paper-2 border border-line text-ink-2 px-2 py-0.5 rounded">
                     {localize("DIN Validated • CBDT Circular 19/2019", lang)}
                   </span>
                   <span className={`text-[0.65rem] font-mono font-semibold px-2 py-0.5 rounded uppercase ${
@@ -102,7 +102,7 @@ export default function ActionsTab({
           </div>
         </div>
       ) : (
-        <div className="bg-white border border-line rounded-xl p-10 text-center space-y-3">
+        <div className="bg-white dark:bg-paper-2 border border-line rounded-xl p-10 text-center space-y-3">
           <CheckCircle2 size={36} className="text-money mx-auto" />
           <h3 className="font-bold text-ink text-sm">{localize("No Pending Actions", lang)}</h3>
           <p className="text-xs text-ink-2">{localize("Your account is fully compliant with no outstanding notices or tax demands.", lang)}</p>
@@ -129,7 +129,7 @@ export default function ActionsTab({
 
                 {/* Rent verification receipt upload form */}
                 {hold.kind === "nudge_deduction" && (
-                  <div className="bg-white border border-line rounded-lg p-3 space-y-3 mt-2">
+                  <div className="bg-white dark:bg-paper-2 border border-line rounded-lg p-3 space-y-3 mt-2">
                     <span className="block text-xs font-mono text-ink-2">{localize("Upload Rent Agreement / Receipts", lang)}</span>
                     
                     <div className="space-y-2">
@@ -173,7 +173,7 @@ export default function ActionsTab({
                         <button
                           onClick={saveRentClaim}
                           disabled={!rentFile}
-                          className="bg-navy text-paper text-xs font-semibold py-1.5 px-4 rounded hover:opacity-90 transition-colors disabled:opacity-50"
+                          className="bg-navy text-paper dark:text-white text-xs font-semibold py-1.5 px-4 rounded hover:opacity-90 transition-colors disabled:opacity-50"
                         >
                           {localize("Submit Receipt", lang)}
                         </button>

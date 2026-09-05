@@ -1,462 +1,331 @@
-# Wapsi — Agentic Pivot Plan
+# Wapsi — Agentic Mode Implementation Plan
 
-**Written:** 2026-09-03 03:15 by claude, on branch `dev` at `215327e`, replacing the previous living
-plan in full (user instruction). The old plan's history survives in `git log -- plan.md` and in `log.md`.
-**Owner of this file:** the executing agent. It is the resume point: every batch ends by ticking the
-status table in §9 and appending to `log.md`. Anyone (human or agent) resuming work reads §9 first.
-**Companion:** `docs/CONTEXT.md` (what the codebase is today). This file says what it must become.
+**Revised:** 2026-09-05, Codex. Audited on `dev-2`, HEAD `9d29bf0`, including the existing uncommitted working tree. Follow-up research adds the user's ChatGPT Work-style layout, fixed toggle, tax knowledge/applicability architecture, adaptive planning, and conversation contract (§5.6–§6).
+**Status:** ANALYSIS COMPLETE — implementation has not started and is not authorized by this planning task.
+**Replaces:** the 2026-09-03 agentic pivot proposal. This is a proposed implementation sequence, not an instruction to start automatically.
+**Read first:** `docs/CONTEXT.md`, then this file. CONTEXT currently describes an older tree; the verified differences below take precedence for this proposal.
 
----
+## 1. Intended experience
 
-## 0. Decisions taken without the user (and why)
+Use a simplified ChatGPT Work-style workspace with persistent left navigation, a central conversation/manual workspace, and Progress / Outputs / Sources at the top right. The user's follow-up explicitly authorizes this shared-shell layout change. Preserve working manual components, the existing vault service, return behavior, and all 23 languages. The Agentic / Manual toggle occupies exactly the same header location in both modes. Explain your situation, see a personalized plan, watch document checks and calculations, answer only necessary questions, review the result, and explicitly confirm any simulated filing or payment.
 
-The user is away and asked for a plan that needs no input. Where a choice was open, this is what was
-chosen and the reason. Each is reversible; none is hidden.
+The agent checks the citizen's existing vault before requesting documents. It can retrieve a supported stored document, extract relevant facts, cite its source, reconcile discrepancies, and compute using the existing engine. Chat history, resumable work, outputs, and user-controlled memory remain part of the original vision.
 
-| # | Decision | Reason |
+All filing, payments, external status, and authority-issued documents remain prototype simulations. A saved file and a successful model response do not establish a government filing.
+
+## 2. What exists today and what changes the old plan
+
+| Area | Verified implementation | Updated decision |
 |---|---|---|
-| D1 | **Harness, vault, memory and auth live in Next.js (TypeScript), not the Java backend.** | Engine, tool registry, Gemini call and streaming UI are already TypeScript; Maven is not installed; one runtime is what the user can reason about. Java stays as the reference implementation pinned by the golden vectors. Spring AI remains a documented alternative (§11). |
-| D2 | **Storage is SQLite via Node's built-in `node:sqlite`** (Node 24 on this machine), file `data/wapsi.db`, schema written in portable SQL. | No Postgres and no Docker daemon on the machine; the user's Supabase projects belong to other apps and creating one incurs cost. The schema is column-for-column portable; a `pg` adapter is a later swap (§10, K1). On Vercel the file lives in `/tmp` and is ephemeral; documented on `/honesty`. |
-| D3 | **One confirm click before a return is marked filed** (`AGENT_REQUIRE_CONFIRMATION=true`, already set). | Same pattern as CoWork's plan approval; the user said it may be a flag, so it is. Setting it to `false` makes the agent file without the click. |
-| D4 | **Sign-in is username + password, seeded `asabs` / `12345`**, stored as a scrypt hash. Anyone can also register a new username. | User instruction. The old PAN → OTP step stays *inside* manual mode as the way to pick a return (persona or custom), not as the site gate. |
-| D5 | **Simple → Agentic, Full detail → Manual** by migration (profile v3). The mode question is removed from onboarding; everyone lands in Agentic with the switch visible. | `docs/MODES.md` already defines Simple as "do it for me" and Full as "show me everything"; the mapping is honest. |
-| D6 | **The model is whatever `AGENT_MODEL` says** (currently `gemini-3.5-flash`). The adapter verifies the id against `GET /v1beta/models` once per process and logs a clear error if it does not exist. | The user named "Gemini 3.5 Plus"; the id could not be confirmed. Config, not code. |
-| D7 | **A deterministic offline planner runs when the model is unavailable** (no key, quota, network, or bad model id). | The demo must work when the user comes back even if the key fails. Every task schema carries its own scripted question order, so the interview still completes; only the phrasing is less natural. The UI labels the run "offline planner". |
-| D8 | **DigiLocker is mocked** behind an OAuth-shaped flow with a `DIGILOCKER_MODE=mock|real` switch; the real adapter is a stub that throws "not configured". | Requester access requires a registered organisation (verified 2026-09-03). |
-| D9 | **Voice uses the existing `lib/speech.ts`** (browser speech recognition). The mic button carries a one-line disclosure that Chrome sends audio to Google. | Zero dependencies; already written; honesty rule. |
-| D10 | **Aadhaar is stored masked (last 4) plus a Verhoeff-validated flag; the full number lives only in the encrypted slot and is never rendered again.** | The full number is needed for the mocked ITR form; anything else is over-collection. |
-| D11 | **Memory is facts, never secrets.** What the agent "remembers" (has a PF account, salaried, prefers Hindi) is a `memories` row the user can see and delete; identifiers and amounts stay in slots. | The user asked for persistent memory; keeping it separate from the vault keeps the privacy boundary intact and the memory list readable. |
-| D12 | **No `git commit` and no `git push`, ever, by the agent.** All work stays in the working tree; the user reviews and commits. | User instruction 2026-09-03 03:30. |
+| Branch | `dev-2`, with substantial existing uncommitted UI work | Preserve it; no branch switch, merge, commit, or push |
+| Vault | `lib/vault/vault-store.ts`, `/api/vault`, `citizen-vault-modal.tsx` | Extend this vault; do not create a competing vault or mandatory `/vault` page |
+| Document contents | `VaultDocument` contains metadata only; no bytes or storage reference. New `vault-document-preview.tsx` draws explicitly synthetic replicas from vault statistics | Add persistent originals and extraction records; retain replicas as clearly synthetic demo previews |
+| Database | `pg` dependency, `lib/db/postgres.ts`, `tax_vault_users` with JSONB | Extend PostgreSQL; remove SQLite and `/tmp` persistence from this plan |
+| Supabase | `lib/db/supabase.ts` detects configuration and wraps PostgreSQL calls; it does not implement bucket uploads, RLS policies, or application encryption | Verify deployment capabilities before relying on them; comments are not evidence of configured infrastructure |
+| Authentication | Java-backed PAN/OTP path exists, with mock fallback. New vault registration mints a client-side `vault_session_*` marked mock | Retain the UI, establish server-verifiable ownership before persistent agent access; do not blindly add the old username/password gate |
+| Vault authorization | `/api/vault` GET accepts PAN; POST accepts identity data without session ownership checks | Secure the existing route before exposing it to an autonomous workflow |
+| Agentic mode | Header already has Agentic/Manual; `AgenticModeModal.tsx` contains scripted scenarios | Replace the scripted experience; use the requested shared navigation shell while preserving working manual content |
+| Existing copilot | `/api/agent` has Gemini function calling and a four-question cap; `components/agent/agent-panel.tsx` is the UI | Reuse formatting and valid engine tools; introduce a shared runtime rather than a second divergent registry |
+| Agent documents | `list_documents` reads Java `/api/v1/documents`; `fetch_document` is a client action without an implemented handler | Point both modes at the same vault document service |
+| Java document store | Owner-scoped metadata and byte storage already exist under `backend/.../document/` | Keep an adapter/import path for existing Java records; do not silently mix them with frontend vault metadata |
+| Copilot writes | `executeReconcileFact` returns an event-shaped object but does not persist a correction | A completed action must mean a real shared state mutation succeeded |
+| Returns | Browser-owned `ReturnState`, correction history, `upstreamSync`, reconciliation context | Reuse these contracts and extract shared commands; avoid independent agent balances |
+| Filing | `handleFileCommit` continues after non-2xx HTTP responses; exception fallback is synthetic | Fix shared outcome handling before exposing filing to the harness |
+| PDF extraction | `pdfExtract.ts` now has async FlateDecode/CMap handling plus raw-text extraction | Reuse and test current parser; the old assertion that all compressed PDFs fail is obsolete. OCR is still separate |
+| Manual tools | Portal Hub and file, optimizer, record matching, pay, notices, status/history, calendar modals already exist | Integrate these capabilities instead of rebuilding the old tile grid |
+| Modes | `wapsi_user_mode` coexists with `wapsi_ui_mode` and onboarding v2 `simple/full` | Separate interaction mode from detail preference; preserve existing selections during migration |
+| Verification | Typecheck passed; **193/193 tests in 18 files** passed during this analysis | Replace old 182-test assumptions; gates do not establish live service readiness |
 
----
+No production database, bucket, model endpoint, or Java deployment was contacted in this analysis. Live configuration, authorization, durability, and deployment limits remain implementation preflight checks. No secret environment values were printed.
 
-## 1. Goal, in one paragraph
+## 3. Architecture and boundaries
 
-A signed-in citizen lands on one line, **"Explain your situation"**, with a text box, a mic, and four
-chips. The first keystroke turns the page into a chat. The agent classifies the situation, builds a
-plan (shown top-right as a checklist the moment it exists), interviews the citizen slot by slot in
-plain language, pulls documents from the vault and (mock) DigiLocker before ever asking for them,
-computes with the engine, shows a review card, and after one confirm click files the return, drops
-the ITR-V and ITR JSON into an Outputs panel, and records everything in the ledger. Every step is
-visible in a Claude-style activity log. Every chat is kept and can be reopened; what the agent learned
-about the citizen is remembered across chats and shown to them. The model never sees a secret value
-and never invents a number. Flip the header switch to **Manual** and the same person gets the existing
-dashboard plus a grid of tasks the site can actually complete.
+Proposed flow:
 
-## 2. Non-goals (explicitly out)
-
-- Real filing with the Income Tax Department, real DigiLocker, real payments. Everything is mocked and
-  `/honesty` says so.
-- Self-hosted model. The pseudonymisation boundary (§4.3) is the privacy mechanism for now.
-- Postgres migration (K1), Spring AI (§11), multi-device sync of the vault beyond one SQLite file.
-- Redesigning the 23-language dictionaries. New copy goes through `localize()` for hi/ta and English
-  elsewhere, per the existing rule.
-
----
-
-## 3. Architecture
-
-```
-browser ── /app (agentic) ──┐                     ┌── lib/harness/planner   (plan → steps)
-        ── /  (manual)   ──┤  Next.js route        ├── lib/harness/interview (slot state machine)
-        ── /vault        ──┤  handlers (server) ───┤── lib/harness/tools     (typed tool registry)
-        ── /signin       ──┘        │              ├── lib/harness/model     (Gemini adapter + offline planner)
-                                    │              ├── lib/harness/memory    (remember / recall / forget)
-                                    │              └── lib/harness/events    (SSE event stream)
-                                    ▼
-                        lib/server/db.ts        (node:sqlite, migrations)
-                        lib/server/auth.ts      (users, sessions, scrypt)
-                        lib/server/vault.ts     (slots AES-256-GCM, audit log, documents)
-                        lib/server/digilocker.ts (mock adapter; real stub)
-                                    │
-                        lib/engine/*  (unchanged: the only place numbers come from)
-                        lib/return/*  (ledger; agent writes through the same reducers)
+```text
+Existing portal and Tax Vault          Agentic workspace (/app)
+              |                                 |
+              +------ shared return commands ---+
+              |                                 |
+       versioned ReturnState             authenticated run API
+              |                                 |
+       upstreamSync projection          bounded workflow harness
+              |                          |       |       |
+       TaxReturnContext                vault   engine   outputs
+                                        |
+                              existing PostgreSQL adapter
+                          documents / extractions / runs / events
 ```
 
-### 3.1 Routes
+### 3.1 One document service
 
-| Route | New/Changed | Purpose |
-|---|---|---|
-| `/signin` | new | Username + password. Register link. Redirects to `/welcome` (first time) or the last mode. |
-| `/welcome` | new | Onboarding (language, intent, profession, filing history, focuses; **no mode question**). Shown once per user; `users.onboarded_at` set on completion. |
-| `/app` | new | Agentic surface. Hero → chat. Requires session. `/app?run=<id>` reopens a past chat. |
-| `/` | changed | Manual surface = existing journey, gated by session; mode switch in header. Onboarding step removed from the page's own state machine (it lives at `/welcome`). |
-| `/vault` | new | Documents, details and memory: present / from DigiLocker / missing per task; upload; "what Wapsi remembers"; audit trail. |
-| `/api/auth/*` | new | `signin`, `signup`, `signout`, `me`, `preferences` (mode, lang, theme). |
-| `/api/agent/stream` | new | POST, returns `text/event-stream`. The harness. |
-| `/api/agent` | kept | Legacy one-shot route for the manual-mode panel; cap logic moved to `lib/server/cap.ts`. |
-| `/api/vault/*` | new | `slots` (GET status, PUT value, DELETE), `documents` (GET list, POST upload, GET /:id, DELETE), `digilocker/connect`, `digilocker/callback`, `digilocker/pull`, `audit`. |
-| `/api/memory` | new | GET list, DELETE one, DELETE all. |
-| `/api/runs` | new | GET list (chat history), GET `/:id` (events for replay), DELETE `/:id`. |
-| `/api/outputs/:id` | new | Serves generated files (ITR JSON, ITR-V HTML, challan). |
-| `/reconcile`, `/honesty`, `/architecture` | kept | `/honesty` gains the vault, memory, DigiLocker-mock, SQLite-ephemeral and voice disclosures. |
+Introduce a server-side `VaultRepository` behind the existing vault API, with owner-scoped operations to list metadata, retrieve bytes, read extraction results, upload, and delete. Agent tools call this service directly; they do not fetch arbitrary URLs or use a client-supplied PAN as authorization.
 
-### 3.2 Data model (SQLite, `lib/server/schema.sql`)
+Default initial storage: PostgreSQL metadata and capped encrypted file bytes in a separate document table, using the current `pg` connection. This avoids assuming a Supabase bucket exists. Keep a storage interface so verified private object storage can replace byte storage later. Do not introduce two simultaneous authoritative stores. Existing Java documents are exposed through an explicit legacy adapter where authenticated access is available, with source-qualified IDs and deduplication on import.
 
-```
-users            (id TEXT PK, username TEXT UNIQUE, password_hash TEXT, created_at, onboarded_at NULL,
-                  onboarding_json TEXT NULL, mode TEXT CHECK(mode IN ('agentic','manual')) DEFAULT 'agentic',
-                  lang TEXT DEFAULT 'en', theme TEXT DEFAULT 'light', vault_key_wrapped BLOB)
-sessions         (token_hash TEXT PK, user_id, created_at, expires_at, last_seen_at)
-slots            (user_id, slot_id TEXT, ciphertext BLOB, iv BLOB, tag BLOB, masked TEXT,
-                  source TEXT CHECK(source IN ('user','digilocker','document','persona')),
-                  verified INTEGER, updated_at, PRIMARY KEY(user_id, slot_id))
-documents        (id TEXT PK, user_id, doc_type TEXT, assessment_year TEXT, filename, content_type,
-                  bytes BLOB, sha256 TEXT, source TEXT, extracted_json TEXT NULL, uploaded_at)
-vault_audit      (id INTEGER PK, user_id, at, actor TEXT CHECK(actor IN ('user','agent','system')),
-                  action TEXT, slot_id TEXT NULL, document_id TEXT NULL, run_id TEXT NULL, detail TEXT)
-memories         (id TEXT PK, user_id, key TEXT, value TEXT, source_run_id TEXT NULL, at,
-                  UNIQUE(user_id, key))                          -- facts, never identifiers or amounts
-runs             (id TEXT PK, user_id, task_id TEXT NULL, title TEXT, status TEXT, created_at,
-                  updated_at, plan_json TEXT NULL, state_json TEXT)   -- interview state, not values
-run_events       (id INTEGER PK, run_id, seq INTEGER, at, type TEXT, payload_json TEXT)
-outputs          (id TEXT PK, run_id, user_id, kind TEXT, name TEXT, content_type, bytes BLOB, at)
-question_usage   (key TEXT PK, count INTEGER, day TEXT)         -- anonymous cap only
-returns          (user_id PK, state_json TEXT, updated_at)      -- server copy of ReturnState
-```
+Keep the vault modal and its four-tab organization. Existing preview behavior remains for synthetic records; actual uploaded files open their original bytes. Add only the controls and statuses required by retrieval, upload, extraction, and memory.
 
-Rules: `slots.ciphertext` is AES-256-GCM under a per-user data key, itself wrapped by
-`VAULT_MASTER_KEY` (env; if absent in dev, generated once into `data/master.key` with a console
-warning). `masked` is the only column ever sent to the browser or the model. Every read of a slot
-value writes a `vault_audit` row. `run_events` is append-only and is what the activity log replays;
-it is also the chat history. `memories` values are free text under 200 characters, written only by
-the `remember` tool or the user, and are shown verbatim on `/vault`.
+### 3.2 Identity before retrieval
 
-### 3.3 The harness (`lib/harness/`)
+Implement one server-side session resolver used by vault, runs, outputs, memory, and shared return APIs. Keep current PAN/document onboarding screens. A PAN extracted from a document identifies its subject; it does not prove account ownership.
 
-1. **recall** — load the user's memories and the vault status map (slot ids → filled/masked, never
-   values). Both are prepended to the model context as "What you already know about this citizen".
-2. **classify** — model (or offline keyword table) maps the first message to a `TaskId` and extracts
-   what the sentence already contains (income band, profession, "new job", "small business",
-   "notice"). Extracted facts are *proposals*; each becomes a pre-filled answer the user confirms.
-3. **plan** — the task schema yields ordered steps; the model may reorder or drop optional steps but
-   cannot add tools. The plan is emitted as one `plan` event → the right panel's Progress list.
-4. **interview** — a deterministic slot machine: `nextSlot(state)` returns the first unfilled required
-   slot whose `dependsOn` are satisfied. The model's only job is to *phrase* the question (with the
-   plain-language template as fallback). The UI renders the matching input component; the value goes
-   to `/api/vault/slots` directly, never through the model. The model receives
-   `{slot, status:"filled", masked}`. Non-secret answers (yes/no, choices) also call `remember`.
-5. **gather** — before asking for any document slot, run the source chain: vault → DigiLocker (mock)
-   → ask. Each attempt is an event ("Checked your vault: Form 16 found (uploaded 2 Sep)").
-6. **compute** — engine only. `compute_tax_ay2026` and `compare_regimes` over the ledger built from
-   slots. Emits a `card:review`.
-7. **act** — `prepare_filing` → `card:confirm` → user clicks → `file_return` writes to the ledger
-   (`markFiled`), the context (`MARK_FILED`), produces ITR JSON + ITR-V → `output` events.
-8. **persist** — every event is written to `run_events` before it is streamed, so a reload replays
-   and the run appears in chat history with a title derived from the first message.
+Reuse verified Java authentication for real backend sessions, exchanging it for a server-managed HttpOnly session through a verified bridge. The backend currently needs a suitable authenticated identity verification contract; implement that deliberately, not by trusting a token prefix or a body field. For standalone demonstrations, issue server-managed demo sessions isolated to synthetic fixture data. Existing client-minted tokens cannot authorize access to real vault records.
 
-Tool calls are validated with zod schemas before execution; a malformed call is an `error` event and
-the offline planner takes over that step.
+For newly uploaded personal records, require a verified account before durable private access. Account claiming and any standalone production auth provider are prerequisites if the Java identity service is unavailable; do not make the demo registration path a substitute for ownership verification.
 
-### 3.4 Event protocol (`lib/harness/events.ts`)
+Owner checks belong in every data operation. A root `proxy.ts`, if useful for redirects, is not the authorization boundary. This matches the installed Next.js guides; the old `middleware.ts` instruction is obsolete.
 
-```
-type RunEvent =
-  | { type:"run.start";   runId; taskId?; title }
-  | { type:"thinking";    text }                      // model thought summaries or planner notes
-  | { type:"plan";        steps:[{id,title,detail?}] } // Progress panel appears on this
-  | { type:"step.start";  stepId }
-  | { type:"step.done";   stepId; note? }
-  | { type:"tool.call";   name; argsMasked }
-  | { type:"tool.result"; name; summary }
-  | { type:"message";     role:"user"|"assistant"; text }   // assistant text via components/agent/format.tsx
-  | { type:"ask";         slotId; prompt; input:SlotInput; prefill? }   // renders the isolated form
-  | { type:"card";        card:Card }                  // review | confirm | document | itrv | challan | vaultStatus | memory
-  | { type:"output";      outputId; kind:"itr-json"|"itr-v"|"challan"|"summary"; name; href }
-  | { type:"context";     items:[{kind:"document"|"slot"|"source"|"memory", label, status}] }
-  | { type:"memory";      op:"remember"|"forget"; key; value? }
-  | { type:"error";       message; recoverable }
-  | { type:"run.done";    status:"complete"|"waiting"|"failed" }
-```
+### 3.3 One return mutation path
 
-### 3.5 Task schemas (`lib/harness/tasks/*.ts`)
+Extract behavior from `app/page.tsx` into framework-independent return commands and a shared provider/service before connecting agent writes. Commands include import proposed facts, confirm, correct, revert, choose regime, record a simulated payment, stage revision, and finalize a simulated filing.
 
-Each: `{ id, title, triggers[], steps[], slots[], documents[], outputs[] }`. Slots:
-`{ id, label, question, why, input, validate, required, secret, dependsOn?, sources:["vault","digilocker","document","ask"] }`.
+Preserve `baselinePersona`, `effectivePersona`, correction history, feedback codes, confirmations, and `buildSyncPayload`. Use canonical persona fact IDs; aggregate reconciliation IDs such as `salary` cannot select one of several employers without an explicit mapping.
 
-| Task | Slots (required unless marked `?`) | Documents | Outputs |
-|---|---|---|---|
-| `file_return` | pan, full_name, dob, aadhaar, mobile, email, employment_type, gross_salary, tds_192, has_pf (→80CCD(2)/80C), savings_interest?, other_income?, rent_paid?, insurance_premium?, investments_80c?, bank_account, ifsc, regime_choice | Form 16 (preferred), bank statement? | ITR JSON, ITR-V, summary |
-| `compare_regimes` | gross_salary, deductions bundle (80C, 80D, HRA/rent, 24b?) | none | comparison card, summary |
-| `business_benefits` | business_type, revenue, expenses?, gst_registered?, presumptive_opt (44AD/44ADA) | none | benefits card, summary |
-| `respond_notice` | notice_din, notice_section, notice_amount, agree/disagree, reason | notice PDF | draft response, summary |
-| `pay_tax` | (from ledger) outstanding, bank | none | Challan 280 receipt |
-| `check_refund` | pan, ack_number? | none | refund timeline card |
-| `demo_persona` | which (sunita/rakesh/priya) | none | loads the persona into the ledger and vault |
+Persist one server-owned return snapshot per owner and assessment year for durable agent sessions, with a separate monotonic revision for concurrency. Existing `ReturnState.version` is a serialization version, not a concurrency counter. Manual and Agentic use the same commands and snapshot; reconciliation remains a projection, with mutable actions bridged back through commands. Preserve its payments, additional claims, revision state, and undo semantics during extraction.
 
-Plain-language question phrasing rule (from the user): never lead with the form name. Ask what the
-thing *is* ("the salary statement your employer gives you each year, usually in June; do you have
-it?"), then name it in small print so the user learns the term.
+A command carries an expected revision and idempotency key. A stale write returns a conflict, refreshes the view, and invalidates affected calculations and review cards. An agent must not overwrite a newer manual edit. Vault statistics are derived summaries, never a competing financial authority.
 
-### 3.6 Memory and chat history (user requirement, added 2026-09-03 03:15)
+## 4. Extending the existing vault
 
-- **Chat history.** Every run persists (`runs`, `run_events`, `outputs`). The agentic surface has a
-  history drawer (clock icon in the header) listing runs newest first with title, task, status and
-  date; opening one replays its events, restores the side panel, and lets the user continue if it was
-  `waiting`. Delete removes the run, its events and outputs (documents and slots stay; they belong to
-  the vault, not the chat).
-- **Persistent memory.** `memories(key, value)` rows such as `employment=salaried`,
-  `has_pf=yes`, `preferred_language=hi`, `filed_ay_2026_27=yes`. Written by the `remember` tool
-  when the interview learns a non-secret fact, and by the user from `/vault`. Read at the start of
-  every run and shown to the model as plain sentences. Shown on `/vault` under "What Wapsi remembers"
-  with per-item delete and "forget everything". The agent never stores identifiers, amounts, or
-  document contents as memories; the tool's zod schema rejects values that match any identifier
-  validator or contain a rupee amount.
-- **Context panel** lists memories that influenced the current run.
+### 4.1 Data additions
 
-### 3.7 Validation (`lib/validation/`)
+Use migrations rather than creating tables opportunistically in every request. Preserve existing `tax_vault_users` rows and vault IDs.
 
-One module per identifier, each exporting `validate(raw) → {ok,value,masked?} | {ok:false, issue}` with
-issue codes (never messages), plus tests:
-
-| Identifier | Rule |
+| Record | Required information |
 |---|---|
-| PAN | `^[A-Z]{3}[ABCFGHLJPT][A-Z][0-9]{4}[A-Z]$`; 4th letter = holder type, `P` required for an individual; 5th letter should equal surname initial (warning, not error). |
-| Aadhaar | 12 digits, first digit 2–9, Verhoeff checksum valid. Stored masked `XXXX XXXX 1234`. |
-| VID | 16 digits, first digit 2–9, Verhoeff. |
-| TAN | `^[A-Z]{4}[0-9]{5}[A-Z]$`. |
-| IFSC | `^[A-Z]{4}0[A-Z0-9]{6}$` (existing). |
-| Bank account | 9–18 digits. |
-| Mobile | 10 digits, first 6–9. |
-| Email | RFC-lite. |
-| PIN code | 6 digits, first 1–9. |
-| UAN | 12 digits. |
-| GSTIN | 15 chars `^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$`, state code 01–38, embedded PAN valid, mod-36 checksum. |
-| DIN | 20 alphanumeric (ITD document identification). |
-| Acknowledgement no. | 15 digits. |
-| BSR / challan serial | 7 digits / 5 digits (existing in challan280). |
-| DOB | ISO date, age 18–120 for filer. |
-| Money | whole rupees, ≥0, ≤ 10^10; Indian grouping on display only. |
+| Document | Stable ID, owner, assessment year, type, filename, MIME type, byte length, hash, storage reference/bytes, issuer, source, timestamps, retention/deletion state |
+| Document provenance | `uploaded`, `legacy_backend`, `synthetic`, or `generated_output`; version and supersession relationship |
+| Extraction | Document/version/hash, parser version, status, structured fields, field locator where available, validation issues, review state |
+| Source-backed fact | Field value, document ID, source field/location, assessment year, issuer/employer, confirmation status; identity fields kept outside model context |
+| Access audit | Owner, actor, run/tool, document ID, operation, result, timestamp; no raw document text or secrets |
+| Run / events | Owner, return ID and revision, task, workflow state, ordered events, pending question/review, budget usage, timestamps |
+| Outputs | Owner, run, reviewed snapshot revision/hash, kind, stored bytes/reference, synthetic status |
+| Memory | Typed key/value, source run, validity year where needed, timestamp, deletion state |
 
-### 3.8 UI (`components/agentic/`)
+Scope document identity by owner, not by current `doc_f16`-style seed ID alone. Deduplicate uploads by content hash per owner; matching titles are not proof of identical contents. Store multiple employers and multiple years.
 
-- `Hero.tsx` — big serif line, sub-line, pill input (mic + Ask), four chips (File my return · Compare
-  regimes · I received a notice · Load a demo). Chips insert text, not run scripts.
-- `ChatShell.tsx` — morph from hero to two-column chat on first submit (`motion` layout animation;
-  content never gated on animation, per repo rule).
-- `Transcript.tsx` — messages; `ActivityLog.tsx` ("Worked for 22s" collapsible: thinking, tool calls,
-  files); `AskForm.tsx` (isolated input per `SlotInput`: text, number, date, select, upload, yes/no);
-  `Cards.tsx` (review, confirm, document, ITR-V, challan, vault status, memory).
-- `SidePanel.tsx` — Progress (hidden until `plan`), Outputs, Context, matching the CoWork screenshot.
-- `HistoryDrawer.tsx` — past chats (§3.6).
-- `ModeSwitch.tsx` — Agentic | Manual segmented control in the header of both surfaces; persists to
-  `users.mode`.
-- Manual grid `components/dashboard/task-grid.tsx` — tiles listed in §5.
+### 4.2 Migration and truthful status
 
----
+- Existing metadata records migrate as `metadata_only`; preserve their title, issuer, and dates. Mark known persona fixtures `synthetic`.
+- An original file that was never saved cannot be recovered from metadata or regenerated from vault totals. Ask once for re-upload when the original is necessary; remember the missing-source state during the run.
+- Migrate cached data only after matching it to the verified owner and year. Never assign every unsuffixed localStorage record to the first person who signs in.
+- Preserve current keys during a versioned migration: `wapsi_citizen_vault_active`, `wapsi_citizen_vaults_all`, `wapsi_active_data`, `wapsi_reconciliation`, session, onboarding, and mode keys. New private caches must be owner-scoped; sign-out removes the active private view.
+- Treat seeded `verified`, `syncedToPostgres`, and bank status flags as demo data, not evidence of actual verification or successful persistence.
+- The current code stores identity fields as ordinary database text/localStorage JSON despite encryption claims. Add actual protected storage/key handling and accurate disclosures; do not carry forward an unsupported “zero-knowledge” claim for a service that decrypts documents for processing.
 
-## 4. Security & privacy design
+### 4.3 Retrieval and extraction policy
 
-### 4.1 Auth
-- scrypt (`node:crypto`), 16-byte salt, N=2^15. Seed `asabs`/`12345` on first boot only if absent.
-- Session token: 32 random bytes, stored as SHA-256 hash, `HttpOnly; SameSite=Lax; Secure` (secure
-  only when `NODE_ENV=production`), 30-day expiry, sliding.
-- Rate limit sign-in: 10 failures / 15 min per username (in-memory map).
-- Signed-in sessions: **no question cap**. Anonymous `/api/agent`: cap 4 (unchanged).
+For each required fact: check accepted current-return facts and their source versions, then relevant vault extraction records, then stored originals needing extraction, then ask for the missing information or file. Do not ask for information already supported by current, usable evidence.
 
-### 4.2 Vault
-- Values never appear in: run_events, memories, model prompts, logs, URLs, or React state beyond the
-  input component that captured them. After PUT, the input clears and shows the masked form.
-- Per-user data key generated at sign-up, wrapped with the master key; rotating the master re-wraps.
-- Audit row on every decrypt, including the run id and the tool that asked.
-- Documents: 5 MB cap, PDF/PNG/JPEG only, sha256 dedupe per user, `pdfExtract` runs server-side and
-  stores only structured fields (amounts) in `extracted_json`; identifiers found in PDFs go to slots.
+Automatic retrieval of the signed-in citizen's relevant vault documents is part of the workflow; no repeated permission prompt. Log “Found two salary statements for this year” only after a successful lookup. A metadata match means “record found; original unavailable,” not “document read.”
 
-### 4.3 What the model sees
-- Slot *status* and masked values only. Financial figures go to the model **without** name, PAN,
-  Aadhaar, account numbers, or email: the request builder strips them and replaces the citizen name
-  with "the citizen". This is the pseudonymisation boundary; it is documented on `/honesty`.
-- Memories are sent as plain sentences; they cannot contain identifiers or amounts by construction.
-- Tool results are summarised server-side before being returned to the model (already the pattern).
+Validate owner, year, subject identity when present, document type, size, signature/MIME, extraction completeness, and duplicate/version relationships. Begin with the current PDF parser and a 5 MB original-file cap; also bound decompressed size, execution time, and extracted text. Images and scans can be stored but require manual figures until OCR is separately implemented and verified. Unsupported or password-protected files produce a recoverable request, never invented fields.
 
----
+Extracted values are proposals. Keep disagreements between Form 16, AIS, 26AS, and user answers visible; do not overwrite whichever arrived first or sum the same salary reported in three sources. For multiple employers, preserve separate salary/TDS entries and let the engine apply its annual rules. Zero, absent, unreadable, not applicable, and declined are distinct states. A “14 lakh package” is not automatically taxable gross salary; PF is not automatically employer NPS.
 
-## 5. Manual mode grid (real tiles only)
+Private vault lookup begins with owner/year/type/issuer and structured fields. The public tax-law corpus uses the separate hybrid retrieval system in §5.6; the earlier decision against a vector index applied only to basic private-file lookup, not legal research. Additional formats use explicit extraction adapters; “any document” means authorized retrieval of supported stored files, not a promise to understand every format.
 
-| Tile | Backed by | Status |
+## 5. Harness, tools, history, and memory
+
+### 5.1 Workflow
+
+`classify → plan → gather → resolve gaps/conflicts → compute → review → confirm → simulated action → outputs`
+
+Support `running`, `waiting_for_input`, `waiting_for_review`, `completed`, `cancelled`, and `failed`, with explicit recoverable failure reasons. The server owns transitions, prerequisites, validation, and tool permissions. The model classifies intent, proposes eligible next steps, and explains results in the selected language. It cannot bypass missing evidence or completion gates.
+
+Use bounded action schemas, not fixed interviews or canned tax plans. The planner composes a per-user dependency graph from the goal, applicable rules, verified facts, document availability, deadlines, and tool capabilities. It may omit resolved work, reorder independent steps, and ask the question that resolves the most consequential uncertainty. The server validates every proposed action and prerequisite. Replan when facts change, preserving completed work and explaining the practical change. Start with validated coverage for salary-return preparation, regime comparison, reconciliation, and demo loading; expand coverage by category. Unsupported cases return a supported next action rather than claiming completion.
+
+### 5.2 Shared tools
+
+Adapt `lib/agent/tools.ts` into a runtime-validated registry shared by legacy chat and Agentic. Reuse `computeForPersona`, `compareForPersona`, engine constants, compliance modules, and existing return adapters. Retire duplicated calculations and misleading result contracts where they differ from the shared implementation.
+
+Tools: `list_vault_documents`, `read_document_fields`, `open_vault_document`, `get_current_return`, `propose_fact_updates`, `apply_return_command`, `compute_current_tax`, `compare_regimes`, `review_return`, `prepare_filing`, `confirm_simulated_filing`, `prepare_simulated_payment`, `get_filing_history`, `draft_notice_response`, and typed memory operations.
+
+Routine scoped reads and calculations run automatically. Proposed financial changes remain reviewable and reversible; ambiguous changes ask a targeted question. Filing/payment confirmation is mandatory and bound to the exact current snapshot, amount, owner, and year. Remove the old production-facing `AGENT_REQUIRE_CONFIRMATION=false` shortcut. Do not treat a model tool call as user confirmation.
+
+### 5.3 Model boundary and limits
+
+The server builds allowlisted context; it does not trust client-posted facts for final actions. The model sees opaque references, relevant financial figures, approved non-sensitive attributes, and sanitized source descriptions. Names, PAN, Aadhaar, bank details, tokens, filenames containing identifiers, and unrestricted document text stay out of prompts/tool summaries.
+
+Redact free-text messages before model transmission and persistence; secure identity inputs bypass chat. Documents and extracted text are untrusted data, never tool instructions. Prompt wording supplements schema validation and server authorization; it does not replace them.
+
+Keep Gemini configuration-driven. Verify configured model availability/capabilities during implementation; do not assume the old hard-coded primary/fallback IDs remain valid. Use bounded timeouts, retries, tool calls, and per-user/run/day budgets. The current route does not enforce the documented daily-token budget. Replace the four-question limit for authenticated agent workflows with real server-enforced budgets, while preserving legacy public-chat limits. Model failure falls back to explicit deterministic questions for supported tasks, not guessed intent or unchecked actions.
+
+### 5.4 Durable runs and streaming
+
+Add owner-scoped run creation, message/answer submission, confirmation, cancellation, history, event replay, and output endpoints. Persist each transition/event before streaming it. Every event has `runId`, monotonic `seq`, timestamp, type, and a validated redacted payload.
+
+Events cover plan/step updates, factual activity, source lookup, tool outcome, questions, messages, review cards, outputs, and status. Activity describes observable work; do not expose private model reasoning or label invented text as “thinking.”
+
+Use fetch-streamed SSE with cursor replay/poll fallback. Run execution is a bounded step per request with a persisted checkpoint, not a process that must stay alive until the entire interview finishes. After disconnect or process restart, resume from the checkpoint; do not rely on unawaited background work. Enforce one writer per owner/return through a lease or optimistic lock and idempotent actions. A replay re-renders events; it never re-executes a payment or filing.
+
+Reopened history restores the latest valid question, plan, sources, and outputs. A changed return/document version invalidates stale reviews. Deleting a chat removes its conversational data and run-owned outputs subject to documented retention; it does not erase the return's correction audit or source documents. Keep shared generated-document references consistent and disclose any retained filing record.
+
+### 5.5 Memory
+
+Store explicit typed facts such as preferred language or employment category, with user visibility and deletion. Do not use arbitrary model-authored free text with regex filtering as the privacy guarantee. Financial amounts and identifiers belong to protected facts, not memory. Annual facts expire or require reconfirmation; deleting memory excludes it from future model context, including reconstructed context in ongoing runs.
+
+### 5.6 Tax knowledge: RAG plus executable applicability rules
+
+**Research-backed recommendation:** build a versioned tax knowledge system, not a model expected to memorize all legislation. RAG supplies current evidence at inference time; fine-tuning is an optional later tool for task behavior, extraction, or conversational consistency. OpenAI's [accuracy guidance](https://developers.openai.com/api/docs/guides/optimizing-llm-accuracy) distinguishes these uses. A [preregistered legal-AI study](https://arxiv.org/abs/2405.20362) found errors in retrieval-based legal products; this is evidence against treating RAG as a correctness guarantee, not a measured error rate for Indian taxation or Wapsi.
+
+Maintain two access-separated corpora:
+
+- **Public tax knowledge:** legislation, Finance Acts/amendments, notified Rules and forms, CBDT notifications/circulars, official filing schemas/validation rules and departmental guidance. Add scheme-specific official authorities where necessary. Case law requiring interpretation is separately curated with jurisdiction and precedent status.
+- **Private evidence:** the current owner's vault documents and confirmed answers. Private content never enters a shared legal index, another user's context, or training data by default.
+
+Each legal provision carries Act/version, section and subsection, income period, AY/TY, effective interval, notification/publication date, jurisdiction, taxpayer-category tags, source URL, exact locator, content hash, superseded-by links, reviewer, and review date. Keep definitions, provisos, exceptions, schedules, and amendment relationships with their parent provision. A keyword match on a deduction section without its exceptions is insufficient evidence.
+
+**Critical transition case:** the Department states that FY 2025–26 income / AY 2026–27 remains under the 1961 Act; FY 2026–27 income / Tax Year 2026–27 falls under the 2025 Act. Do not equate either Act with the old/new tax-regime choice. Store these as separate dimensions and include the transition in every regression release. See the Department's [transition FAQ](https://www.incometax.gov.in/iec/foportal/help/all-topics/e-filing-services/objective-and-scope-new-act-faq).
+
+Retrieval pipeline: identify task and applicable period → filter legal version/jurisdiction → exact section and keyword search plus multilingual semantic retrieval → rerank → expand linked definitions/exceptions → validate applicability → supply an evidence bundle. Missing taxpayer attributes must retain candidate rules and trigger questions, rather than filter them away. Date/attribute filtering before semantic search is a documented retrieval capability ([reference](https://developers.openai.com/api/docs/guides/retrieval)).
+
+Encode consequential eligibility rules as reviewed, testable predicates with three outcomes: **eligible / ineligible / insufficient information**. Inputs may include taxpayer entity, tax residency and relevant dates, age, income heads, employment/business status, turnover/receipts, asset type/acquisition/transfer dates, ownership/payment relationships, deductions, prior elections, filing history, deadline, and supporting evidence. Ask only task-relevant attributes; category labels alone do not establish eligibility.
+
+Example: salary-only and salary-plus-business taxpayers must not receive the same regime-switching workflow merely because their totals match. The Department's [Form 10-IEA manual](https://www.incometax.gov.in/iec/foportal/newformpage/forms/form10-iea-UM?mobile-app=1) documents additional election requirements for business/professional income. Implement the relevant year's complete election conditions and history before recommending an executable switch; this source example is not a substitute for the full rule.
+
+The existing engine computes only after eligibility and supported coverage are established. Every recommendation records: relevant user facts, eligible alternatives, disqualified alternatives and reasons, rule versions, engine result, missing evidence, and feasible next steps. “Best” means a lawful supported option under the user's goal and constraints, considering tax, required paperwork, deadlines, liquidity, and any future election consequences. Do not equate maximum deduction with the best financial decision, invent expenditure, or claim global optimality beyond tested coverage.
+
+### 5.7 Models, updates, and accuracy release gates
+
+| Approach | Suggested use | Trade-off |
 |---|---|---|
-| File / check my return | existing 5-step flow | exists |
-| Reconcile with AIS/26AS | `/reconcile` | exists |
-| Pay outstanding tax | Challan 280 modal | exists |
-| Respond to a notice | Actions tab | exists |
-| Tax calculator | engine, new `components/tools/calculator.tsx` | build |
-| Compare regimes | `compareRegimes`, new tile view | build (engine exists) |
-| Advance-tax schedule | engine + 15 Jun/15 Sep/15 Dec/15 Mar split | build |
-| HRA helper | new pure `lib/tools/hra.ts` (min of actual, 50%/40% basic, rent−10% basic) | build |
-| Capital-gains helper | s.111A/112A/112 via engine | build |
-| Tax calendar | static AY 2026-27 dates, `lib/tools/calendar.ts` | build |
-| TDS mismatch check | ledger TDS vs Form 16 extracted | build |
-| e-Verify (mock) | new step after filing, Aadhaar-OTP-shaped, `949494` | build |
-| Download ITR-V | existing | exists |
-| Filing history | `returns` + runs | build |
-| My documents & memory (vault) | `/vault` | build |
-| Connect DigiLocker (mock) | `/api/vault/digilocker/*` | build |
-| Refund status | existing tracker | exists |
-| Chat history | `/app` history drawer | build |
+| General model with prompts alone | Baseline evaluation only | Cannot serve as the authoritative source for current rules |
+| Hybrid RAG + reviewed applicability rules + deterministic engine | Recommended production architecture | More curation and tests, but decisions can be traced and reproduced |
+| Fine-tuned model layered onto that architecture | Later, if held-out tests reveal persistent behavior/extraction problems | Requires licensed/de-identified examples and repeated regression tests; does not replace law updates |
 
-Excluded deliberately (would need invented registries): Know your JAO, TAN lookup, CSI file,
-Instant e-PAN, Aadhaar-link status, NUDGE campaign.
+For a concrete retrieval baseline, evaluate PostgreSQL text search plus a vector extension if the deployment supports it; otherwise use a private compatible index. Benchmark a multilingual embedding candidate such as [BGE-M3](https://arxiv.org/abs/2402.03216) against an approved managed embedding service. Its paper describes multilingual and multiple retrieval modes; it does not establish accuracy for all 23 Wapsi languages. Benchmark query translation and native multilingual retrieval on the actual tax corpus. Add a reranker only if it improves held-out results. No provider/model is selected solely by marketing benchmarks or number of supported languages.
 
----
+Keep generation provider-independent. Evaluate the configured Gemini against an available alternative on identical evidence bundles, category cases, tool calls, and language/style tasks before choosing. Verify current model IDs, licensing, data retention, hosting region, latency, and cost at implementation. Public research here does not change the configured provider or authorize sending citizen data to a new provider.
 
-## 6. Onboarding-once (user requirement)
+Create a legal-content release process: fetch approved sources → detect changes → stage a diff → qualified Indian tax reviewer validates applicability → update executable rules and tests → publish an immutable knowledge release. Record effective dates separately from publication dates; support retrospective changes. A reviewed precedence/conflict policy distinguishes legislation, delegated instruments, departmental guidance, and judicial interpretation. Do not resolve conflicts by whichever snippet has the higher similarity score or newer webpage date.
 
-- `/welcome` renders only when `users.onboarded_at IS NULL`. Completion writes `onboarding_json` and
-  `onboarded_at`; the localStorage profile is written too (existing consumers), keyed by user id.
-- Middleware: `/app`, `/`, `/vault` redirect to `/signin` without session; to `/welcome` without
-  `onboarded_at`; `/welcome` redirects to the mode surface if already onboarded.
-- "Edit preferences" in the header reopens the same form in edit mode without resetting `onboarded_at`.
-- Sign-out clears the cookie and the per-user localStorage keys; a different user on the same browser
-  never sees the previous user's profile (keys are suffixed with user id; legacy unsuffixed keys are
-  migrated to the first user who signs in, then removed).
+Proposed operational cadence: daily checks of official updates, prioritized review around filing deadlines, and an immediate affected-rule hold when a material unreviewed change is detected. This is an implementation requirement, not an automation created by this planning task. Each run pins its knowledge release; a material update invalidates affected pending approvals and requests recalculation before execution. Keep prior snapshots for audit.
 
----
+Establish a reviewer-maintained coverage matrix by year, entity, residency, income head, regime, deduction/scheme, and workflow. Broad legal-reference coverage does not imply autonomous filing coverage. Expand the current limited engine deliberately: surcharge, interest/fees, full eligibility/exemption conditions, return-form selection, schema validations, and supported special cases must be implemented and tested before accepting affected returns.
 
-## 7. Edge-case register
+Proposed release gates (targets, not achieved performance):
 
-| Area | Case | Handling |
+- Every executable legal decision has an approved rule version and retrievable supporting provision; every tax figure matches the versioned engine snapshot.
+- Zero unresolved critical errors across a maintained expert-reviewed blocking suite: wrong year/Act, ineligible deductions, duplicate credits, invalid elections, unauthorized action, or unsupported filing. Passing finite tests is not a guarantee of zero production errors.
+- Measure retrieval recall, source entailment, eligibility precision/recall, calculation parity, appropriate refusal/clarification, and end-to-end completion separately, by category and language. Do not hide a failing group in an aggregate score.
+- Include threshold boundaries, negative eligibility examples, conflicting documents, misleading premises, amended/repealed rules, and equivalent cases in all 23 languages. Separate training, tuning, and held-out cases; include review of real-world diversity and adversarial inputs.
+- Use qualified human review for disputed interpretations and unsupported/high-consequence cases. A second model can detect issues but is not the legal authority or release approver.
+- In production, track corrections and incidents, pin model/prompt/retriever versions, support rollback, and pause only affected capabilities when possible. Never advertise 100% accuracy or turn embedding similarity into an invented “confidence percentage.”
+
+### 5.8 Conversation and trust contract
+
+The goal is ChatGPT-like clarity, warmth, and responsiveness, not an assertion that Wapsi reproduces ChatGPT's private prompts, training, or an undisclosed psychological formula. Official [model guidance](https://developers.openai.com/api/docs/guides/latest-model?model=gpt-5.2) documents configurable verbosity; the sources consulted do not establish one universal ChatGPT word/character cap. Different tasks need different amounts of explanation.
+
+Replace the current rigid one-or-two-sentence/no-context policy with adaptive responses. These are **proposed Wapsi English-language starting ranges**, to validate with users, not OpenAI specifications:
+
+| Situation | Starting response shape |
+|---|---|
+| Simple question | Direct answer and necessary qualification, usually 30–80 words |
+| Missing information | One focused question and a short reason, usually 15–45 words |
+| Progress | One factual sentence; batch small tool events in the activity area |
+| Recommendation | Decision, user-specific reason, evidence, and next action, usually 80–180 words |
+| Complex comparison or final review | Compact table/card with a short explanation, typically 150–300 words; expandable detail |
+| Requested explanation | As long as needed to answer accurately; no artificial character ceiling |
+
+Use these ranges softly. Never truncate a material condition to satisfy a limit. Do not apply English word counts mechanically to Indic scripts; test readability and task success per language. Preserve amounts, dates, identifiers, and source references through translation. New legal translations need terminology review, not just a model-language setting.
+
+Lead with the useful answer. Explain why it applies to this citizen. Ask one important question at a time when an answer is necessary. Avoid stock praise, repeated greetings, legal jargon before plain meaning, sales language, and reassurance unsupported by evidence. Mention uncertainty at the exact unresolved point. Say “I found,” “I suggest,” “I prepared,” and “I completed” only when their corresponding events exist.
+
+Illustrative response after a verified lookup: “I found both salary statements in your vault. I'll combine them and check the tax already deducted. Did you receive any freelance income during the same year?” The question appears only if that fact is unknown and relevant. Do not hard-code that sequence for every taxpayer.
+
+Failure example: “The file is saved, but I couldn't read the salary figure. You can enter it here or upload a clearer copy.” Give a usable recovery action without claiming success or burying the problem in a generic disclaimer.
+
+Use the model to phrase validated facts and next steps naturally. Deterministic validators protect amounts, citations, conditions, action status, and required disclosures; they do not force every reply into identical sentences. Start with a versioned style prompt and a human-reviewed example set; consider fine-tuning only after evaluation demonstrates a need.
+
+Test comprehension, perceived helpfulness, ability to spot an intentionally wrong suggestion in a controlled study, correction success, and unnecessary question count. Optimize appropriate trust rather than how confidently the assistant sounds. [Microsoft's human–AI interaction research](https://www.microsoft.com/en-us/research/project/guidelines-for-human-ai-interaction/) supports evaluating behavior across normal use, failures, and changes over time; exact wording/length choices above are Wapsi design hypotheses.
+
+## 6. Agentic surface and supported scope
+
+Use `/app` for the dedicated agent workspace and `/` for Manual, inside one persistent application shell. Extract the shared return provider first so navigation does not reset the draft. Preserve `/reconcile`, existing vault functionality, manual controls and calculations, and visual tokens while simplifying the navigation as explicitly requested. This replaces the earlier proposal to preserve the entire existing outer header layout.
+
+**Required layout:**
+
+```text
++-------------------+-------------------------------------------------------+
+| Wapsi             | [Agentic | Manual]                Progress Outputs Sources |
+| New chat          +-----------------------------------+-------------------+
+| Search chats      |                                   | Current chat      |
+| Tax Vault         | Conversation / manual workspace   | inspector         |
+| My return         |                                   | (collapsible)     |
+| Filing history    |                                   |                   |
+| ----------------- |                                   |                   |
+| Recent chats      |                                   |                   |
+| ...               |                                   |                   |
+| ----------------- |                                   |                   |
+| Account/settings  | Composer / current manual action  |                   |
++-------------------+-----------------------------------+-------------------+
+```
+
+- **Left sidebar:** New chat, search, Tax Vault, My return/manual tools, filing history, and persisted chats. Account, language, theme, memory/preferences live at the bottom or under settings. Avoid duplicating the same navigation across the canvas and header. Vault access uses the same records/service; an in-shell view may reuse the existing modal's content.
+- **Fixed mode toggle:** one shared `ModeSwitch` in a reserved header slot immediately to the right of the sidebar boundary. It must have the same anchor, order, dimensions, and accessible labels in Agentic and Manual. Switching mode changes central content only; it cannot move the control from right to left or mount it in another header. Sidebar collapse and responsive changes follow identical rules in both modes.
+- **Top right:** stable `Progress`, `Outputs`, and `Sources` controls open one inspector beneath them. Sources means the documents, confirmed answers, assumptions, and legal references actually used in this chat, not every item in the vault. Use “Sources” as the simple visible label; sections distinguish “Your documents,” “Information you provided,” and “Tax rules.” Display source versions, used facts, verification state, and a link to the exact page/provision where available. Changing chats changes the inspector's contents.
+- **Center:** calm whitespace, readable transcript, one composer, lightweight tool activity, and focused review/input cards. No promotional feature pillars, scripted claims, duplicate chat bubbles, or permanent dense dashboard grid in Agentic. Keep pending question and next action obvious.
+- **Progress:** show meaningful steps and current blockers, never fake percentages or a token-by-token thought feed. Outputs appear only after storage succeeds. Empty controls retain their location and show an honest empty state; their appearance does not push the toggle around.
+- **Responsive:** left navigation becomes a drawer; the same mode toggle remains in the same reserved header position for both modes at that viewport. Top-right inspector controls can collapse to one stable button opening tabs. Preserve keyboard focus, selected chat, scroll, pending input, language, theme, and return state when switching. Mode switch pauses new agent writes; a currently committing action resolves and synchronizes before Manual edits proceed. Resume is explicit.
+- **Acceptance:** at identical viewport/sidebar settings, screenshot and bounding-box tests confirm the toggle has identical position/size before and after mode switches. Test empty/loading/active/failed/completed chats, long localized labels, both themes, keyboard use, and narrow screens. The user should not need to rediscover a control after switching modes.
+
+Official [ChatGPT Work guidance](https://learn.chatgpt.com/docs/get-started-with-work) confirms a workflow involving files, tools, progress, questions, and approval of important actions. It does not establish a universal pixel specification for every rollout. The exact left-sidebar/top-right arrangement above is the user's explicit Wapsi requirement; validate visual fidelity against the user's available reference during design rather than inventing unseen ChatGPT screens. Keep Wapsi branding.
+
+Preserve language and theme across mode switches. Keep Simple/Full as an internal detail preference rather than destructively rewriting it to interaction mode. Persist onboarding completion once per verified account, reuse the existing form, and preserve current users' preferences. New accounts can default to Agentic after onboarding; existing users are not silently switched. Separate `/signin` and `/welcome` pages are not necessary for the initial release.
+
+All new fixed interface strings, errors, questions, and review actions must support all 23 dictionaries. Preserve existing locale options and number formatting; model-language output is supplementary to translated deterministic templates. Voice reuses `lib/speech.ts` with a supported-browser fallback and truthful provider disclosure; lack of voice must not block a task.
+
+| Capability | Release treatment |
+|---|---|
+| Salaried return, including multiple employers | First complete vertical slice, within current engine coverage |
+| Regime comparison and fact reconciliation | First release, engine and ledger backed |
+| Demo personas | First release; isolated synthetic vault and return data |
+| Notice assistance | Next slice; cited document-based draft, no submission or invented legal citations |
+| Tax payment / refund status / history | Reuse existing flows and records; clearly label simulations and unavailable live data |
+| ITR JSON / ITR-V | Versioned Wapsi prototype exports tied to reviewed snapshot; no claim of valid government-schema upload unless separately validated |
+| Business benefits / presumptive filing | Deferred: existing “business income” input is not a complete eligibility/rules implementation |
+| HRA, advanced tax helpers, additional manual tiles | Separate follow-up only where absent; no grid rebuild |
+| DigiLocker | Optional later source adapter; never a dependency for using the existing vault |
+| OCR / arbitrary document reasoning | Follow-up with bounded extraction and verification |
+| Real filing, real payments, real e-verification | Out of scope |
+
+## 7. Implementation sequence and acceptance gates
+
+| Phase | Work | Done when |
 |---|---|---|
-| Auth | wrong password | generic "username or password is wrong", counter increments, lockout message after 10 |
-| Auth | duplicate username on signup | 409 → "that name is taken" |
-| Auth | expired cookie mid-chat | SSE closes with `error{recoverable:false}`; UI shows "sign in again", run persists, resumes after sign-in |
-| Auth | two tabs | sessions are server-side; both work; mode switch syncs on focus (`visibilitychange` refetch of `/api/auth/me`) |
-| Onboarding | user closes mid-way | draft stored in localStorage as today; `/welcome` resumes at the same step |
-| Onboarding | v1/v2 profiles in localStorage | migrated to v3 (mode dropped; `simple`→agentic, `full`→manual written to `users.mode`) |
-| Harness | first message is off-topic ("hi") | classify → `unknown` → assistant asks one clarifying question with the four chips |
-| Harness | model down / bad key / bad model id | offline planner, run labelled; the run still completes |
-| Harness | model returns a tool not in registry or bad args | zod fails → `error{recoverable:true}` → planner supplies the deterministic next step |
-| Harness | user answers a different question than asked ("actually my salary is 14L") | free-text answers are classified as slot proposals; if it matches another slot, that slot is filled (after validation) and the current question is repeated |
-| Harness | user says "I don't have that document" | slot marked `unavailable`; task schema defines the fallback (Form 16 → ask salary + TDS directly) |
-| Harness | user changes an earlier answer | `ask` for any filled slot is allowed via the Context panel; dependent slots re-validated, plan step re-opened |
-| Harness | reload mid-run | `/api/runs/:id` replays `run_events`; the last `ask` re-renders |
-| Harness | two runs in parallel | one active run per user; a new first message while a run is `waiting` asks "continue or start over" |
-| Harness | SSE not supported / proxy buffering | response sets `X-Accel-Buffering: no`, flushes a comment line every 15 s; client falls back to polling `/api/runs/:id` if no event for 30 s |
-| Memory | model tries to remember an identifier or amount | `remember` schema rejects; event `error{recoverable:true}`; nothing stored |
-| Memory | conflicting fact ("I'm salaried" then "I run a business") | latest wins (`UNIQUE(user_id,key)` upsert); the old value is written to `vault_audit` as `memory.replaced` |
-| Memory | user deletes a memory mid-run | next `recall` omits it; the current run's context panel updates on the next event |
-| History | run deleted while open in another tab | replay returns 404 → "this chat was deleted", hero shown |
-| History | very long run (hundreds of events) | replay paginates by `seq`; activity log virtualises beyond 200 rows |
-| Vault | Aadhaar fails Verhoeff | inline "that number doesn't check out; one digit may be off", no save |
-| Vault | PAN 4th letter not P | "this looks like a company/firm PAN, not a person's" (block for `file_return`) |
-| Vault | upload >5 MB or wrong type | 413/415 with plain message; nothing stored |
-| Vault | scanned/compressed PDF | extraction returns nothing → assistant says so and asks for the figures directly |
-| Vault | same file uploaded twice | sha256 match → reuse, no duplicate row |
-| Vault | DigiLocker mock "connected" but doc missing | chain falls to `ask` with the reason shown |
-| Vault | master key missing in production | boot fails loudly with instructions; never falls back to plaintext |
-| Filing | outstanding tax > 0 | the confirm card becomes "Pay first" (existing 139(9) rule) and routes to the challan step |
-| Filing | already filed this AY | `file_return` becomes revised return u/s 139(5) staging (existing) |
-| Filing | confirm flag false | `card:confirm` skipped; `file_return` runs; the review card still shows |
-| Manual | persona vs real user | demo personas populate slots with `source:'persona'`, clearly badged; real user starts empty |
-| i18n | new UI strings | `localize()` (en/hi/ta) for component strings; no new `Dict` keys unless all 23 files get them |
-| Deploy | Vercel `/tmp` SQLite | documented; app boots, data does not persist across deploys |
-| Tests | no jsdom | logic (planner, interview, validation, vault crypto, auth, memory) unit-tested in node; UI verified in the browser pane with `data-testid` hooks |
+| A — Contracts and ownership | Capture manual UI baselines; verify deployment/DB; define session resolver and owner mapping; migrations; protect existing vault access; isolate demo records | Cross-user reads/writes fail; mock tokens cannot access private data; migrations preserve current records |
+| B — Usable existing vault | Original bytes, hashes, versions, extraction/provenance, upload/download, legacy metadata migration, read audit | Upload a PDF once, reload, reopen identical bytes, and retrieve its supported fields through an owner-scoped service; metadata-only records remain honest |
+| C — Shared return actions | Extract provider/commands from page handlers; versioned server snapshot; existing manual/context adapters; idempotent payments and filing outcome handling | Manual, Agentic fixtures, and reconciliation show identical figures; corrections/undo survive switching and reload; non-2xx never produces filed status |
+| K — Tax knowledge and applicability | Approved source registry, legal period/version mapping, hybrid retrieval benchmark, reviewed eligibility predicates, category coverage matrix and blocking test suite | First supported tasks resolve the correct law/period, cite supporting provisions, reject ineligible actions, and ask for consequential missing facts; reviewer signs off supported scope |
+| D — First complete agent workflow | Shared validated tools, dynamic dependency planning under deterministic guards, knowledge/engine integration, model adapter, bounded budgets, durable events, adaptive response policy | Existing documents are retrieved automatically; only material gaps are asked; task plans differ appropriately by user; calculation and review derive from accepted facts and eligible rules |
+| E — Working interface | Shared ChatGPT Work-style shell, left navigation/history/vault, fixed mode toggle, top-right inspectors; streamed transcript; history/resume; language/theme continuity | Complete and resume a workflow; toggle does not move on switching; manual functions remain intact; all 23 locales have interface copy |
+| F — Completion and broader tasks | Snapshot-bound confirm, simulated filing/payment, durable exports; notices/status integrations; typed memory controls | Repeat confirmation cannot duplicate actions; files match the approved snapshot; source links work; memory/history deletion works |
+| G — Hardening and documentation | Failure/restart/concurrency checks; legal and language evaluations, user comprehension studies, full regression; deployment verification; update CONTEXT, MODES, disclosures, env docs and README | Technical and expert-reviewed coverage gates pass, persistence survives restart, supported scope is accurate, all limitations are documented |
 
----
+Build each phase behind an agentic feature flag until integrated. The first end-to-end milestone is: **two stored salary statements → automatic retrieval → source review → engine comparison → human-confirmed simulated filing → matching outputs → resume history → identical Manual return.**
 
-## 8. Phases and tasks
+Phase K is required before the first rule-based recommendations in D. Shared-shell wireframes and the style evaluation set can be designed during A, then connected in E. Do not start with a generic scripted interview or a second vault. Complete and validate the first slice, then expand supported taxpayer categories against the same rules and evaluation process. Broad all-category coverage remains the product objective, not a claim that the current prototype already supports every return.
 
-Each task lists the files it touches and its acceptance check. Gates after every phase:
-`npx tsc --noEmit` (0), `npx vitest run` (all green, count updated in CONTEXT.md), `npx next build`
-(exit 0), browser check of anything visual.
+Real filing remains a separate production program: official integration/access, current validated submission schemas, credential and identity controls, filing acknowledgement/status reconciliation, incident response, and operational/legal review must be established before enabling it. Neither this research nor a passing prototype demo enables government filing automatically.
 
-### Phase 0 — Foundation (auth, DB, onboarding-once, mode rename)
-- 0.1 `lib/server/db.ts` + `schema.sql` + migration runner; `data/` gitignored. Test: opens, migrates, inserts.
-- 0.2 `lib/server/auth.ts` (scrypt, sessions, seed asabs) + `/api/auth/{signin,signup,signout,me,preferences}` + `app/signin/page.tsx`. Test: seed, wrong password, lockout; browser: sign in as asabs.
-- 0.3 `middleware.ts` gating `/`, `/app`, `/vault`, `/welcome`. Browser: redirects.
-- 0.4 `app/welcome/page.tsx` reusing `components/onboarding.tsx` with the mode step removed; `users.onboarded_at`. Shows once; not again after reload or re-sign-in.
-- 0.5 Mode rename: `lib/onboarding.ts` v3 (`mode` removed from profile; `UiMode = "agentic"|"manual"` in `lib/mode.ts`), i18n `modeSimple/modeDetailed` → `modeAgentic/modeManual` in all 23 files, `portal-header.tsx`, `personalized-dashboard.tsx`, agent `set_mode` tool, `pushModePreference`, tests. The *register* seam (explainers vs sign-off) is kept internally as `guided = mode==="agentic"` so nothing visual regresses in manual mode. MODES.md rewritten as AGENTIC.md.
-- 0.6 Cap: `lib/server/cap.ts`; `/api/agent` skips the cap when a session cookie is valid. Test.
+## 8. Required verification
 
-### Phase 1 — Agentic surface (UI)
-- 1.1 `app/app/page.tsx` shell + `components/agentic/Hero.tsx` (serif line, pill input, mic via `lib/speech.ts`, chips). Screenshot.
-- 1.2 `ChatShell.tsx` morph on first submit; `Transcript.tsx`; `ActivityLog.tsx`; `SidePanel.tsx`; `AskForm.tsx`; `Cards.tsx`; `HistoryDrawer.tsx`. Static event fixtures first so the UI is verifiable before the harness exists. Screenshots of hero, chat, panel, history; dark mode.
-- 1.3 `ModeSwitch.tsx` in both headers; `/` reads `users.mode`. Switch round-trips.
+- Existing engine/golden vectors, corrections, persistence migrations, reconciliation, challan, notice, status/history, and calendar tests remain green.
+- New tests cover ownership, forged/expired sessions, metadata-only documents, wrong owner/year, missing bytes, duplicate content, multiple employers, conflicting sources, stale extraction, scans/encrypted PDFs, explicit zero, and failed uploads.
+- Shared-state tests cover old/new regime parity, age/capital-gains metadata, disputed facts, additional claims, one credit per challan, undo, and manual edits during a waiting run.
+- Workflow tests cover invalid tool arguments, unknown tasks, model failures, budget exhaustion, secret redaction, document prompt injection, expired approval, concurrent commands, event replay after restart, cancellation, and repeat confirmation.
+- Filing tests explicitly reject non-2xx responses and distinguish accepted, pending, failed, and simulated outcomes. A response lost after acceptance is resolved via idempotency/status lookup; it does not trigger a new simulated submission.
+- Outputs use an immutable reviewed snapshot and are retrieved through owner checks. A model-generated receipt string is not a cryptographic hash or stored artifact.
+- Browser verification: requested shared shell, preserved Manual/Vault functionality, Agentic workflow, fixed-toggle geometry on mode round-trips, per-chat top-right sources, mobile, both themes, keyboard/focus, language persistence, and all 23 locale selections. No jsdom assumption.
+- Knowledge verification: temporal/category retrieval, Act-versus-regime separation, reviewed eligibility predicates, citations that actually support claims, rule-update invalidation, unsupported-case handling, and the §5.7 expert-reviewed gates.
+- Conversation verification: fact/action-state fidelity, localized readability, adaptive length, useful recovery, absence of repeated/unnecessary questions, and controlled comprehension/appropriate-trust testing. A pleasing answer cannot compensate for a wrong filing decision.
+- Per meaningful implementation phase: typecheck, relevant tests, build, and browser verification for changed surfaces. Broaden to the full suite before completion.
 
-### Phase 2 — Harness
-- 2.1 `lib/harness/events.ts`, `tasks/*.ts` (7 schemas), `interview.ts` (nextSlot, apply answer, unavailable, revisit), `planner.ts` (schema → steps), `offline.ts` (deterministic phrasing + keyword classifier). Unit tests for every transition in §7.
-- 2.2 `lib/harness/model.ts`: Gemini adapter with tool calling, thought summaries, model-id check, timeouts, retries, pseudonymised context builder. Test with a fake fetch.
-- 2.3 `lib/harness/tools.ts`: typed registry (zod): `classify_situation`, `request_slot`, `mark_unavailable`, `check_sources`, `compute_tax`, `compare_regimes`, `prepare_filing`, `file_return`, `generate_itr_json`, `generate_itrv`, `pay_challan`, `draft_notice_response`, `load_demo_persona`, `remember`, `forget`, `set_mode`, `set_theme`. Each tool has a test.
-- 2.4 `lib/harness/memory.ts` + `/api/memory`; `runs` persistence + `/api/runs` (list, replay, delete). Tests: upsert, reject identifier, list order, delete cascade.
-- 2.5 `app/api/agent/stream/route.ts`: SSE, persistence to `run_events`, resume. Curl-level test with the offline planner; browser end-to-end.
-- 2.6 Wire the UI to the stream and the history drawer; remove fixtures. Full run "I got a job with a 14 lakh package" completes to a filed return with outputs; reopening it from history replays.
+**Analysis baseline:** `npm run typecheck` passed; `npm test` passed 193/193 in 18 files. Build, browser, Java, model, and live database checks were not rerun for this documentation-only task. Prior log entries report a passing build, but that is not a fresh verification here.
 
-### Phase 3 — Vault, validation, DigiLocker mock
-- 3.1 `lib/validation/*` with tests (§3.7); `lib/validate.ts` re-exports for existing callers.
-- 3.2 `lib/server/vault.ts` (crypto, slots, audit, documents, source chain) + `/api/vault/*`. Tests: encrypt/decrypt round trip, audit row per read, masked-only output, dedupe.
-- 3.3 `lib/server/digilocker.ts` mock (connect → consent page → callback → issued docs: PAN, Aadhaar; never Form 16) + `app/digilocker/consent/page.tsx`. Browser flow.
-- 3.4 `app/vault/page.tsx`: per-task requirement matrix, upload, memories with delete, audit list, DigiLocker connect. Screenshot.
-- 3.5 Persona → slots + memories loader (`source:'persona'`) so demo accounts have a pre-filled vault. Test.
+## 9. Resume and scope rules
 
-### Phase 4 — Manual grid and new functions
-- 4.1 `components/dashboard/task-grid.tsx` with the §5 tiles, routed. Screenshot.
-- 4.2 `lib/tools/{hra,calendar,advanceTax,tdsMismatch}.ts` + tests; tile views.
-- 4.3 e-Verify mock step after filing (both modes). Test + browser.
-- 4.4 Filing history from `returns`/`runs`.
+All phases A–G and K are **proposed / not started**. This task changes planning documentation only. Implementation begins only after a subsequent user instruction.
 
-### Phase 5 — Filing end-to-end through the agent
-- 5.1 `file_return` writes ledger + context (`MARK_FILED`), ITR JSON per a documented subset of the ITD ITR-1/ITR-2 schema (`lib/itr/schema.ts`), ITR-V via existing `ItrVReceipt` rendered to static HTML, both stored in `outputs` and served from `/api/outputs/:id`. Outputs panel shows both; files open.
-- 5.2 Regime chosen by comparison unless the user overrides; review card explains the choice.
-- 5.3 Confirm flag honoured. Test both values.
-
-### Phase 6 — Docs, honesty, gates
-- 6.1 `docs/CONTEXT.md` rewritten sections (routes, models, storage keys, test count, hooks), `docs/AGENTIC.md` (replaces MODES.md), `/honesty` and `/architecture` updated, `.env.example` new keys (`VAULT_MASTER_KEY`, `DIGILOCKER_MODE`, `SESSION_TTL_DAYS`), `README.md` quick start with `asabs`.
-- 6.2 Final gates, browser walkthrough of both modes in light and dark, `log.md` entry. **No commit, no push (D12)**; leave the tree for the user to review.
-
----
-
-## 9. Status (the resume table; update after every batch)
-
-Legend: `[ ]` not started · `[~]` in progress · `[x]` done and gated · `[!]` blocked (say why in log.md)
-
-| Task | Status | Note |
-|---|---|---|
-| 0.1 db | [ ] | |
-| 0.2 auth + signin | [ ] | |
-| 0.3 middleware | [ ] | |
-| 0.4 welcome (onboarding once) | [ ] | |
-| 0.5 mode rename | [ ] | |
-| 0.6 cap | [ ] | |
-| 1.1 hero | [ ] | |
-| 1.2 chat shell + panels + history drawer | [ ] | |
-| 1.3 mode switch | [ ] | |
-| 2.1 schemas/interview/planner/offline | [ ] | |
-| 2.2 model adapter | [ ] | |
-| 2.3 tool registry | [ ] | |
-| 2.4 memory + runs persistence | [ ] | |
-| 2.5 stream route + resume | [ ] | |
-| 2.6 wire UI + history | [ ] | |
-| 3.1 validation | [ ] | |
-| 3.2 vault | [ ] | |
-| 3.3 digilocker mock | [ ] | |
-| 3.4 vault page (docs + memories) | [ ] | |
-| 3.5 persona → slots + memories | [ ] | |
-| 4.1 grid | [ ] | |
-| 4.2 new tools | [ ] | |
-| 4.3 e-verify | [ ] | |
-| 4.4 history tile | [ ] | |
-| 5.1 file_return + outputs | [ ] | |
-| 5.2 regime choice | [ ] | |
-| 5.3 confirm flag | [ ] | |
-| 6.1 docs | [ ] | |
-| 6.2 final gates (no commit) | [ ] | |
-
-**Resume protocol.** On every wake-up: read this table, run the three gates to learn the true state
-(the table can lag a crash), continue from the first `[ ]`/`[~]`, and before stopping for any reason
-tick what is done, write a `log.md` entry, and re-schedule the wake-up. Never leave the tree failing
-`tsc`: if a batch is half-done, stub the missing piece so the gates pass, mark `[~]`, and note the stub.
-
----
-
-## 10. Known follow-ups (not in this plan's scope)
-
-- K1 Postgres adapter (`pg`) behind `DATABASE_URL`; same schema.
-- K2 Real DigiLocker requester (needs organisation registration).
-- K3 Self-hosted model for full data residency.
-- K4 Translating new agentic copy into all 23 languages.
-- K5 Java backend parity for the vault/auth (or retirement).
-
-## 11. Alternative kept on record: Spring AI
-
-If the Java story is wanted later: Spring AI's `@Tool` methods give typed, validated tool calls with
-Gemini via Google GenAI; the harness's `tools.ts` maps 1:1 to `@Tool` methods. Requires JDK 21
-(present) and Maven (absent). Not pursued now per D1.
+On implementation, read current instructions and inspect the working tree first; this audit includes other uncommitted work which must be preserved. Update phase status only after its acceptance criteria pass. Append each change and verification result to `log.md`; update `docs/CONTEXT.md` when actual contracts change. Do not schedule wakeups, deploy, commit, push, or merge as a consequence of this plan.

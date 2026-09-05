@@ -165,7 +165,7 @@ export default function OverviewTab({
           <div className="mt-3 border border-line rounded-xl overflow-hidden bg-paper pb-0 text-left">
             {/* Header: Show source and calculation trail */}
             <div className="p-4 bg-paper-2 border-b border-line">
-              <span className="font-bold text-navy">Tax Calculation Trail</span>
+              <span className="font-bold text-navy dark:text-ink">Tax Calculation Trail</span>
             </div>
 
             <div className="p-4 space-y-4">
@@ -187,7 +187,7 @@ export default function OverviewTab({
                     <span className="font-mono text-money font-semibold">-{formatMoney(breakdown.totalDeductions, lang)}</span>
                   </div>
                 )}
-                <div className="flex items-center justify-between text-xs border-t border-dashed border-line pt-2 font-bold text-navy">
+                <div className="flex items-center justify-between text-xs border-t border-dashed border-line pt-2 font-bold text-navy dark:text-ink">
                   <span>{t.check.taxableIncome}</span>
                   <span className="font-mono tabular-nums">{formatMoney(breakdown.taxableIncome, lang)}</span>
                 </div>
@@ -265,7 +265,7 @@ export default function OverviewTab({
                     <span className="font-mono text-ink font-semibold">+{formatMoney(breakdown.cess, lang)}</span>
                   </div>
                 )}
-                <div className="flex items-center justify-between text-xs border-t border-dashed border-line pt-2 font-bold text-navy">
+                <div className="flex items-center justify-between text-xs border-t border-dashed border-line pt-2 font-bold text-navy dark:text-ink">
                   <span>Total Calculated Tax</span>
                   <span className="font-mono">{formatMoney(breakdown.totalTax, lang)}</span>
                 </div>
@@ -280,7 +280,7 @@ export default function OverviewTab({
 
             {/* Net Result - bottom padded row with color matching outer box */}
             <div className="flex justify-between items-center p-4 bg-money-soft border-t border-line">
-              <span className="font-bold text-navy">Net Refund / Due</span>
+              <span className="font-bold text-navy dark:text-ink">Net Refund / Due</span>
               <span className={`font-mono text-sm font-bold ${breakdown.refundOrDue >= 0 ? "text-money" : "text-alarm"}`}>
                 {breakdown.refundOrDue >= 0 ? "+" : "-"}
                 {formatMoney(Math.abs(breakdown.refundOrDue), lang)}
@@ -328,7 +328,7 @@ export default function OverviewTab({
                       <span
                         className={`absolute -left-[23px] w-4 h-4 rounded-full border-2 border-paper flex items-center justify-center transition-colors duration-300 z-10 ${
                           isCompleted
-                            ? "bg-navy text-paper animate-none"
+                            ? "bg-navy text-paper dark:text-white animate-none"
                             : isCurrent
                             ? "bg-warn text-paper animate-pulse"
                             : "bg-line text-ink-3"
@@ -338,7 +338,7 @@ export default function OverviewTab({
                       </span>
                       <div className="space-y-0.5">
                         <span className={`font-semibold leading-snug block ${
-                          isCurrent ? "text-navy font-bold" : isCompleted ? "text-ink" : "text-ink-3"
+                          isCurrent ? "text-navy dark:text-ink font-bold" : isCompleted ? "text-ink" : "text-ink-3"
                         }`}>
                           {step.title}
                         </span>
@@ -415,7 +415,7 @@ export default function OverviewTab({
           <span className="text-xs font-mono text-money uppercase tracking-wider font-semibold">
             {t.dashboard.returnSummary}
           </span>
-          <h2 className="text-3xl font-extrabold text-navy tracking-tight tabular flex items-baseline gap-2 flex-wrap">
+          <h2 className="text-3xl font-extrabold text-navy dark:text-ink tracking-tight tabular flex items-baseline gap-2 flex-wrap">
             {refundFigure > 0 ? (
               <>
                 <span style={{ color: "var(--flow-keep)" }}>

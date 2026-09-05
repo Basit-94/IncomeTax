@@ -119,7 +119,7 @@ export default function NoticeModal({
               <button
                 onClick={saveNoticeResponse}
                 disabled={!noticeAgreed || !noticeResponseText}
-                className="flex-1 bg-navy hover:opacity-90 text-paper py-2 rounded text-sm font-semibold transition-colors disabled:opacity-50"
+                className="flex-1 bg-navy hover:opacity-90 text-paper dark:text-white py-2 rounded text-sm font-semibold transition-colors disabled:opacity-50"
               >
                 {localize("Send Response", lang)}
               </button>

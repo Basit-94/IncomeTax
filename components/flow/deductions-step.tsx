@@ -79,7 +79,7 @@ export default function DeductionsStep({
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h2 className="text-xl font-bold text-navy tracking-tight">{t.deductions.heading}</h2>
+        <h2 className="text-xl font-bold text-navy dark:text-ink tracking-tight">{t.deductions.heading}</h2>
         <p className="text-sm text-ink-2 leading-relaxed">{t.deductions.sub}</p>
       </div>
 
@@ -113,7 +113,7 @@ export default function DeductionsStep({
                   fireMiniBurst(r.x + r.width / 2, r.y + r.height / 2);
                   onAddClaim(question.section, question.defaultAmount);
                 }}
-                className="bg-navy hover:opacity-90 text-paper text-xs font-semibold py-2 px-3 rounded-lg transition-colors"
+                className="bg-navy hover:opacity-90 text-paper dark:text-white text-xs font-semibold py-2 px-3 rounded-lg transition-colors"
               >
                 {t.deductions.claimIt}
               </button>

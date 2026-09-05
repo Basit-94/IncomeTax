@@ -178,7 +178,7 @@ export default function FactRow({
                 {onCorrect && (
                   <button
                     onClick={onCorrect}
-                    className="ml-2 cursor-pointer text-xs font-semibold text-ink-2 hover:text-navy hover:underline"
+                    className="ml-2 cursor-pointer text-xs font-semibold text-ink-2 hover:text-navy dark:hover:text-ink hover:underline"
                   >
                     Change
                   </button>
@@ -193,7 +193,7 @@ export default function FactRow({
                 {onUndo && (
                   <button
                     onClick={onUndo}
-                    className="ml-2 cursor-pointer text-xs font-semibold text-ink-2 hover:text-navy hover:underline"
+                    className="ml-2 cursor-pointer text-xs font-semibold text-ink-2 hover:text-navy dark:hover:text-ink hover:underline"
                   >
                     Undo Correction
                   </button>
@@ -215,7 +215,7 @@ export default function FactRow({
                     onClick={onConfirm}
                     disabled={gated}
                     title={gated ? t.factCard.readFirst : undefined}
-                    className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded bg-navy px-5 text-sm font-bold text-paper transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded bg-navy px-5 text-sm font-bold text-paper dark:text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <Check size={14} aria-hidden="true" />
                     {t.common.yesThatsRight}

@@ -341,7 +341,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
   const answered = progress.confirmed + progress.disputed;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0D0F14] pb-32 text-slate-800 dark:text-slate-100 font-sans selection:bg-teal-500/20 antialiased">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0D0F14] pb-32 text-slate-800 dark:text-ink font-sans selection:bg-teal-500/20 antialiased">
       {/* Sticky top header */}
       <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-6 py-4 shadow-sm print:hidden">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -364,14 +364,14 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
               aria-label="Language"
               value={lang}
               onChange={(e) => setLang(e.target.value as Lang)}
-              className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer"
+              className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-700 dark:text-ink-2 cursor-pointer"
             >
               <option value="EN">English</option>
               <option value="HI">{"हिन्दी"}</option>
               <option value="TA">{"தமிழ்"}</option>
             </select>
 
-            <div className="bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg flex border border-slate-200 dark:border-slate-700">
+            <div className="bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg flex border border-slate-200 dark:border-slate-800">
               {(["NEW", "OLD"] as const).map((regime) => (
                 <button
                   key={regime}
@@ -401,7 +401,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
             <button
               onClick={() => dispatch({ type: "UNDO_LAST_ACTION" })}
               disabled={!canUndo}
-              className="px-3 py-1.5 border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-lg transition cursor-pointer inline-flex items-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-40"
+              className="px-3 py-1.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-lg transition cursor-pointer inline-flex items-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <RotateCcw size={12} /> {t.undo}
             </button>
@@ -435,7 +435,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
           data-testid="net-position"
           data-position={positionKey}
           transition={springTransition}
-          className="bg-white rounded-3xl p-6 md:p-8 border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6 print:hidden"
+          className="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6 print:hidden"
         >
           <div className="space-y-2">
             <span className="text-[11px] font-bold tracking-wider text-slate-400 uppercase font-mono">
@@ -460,7 +460,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                   }`}
                 />
               </m.div>
-              <span className="text-sm font-semibold text-slate-500">{positionLabel}</span>
+              <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">{positionLabel}</span>
             </div>
             <p className="text-xs text-slate-400 font-mono">
               PAN: <span className="font-bold text-slate-700">{state.pan}</span> · Assessee:{" "}
@@ -475,7 +475,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
             <button
               onClick={() => setShowItrV((v) => !v)}
-              className="flex-1 px-5 py-3.5 bg-teal-850 hover:bg-teal-900 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+              className="flex-1 px-5 py-3.5 bg-teal-800 hover:bg-teal-900 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
             >
               <FileText size={15} />
               <span>{t.officialProofBtn}</span>
@@ -500,7 +500,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
             <div className="flex justify-end print:hidden">
               <button
                 onClick={() => setShowItrV(false)}
-                className="px-4 py-2 border border-slate-350 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-lg transition cursor-pointer"
+                className="px-4 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-lg transition cursor-pointer"
               >
                 ← Back to the reconciliation matrix
               </button>
@@ -546,12 +546,12 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                     data-fact-id={fact.id}
                     data-fact-status={fact.status}
                     transition={springTransition}
-                    className={`bg-white rounded-2xl border transition-colors duration-200 overflow-hidden shadow-xs ${
+                    className={`bg-white dark:bg-slate-900 rounded-2xl border transition-colors duration-200 overflow-hidden shadow-xs ${
                       isConfirmed
                         ? "border-emerald-500/60"
                         : isDisputed
                           ? "border-amber-500/60"
-                          : "border-slate-200/80 hover:border-slate-300"
+                          : "border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
                     }`}
                   >
                     <m.div
@@ -569,7 +569,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                                   : "bg-emerald-600"
                             }`}
                           />
-                          <h4 className="font-extrabold text-slate-900 text-sm">
+                          <h4 className="font-extrabold text-slate-900 dark:text-white text-sm">
                             {localizedLabel}
                           </h4>
                           <span
@@ -578,19 +578,19 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                                 ? "bg-emerald-100 text-emerald-800 border-emerald-200"
                                 : isDisputed
                                   ? "bg-amber-100 text-amber-800 border-amber-200"
-                                  : "bg-slate-100 text-slate-500 border-slate-200"
+                                  : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800"
                             }`}
                           >
                             {isConfirmed ? t.confirmed : isDisputed ? t.modified : t.pending}
                           </span>
                           {fact.statement && (
-                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 border border-slate-200 uppercase">
+                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 uppercase">
                               {fact.statement}
                             </span>
                           )}
                         </div>
 
-                        <p className="text-xs text-slate-500 leading-normal max-w-xl">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal max-w-xl">
                           {CATEGORY_BLURB[fact.category]}
                           {fact.reportedBy && fact.reportedBy !== "—" && (
                             <>
@@ -605,7 +605,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                         </p>
 
                         {isDisputed && fact.feedbackCode && (
-                          <p className="text-[11px] text-amber-800">
+                          <p className="text-[11px] text-amber-800 dark:text-amber-400">
                             <span className="font-bold">{fact.feedbackCode}</span> —{" "}
                             {AIS_FEEDBACK_LABELS[fact.feedbackCode]}
                             {fact.disputeReason ? ` · ${fact.disputeReason}` : ""}
@@ -629,7 +629,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                             <Rupees
                               value={fact.declaredAmount}
                               className={`text-lg font-extrabold tracking-tight ${
-                                isDisputed ? "text-amber-700" : "text-slate-950"
+                                isDisputed ? "text-amber-700 dark:text-amber-400" : "text-slate-950 dark:text-white"
                               }`}
                             />
                           </div>
@@ -689,7 +689,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                               <div className="space-y-1.5">
                                 <label
                                   htmlFor={`amount-${fact.id}`}
-                                  className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block"
+                                  className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block"
                                 >
                                   {t.disputeInputLabel}
                                 </label>
@@ -702,7 +702,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                                   onChange={(e) =>
                                     setDraft((d) => ({ ...d, amount: e.target.value }))
                                   }
-                                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-xl text-sm font-mono tabular-nums font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-700 focus:outline-none transition-all"
+                                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-mono tabular-nums font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-700 focus:outline-none transition-all"
                                 />
                                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                                   Nothing is committed until you save. The department
@@ -727,7 +727,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                                       feedbackCode: e.target.value as AISFeedbackCode,
                                     }))
                                   }
-                                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-700 focus:outline-none transition-all cursor-pointer"
+                                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-700 focus:outline-none transition-all cursor-pointer"
                                 >
                                   {DISPUTE_FEEDBACK_CODES.map((code) => (
                                     <option key={code} value={code}>
@@ -735,7 +735,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                                     </option>
                                   ))}
                                 </select>
-                                <p className="text-[11px] text-slate-500">
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
                                   {AIS_FEEDBACK_HELP[draft.feedbackCode]}
                                 </p>
                               </div>
@@ -744,7 +744,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                             <div className="space-y-1.5">
                               <label
                                 htmlFor={`reason-${fact.id}`}
-                                className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block"
+                                className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block"
                               >
                                 {t.disputeReasonLabel}
                               </label>
@@ -757,7 +757,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                                     setDraft((d) => ({ ...d, reason: e.target.value }))
                                   }
                                   placeholder={t.disputeReasonPlaceholder}
-                                  className="w-full px-4 py-2.5 bg-white border border-slate-250 rounded-xl text-sm text-slate-700 focus:ring-2 focus:ring-teal-700 focus:outline-none transition-all"
+                                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-700 focus:ring-2 focus:ring-teal-700 focus:outline-none transition-all"
                                 />
                                 <MockFill
                                   onFill={() =>
@@ -770,13 +770,13 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                             <div className="flex gap-2 justify-end pt-1">
                               <button
                                 onClick={closeDrawer}
-                                className="px-3.5 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 transition cursor-pointer"
+                                className="px-3.5 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition cursor-pointer"
                               >
                                 Cancel
                               </button>
                               <button
                                 onClick={() => handleReset(fact.id)}
-                                className="px-3.5 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 transition cursor-pointer"
+                                className="px-3.5 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition cursor-pointer"
                               >
                                 {t.reset}
                               </button>
@@ -804,7 +804,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
       <footer className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900 text-white border-t border-slate-800 shadow-2xl p-4 md:p-5 print:hidden">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-teal-850 rounded-xl text-teal-300">
+            <div className="p-2.5 bg-teal-800 rounded-xl text-teal-300">
               <Coins size={20} />
             </div>
             <div>

@@ -81,7 +81,7 @@ export function QuickEditModal({
             {/* Header */}
             <div className="p-5 border-b border-line flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-navy">Quick Edit Actual Figures</h3>
+                <h3 className="text-lg font-bold text-navy dark:text-ink">Quick Edit Actual Figures</h3>
                 <p className="text-xs text-ink-2 mt-0.5">
                   Update primary facts below to recalculate tax liabilities instantly.
                 </p>

@@ -108,7 +108,7 @@ export function JudgeSandboxBar({
             onClick={onToggleAntigravityUi}
             className={`text-xs px-3 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1.5 ${
               antigravityUi
-                ? "bg-emerald-500 text-slate-950 border border-emerald-450 shadow-md"
+                ? "bg-emerald-500 text-slate-950 border border-emerald-400 shadow-md"
                 : "bg-teal-900 text-emerald-300 border border-teal-800 hover:border-teal-705"
             }`}
           >

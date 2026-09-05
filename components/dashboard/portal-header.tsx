@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings, Sun, Moon, LayoutGrid, FileText, LogOut, User, ShieldCheck, Sparkles } from "lucide-react";
+import { Sun, Moon, LayoutGrid, FileText, LogOut, User, ShieldCheck, Sparkles } from "lucide-react";
 import { type Dict } from "../../lib/i18n";
 import type { Lang } from "../../lib/types";
 import { getPortalStrings } from "@/lib/i18n/portalTranslations";
@@ -11,10 +11,8 @@ interface PortalHeaderProps {
   lang: Lang;
   t: Dict;
   theme: "dark" | "light";
-  showConsole: boolean;
   changeLang: (l: Lang) => void;
   toggleTheme: () => void;
-  setShowConsole: (v: boolean) => void;
   onLogoClick?: () => void;
   /**
    * Hidden where the page already owns the language choice (onboarding), so the same task is
@@ -37,10 +35,8 @@ export default function PortalHeader({
   lang,
   t,
   theme,
-  showConsole,
   changeLang,
   toggleTheme,
-  setShowConsole,
   onLogoClick,
   showLanguage = true,
   mode = "manual",
@@ -220,7 +216,7 @@ export default function PortalHeader({
             </div>
           )}
 
-          {/* Action buttons on right: Vault, Language, Theme (mobile), Review tools */}
+          {/* Action buttons on right: Vault, Language, Theme (mobile) */}
           <div className="flex items-center gap-1.5 sm:gap-2 ms-auto">
             {/* Citizen Tax Vault Button */}
             {onOpenVault && (
@@ -250,16 +246,6 @@ export default function PortalHeader({
               ) : (
                 <Moon size={14} className="text-money" />
               )}
-            </button>
-
-            {/* Reviewer Settings Gear */}
-            <button
-              onClick={() => setShowConsole(!showConsole)}
-              className="px-2.5 py-1.5 bg-paper-2 border border-line rounded text-ink-2 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 text-xs font-mono cursor-pointer shrink-0"
-              title={t.shell.sandbox}
-            >
-              <Settings size={14} className={showConsole ? "animate-spin" : ""} />
-              <span className="hidden sm:inline">{t.shell.sandbox}</span>
             </button>
           </div>
         </div>

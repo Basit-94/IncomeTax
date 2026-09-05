@@ -369,23 +369,23 @@ export default function TaxOptimizerModal({
                     <h3 className="font-sans text-base sm:text-lg font-black text-ink">
                       {isNewBetter
                         ? isHindi
-                          ? `नई व्यवस्था बेहतर है · ₹${formatMoney(taxDifference, lang)} की बचत`
+                          ? `नई व्यवस्था बेहतर है · ${formatMoney(taxDifference, lang)} की बचत`
                           : `New Tax Regime Saves You ${formatMoney(taxDifference, lang)}!`
                         : isHindi
-                        ? `पुरानी व्यवस्था बेहतर है · ₹${formatMoney(taxDifference, lang)} की बचत`
+                        ? `पुरानी व्यवस्था बेहतर है · ${formatMoney(taxDifference, lang)} की बचत`
                         : `Old Tax Regime Saves You ${formatMoney(taxDifference, lang)}!`}
                     </h3>
                     {taxesAlreadyPaid > 0 && (
                       <p className="text-xs font-semibold text-ink-2 mt-0.5">
                         {isHindi
-                          ? `पूर्व भुगतान: ₹${formatMoney(taxesAlreadyPaid, lang)} घटाने के बाद ${
+                          ? `पूर्व भुगतान: ${formatMoney(taxesAlreadyPaid, lang)} घटाने के बाद ${
                               (isNewBetter ? newNet : oldNet) < 0
-                                ? `रिफंड: ₹${formatMoney(Math.abs(isNewBetter ? newNet : oldNet), lang)}`
+                                ? `रिफंड: ${formatMoney(Math.abs(isNewBetter ? newNet : oldNet), lang)}`
                                 : (isNewBetter ? newNet : oldNet) > 0
-                                ? `बकाया देय: ₹${formatMoney(isNewBetter ? newNet : oldNet, lang)}`
+                                ? `बकाया देय: ${formatMoney(isNewBetter ? newNet : oldNet, lang)}`
                                 : "पूर्ण चुकता"
                             }`
-                          : `After subtracting ₹${formatMoney(taxesAlreadyPaid, lang)} taxes already paid: ${
+                          : `After subtracting ${formatMoney(taxesAlreadyPaid, lang)} taxes already paid: ${
                               (isNewBetter ? newNet : oldNet) < 0
                                 ? `Net Refund ${formatMoney(Math.abs(isNewBetter ? newNet : oldNet), lang)}`
                                 : (isNewBetter ? newNet : oldNet) > 0
@@ -1001,23 +1001,23 @@ export default function TaxOptimizerModal({
                 {selectedRegimeChoice === "new"
                   ? newNet < 0
                     ? isHindi
-                      ? `नई व्यवस्था लागू करें (रिफंड: ₹${formatMoney(Math.abs(newNet), lang)})`
-                      : `Apply New Regime (Refund: ₹${formatMoney(Math.abs(newNet), lang)})`
+                      ? `नई व्यवस्था लागू करें (रिफंड: ${formatMoney(Math.abs(newNet), lang)})`
+                      : `Apply New Regime (Refund: ${formatMoney(Math.abs(newNet), lang)})`
                     : newNet > 0
                     ? isHindi
-                      ? `नई व्यवस्था लागू करें (अतिरिक्त देय: ₹${formatMoney(newNet, lang)})`
-                      : `Apply New Regime (Pay Extra: ₹${formatMoney(newNet, lang)})`
+                      ? `नई व्यवस्था लागू करें (अतिरिक्त देय: ${formatMoney(newNet, lang)})`
+                      : `Apply New Regime (Pay Extra: ${formatMoney(newNet, lang)})`
                     : isHindi
                     ? "नई व्यवस्था लागू करें (पूर्ण चुकता)"
                     : "Apply New Regime (₹0 Due)"
                   : oldNet < 0
                   ? isHindi
-                    ? `पुरानी व्यवस्था लागू करें (रिफंड: ₹${formatMoney(Math.abs(oldNet), lang)})`
-                    : `Apply Old Regime (Refund: ₹${formatMoney(Math.abs(oldNet), lang)})`
+                    ? `पुरानी व्यवस्था लागू करें (रिफंड: ${formatMoney(Math.abs(oldNet), lang)})`
+                    : `Apply Old Regime (Refund: ${formatMoney(Math.abs(oldNet), lang)})`
                   : oldNet > 0
                   ? isHindi
-                    ? `पुरानी व्यवस्था लागू करें (अतिरिक्त देय: ₹${formatMoney(oldNet, lang)})`
-                    : `Apply Old Regime (Pay Extra: ₹${formatMoney(oldNet, lang)})`
+                    ? `पुरानी व्यवस्था लागू करें (अतिरिक्त देय: ${formatMoney(oldNet, lang)})`
+                    : `Apply Old Regime (Pay Extra: ${formatMoney(oldNet, lang)})`
                   : isHindi
                   ? "पुरानी व्यवस्था लागू करें (पूर्ण चुकता)"
                   : "Apply Old Regime (₹0 Due)"}

@@ -63,7 +63,7 @@ export default function CheckScreen({ persona, t, lang, regime }: CheckScreenPro
             <span
               className={`text-sm ${
                 tone === "money"
-                  ? "font-bold text-navy"
+                  ? "font-bold text-navy dark:text-ink"
                   : tone === "muted"
                   ? "text-ink-2"
                   : "font-medium text-ink"
@@ -75,7 +75,7 @@ export default function CheckScreen({ persona, t, lang, regime }: CheckScreenPro
           <span
             className={`tabular whitespace-nowrap ${
               big
-                ? `text-lg font-extrabold ${tone === "money" ? "text-money" : tone === "alarm" ? "text-alarm" : "text-navy"}`
+                ? `text-lg font-extrabold ${tone === "money" ? "text-money" : tone === "alarm" ? "text-alarm" : "text-navy dark:text-ink"}`
                 : `text-sm font-semibold ${tone === "money" ? "text-money" : tone === "alarm" ? "text-alarm" : "text-ink"}`
             }`}
           >

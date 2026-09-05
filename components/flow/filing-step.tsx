@@ -16,8 +16,6 @@ interface FilingStepProps {
   t: Dict;
   lang: Lang;
   regime: "new" | "old";
-  faultInjected: boolean;
-  slowMode: boolean;
   /** Parent commits the return. Resolves once the server has accepted it; rejects on a
    *  network/server failure so the error ladder can name the cause and offer retry (T1.4). */
   onFile: () => void | Promise<void>;
@@ -32,16 +30,14 @@ interface FilingStepProps {
 
 /**
  * Staged, visibly deliberate submission. Weight matched to stakes
- * (~1.2s of named steps — never an instant flicker), and when the sandbox
- * fault switch is on the failure names its cause and its next action.
+ * (~1.2s of named steps — never an instant flicker); a rejected commit names
+ * its cause and its next action.
  */
 export default function FilingStep({
   persona,
   t,
   lang,
   regime,
-  faultInjected,
-  slowMode,
   onFile,
   onBack,
   onPayOutstanding,
@@ -69,25 +65,21 @@ export default function FilingStep({
     };
   }, []);
 
-  const unit = slowMode ? 1100 : 420;
+  const unit = 420;
 
   const beginFiling = () => {
     setNetworkError(false);
     setStage("checking");
     timers.current.push(
       setTimeout(() => {
-        if (faultInjected) {
-          setStage("error");
-          return;
-        }
         setStage("sealing");
         timers.current.push(
           setTimeout(() => {
             setStage("committing");
             timers.current.push(
               setTimeout(() => {
-                // A rejected commit is a real outcome, not a console line: the same error
-                // ladder that serves the sandbox fault names the network cause and retries.
+                // A rejected commit is a real outcome, not a console line: the error
+                // ladder below names the network cause and offers a retry.
                 Promise.resolve()
                   .then(() => onFile())
                   .then(() => setStage("done"))
@@ -134,7 +126,7 @@ export default function FilingStep({
         </div>
         <button
           onClick={onBack}
-          className="w-full bg-navy hover:opacity-90 text-paper font-semibold py-3.5 px-6 rounded-xl transition-colors shadow-sm text-sm"
+          className="w-full bg-navy hover:opacity-90 text-paper dark:text-white font-semibold py-3.5 px-6 rounded-xl transition-colors shadow-sm text-sm"
         >
           {t.dashboard.refundTimeline}
         </button>
@@ -209,11 +201,11 @@ export default function FilingStep({
                 ) : complete ? (
                   <CheckCircle2 size={16} className="text-money shrink-0" />
                 ) : active ? (
-                  <Loader2 size={16} className="text-navy animate-spin shrink-0" />
+                  <Loader2 size={16} className="text-navy dark:text-ink animate-spin shrink-0" />
                 ) : (
                   <span className="w-4 h-4 rounded-full border-2 border-line shrink-0" />
                 )}
-                <span className={complete ? "text-ink-2 line-through decoration-line" : failed ? "text-alarm font-semibold" : active ? "text-navy font-semibold" : "text-ink-3"}>
+                <span className={complete ? "text-ink-2 line-through decoration-line" : failed ? "text-alarm font-semibold" : active ? "text-navy dark:text-ink font-semibold" : "text-ink-3"}>
                   {label}
                 </span>
               </div>

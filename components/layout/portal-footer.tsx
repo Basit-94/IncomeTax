@@ -23,7 +23,7 @@ export default function PortalFooter({ t, lang }: PortalFooterProps) {
             <span>{t.shell.productNativeName} ({t.shell.productName}) · {t.shell.taxYear}</span>
           </span>
 
-          <span className="rounded bg-white/10 px-2 py-0.5 text-[9.5px] text-slate-200 border border-white/15 font-semibold">
+          <span className="rounded bg-white/10 px-2 py-0.5 text-[9.5px] text-slate-200 dark:text-ink border border-white/15 font-semibold">
             {t.shell.independent}
           </span>
 

@@ -412,10 +412,10 @@ PAN: ${selectedPan}`;
                       <p className="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed">
                         {hasPaidChallan
                           ? (isHindi
-                              ? `आपने पूर्व में ही ₹${formatMoney(existingReceipt?.amount || 0, lang)} का चालान 280 (BSR कोड: ${existingReceipt?.bsrCode || "0002148"}) जमा कर दिया है। अतिरिक्त भुगतान की कोई आवश्यकता नहीं है।`
+                              ? `आपने पूर्व में ही ${formatMoney(existingReceipt?.amount || 0, lang)} का चालान 280 (BSR कोड: ${existingReceipt?.bsrCode || "0002148"}) जमा कर दिया है। अतिरिक्त भुगतान की कोई आवश्यकता नहीं है।`
                               : `You have already paid your self-assessment tax of ${formatMoney(existingReceipt?.amount || 0, lang)} via Challan 280 (BSR: ${existingReceipt?.bsrCode || "0002148"}). No further payment is required.`)
                           : (isHindi
-                              ? `आपके पूर्व-भुगतान किए गए कर (TDS) ₹${formatMoney(activeCitizen?.tds || 0, lang)} आपकी कुल कर देयता को पूर्ण रूप से समायोजित करते हैं। देय शेष राशि शून्य (₹0) है।`
+                              ? `आपके पूर्व-भुगतान किए गए कर (TDS) ${formatMoney(activeCitizen?.tds || 0, lang)} आपकी कुल कर देयता को पूर्ण रूप से समायोजित करते हैं। देय शेष राशि शून्य (₹0) है।`
                               : `Your pre-paid taxes (TDS) of ${formatMoney(activeCitizen?.tds || 0, lang)} fully satisfy your total tax liability. Net tax payable is ₹0.00.`)}
                       </p>
                     </div>
@@ -626,7 +626,7 @@ PAN: ${selectedPan}`;
                           </div>
 
                           <h4 className="font-bold text-sm text-ink">
-                            {isHindi ? `UPI ऐप से ₹${formatMoney(assessedTaxDue, lang)} का स्कैन करके भुगतान करें` : `Scan with Any UPI App to Pay ${formatMoney(assessedTaxDue, lang)}`}
+                            {isHindi ? `UPI ऐप से ${formatMoney(assessedTaxDue, lang)} का स्कैन करके भुगतान करें` : `Scan with Any UPI App to Pay ${formatMoney(assessedTaxDue, lang)}`}
                           </h4>
                           <p className="text-xs text-ink-2 max-w-sm leading-relaxed">
                             {isHindi
@@ -933,7 +933,7 @@ PAN: ${selectedPan}`;
                   </h4>
                   <p className="text-xs text-ink-2 max-w-sm">
                     {isHindi
-                      ? `आपके रिटर्न में ₹${formatMoney(assessedTaxDue, lang)} का टैक्स बकाया है। कृपया '1. ई-पे टैक्स गेटवे' में जाकर इसका भुगतान करें।`
+                      ? `आपके रिटर्न में ${formatMoney(assessedTaxDue, lang)} का टैक्स बकाया है। कृपया '1. ई-पे टैक्स गेटवे' में जाकर इसका भुगतान करें।`
                       : `Your return has an assessed balance payable of ${formatMoney(assessedTaxDue, lang)}. Complete the payment under Tab 1 to generate your BSR counterfoil.`}
                   </p>
                   <button
@@ -1052,8 +1052,8 @@ PAN: ${selectedPan}`;
                 <Lock size={15} className="text-indigo-600" />
                 <span>
                   {isHindi
-                    ? `निकाली गई सटीक चालान राशि: ₹${formatMoney(assessedTaxDue, lang)} · हेड ${taxHead}`
-                    : `Extracted Challan Due: ₹${formatMoney(assessedTaxDue, lang)} · Minor Head ${taxHead}`}
+                    ? `निकाली गई सटीक चालान राशि: ${formatMoney(assessedTaxDue, lang)} · हेड ${taxHead}`
+                    : `Extracted Challan Due: ${formatMoney(assessedTaxDue, lang)} · Minor Head ${taxHead}`}
                 </span>
               </>
             )}
@@ -1077,7 +1077,7 @@ PAN: ${selectedPan}`;
                 <Sparkles size={14} />
                 <span>
                   {isHindi
-                    ? `रिटर्न में चालान जोड़ें (₹${formatMoney(paymentReceipt.amount, lang)} चुकता)`
+                    ? `रिटर्न में चालान जोड़ें (${formatMoney(paymentReceipt.amount, lang)} चुकता)`
                     : `Apply Challan to My Return (Settles ${formatMoney(paymentReceipt.amount, lang)})`}
                 </span>
                 <ArrowRight size={14} />
@@ -1108,7 +1108,7 @@ PAN: ${selectedPan}`;
                     <CreditCard size={14} />
                     <span>
                       {isHindi
-                        ? `₹${formatMoney(assessedTaxDue, lang)} का तत्काल भुगतान अनुकरण करें`
+                        ? `${formatMoney(assessedTaxDue, lang)} का तत्काल भुगतान अनुकरण करें`
                         : `Simulate Payment (${formatMoney(assessedTaxDue, lang)})`}
                     </span>
                     <ArrowRight size={14} />

@@ -61,7 +61,7 @@ function FindingRow({ finding }: { finding: CassRowFinding }) {
   return (
     <li className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/80 dark:bg-slate-800/80 px-4 py-3">
       <div className="min-w-0 space-y-0.5">
-        <p className="truncate text-xs font-bold text-slate-900 dark:text-slate-100">{finding.label}</p>
+        <p className="truncate text-xs font-bold text-slate-900 dark:text-ink">{finding.label}</p>
         <p className="text-[11px] text-slate-600 dark:text-slate-300">
           <Rupees value={finding.reportedAmount} className="font-semibold" /> reported
           {finding.reportedBy ? ` by ${finding.reportedBy}` : ""} ·{" "}
@@ -99,7 +99,7 @@ function FindingRow({ finding }: { finding: CassRowFinding }) {
             type="button"
             data-action="attach-proof"
             onClick={() => inputRef.current?.click()}
-            className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-[11px] font-bold text-amber-900 transition hover:bg-amber-50"
+            className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-amber-900 px-3 py-1.5 text-[11px] font-bold text-amber-900 dark:text-amber-100 transition hover:bg-amber-50 dark:hover:bg-amber-800"
           >
             <Paperclip size={11} /> Attach documentary proof (salary slip / Form 16 / bank statement)
           </button>
@@ -138,7 +138,7 @@ export function AuditRiskRadar({ quietWhenClear = false }: AuditRiskRadarProps =
           <div className="space-y-1">
             <h3
               className={`text-sm font-extrabold ${
-                isHigh ? "text-amber-950 dark:text-amber-200" : "text-slate-900 dark:text-slate-100"
+                isHigh ? "text-amber-950 dark:text-amber-200" : "text-slate-900 dark:text-ink"
               }`}
             >
               {isHigh
@@ -198,13 +198,13 @@ export function AuditRiskRadar({ quietWhenClear = false }: AuditRiskRadarProps =
             transition={spring}
             className="overflow-hidden"
           >
-            <ul className="mt-4 space-y-2 border-t border-amber-200 pt-4">
+            <ul className="mt-4 space-y-2 border-t border-amber-200 dark:border-amber-800 pt-4">
               {cass.findings.map((f) => (
                 <FindingRow key={f.id} finding={f} />
               ))}
             </ul>
 
-            <p className="mt-3 text-[11px] leading-relaxed text-amber-900">
+            <p className="mt-3 text-[11px] leading-relaxed text-amber-900 dark:text-amber-300">
               Total reduction against reported data:{" "}
               <Rupees value={cass.aggregateShortfall} className="font-bold" />.
               {cass.unsupportedFindings.length > 0 ? (

@@ -44,7 +44,6 @@ import TabBar, { type DashboardTab } from "../components/dashboard/tab-bar";
 import OverviewTab from "../components/dashboard/overview-tab";
 import StatementTab from "../components/dashboard/statement-tab";
 import ActionsTab from "../components/dashboard/actions-tab";
-import SandboxDrawer from "../components/dashboard/sandbox-drawer";
 import Motes from "../components/ambient/motes";
 import {
   clearSession,
@@ -282,10 +281,6 @@ export default function WapsiPrototype() {
   const [isFiled, setIsFiled] = useState(false);
   const [stampFired, setStampFired] = useState(false);
 
-  // Debug Console / Reviewer drawer
-  const [showConsole, setShowConsole] = useState(false);
-  const [simulatedDelay, setSimulatedDelay] = useState(false);
-  const [simulatedError, setSimulatedError] = useState(false);
   const [isSpeechListening, setIsSpeechListening] = useState(false);
   const [speechText, setSpeechText] = useState("");
 
@@ -1330,10 +1325,6 @@ export default function WapsiPrototype() {
   };
 
   const handleVerifyOtp = async () => {
-    if (simulatedError) {
-      setOtpError(true);
-      return;
-    }
     if (!returnState || authBusy) return;
 
     // REAL sign-in (2026-08-29): the code the user typed is verified by the
@@ -1378,15 +1369,8 @@ export default function WapsiPrototype() {
 
     saveState({ ...returnState, lang });
     // Unfiled citizens enter the default path; already-filed ones land on the tracker.
-    const enter = () => {
-      setPersonalizedDashboardDestination(onboardingProfile, returnState);
-      setStep("dashboard");
-    };
-    if (simulatedDelay) {
-      setTimeout(enter, 3000);
-    } else {
-      enter();
-    }
+    setPersonalizedDashboardDestination(onboardingProfile, returnState);
+    setStep("dashboard");
   };
 
   // Log Out / Reset
@@ -2431,10 +2415,8 @@ export default function WapsiPrototype() {
           lang={lang}
           t={t}
           theme={theme}
-          showConsole={showConsole}
           changeLang={changeLang}
           toggleTheme={toggleTheme}
-          setShowConsole={setShowConsole}
           onLogoClick={goHome}
           showLanguage={true}
           mode={userMode}
@@ -2924,8 +2906,6 @@ export default function WapsiPrototype() {
                           t={t}
                           lang={lang}
                           regime={regime}
-                          faultInjected={simulatedError}
-                          slowMode={simulatedDelay}
                           onFile={handleFileCommit}
                           onPayOutstanding={() => setChallanOpen(true)}
                           onBack={() => {
@@ -3027,20 +3007,6 @@ export default function WapsiPrototype() {
           </AnimatePresence>
 
         </main>
-
-        {/* --- REVIEWER DEBUG DRAWER (SCHEDULE I) --- */}
-        <SandboxDrawer
-          showConsole={showConsole}
-          setShowConsole={setShowConsole}
-          simulatedDelay={simulatedDelay}
-          simulatedError={simulatedError}
-          setSimulatedDelay={setSimulatedDelay}
-          setSimulatedError={setSimulatedError}
-          persona={persona}
-          lang={lang}
-          handleLogOut={handleLogOut}
-          handleFactAmountChange={handleFactAmountChange}
-        />
 
         {/* --- DYNAMIC DISPUTE MODAL (FRAMER MOTION) --- */}
         {activeDisputeId && isPreFilled ? (

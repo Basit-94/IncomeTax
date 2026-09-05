@@ -3817,3 +3817,215 @@ things there are already true and will NOT be rewritten:
 - **Git Actions:**
   - Branch: `dev-2`.
   - Pushed to: `origin/dev-2`.
+
+---
+
+## 2026-09-05 - Dark-mode contrast audit and repair across every surface
+- **Intent & User Requirements:**
+  - User: "go through it fully and check each and every page in dark mode. Wherever you see dark
+    text over a dark background that is hard to see, please fix those... fix the dark mode."
+- **Method:** A WCAG contrast auditor was injected into the running page (localhost:3000) and run on
+  every mounted state: auth portal (4 tabs), OTP, Portal Hub + all 7 action-card modals, the 5-step
+  return flow, dispute modal, filed dashboard (3 tabs), notice/quick-edit/agentic/vault modals,
+  agent panel, reviewer sandbox, ITR-V, the real-user wizard, and `/reconcile` incl. its dispute
+  drawer, CASS radar, s.139(9) card and Challan 280 (select + paid stages). It walks every element
+  carrying a text node, composites the effective background through alpha layers and gradient
+  stops, normalises non-sRGB `lab()/oklch()` via canvas, and reports anything under 4.5:1
+  (3:1 for large text). CSS transitions were suppressed during measurement — a non-drawing tab
+  freezes them mid-way and reports the outgoing colour.
+- **Root causes found (all dark-mode only; light mode untouched except where noted):**
+  1. `--navy-color` is `#1E3A8A` in dark and serves both roles. As `text-navy` (31 sites) it was
+     dark blue on a dark card (1.4–1.8:1); as `bg-navy` paired with `text-paper` (9 buttons) it was
+     near-black on dark blue (1.78:1). Fixed by pairing: `text-navy dark:text-ink`, and
+     `text-paper dark:text-white` on the navy buttons. Light mode byte-identical.
+  2. The `@theme` slate overrides invert the scale in dark (`slate-50..200` become dark surfaces,
+     `slate-300/700` become light ink). Code written against Tailwind's native direction therefore
+     broke both ways: `dark:text-slate-100/200` rendered DARK text (1.2–1.5:1, e.g. every
+     `text-slate-900 dark:text-slate-100` pair in Challan280Modal/AuditRiskRadar), and
+     `dark:border-slate-700` / `dark:bg-slate-700` rendered a near-white `#E9ECF2`. Repointed to the
+     semantic ink tokens and to `slate-800`, which is not overridden.
+  3. `bg-white` never flips (`--color-white` is pinned). Panels carrying themed text were light-on-
+     white and unreadable: the whole Pending Actions tab, and on `/reconcile` the net-position card,
+     all 13 fact rows, the Undo button, the dispute reason input and the Challan 280 shell.
+  4. `/reconcile` never applied the theme at all — the class toggle lives only in `app/page.tsx`, so
+     a direct load (the only way in, per CONTEXT §3) always rendered light. Added the same
+     `wapsi_theme` toggle to `app/reconcile/page.tsx`.
+  5. `bg-money` + `text-white` (sign-up submit): in dark `--primary-accent` is light `#7FA9D8`, so
+     white on light = 2.45:1. Now `dark:text-paper`.
+  6. Four Tailwind shades that do not exist and silently rendered nothing or `currentColor`:
+     `bg-teal-850` (→ `teal-800`), `border-slate-250` (→ `200`), `border-slate-350` (→ `300`),
+     `border-emerald-450` (→ `400`). **This one also changes light mode**: the ITR-V preview button
+     had no background at all, so its white label was invisible on the white card in BOTH themes.
+  7. Status panels with no dark variant (s.139(9) rose card, CASS amber panel, Challan receipt
+     emerald panel, PDF dropzone) — deep-tinted text over an alpha tint that composites to a muddy
+     mid-grey. Given `dark:bg-*-950/40` surfaces and lightened text.
+- **Files:** 23 changed, +158/-145. `app/reconcile/page.tsx`, `InteractiveTaxDashboard`,
+  `Challan280Modal`, `DefectiveNoticeCard`, `AuditRiskRadar`, `PdfIngestionDropzone`,
+  `actions-tab`, `auth-portal`, `portal-footer`, `citizen-vault-modal`, `otp-screen`, `fact-row`,
+  `agent-panel`, `dispute-modal`, `notice-modal`, `bank-ifsc-modal`, `quick-edit-modal`,
+  `overview-tab`, `judge-sandbox-bar`, and the four `flow/` steps.
+- **Verification:**
+  - `npx tsc --noEmit`: 0 errors.
+  - `npx vitest run`: 193/193 passing.
+  - `npx next build`: exit 0.
+  - Re-audit after the fixes: every walked surface reports zero dark-mode contrast failures.
+  - Light mode re-checked visually on `/` and `/reconcile` — unchanged apart from the ITR-V button
+    that now has its intended teal fill.
+- **Left alone deliberately (pre-existing, identical in light mode — not dark-mode defects):**
+  `bg-emerald-500 text-white` regime star (2.47:1), `bg-teal-600 text-white` "Continue to file"
+  (3.67:1), `bg-amber-600 text-white` "High scrutiny risk" (3.2:1), `text-gray-400` captions on the
+  always-white ITR-V sheet (2.6:1), and the `text-slate-600` bullet separators in the footer.
+  Disabled-button states (~4.06:1) are exempt under WCAG 1.4.3.
+- **Also noticed, not fixed (out of scope):** `components/dashboard/sandbox-drawer.tsx:107` throws
+  `Cannot read properties of undefined (reading 'amount')` when the reviewer sandbox is opened for a
+  custom persona with no seeded facts (`persona.facts[0]` is undefined).
+- **Git Policy:** No commit or push performed, per non-negotiable rule.
+
+---
+
+## 2026-09-05 - Remove the "Review tools" button and its reviewer sandbox; fix doubled ₹ glyph
+- **Intent & User Requirements:**
+  - User selected the header gear button and said: "Remove this button, both from the frontend and
+    backend" — i.e. the control *and* the machinery it drove, not just a hidden button.
+  - Second, separate report: the Tax Vault showed `₹₹1,24,800`. "Find out what it is and fix it."
+
+### 1. Review tools / Reviewer Sandbox — removed
+- **Frontend:**
+  - `components/dashboard/portal-header.tsx` — deleted the gear button, the `showConsole` /
+    `setShowConsole` props, and the now-unused `Settings` lucide import. Both theme togglers
+    (desktop + `sm:hidden` mobile) are untouched and verified still present.
+  - `components/dashboard/sandbox-drawer.tsx` — deleted (`git rm`). This is the "Reviewer Sandbox"
+    drawer: Schedule I error simulations, the custom-persona amount stepper, RESET LOCAL CACHE.
+  - `app/page.tsx` — dropped the `SandboxDrawer` import and render.
+- **The machinery behind it ("backend"):**
+  - `app/page.tsx` — removed `showConsole`, `simulatedDelay` and `simulatedError` state; the
+    `if (simulatedError) { setOtpError(true); return; }` short-circuit at the top of
+    `handleVerifyOtp` (it bypassed the real 949494 check and the server round-trip); and the
+    `if (simulatedDelay) setTimeout(enter, 3000)` wrapper, which is now a direct call.
+  - `components/flow/filing-step.tsx` — removed the `faultInjected` and `slowMode` props, the
+    forced-error branch, and the variable stage timing (`unit` is now the constant 420ms).
+    **The genuine failure path is untouched**: a rejected `onFile()` still sets `networkError` and
+    drives the same error ladder with its cause, next action and retry button.
+- Verified in the browser: the header now renders Portal Hub / My Return / Agentic / Manual /
+  theme / Log out / Tax Vault / Language, and "Review tools" appears nowhere on `/` or `/reconcile`.
+- **Side effect worth recording:** this deletes the crash logged during the dark-mode pass
+  (`sandbox-drawer.tsx:107`, `persona.facts[0].amount` undefined for a factless custom persona).
+  The file is gone, so the bug is gone with it.
+
+### 2. Doubled rupee symbol
+- **Cause (frontend, not backend):** `formatMoney` in `lib/money.ts` uses
+  `Intl.NumberFormat(style: "currency", currency: "INR")`, so it already emits `₹`. 25 call sites
+  prefixed it with a second literal `₹`, rendering `₹₹1,24,800`. `lib/money.ts` already exports
+  `formatAmount` for "places where the ₹ is already in the label" — these sites simply used the
+  wrong one, or rather the right one with a redundant prefix.
+- **Fix:** removed only the literal glyph immediately preceding a `formatMoney(...)` interpolation,
+  leaving `formatMoney` to own the symbol — which matches the CONTEXT §9 rule that money always goes
+  through `formatMoney` / `<Rupees>` / `<AnimatedAmount>`, and keeps per-locale symbol placement.
+  - `components/vault/citizen-vault-modal.tsx` (3) — TDS credits, advance tax, estimated refund.
+  - `components/modals/TaxOptimizerModal.tsx` (14) — regime verdict lines and both Apply buttons.
+  - `components/modals/PayTaxModal.tsx` (8) — challan amount copy.
+- Literal `₹` that is NOT adjacent to `formatMoney` was deliberately left alone — e.g. the standalone
+  `(₹0)` / `(₹0 Due)` strings in PayTaxModal, and `₹${x.toLocaleString("en-IN")}` in
+  `landing-action-grid.tsx`, where `toLocaleString` emits no symbol and the prefix is correct.
+- Swept live for `₹₹` across the Portal Hub and all 7 card modals, the Tax Vault (4 tabs), the filed
+  dashboard (3 tabs) and `/reconcile`: **0 occurrences**.
+- **Noticed, not changed:** the three vault figures call `formatMoney(n)` without the `lang`
+  argument, so they format as `en-IN` even when the portal is in another of the 23 languages. The
+  modal already computes `safeLang`. Left alone as out of scope for a symbol fix.
+- **Verification:** `npx tsc --noEmit` 0 errors · `npx vitest run` 193/193 · `npx next build` exit 0.
+- **Flagged, not deleted (adjacent dead code, per the surgical-changes rule):**
+  `components/dashboard/judge-sandbox-bar.tsx` is referenced by nothing, and
+  `generateSeededUser` is imported in `app/page.tsx:73` but never called.
+  `t.shell.sandbox` is now an unused key in all 23 dictionaries — left in place so the 23-language
+  set stays symmetrical.
+- **Git Policy:** No commit or push performed, per non-negotiable rule.
+
+---
+
+## 2026-09-05 - Card 07 sized and grouped with the rest of the capability grid
+- **Intent & User Requirements:** User selected card 07 ("Tax Calendar & Deadlines") on the Portal
+  Hub: "make this exactly the size of other cards, and group it with them."
+- **Cause:** `components/landing-action-grid.tsx` carried an `isFullWidth = c.id === "tax_calendar"`
+  flag that appended `sm:col-span-2 lg:col-span-3 bg-paper-2/90` to card 07 only, so it spanned the
+  whole row on its own line and sat on a slightly different (90% opacity) surface than its siblings.
+- **Fix:** removed the flag and the conditional class entirely; the button now carries the same
+  static className as the other five. The six cards (02–07) fall through the existing
+  `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3` container as equal cells.
+- **Verified live at 1280×900:** grid resolves to `306px 306px 306px`; all six cards measure
+  306×197 with card 07 as the third cell of row two (02/03/04 · 05/06/07) — a clean 3×2 block. At
+  the `sm` breakpoint all six measure 342×188 in a 2×3 block. Card 07's computed background now
+  matches card 06 exactly (`rgb(26,30,39)` in dark), confirming the `/90` variant is gone. Checked
+  in both themes.
+- **Verification:** `npx tsc --noEmit` 0 errors · `npx vitest run` 193/193 · `npx next build` exit 0.
+- **Git Policy:** No commit or push performed, per non-negotiable rule.
+
+---
+
+## 2026-09-05 - Vault "Open Document" now renders the document instead of an alert()
+- **Intent & User Requirements:** User selected the external-link icon in the vault's Stored
+  Documents tab: "this should open the assigned pdf, but it isnt rn."
+- **Diagnosis — there was no PDF to open.** The handler was
+  `onClick={() => alert(\`Viewing ${doc.title}\`)}`, a placeholder. The data cannot point at a file
+  either: `VaultDocument` in `lib/vault/vault-store.ts` is `{ id, title, docType, issuer,
+  uploadedAt, sizeKb, status }` — no url, path or blob — and there is no `public/` directory. The
+  three repo-root PDFs (`Form 16 - Arjun Mehta.pdf`, `Form 16 - Certificate under Section 203.pdf`,
+  `The e-Filing Portal, End to End.pdf`) are git-tracked fixtures committed alongside the
+  PDF-ingestion work for `lib/compliance/pdfExtract.ts`; they are not servable, nothing references
+  them, and "Arjun Mehta" is not one of the three personas.
+- **Decision:** put to the user — serve those sample PDFs from `public/`, render the document
+  in-app, or make the stub honest. User chose to render it in-app.
+- **Implementation:** new `components/vault/vault-document-preview.tsx`, following the existing
+  `ItrVReceipt` idiom rather than inventing a second document style:
+  - Draws Form 16 (Part A quarterly TDS + Part B salary computation), AIS (information reported)
+    and 26AS (TDS credit) from the citizen's own `vaultUser.stats`, with a generic summary for the
+    other `docType`s the union allows.
+  - Uses the shared `.printable-sheet` class, so the paper stays white in both themes and
+    `window.print()` emits the sheet alone (the `body:has(.printable-sheet)` rules in globals.css).
+  - Carries the same "synthetic prototype document · not issued by any authority · no legal
+    standing" banner as the ITR-V, as the first thing on the sheet, so it prints too.
+  - Money goes through `formatMoney`; the s.16(ia) standard deduction is capped at salary, matching
+    `lib/engine`. Quarterly TDS is split so the four quarters sum to the year's figure exactly.
+  - `syntheticTan()` derives a stable TAN-shaped id from the deductor name — same seeded-and-clearly
+    invented idiom as the BSR code in `lib/compliance/challan280.ts`.
+  - Only figures the vault actually holds are printed; a row with no data (savings interest on an
+    AIS, say) is omitted rather than invented.
+- **Two bugs caught during live verification and fixed:**
+  1. `syntheticTan` used signed `>>` on a `>>> 0` hash that routinely exceeds 2^31, so the shifted
+     values went negative and indexed off the front of the alphabet — the TAN rendered as
+     `KundefinedundefinedA27840undefined`. Now unsigned throughout.
+  2. The AIS and 26AS rows attributed the salary to `doc.issuer` — i.e. to CBDT and TRACES, who
+     publish those statements but did not pay anyone. Naming the publisher as the source of a figure
+     is precisely the provenance error this product exists to correct, so the payer is now read off
+     the Form 16 in the same vault (`State Bank of India` for Rakesh, verified on screen).
+- **Verification (live, Rakesh, dark mode):** all three documents open; Form 16 shows gross
+  ₹18,60,000, standard deduction ₹75,000, chargeable ₹17,85,000 and four quarters summing to
+  ₹2,86,840 — all matching the seeded persona; TAN renders as `XWZW74979Z`. A contrast pass over the
+  sheet returns 0 failures. `npx tsc --noEmit` 0 errors · `npx vitest run` 193/193 ·
+  `npx next build` exit 0.
+- **Noticed, not fixed:** with a stale custom-PAN vault in localStorage the Form 16 title renders as
+  "Form 16 Part A & B ()" — `getSeededVaultForPersona` interpolates `persona.name` while it is still
+  empty. Pre-existing, in the seeding path, not the viewer.
+- **Git Policy:** No commit or push performed, per non-negotiable rule.
+
+## [2026-09-05 06:16] Codex (Analyze and revise agentic plan; no implementation)
+- Read docs/CONTEXT.md first, then plan.md as requested. Audited current dev-2 working tree (HEAD 9d29bf0), including existing uncommitted changes; preserved application code and staged deletion.
+- Reviewed the existing vault store/API/PostgreSQL adapter, synthetic document viewer, upload/extraction paths, auth sessions and Java document API, copilot tools/runtime/panel, mode/onboarding integration, return commands/projection, filing handler, manual capability modals, and recent task history.
+- Replaced outdated plan.md with a proposed phased implementation plan that extends the current vault, uses the existing PostgreSQL direction, establishes ownership and original-file retrieval, shares return mutations, then adds resumable agent orchestration and the real Agentic interface.
+- Recorded concrete gaps: vault documents contain metadata only; frontend vault API lacks owner authentication; encryption/RLS claims exceed inspected implementation; copilot document tools target a separate backend and fetch_document has no handler; reconcile_fact returns metadata without mutating the return; filing proceeds after non-2xx responses. No fixes implemented in this analysis task.
+- Corrected stale assumptions about compressed-PDF extraction, existing Agentic/Manual controls, current manual tools, state synchronization additions, and test counts. Consulted installed Next.js route-handler/proxy/auth guides for proposed API boundaries.
+- Verification: npm run typecheck passed (exit 0); npm test passed 193/193 tests in 18 files (exit 0). Build/browser/Java/model/live-database checks not run. Read-only search commands encountered an absent lib/tools directory and a PowerShell glob incompatibility; subsequent repository-specific searches resolved the relevant files.
+- No application contract changed; docs/CONTEXT.md was not rewritten to present proposed architecture as implemented. plan.md explicitly supersedes stale context details for planning and marks every implementation phase not started.
+- No commit, push, merge, deployment, automation, or application implementation performed.
+- Documentation verification: git diff --check -- plan.md log.md passed; Git reported only LF/CRLF normalization warnings. Final status remains dev-2 with all pre-existing application changes preserved.
+
+## [2026-09-05 06:37] Codex (Research workspace UX, tax RAG, and conversation design)
+- User requested further research and planning only: ChatGPT Work-style simplicity, chats/vault/features in the left sidebar, Progress/Outputs/Sources at the top right, a fixed-position Agentic/Manual toggle, accurate category-specific tax knowledge, personalized execution, and natural trustworthy conversation.
+- Consulted Agent Reach and OpenAI Docs skills and official OpenAI Work/retrieval/model-optimization/verbosity documentation; reviewed official Income Tax Department transition and Form 10-IEA guidance, the primary legal-RAG evaluation paper, BGE-M3 paper, and Microsoft human-AI interaction research. Sources are linked next to the relevant recommendations in plan.md. No claim to access ChatGPT private prompts or reproduce an unverified pixel specification.
+- Agent Reach CLI was unavailable; mcporter was present but its Exa call failed with Unknown MCP server 'exa'. Used available web search/open tools for primary sources; no tools installed or configuration changed. No live citizen data or secrets sent to research sources.
+- Updated plan.md sections 1, 2, 4.3, 5.1, 6, 7, 8, and 9; added 5.6 tax knowledge/applicability, 5.7 model choices/content governance/accuracy gates, and 5.8 conversation contract. Added phase K before rule-based recommendations. All phases remain proposed/not started.
+- Specified one shared header toggle with identical geometry across modes; left sidebar navigation and per-chat top-right inspector; preserved manual functionality and all 23 languages while recording user authorization for the outer-shell layout change.
+- Replaced fixed interview sequences with user-specific dependency planning under validated action guards. Recommended separate public/private retrieval, expert-reviewed eligibility predicates, versioned law/engine snapshots, category coverage tests, knowledge update governance, and optional evidence-driven fine-tuning.
+- Research finding: AY 2026-27 and Tax Year 2026-27 map to different income periods/Acts; this distinction is separate from old/new regime selection. No tax-engine changes were made.
+- Proposed response-length bands are explicitly Wapsi hypotheses, not claimed ChatGPT limits. Trust evaluation includes comprehension, corrections, and appropriate reliance rather than confidence alone.
+- Verification: git diff --check -- plan.md passed, with only Git LF/CRLF normalization warning. Checked new sections, fixed-toggle requirement, phase dependency and not-started status with rg. No app tests/build/browser re-run for documentation-only changes; earlier 193-test baseline is unchanged, not newly verified.
+- Application files and other pre-existing changes preserved. No implementation, commit, push, merge, deployment, or scheduled automation.

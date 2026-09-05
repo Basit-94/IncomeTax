@@ -114,8 +114,8 @@ export function PdfIngestionDropzone({ onIngested }: PdfIngestionDropzoneProps =
         }}
         className={`cursor-pointer rounded-2xl border-2 border-dashed p-6 text-center transition-colors ${
           dragging
-            ? "border-teal-600 bg-teal-50"
-            : "border-slate-300 bg-white hover:border-slate-400"
+            ? "border-teal-600 bg-teal-50 dark:bg-teal-950"
+            : "border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-400 dark:hover:border-slate-600"
         }`}
       >
         <input
@@ -147,13 +147,13 @@ export function PdfIngestionDropzone({ onIngested }: PdfIngestionDropzoneProps =
               className="flex flex-col items-center gap-2 py-2"
             >
               <FileUp size={24} className="text-slate-400" />
-              <p className="text-sm font-bold text-slate-800">
+              <p className="text-sm font-bold text-slate-800 dark:text-white">
                 Drop your Form 16 or AIS PDF here
               </p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 or click to choose a file — PAN, gross salary and TDS are read out of it
               </p>
-              <p className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
+              <p className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                 <Lock size={11} /> Read in your browser. The file is never uploaded.
               </p>
             </div>

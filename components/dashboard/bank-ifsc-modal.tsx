@@ -83,7 +83,7 @@ export default function BankIfscModal({
               </button>
               <button
                 onClick={saveBankFix}
-                className="flex-1 bg-navy hover:opacity-90 text-paper py-2 rounded text-sm font-semibold transition-colors"
+                className="flex-1 bg-navy hover:opacity-90 text-paper dark:text-white py-2 rounded text-sm font-semibold transition-colors"
               >
                 {localize("Validate Bank Code", lang)}
               </button>

@@ -75,17 +75,17 @@ export function DefectiveNoticeCard({ onReconcile, onUndoReconcile }: DefectiveN
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={spring}
-        className="rounded-2xl border border-emerald-300 bg-emerald-50/60 p-5"
+        className="rounded-2xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/40 p-5"
       >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1.5">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white">
               <Scale size={11} /> Revised return staged
             </span>
-            <h3 className="text-sm font-extrabold text-emerald-950">
+            <h3 className="text-sm font-extrabold text-emerald-950 dark:text-emerald-100">
               Prepared u/s 139(5) — the s.139(9) defect is resolved
             </h3>
-            <p className="max-w-2xl text-xs leading-relaxed text-emerald-900">
+            <p className="max-w-2xl text-xs leading-relaxed text-emerald-900 dark:text-emerald-200">
               Declared income now matches what the reporters filed, so the
               inconsistency the notice cited no longer exists. Your original figures
               were kept on each row and nothing was discarded — the revised return
@@ -95,7 +95,7 @@ export function DefectiveNoticeCard({ onReconcile, onUndoReconcile }: DefectiveN
           {canUndoStage && (
             <button
               onClick={undo}
-              className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-300 bg-white px-3.5 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-50"
+              className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-300 dark:border-emerald-800 bg-white dark:bg-emerald-900 px-3.5 py-2 text-xs font-bold text-emerald-800 dark:text-emerald-100 transition hover:bg-emerald-50 dark:hover:bg-emerald-800"
             >
               <RotateCcw size={13} /> Undo auto-reconcile
             </button>
@@ -103,19 +103,19 @@ export function DefectiveNoticeCard({ onReconcile, onUndoReconcile }: DefectiveN
         </div>
 
         {affected.length === 0 && (
-          <ul className="mt-4 space-y-1.5 border-t border-emerald-200 pt-4">
+          <ul className="mt-4 space-y-1.5 border-t border-emerald-200 dark:border-emerald-800 pt-4">
             {Object.values(state.facts)
               .filter((f) => f.supersededAmount !== undefined)
               .map((f) => (
                 <li key={f.id} className="flex items-baseline justify-between gap-4 text-xs">
-                  <span className="text-emerald-900">{f.label}</span>
+                  <span className="text-emerald-900 dark:text-emerald-200">{f.label}</span>
                   <span className="shrink-0">
                     <Rupees
                       value={f.supersededAmount ?? 0}
                       strike
                       className="mr-2 text-emerald-700/70"
                     />
-                    <Rupees value={f.declaredAmount} className="font-bold text-emerald-950" />
+                    <Rupees value={f.declaredAmount} className="font-bold text-emerald-950 dark:text-emerald-100" />
                   </span>
                 </li>
               ))}
@@ -133,17 +133,17 @@ export function DefectiveNoticeCard({ onReconcile, onUndoReconcile }: DefectiveN
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={spring}
-      className="overflow-hidden rounded-2xl border border-rose-300 bg-rose-50/70"
+      className="overflow-hidden rounded-2xl border border-rose-300 dark:border-rose-800 bg-rose-50/70 dark:bg-rose-950/40"
     >
       <div className="flex flex-col gap-4 p-5 md:flex-row md:items-start md:justify-between">
         <div className="space-y-2">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-700 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white">
             <AlertOctagon size={11} /> Notice under Section 139(9) — Defective Return
           </span>
-          <h3 className="text-sm font-extrabold text-rose-950">
+          <h3 className="text-sm font-extrabold text-rose-950 dark:text-rose-100">
             Reported receipts exceed the income declared in your schedules
           </h3>
-          <p className="max-w-2xl text-xs leading-relaxed text-rose-900">
+          <p className="max-w-2xl text-xs leading-relaxed text-rose-900 dark:text-rose-200">
             Gross receipts in Form 26AS / AIS (
             <Rupees value={incomeReported} className="font-bold" />) exceed total income
             reported in the filed schedules (
@@ -164,7 +164,7 @@ export function DefectiveNoticeCard({ onReconcile, onUndoReconcile }: DefectiveN
           </button>
           <button
             onClick={() => setExpanded((v) => !v)}
-            className="cursor-pointer text-xs font-semibold text-rose-800 underline-offset-2 hover:underline"
+            className="cursor-pointer text-xs font-semibold text-rose-800 dark:text-rose-300 underline-offset-2 hover:underline"
           >
             {expanded ? "Hide" : `Show the ${affected.length} row${affected.length === 1 ? "" : "s"} this would change`}
           </button>
@@ -179,10 +179,10 @@ export function DefectiveNoticeCard({ onReconcile, onUndoReconcile }: DefectiveN
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={spring}
-            className="overflow-hidden border-t border-rose-200 bg-white/60"
+            className="overflow-hidden border-t border-rose-200 dark:border-rose-900 bg-white/60 dark:bg-slate-900/60"
           >
             <div className="space-y-3 p-5">
-              <p className="text-xs leading-relaxed text-rose-900">
+              <p className="text-xs leading-relaxed text-rose-900 dark:text-rose-200">
                 Auto-reconcile accepts the reporter&apos;s figure on each row below. If
                 any of these AIS entries is genuinely wrong, dispute that row instead —
                 accepting a figure you do not owe tax on is not the safe option, it is
@@ -192,20 +192,20 @@ export function DefectiveNoticeCard({ onReconcile, onUndoReconcile }: DefectiveN
                 {affected.map((f) => (
                   <li
                     key={f.id}
-                    className="flex flex-wrap items-baseline justify-between gap-3 rounded-lg bg-white px-3.5 py-2.5 text-xs"
+                    className="flex flex-wrap items-baseline justify-between gap-3 rounded-lg bg-white dark:bg-slate-900 px-3.5 py-2.5 text-xs"
                   >
-                    <span className="font-semibold text-slate-800">
+                    <span className="font-semibold text-slate-800 dark:text-white">
                       {f.label}
                       {f.reportedBy && (
-                        <span className="ml-2 font-normal text-slate-500">
+                        <span className="ml-2 font-normal text-slate-500 dark:text-slate-400">
                           reported by {f.reportedBy}
                         </span>
                       )}
                     </span>
                     <span className="shrink-0 whitespace-nowrap">
-                      <Rupees value={f.declaredAmount} className="text-slate-500" />
+                      <Rupees value={f.declaredAmount} className="text-slate-500 dark:text-slate-400" />
                       <ArrowRight size={11} className="mx-1.5 inline text-slate-400" />
-                      <Rupees value={f.reportedAmount} className="font-bold text-rose-800" />
+                      <Rupees value={f.reportedAmount} className="font-bold text-rose-800 dark:text-rose-300" />
                     </span>
                   </li>
                 ))}

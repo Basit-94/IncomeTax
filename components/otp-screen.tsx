@@ -136,7 +136,7 @@ export default function OtpScreen({
         <button
           onClick={onVerify}
           disabled={authBusy}
-          className="flex-1 bg-navy hover:opacity-90 text-paper py-3 px-4 rounded-lg transition-colors text-sm font-semibold disabled:opacity-60"
+          className="flex-1 bg-navy hover:opacity-90 text-paper dark:text-white py-3 px-4 rounded-lg transition-colors text-sm font-semibold disabled:opacity-60"
         >
           {authBusy ? t.login.authVerifying : t.login.verifyEnter}
         </button>
