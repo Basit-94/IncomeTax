@@ -1,7 +1,7 @@
 # Wapsi — Agentic Mode Implementation Plan
 
 **Revised:** 2026-09-05, Codex. Audited on `dev-2`, HEAD `9d29bf0`, including the existing uncommitted working tree. Follow-up research adds the user's ChatGPT Work-style layout, fixed toggle, tax knowledge/applicability architecture, adaptive planning, and conversation contract (§5.6–§6).
-**Status:** ANALYSIS COMPLETE — implementation has not started and is not authorized by this planning task.
+**Status:** IMPLEMENTATION IN PROGRESS — authorized by the user's “execute” instruction. Completion requires the phase acceptance checks below; infrastructure and expert review gates remain explicit.
 **Replaces:** the 2026-09-03 agentic pivot proposal. This is a proposed implementation sequence, not an instruction to start automatically.
 **Read first:** `docs/CONTEXT.md`, then this file. CONTEXT currently describes an older tree; the verified differences below take precedence for this proposal.
 

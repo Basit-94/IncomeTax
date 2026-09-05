@@ -1,5 +1,8 @@
 import type { BankAccount, Persona } from "../types";
 import { PERSONAS } from "../personas";
+import { loadSession } from "../auth-client";
+import { ensureServerSession } from "../session-client";
+import type { DocumentProvenance } from "./types";
 
 export interface VaultDocument {
   id: string;
@@ -9,6 +12,15 @@ export interface VaultDocument {
   uploadedAt: string;
   sizeKb: number;
   status: "verified" | "pending" | "disputed";
+  /**
+   * Where this record came from (plan.md §4.1–4.2). Seeded persona fixtures are
+   * `synthetic`; a record saved before originals were stored is
+   * `metadata_only` — "record found; original unavailable", never "document
+   * read". Absent on old localStorage rows, which read as metadata_only.
+   */
+  provenance?: DocumentProvenance;
+  /** The server document id once an original has been stored through /api/vault/documents. */
+  serverId?: string;
 }
 
 export interface CitizenVaultUser {
@@ -73,6 +85,7 @@ export function getSeededVaultForPersona(persona: Persona): CitizenVaultUser {
         uploadedAt: "2026-06-15",
         sizeKb: 142,
         status: "verified",
+        provenance: "synthetic",
       },
       {
         id: "doc_ais",
@@ -82,6 +95,7 @@ export function getSeededVaultForPersona(persona: Persona): CitizenVaultUser {
         uploadedAt: "2026-07-01",
         sizeKb: 284,
         status: "verified",
+        provenance: "synthetic",
       },
       {
         id: "doc_26as",
@@ -91,6 +105,7 @@ export function getSeededVaultForPersona(persona: Persona): CitizenVaultUser {
         uploadedAt: "2026-07-05",
         sizeKb: 98,
         status: "verified",
+        provenance: "synthetic",
       },
     ],
     syncedToPostgres: true,
@@ -136,15 +151,29 @@ export function setLocalVaultUser(user: CitizenVaultUser | null) {
   }
 }
 
-/** Sync user to /api/vault (which persists to PostgreSQL with fallback). */
+/**
+ * Sync user to /api/vault (which persists to PostgreSQL with fallback).
+ *
+ * The route is owner-scoped (2026-09-05), so a server session is established
+ * first. A PAN with no verifiable owner — a self-registered account with a
+ * client-minted token — stays in this browser: plan.md §3.2 requires a verified
+ * account before durable private access, and the previous behaviour of writing
+ * any posted identity to the shared database was exactly the hole it names.
+ */
 export async function syncVaultUser(
   user: CitizenVaultUser
 ): Promise<{ ok: boolean; syncedToPostgres: boolean; dbStatus: string }> {
   setLocalVaultUser(user);
 
+  const serverSession = await ensureServerSession(loadSession());
+  if (!serverSession.ok || serverSession.session.owner.pan !== user.pan.toUpperCase()) {
+    return { ok: true, syncedToPostgres: false, dbStatus: "client_fallback" };
+  }
+
   try {
     const res = await fetch("/api/vault", {
       method: "POST",
+      credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         pan: user.pan,
@@ -195,9 +224,9 @@ export async function syncVaultUser(
 export async function fetchVaultUser(pan: string): Promise<CitizenVaultUser | null> {
   const cleanPan = pan.trim().toUpperCase();
 
-  // Try PostgreSQL via /api/vault
+  // Try PostgreSQL via /api/vault — owner-scoped, so only for the signed-in PAN.
   try {
-    const res = await fetch(`/api/vault?pan=${encodeURIComponent(cleanPan)}`);
+    const res = await fetch(`/api/vault?pan=${encodeURIComponent(cleanPan)}`, { credentials: "same-origin" });
     if (res.ok) {
       const data = await res.json();
       if (data.ok && data.user) {

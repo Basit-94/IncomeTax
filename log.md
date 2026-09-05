@@ -4029,3 +4029,10 @@ things there are already true and will NOT be rewritten:
 - Proposed response-length bands are explicitly Wapsi hypotheses, not claimed ChatGPT limits. Trust evaluation includes comprehension, corrections, and appropriate reliance rather than confidence alone.
 - Verification: git diff --check -- plan.md passed, with only Git LF/CRLF normalization warning. Checked new sections, fixed-toggle requirement, phase dependency and not-started status with rg. No app tests/build/browser re-run for documentation-only changes; earlier 193-test baseline is unchanged, not newly verified.
 - Application files and other pre-existing changes preserved. No implementation, commit, push, merge, deployment, or scheduled automation.
+
+## [2026-09-05 17:58] Codex (Update Codex CLI)
+- Read `docs/CONTEXT.md` first and confirmed the active branch is `dev-2`.
+- Ran the user-supplied non-interactive official installer: `powershell -ExecutionPolicy Bypass -c '$env:CODEX_NON_INTERACTIVE=1; irm https://chatgpt.com/codex/install.ps1 | iex'`.
+- Installer updated Codex CLI from 0.144.5 to 0.153.4 and reported that its bin directory was already on `PATH`.
+- Verification: `codex --version` returned `codex-cli 0.153.4` (exit 0).
+- No application code, UI, localization, product contract, or `docs/CONTEXT.md` changes were made. No tests or build were run because this task only updated the external CLI. No commit or push performed.

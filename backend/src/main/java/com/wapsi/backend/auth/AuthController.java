@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -144,6 +145,24 @@ public final class AuthController {
             @RequestHeader(value = "Authorization", required = false) String authorization) {
         sessions.revoke(bearerToken(authorization), Instant.now(clock));
         return ResponseEntity.noContent().build();
+    }
+
+    /** Who a bearer token belongs to. Only the PAN — the front end holds the rest already. */
+    public record SessionOwner(String pan) {
+    }
+
+    /**
+     * The identity-verification contract the front end's session bridge needs (front-end plan
+     * §3.2): 200 with the owning PAN for a live token, 401 for anything else. Nothing about the
+     * token itself is echoed back. Added 2026-09-05; not yet compiled here — mvn is not installed
+     * on the machine that wrote it.
+     */
+    @GetMapping("/session")
+    public ResponseEntity<SessionOwner> session(
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+        return sessions.authenticate(bearerToken(authorization), Instant.now(clock))
+                .map(pan -> ResponseEntity.ok(new SessionOwner(pan)))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     }
 
     /** The resend cooldown said no. 429 names it; a 500 pretended we broke. */

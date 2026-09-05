@@ -1,4 +1,5 @@
 import { Pool, type QueryResult } from "pg";
+import { runMigrations } from "./migrate";
 
 export interface VaultUserRow {
   id: string;
@@ -18,6 +19,28 @@ export interface VaultUserRow {
 let pool: Pool | null = null;
 let dbInitialized = false;
 
+/** The connection string an operator actually configured, or null. */
+function configuredConnectionString(): string | null {
+  return (
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.WAPSI_DATASOURCE_URL?.replace("jdbc:", "") ||
+    null
+  );
+}
+
+/**
+ * True only when a database was explicitly configured (plan.md §2: "Verify
+ * deployment capabilities before relying on them; comments are not evidence of
+ * configured infrastructure"). The agentic services check this before touching
+ * the pool, so an unconfigured deployment answers "storage unavailable" in
+ * milliseconds instead of waiting on a connection timeout to localhost.
+ * getDbPool() below keeps its localhost default for the legacy vault route.
+ */
+export function isDbConfigured(): boolean {
+  return configuredConnectionString() !== null;
+}
+
 /**
  * Construct or return cached PG Pool.
  * Checks standard environment variables before falling back to local defaults.
@@ -26,9 +49,7 @@ export function getDbPool(): Pool | null {
   if (pool) return pool;
 
   const connectionString =
-    process.env.DATABASE_URL ||
-    process.env.POSTGRES_URL ||
-    process.env.WAPSI_DATASOURCE_URL?.replace("jdbc:", "") ||
+    configuredConnectionString() ||
     "postgresql://postgres:postgres@localhost:5432/wapsi";
 
   try {
@@ -58,7 +79,9 @@ export function getDbPool(): Pool | null {
 }
 
 /**
- * Ensures table tax_vault_users exists.
+ * Ensures the schema is current. Runs the migration list in lib/db/migrations.ts
+ * once per process (§4.1) — the old per-request CREATE TABLE is now that list's
+ * first entry, so existing databases keep every row and gain a history.
  */
 export async function initDb(): Promise<{ ok: boolean; message: string }> {
   if (dbInitialized) return { ok: true, message: "Already initialized" };
@@ -68,33 +91,13 @@ export async function initDb(): Promise<{ ok: boolean; message: string }> {
     return { ok: false, message: "Database pool not available" };
   }
 
-  const createTableQuery = `
-    CREATE TABLE IF NOT EXISTS tax_vault_users (
-      id VARCHAR(64) PRIMARY KEY,
-      pan VARCHAR(10) UNIQUE NOT NULL,
-      aadhaar VARCHAR(20),
-      full_name VARCHAR(255) NOT NULL,
-      mobile VARCHAR(20),
-      email VARCHAR(255),
-      date_of_birth VARCHAR(20),
-      assessment_year VARCHAR(9) DEFAULT '2026-27',
-      status VARCHAR(20) DEFAULT 'active',
-      vault_data JSONB DEFAULT '{}',
-      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE INDEX IF NOT EXISTS idx_tax_vault_pan ON tax_vault_users(pan);
-  `;
-
   try {
-    const client = await db.connect();
-    try {
-      await client.query(createTableQuery);
-      dbInitialized = true;
-      return { ok: true, message: "Table tax_vault_users verified" };
-    } finally {
-      client.release();
-    }
+    const { applied } = await runMigrations(db);
+    dbInitialized = true;
+    return {
+      ok: true,
+      message: applied.length ? `Applied migrations: ${applied.join(", ")}` : "Schema current",
+    };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.warn("[PostgreSQL] Init table warning (fallback mode active):", msg);

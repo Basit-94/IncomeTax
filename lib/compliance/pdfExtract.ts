@@ -131,6 +131,13 @@ export function isEmptyExtraction(fields: ExtractedFields): boolean {
 /*                  DEFLATE DECOMPRESSION & CMAP RESOLUTION                   */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * A FlateDecode stream may inflate far beyond the 5 MB file that carried it; a
+ * hostile PDF can inflate to gigabytes. Reading stops here (plan.md §4.3:
+ * "also bound decompressed size, execution time, and extracted text").
+ */
+export const MAX_DECOMPRESSED_BYTES = 32 * 1024 * 1024;
+
 async function decompressDeflateStream(rawBytes: Uint8Array): Promise<Uint8Array | null> {
   if (typeof DecompressionStream === "undefined") return null;
 
@@ -143,10 +150,18 @@ async function decompressDeflateStream(rawBytes: Uint8Array): Promise<Uint8Array
 
       const reader = ds.readable.getReader();
       const chunks: Uint8Array[] = [];
+      let total = 0;
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        if (value) chunks.push(value);
+        if (value) {
+          total += value.length;
+          if (total > MAX_DECOMPRESSED_BYTES) {
+            await reader.cancel();
+            return null;
+          }
+          chunks.push(value);
+        }
       }
 
       const totalLen = chunks.reduce((acc, c) => acc + c.length, 0);

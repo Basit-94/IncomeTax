@@ -27,6 +27,8 @@ import {
   CURRENT_VERSION,
 } from "../lib/return/persist";
 import { computeForPersona, DEFAULT_REGIME } from "../lib/return/compute";
+import { applyReturnCommand } from "../lib/return/commands";
+import { outcomeStampsFiled, simulatedFiling, submitReturn, type FilingOutcome } from "../lib/return/filing";
 import {
   loadOnboardingDraft,
   loadOnboardingProfile,
@@ -1503,20 +1505,9 @@ export default function WapsiPrototype() {
    */
   const handleAutoReconcile = () => {
     if (!returnState) return;
-    const effective = new Map(returnState.persona.facts.map((f) => [f.id, f.amount]));
-    const shortIds = new Set(
-      returnState.baselinePersona.facts
-        .filter((f) => (effective.get(f.id) ?? 0) < f.amount)
-        .map((f) => f.id),
-    );
-    if (shortIds.size === 0) return;
-
-    let next = returnState;
-    for (const c of returnState.corrections) {
-      if (!c.reverted && shortIds.has(c.factId)) next = revertCorrection(next, c.id);
-    }
-    for (const id of shortIds) next = confirmFact(next, id);
-    commitWithUndo(next);
+    // One mutation path (plan.md §3.3): the same command the agent runs.
+    const result = applyReturnCommand(returnState, { type: "stage_revision" });
+    if (result.ok && result.changed) commitWithUndo(result.state);
   };
 
   const handleResolveNotice = (_noticeId: string, resolution: "agree" | "disagree", _statement?: string) => {
@@ -1567,59 +1558,11 @@ export default function WapsiPrototype() {
       setActivePersonaId(state.personaId);
     }
 
-    const entry: TaxAlreadyPaid = {
-      id: `sat-${payment.bsrCode}-${payment.challanNo}`,
-      label: "Self-assessment tax paid (Challan 280)",
-      amount: payment.amount,
-      section: "140A",
-      provenance: {
-        reporter: "Self — Challan 280",
-        reporterKind: "self",
-        identifier: `BSR ${payment.bsrCode} · serial ${payment.challanNo}`,
-        filedOn: payment.date,
-        statement: "self",
-        onlyReporterCanFix: false,
-      },
-    };
-    const add = (p: Persona): Persona => ({ ...p, taxPaid: [...(p.taxPaid || []), entry] });
-    const baselinePersona = add(state.baselinePersona);
-    const effective = add(state.persona);
-
-    const newTaxCalc = computeForPersona(effective, regime);
-    const refundOrDue = newTaxCalc.refundOrDue;
-
-    if (refundOrDue > 0) {
-      baselinePersona.refund = {
-        ...baselinePersona.refund,
-        state: "under_review",
-        filedOn: baselinePersona.refund.filedOn || payment.date,
-        amount: refundOrDue,
-      };
-      effective.refund = {
-        ...effective.refund,
-        state: "under_review",
-        filedOn: effective.refund.filedOn || payment.date,
-        amount: refundOrDue,
-      };
-    } else {
-      baselinePersona.refund = {
-        ...baselinePersona.refund,
-        state: "not_filed",
-        amount: 0,
-      };
-      effective.refund = {
-        ...effective.refund,
-        state: "not_filed",
-        amount: 0,
-      };
-    }
-
-    const updatedReturnState: ReturnState = {
-      ...state,
-      baselinePersona,
-      persona: effective,
-      confirmedFactIds: [...state.confirmedFactIds, entry.id],
-    };
+    // One mutation path (plan.md §3.3): the same command the agent runs. It adds
+    // the s.140A row, credits the challan once, and settles the refund state.
+    const applied = applyReturnCommand({ ...state, regime }, { type: "record_payment", payment });
+    const updatedReturnState: ReturnState = applied.ok ? applied.state : state;
+    const refundOrDue = computeForPersona(updatedReturnState.persona, regime).refundOrDue;
 
     setReturnState(updatedReturnState);
     saveState(updatedReturnState);
@@ -1654,68 +1597,11 @@ export default function WapsiPrototype() {
    */
   const handlePdfIngested = (doc: IngestedDocument) => {
     if (!returnState) return;
-    const { grossSalary, tds } = doc.extracted;
-    if (grossSalary === undefined && tds === undefined) return;
-
-    const statement: Provenance["statement"] = doc.kind === "AIS" ? "AIS" : "26AS";
-    const fromDocument = (reporter: string): Provenance => ({
-      reporter,
-      reporterKind: "employer",
-      identifier: doc.fileName,
-      filedOn: TODAY,
-      statement,
-      onlyReporterCanFix: true,
-    });
-
-    const upgrade = (p: Persona): Persona => {
-      let facts = p.facts;
-      let taxPaid = p.taxPaid;
-      if (grossSalary !== undefined) {
-        const i = facts.findIndex((f) => f.kind === "salary");
-        facts =
-          i >= 0
-            ? facts.map((f, idx) =>
-                idx === i
-                  ? { ...f, amount: grossSalary, provenance: { ...f.provenance, identifier: doc.fileName, statement } }
-                  : f,
-              )
-            : [
-                ...facts,
-                {
-                  id: `ingested-salary-${Date.now()}`,
-                  label: "Gross salary (from uploaded Form 16)",
-                  amount: grossSalary,
-                  kind: "salary",
-                  provenance: fromDocument("Employer, per uploaded document"),
-                },
-              ];
-      }
-      if (tds !== undefined) {
-        const i = taxPaid.findIndex((x) => x.section.includes("192"));
-        taxPaid =
-          i >= 0
-            ? taxPaid.map((x, idx) =>
-                idx === i
-                  ? { ...x, amount: tds, provenance: { ...x.provenance, identifier: doc.fileName, statement } }
-                  : x,
-              )
-            : [
-                ...taxPaid,
-                {
-                  id: `ingested-tds-${Date.now()}`,
-                  label: "Tax deducted on salary (from uploaded Form 16)",
-                  amount: tds,
-                  section: "192",
-                  provenance: fromDocument("Employer, per uploaded document"),
-                },
-              ];
-      }
-      return { ...p, facts, taxPaid };
-    };
-
-    const next: ReturnState = { ...returnState, baselinePersona: upgrade(returnState.baselinePersona) };
+    // One mutation path (plan.md §3.3): the same command the agent runs.
+    const result = applyReturnCommand(returnState, { type: "import_document", document: doc, today: TODAY });
+    if (!result.ok) return;
     setIngestedDoc(doc);
-    commitWithUndo({ ...next, persona: effectivePersona(next) });
+    commitWithUndo(result.state);
   };
 
   /** Positive while the main journey's own engine says tax is still owed. */
@@ -2011,109 +1897,34 @@ export default function WapsiPrototype() {
     if (!persona || !returnState) return;
 
     // T1.4 (policy §5.2: alert immediately, let the user retry). The POST happens FIRST and
-    // the return is stamped filed only after the server accepts it. The previous ordering
-    // stamped "Filed" optimistically and buried a failed POST in console.error — the user
-    // was told their return was in while nothing had reached the server.
-    const facts = persona.facts.map((f) => ({
-      kind: f.kind,
-      amountPaise: f.amount * 100,
-      // Asset-class metadata (T1.9b): lets the backend price s.111A/112A/112
-      // gains at their real rates. undefined keys drop out of the JSON.
-      assetClass: f.capitalGains?.assetClass,
-      holding: f.capitalGains?.holding
-    }));
-    const claims = persona.claims.map((c) => ({
-      section: c.section,
-      amountPaise: c.amount * 100
-    }));
-    const tdsCreditsPaise = persona.taxPaid.reduce((sum, t) => sum + t.amount, 0) * 100;
-    const ruleSetVersion = regime === "old" ? "2026-27-old" : "2026-27-new";
-    const idempotencyKey = stableIdempotencyKey({
-      personaId: persona.id,
-      assessmentYear: "2026-27",
-      ruleSetVersion,
-      facts,
-      claims,
-      tdsCreditsPaise,
-    });
+    // the return is stamped filed only after the server accepts it. Outcomes are named in
+    // lib/return/filing.ts (plan.md §8): a non-2xx answer is `failed` and throws, so the
+    // filing step shows its error ladder and nothing is stamped. `unreachable` — no server
+    // at all — becomes an explicitly SIMULATED filing in this prototype; the receipt id says
+    // so (SIM-…) and is deterministic from the idempotency key, so a retry cannot mint two.
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
-
-    try {
-      const res = await fetch(`${backendUrl}/api/v1/returns/submit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          idempotencyKey,
-          // The PAN is the cross-year join key (SS5.4); without it the ledger
-          // append failed async - observed live 2026-08-29 on Sunita's filing.
-          citizenReference: persona.pan || persona.id,
-          assessmentYear: "2026-27",
-          ruleSetVersion,
-          ageBand: persona.age >= 80 ? "above_80" : persona.age >= 60 ? "60_to_80" : "below_60",
-          facts,
-          claims,
-          tdsCreditsPaise,
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.submissionId) {
-          localStorage.setItem("wapsi_last_submission_id", data.submissionId);
-          window.dispatchEvent(new CustomEvent("wapsi_submitted", { detail: data.submissionId }));
-        }
-      }
-    } catch {
-      // Standalone/offline prototype fallback: generate a mock submission receipt ID
-      const fallbackSubmissionId = `DEMP-${Date.now().toString().slice(-8)}`;
-      localStorage.setItem("wapsi_last_submission_id", fallbackSubmissionId);
-      window.dispatchEvent(new CustomEvent("wapsi_submitted", { detail: fallbackSubmissionId }));
+    let outcome: FilingOutcome = await submitReturn({ persona, regime, backendUrl });
+    if (outcome.kind === "failed") {
+      throw new Error(`Filing was not accepted: ${outcome.detail}`);
     }
+    if (outcome.kind === "unreachable") {
+      if (process.env.NEXT_PUBLIC_MOCK_MODE === "false") {
+        throw new Error("The filing service could not be reached. Nothing was filed.");
+      }
+      outcome = simulatedFiling(outcome.idempotencyKey);
+    }
+    if (!outcomeStampsFiled(outcome) || !("submissionId" in outcome)) return;
+    localStorage.setItem("wapsi_last_submission_id", outcome.submissionId);
+    window.dispatchEvent(new CustomEvent("wapsi_submitted", { detail: outcome.submissionId }));
 
-    // Only now — the server or local prototype has recorded the return — does the UI transition.
+    // Only now — the server accepted it, or the simulation was explicit — does the UI transition.
     const filedAt = new Date().toISOString();
     setIsFiled(true);
     // The ITR-V prints this moment as the submission timestamp.
     taxDispatch({ type: "MARK_FILED", filedAt });
-    saveState({
-      ...returnState,
-      filedAt,
-      baselinePersona: {
-        ...returnState.baselinePersona,
-        refund: {
-          ...returnState.baselinePersona.refund,
-          state: "filed_unverified",
-          filedOn: TODAY,
-          timeline: [
-            ...returnState.baselinePersona.refund.timeline.filter((e) => e.headlineKey !== "filed"),
-            {
-              id: `filing-${Date.now()}`,
-              on: TODAY,
-              state: "filed_unverified",
-              headlineKey: "filed",
-              actor: "citizen"
-            }
-          ]
-        }
-      },
-      persona: {
-        ...returnState.persona,
-        refund: {
-          ...returnState.persona.refund,
-          state: "filed_unverified",
-          filedOn: TODAY,
-          timeline: [
-            ...returnState.persona.refund.timeline.filter((e) => e.headlineKey !== "filed"),
-            {
-              id: `filing-${Date.now()}`,
-              on: TODAY,
-              state: "filed_unverified",
-              headlineKey: "filed",
-              actor: "citizen"
-            }
-          ]
-        }
-      }
-    });
+    // One mutation path (plan.md §3.3): the same command the agent runs to stamp a return.
+    const stamped = applyReturnCommand(returnState, { type: "finalize_filing", filedAt, today: TODAY });
+    if (stamped.ok) saveState(stamped.state);
     setTimeout(() => setStampFired(true), 400);
 
     // Start automatic progression to Credited
