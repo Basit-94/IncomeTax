@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wapsi (वापसी) — Top Priority Features & Comprehensive Use Cases</title>
+  <style>
+    :root {
+      --bg: #F4F1E8;
+      --card-bg: #FCFAF5;
+      --paper: #FFFFFF;
+      --ink: #181E29;
+      --ink-muted: #4B5565;
+      --ink-subtle: #6B7280;
+      --border: #D8D2C2;
+      --navy: #0F172A;
+      --navy-dark: #0A0F1D;
+      --accent: #1565C0;
+      --accent-soft: #E3F2FD;
+      --emerald: #059669;
+      --emerald-soft: #D1FAE5;
+      --amber: #D97706;
+      --amber-soft: #FEF3C7;
+      --rose: #DC2626;
+      --rose-soft: #FEE2E2;
+      --purple: #7C3AED;
+      --purple-soft: #EDE9FE;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --radius: 12px;
+      --shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    }
+
+    body.dark-mode {
+      --bg: #0B0F19;
+      --card-bg: #111827;
+      --paper: #1F2937;
+      --ink: #F9FAFB;
+      --ink-muted: #9CA3AF;
+      --ink-subtle: #6B7280;
+      --border: #374151;
+      --navy: #F3F4F6;
+      --navy-dark: #030712;
+      --accent: #3B82F6;
+      --accent-soft: rgba(59, 130, 246, 0.15);
+      --emerald: #10B981;
+      --emerald-soft: rgba(16, 185, 129, 0.15);
+      --amber: #F59E0B;
+      --amber-soft: rgba(245, 158, 11, 0.15);
+      --purple: #A78BFA;
+      --purple-soft: rgba(167, 139, 250, 0.15);
+      --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--ink);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      padding: 24px 16px;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Top Controls */
+    .top-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .brand-mark {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 15px;
+      color: var(--navy);
+      letter-spacing: -0.01em;
+    }
+    .brand-pill {
+      background: #059669;
+      color: #FFF;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+    .theme-toggle-btn {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      color: var(--ink);
+      padding: 6px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .theme-toggle-btn:hover {
+      border-color: var(--accent);
+    }
+
+    /* Master Header */
+    header.doc-header {
+      background: linear-gradient(135deg, #0A0F1D 0%, #1E1B4B 100%);
+      color: #FFFFFF;
+      border-radius: var(--radius);
+      padding: 36px 32px;
+      margin-bottom: 24px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+      position: relative;
+      overflow: hidden;
+    }
+    header.doc-header::after {
+      content: "";
+      position: absolute;
+      top: -60px;
+      right: -60px;
+      width: 260px;
+      height: 260px;
+      background: radial-gradient(circle, rgba(124, 58, 237, 0.25) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .badge-emerald { background: rgba(16, 185, 129, 0.15); color: #34D399; border: 1px solid rgba(52, 211, 153, 0.3); }
+    .badge-amber { background: rgba(245, 158, 11, 0.15); color: #FBBF24; border: 1px solid rgba(251, 191, 36, 0.3); }
+    .badge-purple { background: rgba(168, 85, 247, 0.15); color: #C084FC; border: 1px solid rgba(192, 132, 252, 0.3); }
+
+    h1.title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 10px;
+      color: #FFFFFF;
+    }
+    p.subtitle {
+      font-size: 1.05rem;
+      color: #CBD5E1;
+      max-width: 960px;
+      line-height: 1.5;
+    }
+
+    /* Search & Filter Bar */
+    .filter-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .search-input-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 280px;
+    }
+    .search-input {
+      width: 100%;
+      padding: 12px 14px 12px 38px;
+      border: 1px solid var(--border);
+      background: var(--paper);
+      color: var(--ink);
+      border-radius: 10px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-input:focus {
+      border-color: var(--accent);
+    }
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 14px;
+      color: var(--ink-subtle);
+    }
+
+    /* Summary Table Card */
+    .summary-card {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 28px;
+      box-shadow: var(--shadow);
+    }
+    .summary-card h3 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    table.summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    table.summary-table th {
+      background: var(--navy-dark);
+      color: #FFFFFF;
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 11px;
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+      letter-spacing: 0.05em;
+    }
+    table.summary-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    table.summary-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Use Case Deep-Dive Cards */
+    .usecase-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 26px;
+      margin-bottom: 28px;
+      position: relative;
+      border-left: 6px solid var(--accent);
+      box-shadow: var(--shadow);
+    }
+    .usecase-card.card-emerald { border-left-color: var(--emerald); }
+    .usecase-card.card-amber { border-left-color: var(--amber); }
+    .usecase-card.card-purple { border-left-color: var(--purple); }
+    .usecase-card.card-rose { border-left-color: var(--rose); }
+
+    .usecase-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .usecase-rank {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: var(--navy-dark);
+      color: #FFF;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+    .usecase-title {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--navy);
+    }
+    .usecase-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .pill {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 9999px;
+    }
+    .pill-impact { background: #E0E7FF; color: #3730A3; }
+    .pill-savings { background: #D1FAE5; color: #065F46; }
+    .pill-law { background: #FEF3C7; color: #92400E; }
+    body.dark-mode .pill-impact { background: rgba(99, 102, 241, 0.2); color: #A5B4FC; }
+    body.dark-mode .pill-savings { background: rgba(16, 185, 129, 0.2); color: #6EE7B7; }
+    body.dark-mode .pill-law { background: rgba(245, 158, 11, 0.2); color: #FCD34D; }
+
+    .persona-banner {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--paper);
+      padding: 14px 18px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      margin-bottom: 18px;
+    }
+    .persona-avatar {
+      font-size: 26px;
+      background: var(--bg);
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+    }
+    .persona-name {
+      font-weight: 800;
+      font-size: 15px;
+      color: var(--navy);
+    }
+    .persona-bio {
+      font-size: 13px;
+      color: var(--ink-muted);
+    }
+
+    .before-after-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 768px) {
+      .before-after-grid { grid-template-columns: 1fr; }
+    }
+    .before-box {
+      background: var(--paper);
+      border: 1px solid #FECACA;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .after-box {
+      background: var(--paper);
+      border: 1px solid #A7F3D0;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    body.dark-mode .before-box { border-color: rgba(239, 68, 68, 0.3); }
+    body.dark-mode .after-box { border-color: rgba(16, 185, 129, 0.3); }
+    .box-heading {
+      font-size: 12px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .box-heading.bad { color: #DC2626; }
+    .box-heading.good { color: #059669; }
+    .box-desc {
+      font-size: 13px;
+      color: var(--ink-muted);
+      line-height: 1.5;
+    }
+
+    .journey-steps {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+    .journey-title {
+      font-size: 12px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      color: var(--navy);
+      margin-bottom: 12px;
+    }
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--ink);
+    }
+    .step-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--navy);
+      color: #FFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    body.dark-mode .step-num { background: var(--accent); }
+
+    .calc-box {
+      background: var(--bg);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--ink);
+      line-height: 1.6;
+    }
+
+    /* Footer */
+    footer.doc-footer {
+      text-align: center;
+      padding: 24px;
+      color: var(--ink-subtle);
+      font-size: 12px;
+      font-family: var(--font-mono);
+      border-top: 1px solid var(--border);
+      margin-top: 32px;
+    }
+
+    @media print {
+      body { background: #FFFFFF; color: #000000; padding: 0; }
+      .top-controls, .filter-bar, .theme-toggle-btn { display: none !important; }
+      header.doc-header { background: #0F172A !important; color: #FFF !important; }
+      .usecase-card, .summary-card { box-shadow: none; border: 1px solid #CCC; page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Top Controls -->
+    <div class="top-controls">
+      <div class="brand-mark">
+        <span class="brand-pill">WAPSI</span>
+        <span>Income Tax Platform · Top Features & Comprehensive Use Cases</span>
+      </div>
+      <button class="theme-toggle-btn" onclick="toggleTheme()">
+        <span id="theme-icon">🌙</span>
+        <span id="theme-text">Dark Mode</span>
+      </button>
+    </div>
+
+    <!-- Header -->
+    <header class="doc-header">
+      <div class="tag-row">
+        <span class="badge badge-emerald">● Curated Strategic Priorities</span>
+        <span class="badge badge-amber">AY 2026-27 Tax Compliance</span>
+        <span class="badge badge-purple">Concrete Persona Use Cases</span>
+      </div>
+      <h1 class="title">Wapsi (वापसी) — Top Priority Features & Detailed Use Cases</h1>
+      <p class="subtitle">
+        An exhaustive blueprint of the top 5 game-changing features selected for Wapsi. Each feature includes target taxpayer personas, current pain points, the Wapsi solution, step-by-step user journeys, statutory provisions, and exact calculation models.
+      </p>
+    </header>
+
+    <!-- Search / Filter -->
+    <div class="filter-bar">
+      <div class="search-input-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="live-search" class="search-input" placeholder="Search features, personas (Rakesh, Ananya, Priya), statutory sections (111A, 44ADA)..." oninput="handleSearch(this.value)">
+      </div>
+    </div>
+
+    <!-- Executive Summary Table -->
+    <div class="summary-card">
+      <h3><span>📋</span> Executive Prioritization Summary</h3>
+      <table class="summary-table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Feature Name</th>
+            <th>Target Audience</th>
+            <th>Statutory Law</th>
+            <th>User Value / Impact</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>#1</strong></td>
+            <td><strong>1-Click Broker & CAS PDF Ingestion</strong></td>
+            <td>100M+ Retail Stock & MF Investors</td>
+            <td>Section 111A, 112A, 112</td>
+            <td>🔥 Massive · Saves ₹2,000–₹5,000 CA fees</td>
+          </tr>
+          <tr>
+            <td><strong>#2</strong></td>
+            <td><strong>Section 44ADA 1-Tap Freelancer Wizard</strong></td>
+            <td>25M+ Freelancers, Creators & Gig Workers</td>
+            <td>Section 44ADA, 44AB (ITR-4)</td>
+            <td>⚡ High · 50% deemed profit, zero balance sheets</td>
+          </tr>
+          <tr>
+            <td><strong>#3</strong></td>
+            <td><strong>AI Legal Defense & Notice Drafter</strong></td>
+            <td>Taxpayers receiving CPC Intimations</td>
+            <td>Section 143(1)(a), 139(9), 154</td>
+            <td>🛡️ Massive · Auto-drafted CBDT response letters</td>
+          </tr>
+          <tr>
+            <td><strong>#4</strong></td>
+            <td><strong>Year-Round Tax Shield & Advance Tax Radar</strong></td>
+            <td>Salaried + Freelancers with bonuses</td>
+            <td>Section 234B, 234C, 80CCD(1B)</td>
+            <td>📈 High Retention · Eliminates 1%/mo interest penalties</td>
+          </tr>
+          <tr>
+            <td><strong>#5</strong></td>
+            <td><strong>Family Multi-PAN Household Tax Grouping</strong></td>
+            <td>Families (Self, Spouse, Senior Parents)</td>
+            <td>Section 80D, 80TTB, 24(b)</td>
+            <td>👨‍👩‍👧‍👦 Loyalty · ₹38,400+ collective refund boost</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- DETAILED USE CASES                                               -->
+    <!-- ================================================================= -->
+
+    <!-- FEATURE 1 -->
+    <div class="usecase-card card-emerald searchable-item">
+      <div class="usecase-header">
+        <div>
+          <span class="usecase-rank">FEATURE 01 · CAPITAL GAINS AUTOMATION</span>
+          <h2 class="usecase-title">1-Click Broker P&L & CAS PDF Ingestion</h2>
+        </div>
+        <div class="usecase-pills">
+          <span class="pill pill-impact">🔥 MASSIVE REACH (100M+ INVESTORS)</span>
+          <span class="pill pill-savings">💰 SAVES CITIZEN ₹2,000–₹5,000 CA FEES</span>
+          <span class="pill pill-law">⚖️ SEC 111A, 112A, 112</span>
+        </div>
+      </div>
+
+      <div class="persona-banner">
+        <div class="persona-avatar">👨‍💻</div>
+        <div>
+          <div class="persona-name">Target Persona: Rakesh (32, Software Engineer & Retail Trader)</div>
+          <div class="persona-bio">Salaried employee with stock investments on Zerodha and mutual funds via Groww/CAMS. Files ITR-2 annually.</div>
+        </div>
+      </div>
+
+      <div class="before-after-grid">
+        <div class="before-box">
+          <div class="box-heading bad">✗ The Legacy Pain Today</div>
+          <div class="box-desc">
+            Rakesh opens Schedule CG on the government portal. He must manually classify trades, compute grandfathering value as of 31-Jan-2018, split STCG (Sec 111A @ 20%) and LTCG (Sec 112A @ 12.5%), and fill quarterly date breakdowns to avoid Section 234C interest penalties. Frustrated, he pays a CA ₹3,500 every July.
+          </div>
+        </div>
+        <div class="before-box after-box">
+          <div class="box-heading good">✓ The Wapsi Experience</div>
+          <div class="box-desc">
+            Rakesh drags his Zerodha <em>Tax_PnL_FY25-26.pdf</em> and CAMS CAS statement into Wapsi. In <strong>1.5 seconds</strong> client-side, Wapsi automatically parses all buy/sell transactions, applies the statutory ₹1.25L LTCG exemption, computes flat 20% STCG, and populates Schedule CG with zero cloud leakage.
+          </div>
+        </div>
+      </div>
+
+      <div class="journey-steps">
+        <div class="journey-title">Step-by-Step User Journey:</div>
+        <div class="step-list">
+          <div class="step-item">
+            <span class="step-num">1</span>
+            <div><strong>Drag & Drop:</strong> Rakesh uploads his 2-page broker Tax P&L PDF into Card 01.</div>
+          </div>
+          <div class="step-item">
+            <span class="step-num">2</span>
+            <div><strong>Instant Parsing:</strong> Client-side PDF parser isolates equity delivery, mutual funds, and intraday trades in 80ms.</div>
+          </div>
+          <div class="step-item">
+            <span class="step-num">3</span>
+            <div><strong>Statutory Allocation:</strong> Applies ₹1,25,000 exemption under Section 112A to LTCG and calculates flat 20% on Section 111A STCG.</div>
+          </div>
+          <div class="step-item">
+            <span class="step-num">4</span>
+            <div><strong>1-Tap Verification:</strong> Rakesh reviews the visual summary and confirms. The entire Schedule CG is settled.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="calc-box">
+        <strong>Statutory Calculation Snapshot:</strong><br>
+        • Equity LTCG Realized: ₹85,000 → Covered by ₹1,25,000 exemption u/s 112A = <strong>₹0 Tax</strong><br>
+        • Equity STCG Realized: ₹40,000 → Flat 20% u/s 111A = <strong>₹8,000 Tax</strong><br>
+        • Total Filing Time: <strong>45 seconds</strong> · CA Fees Incurred: <strong>₹0</strong>
+      </div>
+    </div>
+
+    <!-- FEATURE 2 -->
+    <div class="usecase-card card-amber searchable-item">
+      <div class="usecase-header">
+        <div>
+          <span class="usecase-rank">FEATURE 02 · GIG ECONOMY FREEDOM</span>
+          <h2 class="usecase-title">Section 44ADA 1-Tap Presumptive Tax Wizard</h2>
+        </div>
+        <div class="usecase-pills">
+          <span class="pill pill-impact">⚡ 25M+ GIG WORKERS & CONSULTANTS</span>
+          <span class="pill pill-savings">💰 NO BALANCE SHEET OR AUDIT NEEDED</span>
+          <span class="pill pill-law">⚖️ SEC 44ADA, 44AB (ITR-4)</span>
+        </div>
+      </div>
+
+      <div class="persona-banner">
+        <div class="persona-avatar">🎨</div>
+        <div>
+          <div class="persona-name">Target Persona: Ananya (26, Freelance UI/UX Designer & Content Creator)</div>
+          <div class="persona-bio">Invoices international & domestic clients via Stripe/Upwork. Has no employer, no Form 16, and keeps zero expense receipts.</div>
+        </div>
+      </div>
+
+      <div class="before-after-grid">
+        <div class="before-box">
+          <div class="box-heading bad">✗ The Legacy Pain Today</div>
+          <div class="box-desc">
+            Ananya tries to file ITR-4 on the government portal. The portal demands "Sundry Debtors, Sundry Creditors, Stock-in-Trade, Cash Balance, and Gross Turnover." Ananya doesn't know what these accounting terms mean, panics that she might get audited, and delays filing until late penalties attach.
+          </div>
+        </div>
+        <div class="before-box after-box">
+          <div class="box-heading good">✓ The Wapsi Experience</div>
+          <div class="box-desc">
+            Ananya chooses <em>"Freelancer / Creative Professional (Section 44ADA)"</em> on Wapsi. Wapsi asks exactly <strong>ONE question</strong>: <em>"What were your total professional receipts collected in bank accounts?"</em> She enters ₹18,00,000. Wapsi automatically deems 50% as expenses and completes her ITR-4 in 30 seconds.
+          </div>
+        </div>
+      </div>
+
+      <div class="journey-steps">
+        <div class="journey-title">Step-by-Step User Journey:</div>
+        <div class="step-list">
+          <div class="step-item">
+            <span class="step-num">1</span>
+            <div><strong>Select Profession:</strong> Ananya selects "Design / Tech / Creative Consultant" from the visual grid.</div>
+          </div>
+          <div class="step-item">
+            <span class="step-num">2</span>
+            <div><strong>Enter Gross Receipts:</strong> Types her total annual bank inflow: `₹18,00,000`.</div>
+          </div>
+          <div class="step-item">
+            <span class="step-num">3</span>
+            <div><strong>Statutory 50% Rule:</strong> Wapsi instantly writes off ₹9,00,000 as statutory deemed expenses under Section 44ADA (no bills or accounting required).</div>
+          </div>
+          <div class="step-item">
+            <span class="step-num">4</span>
+            <div><strong>Audit Exemption Applied:</strong> Wapsi flags her return exempt from Section 44AB statutory audit and runs the AY 2026-27 regime optimizer.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="calc-box">
+        <strong>Statutory Calculation Snapshot:</strong><br>
+        • Gross Professional Receipts: ₹18,00,000<br>
+        • Deemed Statutory Expenses (50% u/s 44ADA): ₹9,00,000 (No receipts needed)<br>
+        • Taxable Net Profit: ₹9,00,000 → AY 2026-27 New Regime Slabs & Section 87A applied<br>
+        • Status: <strong>100% Legally Compliant · Zero Audit Risk</strong>
+      </div>
+    </div>
+
+    <!-- FEATURE 3 -->
+    <div class="usecase-card card-purple searchable-item">
+      <div class="usecase-header">
+        <div>
+          <span class="usecase-rank">FEATURE 03 · AI LEGAL ASSISTANCE</span>
+          <h2 class="usecase-title">AI Legal Defense & Notice Response Drafter</h2>
+        </div>
+        <div class="usecase-pills">
+          <span class="pill pill-impact">🛡️ ZERO PANIC FOR TAXPAYERS</span>
+          <span class="pill pill-savings">💰 SAVES ₹5,000–₹10,000 LEGAL FEES</span>
+          <span class="pill pill-law">⚖️ SEC 143(1)(a), 139(9), 154</span>
+        </div>
+      </div>
+
+      <div class="persona-banner">
+        <div class="persona-avatar">👩‍💼</div>
+        <div>
+          <div class="persona-name">Target Persona: Priya (29, Corporate Employee who switched jobs)</div>
+          <div class="persona-bio">Switched companies in October. Received a scary CPC Bengaluru intimation alleging ₹18,000 tax mismatch.</div>
+        </div>
+      </div>
+
+      <div class="before-after-grid">
+        <div class="before-box">
+          <div class="box-heading bad">✗ The Legacy Pain Today</div>
+          <div class="box-desc">
+            Priya receives a 6-page legal PDF from `donotreply@incometax.gov.in` citing Section 143(1)(a) discrepancy in Schedule TDS. It warns of a 30-day demand and interest under Section 220. Terrified, she contacts a tax lawyer who asks for ₹5,000 to file a rectification request.
+          </div>
+        </div>
+        <div class="before-box after-box">
+          <div class="box-heading good">✓ The Wapsi Experience</div>
+          <div class="box-desc">
+            Priya uploads the Notice PDF to Wapsi's Notice Resolver. Wapsi's local Gemini copilot analyzes the department's table against her Form 26AS, pinpoints the discrepancy (TAN typo by her previous employer), and <strong>drafts a formal, legally grounded response letter citing CBDT Circular 08/2011</strong> ready for copy-pasting.
+          </div>
+        </div>
+      </div>
+
+      <div class="journey-steps">
+        <div class="journey-title">Step-by-Step User Journey:</div>
+        <div class="step-list">
+          <div class="step-item">
+            <span class="step-num">1</span>
+            <div><strong>Drop Notice PDF:</strong> Priya drops the cryptic Section 143(1)(a) notice into Card 05.</div>
+          </div>
+          <div class="step-item">
+            <span class="step-num">2</span>
+            <div><strong>AI Discrepancy Matching:</strong> Copilot detects: <em>"CPC disallowed ₹18,000 TDS because TAN prefix had an OCR mismatch."</em></div>
+          </div>
+          <div class="step-item">
+            <span class="step-num">3</span>
+            <div><strong>Auto-Draft Response:</strong> Wapsi generates an official reply addressed to the Assessing Officer citing 26AS Challan Identification Numbers (CIN).</div>
+          </div>
+          <div class="step-item">
+            <span class="step-num">4</span>
+            <div><strong>1-Click Resolution:</strong> Priya pastes the text into the e-Proceedings tab or downloads the rectification JSON. Demand cancelled.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="calc-box">
+        <strong>Sample Generated Reply Preview:</strong><br>
+        <em>"In response to communication DIN: CPC/2526/1431A/0921, the proposed adjustment of ₹18,000 u/s 143(1)(a)(iv) is respectfully disputed. As per Form 26AS (enclosed), TDS of ₹18,000 was duly deducted by deductor TAN: DELA12345B on 12-Aug-2025. In accordance with CBDT Instruction No. 08/2011, credit is statutory and demand may be vacated."</em>
+      </div>
+    </div>
+
+    <!-- FEATURE 4 -->
+    <div class="usecase-card card-emerald searchable-item">
+      <div class="usecase-header">
+        <div>
+          <span class="usecase-rank">FEATURE 04 · PROACTIVE WEALTH PROTECTION</span>
+          <h2 class="usecase-title">Year-Round "Tax Shield" & Advance Tax Radar</h2>
+        </div>
+        <div class="usecase-pills">
+          <span class="pill pill-impact">📈 365-DAY USER RETENTION</span>
+          <span class="pill pill-savings">💰 IMMUNITY FROM 1%/MONTH PENALTIES</span>
+          <span class="pill pill-law">⚖️ SEC 234B, 234C, 80CCD(1B)</span>
+        </div>
+      </div>
+
+      <div class="persona-banner">
+        <div class="persona-avatar">📊</div>
+        <div>
+          <div class="persona-name">Target Persona: Vikram (38, Independent Consultant with Quarterly Bonuses)</div>
+          <div class="persona-bio">Earns variable project-based consulting income. Doesn't have steady monthly TDS deductions.</div>
+        </div>
+      </div>
+
+      <div class="before-after-grid">
+        <div class="before-box">
+          <div class="box-heading bad">✗ The Legacy Pain Today</div>
+          <div class="box-desc">
+            Vikram files his return in July and is shocked to see an extra ₹7,800 added to his tax bill. The penalty is Section 234C interest (1% per month for missing the 15% Jun, 45% Sep, 75% Dec advance tax deadlines). Nobody ever warned him during the year.
+          </div>
+        </div>
+        <div class="before-box after-box">
+          <div class="box-heading good">✓ The Wapsi Experience</div>
+          <div class="box-desc">
+            Wapsi's Year-Round Tax Shield tracks Vikram's projected income. On December 5, it sends a gentle notification: <em>"Pay ₹22,500 advance tax by Dec 15 to save ₹1,800 in Section 234C interest."</em> It generates a dynamic Challan 280 UPI QR code. Vikram scans and pays in 10 seconds.
+          </div>
+        </div>
+      </div>
+
+      <div class="calc-box">
+        <strong>Advance Tax Radar Schedule & Savings:</strong><br>
+        • June 15: 15% Cumulative Due · Sep 15: 45% Cumulative Due<br>
+        • Dec 15: 75% Cumulative Due · Mar 15: 100% Cumulative Due<br>
+        • Result: <strong>Zero Section 234B/C interest penalties</strong> · Proactive NPS 80CCD(1B) savings alert in February saves an additional ₹15,600.
+      </div>
+    </div>
+
+    <!-- FEATURE 5 -->
+    <div class="usecase-card card-rose searchable-item">
+      <div class="usecase-header">
+        <div>
+          <span class="usecase-rank">FEATURE 05 · HOUSEHOLD OPTIMIZATION</span>
+          <h2 class="usecase-title">Family & Multi-PAN "Household Tax Grouping"</h2>
+        </div>
+        <div class="usecase-pills">
+          <span class="pill pill-impact">👨‍👩‍👧‍👦 HIGH USER LOYALTY</span>
+          <span class="pill pill-savings">💰 MAXIMIZES COLLECTIVE REFUND</span>
+          <span class="pill pill-law">⚖️ SEC 80D, 80TTB, SEC 24(b)</span>
+        </div>
+      </div>
+
+      <div class="persona-banner">
+        <div class="persona-avatar">👨‍👩‍👦</div>
+        <div>
+          <div class="persona-name">Target Persona: Amit (41, Managing taxes for Self, Working Spouse, and Retired Parents)</div>
+          <div class="persona-bio">Pays joint home loan EMI and ₹50,000 health insurance for senior citizen parents.</div>
+        </div>
+      </div>
+
+      <div class="before-after-grid">
+        <div class="before-box">
+          <div class="box-heading bad">✗ The Legacy Pain Today</div>
+          <div class="box-desc">
+            Amit must create 3 separate accounts with different passwords on the government portal, clear browser cache between logins, and guess whether he or his wife should claim their father's ₹50,000 medical insurance or the home loan interest.
+          </div>
+        </div>
+        <div class="before-box after-box">
+          <div class="box-heading good">✓ The Wapsi Experience</div>
+          <div class="box-desc">
+            Amit switches between family profiles in one click inside the Citizen Vault. Wapsi runs a combinatorial optimization: <em>"Amit should file New Regime; Wife should file Old Regime and claim father's Section 80D."</em> Household collective refund increases by <strong>₹38,400</strong>!
+          </div>
+        </div>
+      </div>
+
+      <div class="calc-box">
+        <strong>Combinatorial Household Optimization Result:</strong><br>
+        • Amit (Self): AY 2026-27 New Regime → Low 10% slab rate, zero deduction loss.<br>
+        • Wife: Old Regime → Claims ₹2,00,000 Home Loan Interest (Sec 24b) + ₹50,000 Senior Parent Medical (Sec 80D).<br>
+        • Retired Father: Claims ₹50,000 Senior Citizen FD Interest u/s 80TTB tax-free.<br>
+        • Collective Family Tax Reduction: <strong>₹38,400 Saved</strong> compared to uncoordinated filing.
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="doc-footer">
+      Wapsi (वापसी) Sovereign Income Tax Platform · Feature & Use Case Blueprint · C:\projects\IncomeTax\
+    </footer>
+  </div>
+
+  <script>
+    function toggleTheme() {
+      const isDark = document.body.classList.toggle('dark-mode');
+      document.getElementById('theme-icon').textContent = isDark ? '☀️' : '🌙';
+      document.getElementById('theme-text').textContent = isDark ? 'Light Mode' : 'Dark Mode';
+      localStorage.setItem('wapsi_usecase_theme', isDark ? 'dark' : 'light');
+    }
+
+    if (localStorage.getItem('wapsi_usecase_theme') === 'dark') {
+      document.body.classList.add('dark-mode');
+      document.getElementById('theme-icon').textContent = '☀️';
+      document.getElementById('theme-text').textContent = 'Light Mode';
+    }
+
+    function handleSearch(query) {
+      const q = query.trim().toLowerCase();
+      const items = document.querySelectorAll('.searchable-item');
+      
+      if (!q) {
+        items.forEach(item => item.style.display = '');
+        return;
+      }
+
+      items.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        if (text.includes(q)) {
+          item.style.display = '';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    }
+  </script>
+</body>
+</html>

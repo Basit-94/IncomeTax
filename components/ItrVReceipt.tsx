@@ -179,7 +179,7 @@ export function ItrVReceipt({ filedOn, filedAt }: ItrVReceiptProps = {}) {
         set for `.printable-sheet` and a second, competing one in a component
         would be the next thing to drift.
       */}
-      <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 p-4 print:hidden">
+      <div dir="ltr" className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 p-4 print:hidden">
         <div>
           <h3 className="text-sm font-bold text-gray-900">Acknowledgement preview</h3>
           <p className="text-xs text-gray-500">
@@ -197,6 +197,7 @@ export function ItrVReceipt({ filedOn, filedAt }: ItrVReceiptProps = {}) {
 
       <div
         ref={receiptRef}
+        dir="ltr"
         className="printable-sheet rounded-xl border-2 border-gray-300 bg-white p-8 font-sans text-gray-900 shadow-md print:rounded-none print:border-none print:p-0 print:shadow-none"
       >
         {/* This banner prints. It is the first thing on the sheet by design. */}

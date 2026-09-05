@@ -14,7 +14,6 @@ import { PERSONAS, TODAY, findPersonaByPan } from "../lib/personas";
 import type { Persona, PersonaId, Lang, IncomeFact, IncomeKind, BankAccount, Notice, RefundState, TimelineKey, Provenance, TaxAlreadyPaid, Claim } from "../lib/types";
 import { REFUND_SEQUENCE } from "../lib/types";
 import { dict, isLang } from "../lib/i18n";
-import { isRtl } from "../lib/i18n/languages";
 import { mulberry32, pick } from "../lib/rng";
 import { formatMoney } from "../lib/money";
 import { validatePan, validateIfsc } from "../lib/validate";
@@ -220,6 +219,22 @@ export default function WapsiPrototype() {
       document.body?.classList.toggle("dark-mode", theme === "dark");
     }
   }, [theme]);
+
+  // Global dragover & drop prevention to prevent browser navigating away on misplaced drops
+  useEffect(() => {
+    const handleGlobalDragOver = (e: DragEvent) => {
+      e.preventDefault();
+    };
+    const handleGlobalDrop = (e: DragEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("dragover", handleGlobalDragOver);
+    window.addEventListener("drop", handleGlobalDrop);
+    return () => {
+      window.removeEventListener("dragover", handleGlobalDragOver);
+      window.removeEventListener("drop", handleGlobalDrop);
+    };
+  }, []);
 
   const breakdown = useMemo(
     () => (persona ? computeForPersona(persona, regime) : null),
@@ -434,9 +449,10 @@ export default function WapsiPrototype() {
     document.documentElement.classList.toggle("dark-mode", theme === "dark");
   }, [theme]);
 
-  // Urdu, Kashmiri and Sindhi read right-to-left; everything else here is LTR.
+  // Keep form and document layout in standard LTR structure so forms, tables,
+  // calculation steps and download options never shift or invert sides for Urdu/RTL.
   useEffect(() => {
-    document.documentElement.dir = isRtl(lang) ? "rtl" : "ltr";
+    document.documentElement.dir = "ltr";
     document.documentElement.lang = lang;
   }, [lang]);
 
