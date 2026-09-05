@@ -171,24 +171,31 @@ export class PostgresRunStore implements RunStore {
       [run.id, run.status, JSON.stringify(run.state), run.title, run.task, run.knowledgeRelease, this.clock()],
     );
   }
+  /**
+   * One round-trip per event. The owner check, the next sequence number and the
+   * insert are a single statement; the (run_id, seq) primary key turns a concurrent
+   * appender into a unique-violation, which is retried. This replaced a six-trip
+   * transaction that made every agent turn take 6–9 s against a remote database.
+   */
   async appendEvent(owner: Owner, runId: string, payload: RunEventPayload) {
-    const client = await this.pool.connect();
-    try {
-      await client.query("BEGIN");
-      const own = await client.query("SELECT 1 FROM agent_runs WHERE id = $1 AND owner_pan = $2 AND owner_kind = $3 AND deleted_at IS NULL FOR UPDATE", [runId, owner.pan, owner.kind]);
-      if (!own.rowCount) throw new Error("run not found");
-      const seqRes = await client.query<{ next: number }>("SELECT COALESCE(MAX(seq), 0) + 1 AS next FROM agent_run_events WHERE run_id = $1", [runId]);
-      const seq = Number(seqRes.rows[0].next);
+    for (let attempt = 0; attempt < 5; attempt += 1) {
       const at = this.clock();
-      await client.query("INSERT INTO agent_run_events (run_id, seq, at, type, payload) VALUES ($1,$2,$3,$4,$5::jsonb)", [runId, seq, at, payload.type, JSON.stringify(payload)]);
-      await client.query("COMMIT");
-      return { runId, seq, at, payload };
-    } catch (err) {
-      await client.query("ROLLBACK");
-      throw err;
-    } finally {
-      client.release();
+      try {
+        const res = await this.pool.query<{ seq: number }>(
+          `INSERT INTO agent_run_events (run_id, seq, at, type, payload)
+           SELECT r.id, COALESCE((SELECT MAX(e.seq) FROM agent_run_events e WHERE e.run_id = r.id), 0) + 1, $4, $5, $6::jsonb
+           FROM agent_runs r WHERE r.id = $1 AND r.owner_pan = $2 AND r.owner_kind = $3 AND r.deleted_at IS NULL
+           RETURNING seq`,
+          [runId, owner.pan, owner.kind, at, payload.type, JSON.stringify(payload)],
+        );
+        if (!res.rowCount) throw new Error("run not found");
+        return { runId, seq: Number(res.rows[0].seq), at, payload };
+      } catch (err) {
+        if ((err as { code?: string }).code === "23505" && attempt < 4) continue; // lost a seq race; recompute
+        throw err;
+      }
     }
+    throw new Error("append_event_contended");
   }
   async eventsAfter(owner: Owner, runId: string, afterSeq: number) {
     const res = await this.pool.query<{ seq: number; at: Date; payload: RunEventPayload }>(

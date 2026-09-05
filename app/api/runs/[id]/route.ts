@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 import { z } from "zod";
 import { advance, cancelRun, publicRun } from "@/lib/agentic/runtime";
 import { requireSession, runtimeFor } from "@/lib/server/context";
@@ -41,8 +41,12 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   }
   const parsed = inputSchema.safeParse(raw);
   if (!parsed.success) return NextResponse.json({ ok: false, error: "invalid_input" }, { status: 400 });
-  const run = await advance(deps, guard.session.owner, id, parsed.data);
+  // Record the input now (a few queries) and answer; the agent's steps run after the response is
+  // sent while the client streams events, so the citizen's own words appear immediately.
+  const owner = guard.session.owner;
+  const run = await advance(deps, owner, id, parsed.data, "input_only");
   if (!run) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+  if (run.status === "running") after(() => advance(deps, owner, id, {}, "steps_only").catch(() => undefined));
   return NextResponse.json({ ok: true, run: publicRun(run) });
 }
 

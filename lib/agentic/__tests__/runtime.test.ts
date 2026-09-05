@@ -122,7 +122,7 @@ describe("runtime — the first end-to-end milestone (plan §7)", () => {
     expect(r.status).toBe("waiting_for_review");
     expect(r.state.pendingCard!.id).not.toBe(card.id);
     expect(r.state.pendingCard!.boundTo.revision).toBe(2);
-    expect((await events(d, sunita, r)).some((e) => e.type === "message" && /changed since/.test(e.text))).toBe(true);
+    expect((await events(d, sunita, r)).some((e) => e.type === "message" && /changed while I was preparing/.test(e.text))).toBe(true);
   });
 
   it("declining leaves the return untouched and completes the run", async () => {

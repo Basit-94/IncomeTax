@@ -63,7 +63,7 @@ Env (see `.env.example`): `NEXT_PUBLIC_BACKEND_URL` (default `http://localhost:8
 | `/api/session`, `/api/session/demo`, `/api/session/bridge` | `app/api/session/…` | HttpOnly `wapsi_sid` cookie sessions: read / revoke; issue a demo session for one of the three synthetic PANs; bridge a Java backend token via `GET /api/v1/auth/session`. |
 | `/api/vault`, `/api/vault/documents[/:id[/bytes|/extract]]` | `app/api/vault/…` | Owner-scoped vault: user record GET/POST; upload (5 MB, MIME-sniffed, sha256-deduped, AES-256-GCM), list, metadata, original bytes, re-extract. |
 | `/api/return`, `/api/return/command` | `app/api/return/…` | The shared return snapshot: GET / PUT (`expectedRevision`, 409 on conflict) and the single command endpoint (zod-validated `ReturnCommand`). |
-| `/api/runs`, `/api/runs/:id[/events|/cancel|/outputs/:outputId]` | `app/api/runs/…` | Agent runs: create/list, replay + input (message / answer / confirm) + delete, SSE event stream with cursor, cancel, output download. |
+| `/api/runs`, `/api/runs/:id[/events|/cancel|/outputs/:outputId]` | `app/api/runs/…` | Agent runs: create/list, replay + input (message / answer / confirm) + delete, SSE event stream with cursor, cancel, output download. **Response-first (2026-09-06):** POST create / POST input record the run or input and answer in ~0.3 s; the agent's steps run in `after()` from `next/server` while the client streams `/events` (`advance(..., "input_only" | "steps_only")`). `PostgresRunStore.appendEvent` is one statement (owner check + next seq + insert, PK retry) — previously a six-trip transaction that made every turn 6–10 s against Supabase. |
 | `/api/memory` | `app/api/memory/route.ts` | Owner-scoped memory entries (list / forget). |
 
 ## 4. The two state models, and the bridge between them (the most important thing to understand)
@@ -165,7 +165,12 @@ card but not the summary" (log 2026-09-02 and 2026-09-03 00:50).
   with a description and an inline upload (`Question.expects: "file"`, answered with the vault
   document id, or `"none"`), then PF / health insurance, each followed by a proof upload before the
   deduction is staged (`evidenceAttached: true`); unproven amounts are left out and said so. Business
-  situations are told plainly what the release will not do. `PostgresRunStore.saveRun` now persists
+  situations are told plainly what the release will not do. **Voice** (`lib/agentic/voice.ts`, `docs/VOICE.md`):
+  small talk (hi/thanks/who/help/how are you/bye) gets a deterministic friendly reply with the first name and no
+  return read; questions carry rotating lead-ins (`Question.lead`); the recommendation ends with a human outcome
+  sentence that repeats the figure; a review intro precedes every card; the model may add ONE warm figure-free
+  sentence (`warmLine`, validated: no digit in any script, no ₹/%, no section, no filed/paid claim) else a
+  deterministic lead. `PostgresRunStore.saveRun` now persists
   `task` and `knowledge_release` (it previously wrote only status/state/title, so a DB-backed run
   re-read as `explain` after classification).
   The guard is enforced in `lib/agentic/runtime.ts` (explain → public QA; recommendations abstain with
@@ -272,7 +277,7 @@ procedure or regime comparison.
 
 `docs/PROTOTYPE.md` (stack narrative), `docs/PLAN.md` + `plan.md` (milestones, resume protocol),
 `docs/DESIGN.md` (Direction 13 design language), `docs/MODES.md` (Simple/Full and Manual/Agentic),
-`docs/TAX-RAG.md` (knowledge release, retrieval, guard), `docs/knowledge-tax-review-2026-09-05.md`
+`docs/TAX-RAG.md` (knowledge release, retrieval, guard), `docs/VOICE.md` (the agent's voice: small talk, lead-ins, validated model warmth), `docs/knowledge-tax-review-2026-09-05.md`
 (tax-knowledge findings), `docs/TAX-RAG-AGENT-HANDOFF-2026-09-05.md` (completed handoff), `docs/ISSUES.md` (backend/UX audit
 2026-08-25), `docs/scale/*` (capacity, load, rule-source audit), `fixtures/golden/README.md`,
 `backend/README.md`, `critics/*` (round-by-round critiques), `log.md` (the full history).

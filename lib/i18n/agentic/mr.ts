@@ -6,7 +6,7 @@
  */
 import type { AgenticStrings } from "../agenticStrings";
 
-export const mr: AgenticStrings = {
+export const mr: Partial<AgenticStrings> = {
   newChat: "नवीन चॅट",
   searchChats: "चॅट शोधा",
   taxVault: "कर व्हॉल्ट",

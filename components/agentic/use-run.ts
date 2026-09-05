@@ -89,42 +89,51 @@ export function useRun(runId: string | null) {
     return body.run;
   }, []);
 
-  /** Follow the run while it is running: SSE first, polling if the stream is unavailable. */
+  /**
+   * Follow the run while it is running: SSE first, a reconciling load after each stream.
+   * The server closes a stream after a bounded window, so this loops until the run stops
+   * running or a newer follow/unmount aborts it.
+   */
   const follow = useCallback(
     async (id: string) => {
       streaming.current?.abort();
       const ac = new AbortController();
       streaming.current = ac;
-      try {
-        const res = await fetch(`/api/runs/${id}/events?after=${cursor.current}`, { credentials: "same-origin", signal: ac.signal });
-        if (!res.ok || !res.body) throw new Error("no stream");
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          let idx;
-          while ((idx = buffer.indexOf("\n\n")) >= 0) {
-            const frame = buffer.slice(0, idx);
-            buffer = buffer.slice(idx + 2);
-            const ev = /^event: (\w+)/m.exec(frame)?.[1];
-            const data = /^data: (.*)$/m.exec(frame)?.[1];
-            if (!ev || !data) continue;
-            if (ev === "run_event") {
-              const e = JSON.parse(data) as RunEvent;
-              if (e.seq > cursor.current) {
-                cursor.current = e.seq;
-                setView((v) => ({ ...v, events: [...v.events, e] }));
+      while (!ac.signal.aborted) {
+        try {
+          const res = await fetch(`/api/runs/${id}/events?after=${cursor.current}`, { credentials: "same-origin", signal: ac.signal });
+          if (!res.ok || !res.body) throw new Error("no stream");
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            let idx;
+            while ((idx = buffer.indexOf("\n\n")) >= 0) {
+              const frame = buffer.slice(0, idx);
+              buffer = buffer.slice(idx + 2);
+              const ev = /^event: (\w+)/m.exec(frame)?.[1];
+              const data = /^data: (.*)$/m.exec(frame)?.[1];
+              if (!ev || !data) continue;
+              if (ev === "run_event") {
+                const e = JSON.parse(data) as RunEvent;
+                if (e.seq > cursor.current) {
+                  cursor.current = e.seq;
+                  setView((v) => ({ ...v, events: [...v.events, e] }));
+                }
               }
             }
           }
+        } catch {
+          // stream unavailable or aborted — the load below still converges; a hard failure waits a beat
+          if (!ac.signal.aborted) await new Promise((r) => setTimeout(r, 1000));
         }
-      } catch {
-        // stream unavailable or aborted — the poll below still converges
+        if (ac.signal.aborted) return;
+        const run = await load(id, cursor.current);
+        if (run.status !== "running" || streaming.current !== ac) return;
       }
-      if (!ac.signal.aborted) await load(id, cursor.current);
     },
     [load],
   );

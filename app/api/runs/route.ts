@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 import { z } from "zod";
 import { agenticEnabled } from "@/lib/agentic/flags";
 import { advance, createRun, publicRun } from "@/lib/agentic/runtime";
@@ -42,6 +42,9 @@ export async function POST(req: NextRequest) {
   }
   const lang = parsed.data.lang && isLang(parsed.data.lang) ? parsed.data.lang : "en";
   const run = await createRun(deps, guard.session.owner, { message: parsed.data.message, task: parsed.data.task, lang });
-  const advanced = await advance(deps, guard.session.owner, run.id);
-  return NextResponse.json({ ok: true, run: publicRun(advanced ?? run), durable: guard.services.dbConfigured }, { status: 201 });
+  // Answer at once with the created run; the steps execute after the response is sent, while the
+  // client streams events (plan.md §5.4). The run lives in the store, so nothing depends on this request.
+  const owner = guard.session.owner;
+  after(() => advance(deps, owner, run.id, {}, "steps_only").catch(() => undefined));
+  return NextResponse.json({ ok: true, run: publicRun(run), durable: guard.services.dbConfigured }, { status: 201 });
 }

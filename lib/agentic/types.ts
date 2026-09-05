@@ -67,6 +67,8 @@ export interface Question {
   docType?: string;
   /** For `file` questions: the label of the "I don't have it / skip" choice. */
   skipLabel?: string;
+  /** A short human lead-in shown above the question ("Quick one to start:"), from the voice layer. */
+  lead?: string;
 }
 
 export interface ReviewCard {
@@ -148,6 +150,8 @@ export interface RunWorkingState {
   situation?: import("./intake").Situation;
   /** Document types the vault already holds for the year, so the intake never asks for what it has. */
   documentTypes?: string[];
+  /** Set when the opening message was small talk (hello, thanks…); answered warmly, no return work. */
+  smallTalk?: import("./voice").SmallTalk;
   /** Applicability results computed for this run. */
   applicability?: ApplicabilityResult[];
   /** Exact retrieved evidence and guarded decision persisted for audit/replay. */

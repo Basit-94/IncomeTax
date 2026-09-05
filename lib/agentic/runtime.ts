@@ -36,6 +36,7 @@ import type { VaultService } from "../vault/service";
 import { KNOWLEDGE_RELEASE } from "./flags";
 import { hasIntakeSignal, intakeAcknowledgement, isDocumentAnswer, nextIntakeQuestion, parseSituation } from "./intake";
 import type { ModelAdapter } from "./model";
+import { detectSmallTalk, firstName, questionLead, smallTalkReply, warmLine } from "./voice";
 import { buildPlan, classifyByRules, isTaxInformationQuestion, nextStep, setStep, taskTitle, type PlanningFacts } from "./planner";
 import { redactText, stripInjection } from "./redact";
 import { recommendationText, regimeName, strings } from "./response";
@@ -110,7 +111,15 @@ function planningFacts(task: RunTask, snapshot: VersionedReturn | null, document
 
 /* ---------------------------------------------------------------- advance -- */
 
-export async function advance(deps: RuntimeDeps, owner: Owner, runId: string, input: RunInput = {}): Promise<Run | null> {
+/**
+ * `mode` lets a route answer the browser quickly: "input_only" records the
+ * message / answer / confirmation and returns (a few queries), and the route
+ * then runs "steps_only" after the response has been sent, while the client
+ * streams events. "full" (tests, in-process callers) does both in one call.
+ */
+export type AdvanceMode = "full" | "input_only" | "steps_only";
+
+export async function advance(deps: RuntimeDeps, owner: Owner, runId: string, input: RunInput = {}, mode: AdvanceMode = "full"): Promise<Run | null> {
   const run = await deps.store.getRun(owner, runId);
   if (!run) return null;
   if (run.status === "cancelled" || run.status === "failed" || (run.status === "completed" && !input.message)) return run;
@@ -155,12 +164,14 @@ export async function advance(deps: RuntimeDeps, owner: Owner, runId: string, in
       // handleConfirmation mutates run.status; TS keeps the pre-call narrowing.
       if ((run.status as RunStatus) !== "running") return run;
     }
-    if (run.status !== "running") {
+    if (run.status !== "running" || mode === "input_only") {
       await persist();
       return run;
     }
 
     // --- the bounded step loop ---------------------------------------------
+    // The plan is re-emitted only when a step actually changed it; an unchanged plan is noise and a round-trip.
+    let lastPlan = JSON.stringify(run.state.steps);
     for (let i = 0; i < MAX_STEPS_PER_CALL && run.status === "running"; i += 1) {
       if (run.state.usage.toolCalls >= deps.budget.maxToolCallsPerRun || run.state.usage.modelCalls >= deps.budget.maxModelCallsPerRun) {
         await emit({ type: "message", role: "assistant", text: s.budgetExhausted });
@@ -172,8 +183,8 @@ export async function advance(deps: RuntimeDeps, owner: Owner, runId: string, in
         await setStatus("completed");
         break;
       }
+      // "active" is state, not history: the checkpoint carries it; only completed transitions are written as events.
       run.state.steps = setStep(run.state.steps, step.id, "active");
-      await emit({ type: "step_changed", step: step.id, state: "active" });
       run.state.usage.toolCalls += 1;
 
       switch (step.id) {
@@ -210,7 +221,11 @@ export async function advance(deps: RuntimeDeps, owner: Owner, runId: string, in
         run.state.steps = setStep(run.state.steps, step.id, "done");
         await emit({ type: "step_changed", step: step.id, state: "done" });
       }
-      await emit({ type: "plan_updated", steps: run.state.steps });
+      const plan = JSON.stringify(run.state.steps);
+      if (plan !== lastPlan) {
+        lastPlan = plan;
+        await emit({ type: "plan_updated", steps: run.state.steps });
+      }
       await persist();
     }
     await persist();
@@ -240,6 +255,18 @@ export async function cancelRun(deps: RuntimeDeps, owner: Owner, runId: string):
 
 async function stepClassify(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>) {
   const text = run.state.lastUserMessage ?? "";
+  // Small talk is answered like a friend would, without touching the return or calling the model (docs/VOICE.md).
+  const talk = text ? detectSmallTalk(text) : null;
+  if (talk) {
+    // Reply now and finish: no plan walk, no return read — a greeting should cost one round-trip, not twenty.
+    run.state.smallTalk = talk;
+    run.task = "explain";
+    run.state.steps = buildPlan(planningFacts("explain", null, null), s, run.state.steps).map((p) => ({ ...p, state: "done" as const }));
+    await emit({ type: "message", role: "assistant", text: smallTalkReply(talk, s, firstName(owner.displayName)) });
+    run.status = "completed";
+    await emit({ type: "status", status: "completed" });
+    return;
+  }
   let task = classifyByRules(text);
   // Plain-English intake: what the sentence says about the situation, parsed deterministically.
   if (text) {
@@ -441,6 +468,7 @@ async function stepResolve(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
   }
   const q = nextQuestion(run, snapshot, s, !!deps.vault);
   if (q) {
+    q.lead = questionLead(Object.keys(a).length, s, q.expects === "file" ? "file" : "question");
     run.state.pendingQuestion = q;
     await emit({ type: "question", question: q });
     run.status = "waiting_for_input";
@@ -486,6 +514,10 @@ function projected(snapshot: VersionedReturn, cmds: ReturnCommand[] | undefined)
 
 async function stepCompute(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>) {
   if (run.task === "explain") {
+    if (run.state.smallTalk) {
+      await emit({ type: "message", role: "assistant", text: smallTalkReply(run.state.smallTalk, s, firstName(owner.displayName)) });
+      return;
+    }
     if (run.state.situation?.business) await emit({ type: "message", role: "assistant", text: s.intakeBusinessUnsupported });
     const answer = answerTaxQuestion(run.state.lastUserMessage ?? "", deps.today());
     run.state.taxAnswer = answer;
@@ -549,8 +581,19 @@ async function stepCompute(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
   await emit({ type: "source_lookup", sources: run.state.sources });
 
   const brief = recommendationText({ cheaper, saving: Math.abs(both.new.totalTax - both.old.totalTax), taxableIncome: b.taxableIncome, totalTax: b.totalTax, refundOrDue: b.refundOrDue }, run.lang);
-  // Financial conclusions and their caveats stay deterministic: no model rephrases them.
-  await emit({ type: "message", role: "assistant", text: `${s.simulatedBadge}\n${brief}` });
+  // Financial conclusions and their caveats stay deterministic: no model rephrases them. The model may
+  // add ONE warm, figure-free sentence in front (docs/VOICE.md); otherwise a deterministic lead is used.
+  let lead = s.leadRecommendation;
+  if (deps.model.name !== "none" && run.state.usage.modelCalls < deps.budget.maxModelCallsPerRun) {
+    run.state.usage.modelCalls += 1;
+    const warm = await warmLine(deps.model, { lang: run.lang, name: firstName(owner.displayName), moment: b.refundOrDue > 0 ? "recommendation_refund" : b.refundOrDue < 0 ? "recommendation_due" : "recommendation_nil" });
+    if (warm) {
+      run.state.usage.tokens += warm.tokens;
+      if (warm.tokens) await deps.store.addDailyUsage(owner, deps.today(), warm.tokens, 1);
+      if (warm.text) lead = warm.text;
+    }
+  }
+  await emit({ type: "message", role: "assistant", text: `${lead}\n${brief}\n\n${s.simulatedBadge}` });
   if (run.task === "load_demo") {
     // Nothing to confirm; outputs (if any) follow.
     run.state.steps = setStep(setStep(run.state.steps, "review", "skipped", s.noteNoAction), "confirm", "skipped", s.noteNoAction);
@@ -605,6 +648,7 @@ async function stepReview(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnTy
     basis: { applicability: run.state.applicability ?? [], provisions: [...new Set((run.state.applicability ?? []).flatMap((r) => r.provisions))] },
   };
   run.state.pendingCard = card;
+  await emit({ type: "message", role: "assistant", text: s.reviewIntro });
   await emit({ type: "review_card", card });
   run.status = "waiting_for_review";
   await emit({ type: "status", status: "waiting_for_review" });

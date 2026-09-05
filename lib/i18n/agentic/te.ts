@@ -6,7 +6,7 @@
  */
 import type { AgenticStrings } from "../agenticStrings";
 
-export const te: AgenticStrings = {
+export const te: Partial<AgenticStrings> = {
   newChat: "కొత్త చాట్",
   searchChats: "చాట్‌లు వెతకండి",
   taxVault: "పన్ను వాల్ట్",

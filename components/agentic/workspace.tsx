@@ -235,6 +235,7 @@ function QuestionCard({ q, s, disabled, onAnswer }: { q: Question; s: AgenticStr
     <div className="flex items-start gap-3">
       <Avatar />
       <div className="w-full max-w-[85%] rounded-2xl rounded-tl-md border border-amber-500/40 bg-paper-2 px-4 py-3 space-y-3">
+        {q.lead && <p className="text-sm text-ink-2 leading-relaxed">{q.lead}</p>}
         <p className="text-[15px] text-ink leading-relaxed">{q.text}</p>
         {q.docHint && <p className="text-sm text-ink-2 leading-relaxed">{q.docHint}</p>}
         <p className="text-xs text-ink-3">{q.why}</p>

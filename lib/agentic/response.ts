@@ -42,7 +42,9 @@ export function recommendationText(f: RecommendationFacts, lang: Lang): string {
     `${s.rowTotalTax}: ${formatMoney(f.totalTax, lang)}`,
     f.refundOrDue >= 0 ? `${s.rowRefund}: ${formatMoney(f.refundOrDue, lang)}` : `${s.rowDue}: ${formatMoney(-f.refundOrDue, lang)}`,
   ];
-  return `${head}\n${rows.join("\n")}`;
+  // The human sentence about the outcome (docs/VOICE.md) repeats the same figure the rows carry — nothing new.
+  const cheer = f.refundOrDue > 0 ? fill(s.cheerRefund, { amount: formatMoney(f.refundOrDue, lang) }) : f.refundOrDue < 0 ? fill(s.cheerDue, { amount: formatMoney(-f.refundOrDue, lang) }) : s.cheerNil;
+  return `${head}\n${rows.join("\n")}\n${cheer}`;
 }
 
 const FORBIDDEN_CLAIMS = /\b(has been filed|was filed|successfully filed|payment (was|has been) made|paid to the department|submitted to the (department|government))\b/i;
