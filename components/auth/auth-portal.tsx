@@ -73,6 +73,7 @@ export default function AuthPortal({
   const [docStatusMsg, setDocStatusMsg] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const dragCounter = useRef(0);
 
   // Indian PAN format regex: 5 uppercase letters, 4 digits, 1 uppercase letter
   const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
@@ -588,40 +589,64 @@ export default function AuthPortal({
                 />
 
                 <div
-                  onDragOver={(e) => {
+                  onDragEnter={(e) => {
                     e.preventDefault();
+                    e.stopPropagation();
+                    dragCounter.current += 1;
                     setIsDragging(true);
                   }}
-                  onDragLeave={() => setIsDragging(false)}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.dataTransfer.dropEffect = "copy";
+                    setIsDragging(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dragCounter.current -= 1;
+                    if (dragCounter.current <= 0) {
+                      dragCounter.current = 0;
+                      setIsDragging(false);
+                    }
+                  }}
                   onDrop={(e) => {
                     e.preventDefault();
+                    e.stopPropagation();
+                    dragCounter.current = 0;
                     setIsDragging(false);
                     const file = e.dataTransfer.files?.[0];
                     if (file) void processDocument(file);
                   }}
                   onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-2xl p-6 text-center transition cursor-pointer flex flex-col items-center justify-center gap-3 ${
+                  className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-3 ${
                     isDragging
-                      ? "border-navy bg-navy/5"
+                      ? "border-indigo-500 bg-indigo-500/10 ring-4 ring-indigo-500/20 scale-[1.01]"
                       : "border-line hover:border-money hover:bg-paper-2 bg-paper-3"
                   }`}
                 >
-                  <div className="size-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-xs">
-                    {docPhase === "reading" ? <Loader2 size={24} className="animate-spin" /> : <FileUp size={24} />}
-                  </div>
+                  <div className="pointer-events-none flex flex-col items-center gap-3">
+                    <div className={`size-12 rounded-2xl flex items-center justify-center shadow-xs transition-transform ${
+                      isDragging
+                        ? "bg-indigo-600 text-white scale-110"
+                        : "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400"
+                    }`}>
+                      {docPhase === "reading" ? <Loader2 size={24} className="animate-spin" /> : <FileUp size={24} />}
+                    </div>
 
-                  <div className="space-y-1">
-                    <p className="font-sans font-bold text-sm text-ink">
-                      {ps.dropzoneTitle}
-                    </p>
-                    <p className="font-mono text-xs text-ink-3">
-                      Form 16 Part A/B · AIS / TIS · Form 26AS · PAN scan (.pdf, .png, .jpg, .txt)
-                    </p>
-                  </div>
+                    <div className="space-y-1">
+                      <p className="font-sans font-bold text-sm text-ink">
+                        {isDragging ? "Drop your file here now" : ps.dropzoneTitle}
+                      </p>
+                      <p className="font-mono text-xs text-ink-3">
+                        Form 16 Part A/B · AIS / TIS · Form 26AS · PAN scan (.pdf, .png, .jpg, .txt)
+                      </p>
+                    </div>
 
-                  <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2.5 py-1 rounded-full border border-emerald-300 dark:border-emerald-800">
-                    {ps.clientSideOnly}
-                  </span>
+                    <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2.5 py-1 rounded-full border border-emerald-300 dark:border-emerald-800">
+                      {ps.clientSideOnly}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Status Messages */}

@@ -54,12 +54,12 @@ export function detectDocumentKind(
 const RUPEE_SIGN = "(?:₹|\\u00e2\\u0082\\u00b9|Rs\\.?)?";
 
 export const GROSS_SALARY_RE = new RegExp(
-  `(?:Gross Salary|Salary u/s 17\\(1\\))[\\s:]+${RUPEE_SIGN}\\s*([0-9,]+)`,
+  `(?:Gross Total Income|Total Gross Salary|Gross Salary|Salary u/s 17\\(1\\)|Taxable Salary|Income from Salary|Gross Amount)[\\s:]+${RUPEE_SIGN}\\s*([0-9,]+)`,
   "i",
 );
 
 export const TDS_RE = new RegExp(
-  `(?:Total Tax Deducted|TDS)[\\s:]+${RUPEE_SIGN}\\s*([0-9,]+)`,
+  `(?:Total Tax Deducted|Tax Deducted at Source|Total Tax Deposited|Total TDS|TDS Deducted|TDS)[\\s:]+${RUPEE_SIGN}\\s*([0-9,]+)`,
   "i",
 );
 

@@ -30,3 +30,9 @@ data/
 
 # Playwright MCP temp artifacts
 .playwright-mcp/
+
+# Local screenshot review artifacts
+/*.png
+!/prefills.png
+!/prefills2.png
+!/viewport.png

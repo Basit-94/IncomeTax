@@ -47,11 +47,23 @@ export function PdfIngestionDropzone({ onIngested }: PdfIngestionDropzoneProps =
   const inputRef = useRef<HTMLInputElement>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [dragging, setDragging] = useState(false);
+  const dragCounter = useRef(0);
   const [result, setResult] = useState<IngestedDocument | null>(null);
   const [errorText, setErrorText] = useState<string>("");
 
   const handleFile = useCallback(
     async (file: File) => {
+      const isPdf =
+        file.name.toLowerCase().endsWith(".pdf") ||
+        file.type === "application/pdf" ||
+        file.type === "application/x-pdf";
+
+      if (!isPdf) {
+        setErrorText("Please provide a valid PDF document (Form 16 or AIS).");
+        setPhase("error");
+        return;
+      }
+
       setPhase("reading");
       setResult(null);
       setErrorText("");
@@ -63,7 +75,7 @@ export function PdfIngestionDropzone({ onIngested }: PdfIngestionDropzoneProps =
 
         // A visible parse beat. Instant completion on a document upload reads as
         // "nothing happened" and people re-drop the same file.
-        await new Promise((resolve) => setTimeout(resolve, 1200));
+        await new Promise((resolve) => setTimeout(resolve, 800));
 
         const found = !isEmptyExtraction(extracted);
 
@@ -95,13 +107,31 @@ export function PdfIngestionDropzone({ onIngested }: PdfIngestionDropzoneProps =
       <m.div
         layout
         transition={spring}
-        onDragOver={(e: React.DragEvent) => {
+        onDragEnter={(e: React.DragEvent) => {
           e.preventDefault();
+          e.stopPropagation();
+          dragCounter.current += 1;
           setDragging(true);
         }}
-        onDragLeave={() => setDragging(false)}
+        onDragOver={(e: React.DragEvent) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.dataTransfer.dropEffect = "copy";
+          setDragging(true);
+        }}
+        onDragLeave={(e: React.DragEvent) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dragCounter.current -= 1;
+          if (dragCounter.current <= 0) {
+            dragCounter.current = 0;
+            setDragging(false);
+          }
+        }}
         onDrop={(e: React.DragEvent) => {
           e.preventDefault();
+          e.stopPropagation();
+          dragCounter.current = 0;
           setDragging(false);
           const file = e.dataTransfer.files?.[0];
           if (file) void handleFile(file);
@@ -112,9 +142,9 @@ export function PdfIngestionDropzone({ onIngested }: PdfIngestionDropzoneProps =
         onKeyDown={(e: React.KeyboardEvent) => {
           if (e.key === "Enter" || e.key === " ") inputRef.current?.click();
         }}
-        className={`cursor-pointer rounded-2xl border-2 border-dashed p-6 text-center transition-colors ${
+        className={`cursor-pointer rounded-2xl border-2 border-dashed p-6 text-center transition-all ${
           dragging
-            ? "border-teal-600 bg-teal-50"
+            ? "border-teal-600 bg-teal-50 ring-4 ring-teal-500/20 scale-[1.01]"
             : "border-slate-300 bg-white hover:border-slate-400"
         }`}
       >
@@ -133,31 +163,31 @@ export function PdfIngestionDropzone({ onIngested }: PdfIngestionDropzoneProps =
         {/* A plain conditional, like the rest of the surface: the caption must
             never wait on an exit animation to finish. */}
         {phase === "reading" ? (
-            <div
-              key="reading"
-              className="flex flex-col items-center gap-2 py-2"
-              role="status"
-            >
-              <Loader2 size={24} className="animate-spin text-teal-700" />
-              <p className="text-sm font-semibold text-slate-700">Reading your document…</p>
-            </div>
-          ) : (
-            <div
-              key="idle"
-              className="flex flex-col items-center gap-2 py-2"
-            >
-              <FileUp size={24} className="text-slate-400" />
-              <p className="text-sm font-bold text-slate-800">
-                Drop your Form 16 or AIS PDF here
-              </p>
-              <p className="text-xs text-slate-500">
-                or click to choose a file — PAN, gross salary and TDS are read out of it
-              </p>
-              <p className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
-                <Lock size={11} /> Read in your browser. The file is never uploaded.
-              </p>
-            </div>
-          )}
+          <div
+            key="reading"
+            className="pointer-events-none flex flex-col items-center gap-2 py-2"
+            role="status"
+          >
+            <Loader2 size={24} className="animate-spin text-teal-700" />
+            <p className="text-sm font-semibold text-slate-700">Reading your document…</p>
+          </div>
+        ) : (
+          <div
+            key="idle"
+            className="pointer-events-none flex flex-col items-center gap-2 py-2"
+          >
+            <FileUp size={24} className={dragging ? "text-teal-600 scale-110" : "text-slate-400"} />
+            <p className="text-sm font-bold text-slate-800">
+              {dragging ? "Drop your Form 16 or AIS PDF now" : "Drop your Form 16 or AIS PDF here"}
+            </p>
+            <p className="text-xs text-slate-500">
+              or click to choose a file — PAN, gross salary and TDS are read out of it
+            </p>
+            <p className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
+              <Lock size={11} /> Read in your browser. The file is never uploaded.
+            </p>
+          </div>
+        )}
       </m.div>
 
       <AnimatePresence>

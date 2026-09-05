@@ -11,6 +11,8 @@ import LandingActionGrid from "./landing-action-grid";
 import type { LandingActionCard } from "@/lib/landingCards";
 import type { CitizenVaultUser } from "@/lib/vault/vault-store";
 import { getPortalStrings } from "@/lib/i18n/portalTranslations";
+import ScrolltideMarquee from "./ui/scrolltide-marquee";
+import Card3D from "./ui/card-3d";
 
 import type { IngestedDocument, SelfAssessmentPayment } from "@/context/TaxReturnContext";
 import type { ReconcileRow } from "./modals/MatchRecordsModal";
@@ -165,16 +167,33 @@ export default function Landing({
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 py-4 lg:py-6">
-      {/* D13 cover: the headline sits directly on the graph paper, no card box. */}
-      <header className="space-y-3 text-start">
-        <span className="stamp-chip -rotate-[1.5deg]">{t.landing.badge}</span>
-        <h1 className="font-sans text-4xl font-bold leading-[1.06] tracking-tight text-ink sm:text-5xl lg:text-[50px]">
+      {/* Scrolltide-inspired Continuous 3D Ticker Streamer */}
+      <div className="-mx-4 sm:-mx-6 lg:-mx-12 -mt-4 mb-4 rounded-xl overflow-hidden shadow-sm">
+        <ScrolltideMarquee />
+      </div>
+
+      {/* Atmospheric 3D Hero Header with Ambient Depth */}
+      <header className="relative space-y-3.5 text-start pt-1">
+        {/* Ambient tide glow backdrop */}
+        <div className="pointer-events-none absolute -top-8 -left-8 size-72 rounded-full bg-cyan-500/10 dark:bg-cyan-500/20 blur-3xl -z-10" />
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-950/20 dark:bg-cyan-950/40 px-3.5 py-1 text-[11px] font-mono uppercase tracking-wider text-cyan-700 dark:text-cyan-300 backdrop-blur shadow-sm">
+            <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+            <span>{t.landing.badge}</span>
+          </div>
+          <span className="font-mono text-[11px] text-ink-3">
+            · {t.shell.taxYear}
+          </span>
+        </div>
+
+        <h1 className="font-sans text-4xl font-extrabold leading-[1.05] tracking-tight text-ink dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-white dark:via-cyan-100 dark:to-cyan-400 sm:text-5xl lg:text-[50px]">
           {t.landing.brandTitle}
         </h1>
-        <h2 className="max-w-[34ch] font-sans text-xl font-bold leading-tight tracking-tight text-ink sm:text-2xl">
+        <h2 className="max-w-[34ch] font-sans text-xl font-bold leading-tight tracking-tight text-ink/90 sm:text-2xl">
           {t.landing.question}
         </h2>
-        <p className="thread max-w-[58ch]">{t.landing.subtext}</p>
+        <p className="thread max-w-[60ch] leading-relaxed text-ink-2 dark:text-slate-400">{t.landing.subtext}</p>
       </header>
 
       {onboardingProfile && personalization && (
@@ -203,8 +222,7 @@ export default function Landing({
       )}
 
       {/* ========================================================================= */}
-      {/* RETURNING CITIZEN WITH ACTIVE DRAFT vs GUEST PROMPT                       */}
-      {/* (First-time citizens enter directly via Card 01 without banner clutter)   */}
+      {/* RETURNING CITIZEN WITH ACTIVE DRAFT vs GUEST PROMPT (3D ELEVATION)        */}
       {/* ========================================================================= */}
       {(() => {
         const hasActiveDraft = Boolean(
@@ -219,7 +237,12 @@ export default function Landing({
 
         if (hasActiveDraft && activeCitizen) {
           return (
-            <div className="surface-panel rounded-2xl border-2 border-emerald-500/40 bg-gradient-to-br from-emerald-50/80 via-paper to-teal-50/40 dark:from-emerald-950/30 dark:via-paper-2 dark:to-teal-950/20 p-5 sm:p-6 text-start shadow-md animate-in fade-in duration-200">
+            <Card3D
+              as="div"
+              glowColor="rgba(16, 185, 129, 0.35)"
+              depth={20}
+              className="rounded-2xl border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-50/90 via-paper to-teal-50/50 dark:from-[#091f16] dark:via-[#0c1424] dark:to-[#081820] p-5 sm:p-6 text-start shadow-xl backdrop-blur-xl animate-in fade-in duration-200"
+            >
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
@@ -244,7 +267,7 @@ export default function Landing({
                     <button
                       type="button"
                       onClick={onResumeReturn}
-                      className="flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-xl bg-navy px-5 py-2.5 text-xs font-bold text-white shadow-md transition hover:opacity-90 cursor-pointer"
+                      className="flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-full bg-emerald-600 hover:bg-emerald-500 px-6 py-3 text-xs font-bold text-white shadow-[0_0_20px_rgba(16,185,129,0.35)] transition-all hover:scale-[1.02] cursor-pointer"
                     >
                       <span>{ps.continueFiling}</span>
                       <ChevronRight size={15} />
@@ -252,14 +275,18 @@ export default function Landing({
                   )}
                 </div>
               </div>
-            </div>
+            </Card3D>
           );
         }
 
         if (!activeCitizen && onNavigateToAuth) {
           return (
-            /* Unauthenticated Guest Banner linking to Dedicated Sign In / Sign Up Page */
-            <div className="surface-panel rounded-2xl border border-line bg-paper-2 p-5 sm:p-6 text-start shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <Card3D
+              as="div"
+              glowColor="rgba(56, 189, 248, 0.25)"
+              depth={20}
+              className="rounded-2xl border border-white/15 dark:border-white/10 bg-paper-2 dark:bg-[#0c1424]/90 p-5 sm:p-6 text-start shadow-xl backdrop-blur-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+            >
               <div className="space-y-1">
                 <span className="stamp-chip -rotate-[1deg] text-[10px]">{t.shell.taxYear} · {ps.taxVault}</span>
                 <h3 className="font-sans text-lg sm:text-xl font-bold text-ink">
@@ -272,12 +299,12 @@ export default function Landing({
               <button
                 type="button"
                 onClick={onNavigateToAuth}
-                className="shrink-0 flex items-center gap-2 rounded-xl bg-navy px-5 py-3 text-xs font-bold text-white shadow-md hover:opacity-90 transition cursor-pointer"
+                className="shrink-0 flex items-center gap-2 rounded-full bg-cyan-600 hover:bg-cyan-500 px-6 py-3 text-xs font-bold text-white shadow-[0_0_25px_rgba(6,182,212,0.35)] transition-all hover:scale-[1.02] cursor-pointer"
               >
                 <span>{ps.signInOrRegister}</span>
                 <ChevronRight size={15} />
               </button>
-            </div>
+            </Card3D>
           );
         }
 
