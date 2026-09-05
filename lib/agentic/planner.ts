@@ -97,10 +97,14 @@ export function buildPlan(facts: PlanningFacts, s: AgenticStrings, previous: Pla
   });
 }
 
-/** The next step that can run: pending, with every dependency done or skipped. */
+/**
+ * The next step that can run: pending — or active, which is a step that
+ * suspended for the citizen (a question, a review) and resumes where it left
+ * off — with every dependency done or skipped.
+ */
 export function nextStep(steps: PlanStep[]): PlanStep | null {
   const done = new Set(steps.filter((p) => p.state === "done" || p.state === "skipped").map((p) => p.id));
-  return steps.find((p) => p.state === "pending" && p.dependsOn.every((d) => done.has(d))) ?? null;
+  return steps.find((p) => (p.state === "pending" || p.state === "active") && p.dependsOn.every((d) => done.has(d))) ?? null;
 }
 
 export function setStep(steps: PlanStep[], id: StepId, state: StepState, note?: string): PlanStep[] {

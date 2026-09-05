@@ -419,6 +419,8 @@ async function stepCompute(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
   const cheaper: "new" | "old" = both.new.totalTax <= both.old.totalTax ? "new" : "old";
   const chosen = run.task === "compare_regimes" ? cheaper : (state.regime ?? "new");
   const b = computeForPersona(state.persona, chosen);
+  // Residency is not a fact the return carries; the demo personas are residents and the
+  // assumption is recorded as a source so the Sources panel shows it as unverified.
   const facts: TaxpayerFacts = {
     period: PERIOD_FY_2025_26,
     category: "individual",
@@ -430,12 +432,15 @@ async function stepCompute(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
     regime: chosen,
     claims: state.persona.claims.map((c) => ({ section: c.section, amount: c.amount, evidence: c.evidenceAttached })),
     ltcg112A: state.persona.facts.filter((f) => f.kind === "capital_gains" && f.capitalGains?.holding === "long" && f.capitalGains.assetClass === "equity_stt").reduce((x, f) => x + f.amount, 0),
+    specialRateIncome: state.persona.facts.filter((f) => f.kind === "capital_gains").reduce((x, f) => x + f.amount, 0),
   };
   run.state.applicability = evaluateSalariedSlice(facts);
   const ruleIds = [...new Set(run.state.applicability.flatMap((r) => r.provisions))];
+  // Rules are cited as what they are: an engineering draft awaiting a qualified reviewer (plan §5.7).
   run.state.sources = dedupeSources([
     ...run.state.sources,
-    ...cite(ruleIds).map((c) => ({ kind: "rule" as const, id: c.id, label: `${c.section} — ${c.title}`, detail: c.locator, verified: true, url: c.url })),
+    { kind: "assumption", id: "assumption:resident", label: "Residential status: resident", detail: "Assumed for the demo personas; not read from the return.", verified: false },
+    ...cite(ruleIds).map((c) => ({ kind: "rule" as const, id: c.id, label: `${c.section} — ${c.title}`, detail: `${c.locator} · ${c.reviewer}`, verified: false, url: c.url })),
   ]);
   await emit({ type: "tool_outcome", tool: "compare_regimes", ok: true, summary: `new ${both.new.totalTax} · old ${both.old.totalTax}` });
   await emit({ type: "source_lookup", sources: run.state.sources });
@@ -476,6 +481,14 @@ async function stepReview(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnTy
   }
   const kind = run.task === "prepare_salaried_return" ? "filing" : run.task === "compare_regimes" ? "regime" : "corrections";
   if (kind === "regime" && regime !== (state.regime ?? "new")) {
+    // Choosing the old regime is an election with conditions (s.115BAC(6)); the applicability
+    // rule decides whether this system may execute it. Otherwise: comparison shown, switch not made.
+    const switchRule = run.state.applicability?.find((r) => r.rule === "regime_switch_115BAC");
+    if (regime === "old" && switchRule?.outcome !== "eligible") {
+      await emit({ type: "message", role: "assistant", text: s.noteRegimeNotExecuted });
+      run.state.steps = setStep(setStep(setStep(run.state.steps, "review", "done"), "confirm", "skipped", s.noteRegimeNotExecuted), "act", "skipped", s.noteNoAction);
+      return;
+    }
     run.state.pendingCommands = [...(run.state.pendingCommands ?? []), { type: "choose_regime", regime }];
   }
   const card: ReviewCard = {
@@ -503,7 +516,8 @@ async function handleConfirmation(deps: RuntimeDeps, owner: Owner, run: Run, con
     run.state.pendingCard = undefined;
     run.state.pendingCommands = undefined;
     await emit({ type: "message", role: "assistant", text: s.cancelledAction });
-    run.state.steps = setStep(setStep(run.state.steps, "confirm", "skipped"), "act", "skipped", s.noteNoAction);
+    // The review step suspended for this answer; it is now complete either way.
+    run.state.steps = setStep(setStep(setStep(run.state.steps, "review", "done"), "confirm", "skipped"), "act", "skipped", s.noteNoAction);
     run.status = "running";
     return;
   }
@@ -545,7 +559,7 @@ async function handleConfirmation(deps: RuntimeDeps, owner: Owner, run: Run, con
   run.state.actionTaken = { kind: card.kind === "filing" ? "filing" : "payment", id: card.kind === "filing" ? receipt : card.id, at: deps.clock() };
   const text = card.kind === "filing" ? s.filedSimulated.replace("{id}", receipt) : card.kind === "regime" ? s.regimeApplied.replace("{regime}", card.rows[0]?.value ?? "") : s.correctionsApplied;
   await emit({ type: "message", role: "assistant", text });
-  run.state.steps = setStep(setStep(run.state.steps, "confirm", "done"), "act", "done");
+  run.state.steps = setStep(setStep(setStep(run.state.steps, "review", "done"), "confirm", "done"), "act", "done");
   await emit({ type: "step_changed", step: "act", state: "done" });
   run.status = "running";
 }

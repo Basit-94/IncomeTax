@@ -36,6 +36,7 @@ export interface AgenticStrings {
   inspectorEmptyProgress: string;
   inspectorEmptyOutputs: string;
   inspectorEmptySources: string;
+  manualInspectorNote: string;
   sourcesDocuments: string;
   sourcesAnswers: string;
   sourcesRules: string;
@@ -75,6 +76,9 @@ export interface AgenticStrings {
   noteVaultUnavailable: string;
   noteNoAction: string;
   noteAlreadyFiled: string;
+  noteRegimeNotExecuted: string;
+  /** The landing's submit button ("Ask →"). */
+  ask: string;
   // Tasks
   taskPrepareReturn: string;
   taskCompareRegimes: string;
@@ -143,6 +147,7 @@ const en: AgenticStrings = {
   inspectorEmptyProgress: "No steps yet. Progress appears here once a task starts.",
   inspectorEmptyOutputs: "Nothing produced yet. Files appear here only after they are stored.",
   inspectorEmptySources: "Nothing used yet. The documents, answers and rules this chat relies on will be listed here.",
+  manualInspectorNote: "Progress, outputs and sources belong to an Agentic chat. Switch to Agentic to see them for the current chat.",
   sourcesDocuments: "Your documents",
   sourcesAnswers: "Information you provided",
   sourcesRules: "Tax rules",
@@ -180,6 +185,8 @@ const en: AgenticStrings = {
   noteVaultUnavailable: "The document store could not be reached; only the return itself was read.",
   noteNoAction: "No action to carry out for this task.",
   noteAlreadyFiled: "This return is already filed; it cannot be filed again.",
+  noteRegimeNotExecuted: "The old regime is cheaper for you, but it can only be chosen in a return filed by the due date, and I cannot confirm that here. I have shown the comparison and not switched — confirm the filing date with a professional, or switch in Manual mode.",
+  ask: "Ask",
   taskPrepareReturn: "Prepare my return",
   taskCompareRegimes: "Compare the two regimes",
   taskReconcile: "Check reported figures",
@@ -246,6 +253,7 @@ const hi: AgenticStrings = {
   inspectorEmptyProgress: "अभी कोई चरण नहीं। काम शुरू होने पर प्रगति यहाँ दिखेगी।",
   inspectorEmptyOutputs: "अभी कुछ नहीं बना। फ़ाइलें सहेजे जाने के बाद ही यहाँ दिखती हैं।",
   inspectorEmptySources: "अभी कुछ प्रयोग नहीं हुआ। इस बातचीत में प्रयुक्त दस्तावेज़, उत्तर और नियम यहाँ सूचीबद्ध होंगे।",
+  manualInspectorNote: "प्रगति, परिणाम और स्रोत एजेंटिक बातचीत के होते हैं। वर्तमान बातचीत के लिए इन्हें देखने हेतु एजेंटिक पर जाएँ।",
   sourcesDocuments: "आपके दस्तावेज़",
   sourcesAnswers: "आपके द्वारा दी गई जानकारी",
   sourcesRules: "कर नियम",
@@ -283,6 +291,8 @@ const hi: AgenticStrings = {
   noteVaultUnavailable: "दस्तावेज़ भंडार तक नहीं पहुँच सके; केवल रिटर्न पढ़ा गया।",
   noteNoAction: "इस काम में करने योग्य कोई कार्य नहीं।",
   noteAlreadyFiled: "यह रिटर्न पहले ही दाखिल है; दोबारा दाखिल नहीं हो सकता।",
+  noteRegimeNotExecuted: "आपके लिए पुरानी व्यवस्था सस्ती है, पर उसे केवल नियत तारीख तक दाखिल रिटर्न में ही चुना जा सकता है, और यह मैं यहाँ पुष्ट नहीं कर सकता। मैंने तुलना दिखाई है, बदलाव नहीं किया — दाखिल करने की तारीख किसी पेशेवर से पुष्ट करें, या मैनुअल मोड में बदलें।",
+  ask: "पूछें",
   taskPrepareReturn: "मेरा रिटर्न तैयार करें",
   taskCompareRegimes: "दोनों व्यवस्थाओं की तुलना",
   taskReconcile: "रिपोर्ट किए आंकड़े जाँचें",
@@ -349,6 +359,7 @@ const ta: AgenticStrings = {
   inspectorEmptyProgress: "இன்னும் படிகள் இல்லை. பணி தொடங்கியதும் முன்னேற்றம் இங்கு தோன்றும்.",
   inspectorEmptyOutputs: "இன்னும் எதுவும் உருவாக்கப்படவில்லை. கோப்புகள் சேமிக்கப்பட்ட பின்பே இங்கு தோன்றும்.",
   inspectorEmptySources: "இன்னும் எதுவும் பயன்படுத்தப்படவில்லை. இந்த உரையாடல் சார்ந்த ஆவணங்கள், பதில்கள், விதிகள் இங்கு பட்டியலிடப்படும்.",
+  manualInspectorNote: "முன்னேற்றம், வெளியீடுகள், ஆதாரங்கள் ஏஜென்டிக் உரையாடலுக்கு உரியவை. தற்போதைய உரையாடலுக்கு அவற்றைக் காண ஏஜென்டிக்கிற்கு மாறுங்கள்.",
   sourcesDocuments: "உங்கள் ஆவணங்கள்",
   sourcesAnswers: "நீங்கள் தந்த தகவல்",
   sourcesRules: "வரி விதிகள்",
@@ -386,6 +397,8 @@ const ta: AgenticStrings = {
   noteVaultUnavailable: "ஆவணக் களஞ்சியத்தை அணுக முடியவில்லை; ரிட்டர்ன் மட்டுமே படிக்கப்பட்டது.",
   noteNoAction: "இந்தப் பணிக்கு செய்ய வேண்டிய செயல் இல்லை.",
   noteAlreadyFiled: "இந்த ரிட்டர்ன் ஏற்கனவே தாக்கல் செய்யப்பட்டது; மீண்டும் தாக்கல் செய்ய முடியாது.",
+  noteRegimeNotExecuted: "உங்களுக்கு பழைய முறை குறைவான வரி, ஆனால் அதை உரிய தேதிக்குள் தாக்கல் செய்யும் ரிட்டர்னில் மட்டுமே தேர்வு செய்யலாம்; அதை நான் இங்கு உறுதிப்படுத்த முடியாது. ஒப்பீட்டைக் காட்டியுள்ளேன், மாற்றவில்லை — தாக்கல் தேதியை ஒரு நிபுணரிடம் உறுதிப்படுத்தவும், அல்லது கைமுறை பயன்முறையில் மாற்றவும்.",
+  ask: "கேளுங்கள்",
   taskPrepareReturn: "என் ரிட்டர்னைத் தயாரிக்க",
   taskCompareRegimes: "இரு முறைகளையும் ஒப்பிட",
   taskReconcile: "அறிவிக்கப்பட்ட எண்களைச் சரிபார்க்க",

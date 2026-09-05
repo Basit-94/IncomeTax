@@ -6,8 +6,10 @@ are, what is real and what is mocked, and how to verify a change. Keep it curren
 architecture, a contract, a storage key, a route, or a test count, update the matching line here and
 append the detail to `log.md` (append-only, `## [YYYY-MM-DD HH:MM] who (title)` entries).
 
-**Last verified against the tree:** 2026-09-03 (branch `dev`, commit `215327e`). Gates at that
-point: `npx tsc --noEmit` 0 errors · `npx vitest run` 182/182 across 15 files · `npx next build` exit 0.
+**Last verified against the tree:** 2026-09-05 (branch `dev-2`, uncommitted working tree after the
+plan.md Phase A–G execution). Gates at that point: `npx tsc --noEmit` 0 errors · `npx vitest run`
+278/278 across 28 files · `npx next build` exit 0. Work happens on `dev-2`; nothing is merged or pushed
+by agents.
 
 ---
 
@@ -19,8 +21,9 @@ carries who reported it (provenance), a plain-language meaning, and one citizen 
 correct. Live demo: https://wapsi-amber.vercel.app/ (deploys from `main`; work happens on `dev`).
 
 Everything is invented: personas, PANs (`DEMP…` prefix), employers, banks, amounts, notices. Nothing
-contacts the Income Tax Department, UIDAI, NPCI or any bank. The disclosure pages `/honesty` and
-`/architecture` say so on the site; keep them true.
+contacts the Income Tax Department, UIDAI, NPCI or any bank. The former disclosure pages `/honesty`
+and `/architecture` no longer exist on `dev-2`; the disclosure lives in `README.md` and the
+"Simulated"/"Synthetic" labels on every filing surface — keep those true.
 
 ## 2. Stack
 
@@ -38,7 +41,11 @@ Scripts: `npm run dev` · `npm run typecheck` · `npm test` (`vitest run`) · `n
 Env (see `.env.example`): `NEXT_PUBLIC_BACKEND_URL` (default `http://localhost:8080`),
 `NEXT_PUBLIC_MOCK_MODE` (tester autofill buttons), `GEMINI_API_KEY`, `AGENT_MODEL`,
 `AGENT_MAX_TOKENS_PER_REPLY` (2048), `AGENT_MAX_TURNS_PER_SESSION`, `AGENT_MAX_QUESTIONS_PER_SESSION`
-(hard-clamped to 4), `AGENT_DAILY_TOKEN_BUDGET`.
+(hard-clamped to 4), `AGENT_DAILY_TOKEN_BUDGET`. Added 2026-09-05 (server-only unless prefixed):
+`DATABASE_URL` / `POSTGRES_URL` / `WAPSI_DATASOURCE_URL` (any one enables the durable stores),
+`WAPSI_VAULT_KEY` (32 bytes base64; without it uploads are refused), `NEXT_PUBLIC_WAPSI_AGENTIC`
+(`false` hides `/app`), `AGENT_MODEL_TIMEOUT_MS` (12000), `AGENT_MAX_TOOL_CALLS_PER_RUN` (40),
+`AGENT_MAX_MODEL_CALLS_PER_RUN` (12).
 
 ## 3. Routes
 
@@ -46,8 +53,13 @@ Env (see `.env.example`): `NEXT_PUBLIC_BACKEND_URL` (default `http://localhost:8
 |---|---|---|
 | `/` | `app/page.tsx` (~2,100 lines, `"use client"`) | The main citizen journey: onboarding → landing (PAN or one of three personas) → OTP (`949494`) → dashboard. Unfiled returns walk a 5-step flow (facts → deductions → regime → check → file); filed returns get three tabs (overview/refund tracker, tax prefills, pending actions). |
 | `/reconcile` | `app/reconcile/page.tsx` → `components/InteractiveTaxDashboard.tsx` | The flat **reconciliation matrix**: 13 AIS/26AS rows, confirm/dispute per row, net-position headline, calculation dock, Challan 280, s.139(9) card, CASS radar, PDF dropzone, ITR-V preview. Starts from a synthetic prefill (₹15,00,000 salary etc.). Reachable by URL only. |
-| `/honesty`, `/architecture` | `app/(docs)/…` | Zero-JS disclosure pages. |
-| `/api/agent` | `app/api/agent/route.ts` | The copilot endpoint. |
+| `/app` | `app/app/page.tsx` (`"use client"`, `Suspense`-wrapped for `useSearchParams`) | The **Agentic workspace** (plan.md §6). Without `?run=` it is a standalone landing (`components/agentic/landing.tsx`: no sidebar, serif question, "Ask →" box, icon shortcuts, sign-in when there is no session). A question or shortcut creates a run and routes to `?run=<id>`, which renders the same `AppShell` as `/` with the transcript, question/review cards and inspector. Disabled by `NEXT_PUBLIC_WAPSI_AGENTIC=false`. |
+| `/api/agent` | `app/api/agent/route.ts` | The legacy copilot endpoint (§8). |
+| `/api/session`, `/api/session/demo`, `/api/session/bridge` | `app/api/session/…` | HttpOnly `wapsi_sid` cookie sessions: read / revoke; issue a demo session for one of the three synthetic PANs; bridge a Java backend token via `GET /api/v1/auth/session`. |
+| `/api/vault`, `/api/vault/documents[/:id[/bytes|/extract]]` | `app/api/vault/…` | Owner-scoped vault: user record GET/POST; upload (5 MB, MIME-sniffed, sha256-deduped, AES-256-GCM), list, metadata, original bytes, re-extract. |
+| `/api/return`, `/api/return/command` | `app/api/return/…` | The shared return snapshot: GET / PUT (`expectedRevision`, 409 on conflict) and the single command endpoint (zod-validated `ReturnCommand`). |
+| `/api/runs`, `/api/runs/:id[/events|/cancel|/outputs/:outputId]` | `app/api/runs/…` | Agent runs: create/list, replay + input (message / answer / confirm) + delete, SSE event stream with cursor, cancel, output download. |
+| `/api/memory` | `app/api/memory/route.ts` | Owner-scoped memory entries (list / forget). |
 
 ## 4. The two state models, and the bridge between them (the most important thing to understand)
 
@@ -101,6 +113,45 @@ card but not the summary" (log 2026-09-02 and 2026-09-03 00:50).
   ledger through a callback so the next sync agrees: `handleAutoReconcile` (reverts the short rows'
   corrections and confirms them), `handleChallanPaid` (adds a `140A` tax-paid row, confirmed),
   `handlePdfIngested` (writes salary/TDS-192 into the baseline, adds them for a first-time filer).
+
+### 4e. The server side added by plan.md (2026-09-05) — sessions, vault, commands, runs, knowledge
+
+- **Sessions** — `lib/server/session.ts`: `SessionResolver` issues demo sessions (three synthetic
+  PANs only) or bridged sessions (Java token verified server-side); owner = `{ pan, kind:
+  "demo" | "citizen", displayName }`. Every data route calls `requireSession` (`lib/server/context.ts`)
+  and every store checks the owner. Client-minted `vault_session_*` / `mock-token-*` never authorise
+  anything; `lib/session-client.ts` (`ensureServerSession`) turns the client copy into a server session.
+- **Storage reality** — no `DATABASE_URL` in this deployment. `isDbConfigured()` gates the Postgres
+  stores; demo owners get process-memory stores and every response carries `durable: false` (the UI
+  says "this history clears when the server restarts"); citizen owners get `storage_unavailable` (503).
+  Migrations `0001–0005` live in `lib/db/migrations.ts` and run from `initDb`.
+- **Vault service** — `lib/vault/service.ts` over `VaultRepository` (memory for tests, Postgres):
+  provenance `uploaded | legacy_backend | synthetic | metadata_only | generated_output`, bounded
+  extraction (5 s, 32 MB decompressed), access audit. The UI vault (`CitizenVaultModal`) is the same
+  component in both modes; seeded documents are `provenance: "synthetic"`.
+- **One return mutation path** — `lib/return/commands.ts` `applyReturnCommand` (confirm_fact,
+  sign_off_all, correct_fact, revert_correction, choose_regime, record_payment, stage_revision,
+  import_document, finalize_filing, declare_income, declare_claim). `ReturnSnapshotStore` keeps a
+  monotonic `revision` + idempotency keys. Manual mirrors its `ReturnState` through `PUT /api/return`
+  (`lib/return-sync-client.ts`; 409 → adopt) and pulls on arrival, so an agent filing shows on `/`.
+  Filing (`lib/return/filing.ts`): accepted | failed (non-2xx → never "filed") | unreachable →
+  explicit `simulatedFiling` (`SIM-…`, deterministic from the idempotency key).
+- **Agent runtime** — `lib/agentic/runtime.ts`: server-owned steps classify → plan → gather →
+  resolve → compute → review → confirm → act → outputs; events persisted before streaming; review
+  cards bound to `{ revision, snapshotHash }` (stale → re-review); replay never re-executes; PAN /
+  Aadhaar / mobile / email / IFSC / token redaction and injection stripping (`redact.ts`); Gemini
+  only classifies and phrases a server-written brief (`model.ts`), `nullModel` fallback; budgets.
+  Choosing the old regime is staged only when `regime_switch_115BAC` is `eligible`; otherwise the
+  comparison is shown and the switch is not made (`noteRegimeNotExecuted`).
+- **Tax knowledge** — `lib/knowledge/`: 12 hash-checked provisions (FY 2025-26, 1961 Act) plus the
+  1961→2025 transition note, three-outcome predicates (`applicability.ts`), lexical retrieval that
+  retains candidates when an attribute is unknown. `KNOWLEDGE_RELEASE = "2026-09-05.1"`, reviewer
+  string "engineering draft — awaiting qualified tax reviewer". **Gate open:** plan §5.7 requires a
+  qualified Indian tax reviewer before rule-based recommendations reach citizens. The engineering
+  review `docs/knowledge-tax-review-2026-09-05.md` was applied to the corpus text and predicates on
+  2026-09-05; its engine-level findings (s.80CCE aggregation, 80D senior cap, 80CCD(2) salary
+  percentage, s.112A/112 basic-exemption adjustment) are **open** because `lib/engine` is pinned to
+  the 72 Java golden vectors and must change on both sides together.
 
 ## 5. The seeded personas (`lib/personas.ts`, `TODAY = 2026-08-22`)
 
@@ -168,8 +219,11 @@ procedure or regime comparison.
   `<Rupees>` / `<AnimatedAmount>`; never a raw float; Latin digits in every language.
 - Provenance is the differentiator: every figure says who reported it and whether only the reporter
   can fix it.
-- Filing with tax outstanding is defective u/s 139(9): while a balance is due, the file button becomes
+- Filing with tax outstanding is blocked by the product: while a balance is due, the file button becomes
   "Pay outstanding tax (Challan 280)" (`before-filing.tsx`, `filing-step.tsx`, the `/reconcile` dock).
+  This is a product choice, not s.139(9) law — unpaid s.140A tax stopped making a return defective from
+  AY 2017-18 (clause (aa) omitted; CBDT Circular 3/2017). UI copy that still says "defective u/s 139(9)"
+  is an open follow-up from the 2026-09-05 knowledge review.
 - A revised return u/s 139(5) is staged, never silently rewritten: superseded figures are kept on the
   row and the whole stage is one undo step.
 - Tester chrome (mock-fill buttons) exists but "is not part of the product"; it disappears with
@@ -178,8 +232,10 @@ procedure or regime comparison.
 ## 10. Verification protocol
 
 1. `npx tsc --noEmit` (0 errors) — zero `any` is a project rule.
-2. `npx vitest run` — 15 files / 182 tests: engine + slab, golden export, return state/persist/compute,
-   `upstreamSync`, context reducer, compliance (cass, pdfExtract), agent, onboarding, submission key.
+2. `npx vitest run` — 28 files / 278 tests: engine + slab, golden export, return state/persist/compute/
+   commands/filing/snapshot store, `upstreamSync`, context reducer, compliance (cass, pdfExtract),
+   agent, onboarding, submission key, server sessions, vault service, migrations, knowledge
+   (corpus integrity, predicates, retrieval), agentic (redact, planner, runtime).
 3. `npx next build`.
 4. Anything visual or animation-related must be checked in a browser; unit tests cannot see it. Test
    hooks exist for automation: `data-testid="net-position"` + `data-position`, `data-fact-id`,
@@ -191,6 +247,7 @@ procedure or regime comparison.
 ## 11. Where else to look
 
 `docs/PROTOTYPE.md` (stack narrative), `docs/PLAN.md` + `plan.md` (milestones, resume protocol),
-`docs/DESIGN.md` (Direction 13 design language), `docs/MODES.md`, `docs/ISSUES.md` (backend/UX audit
+`docs/DESIGN.md` (Direction 13 design language), `docs/MODES.md` (Simple/Full and Manual/Agentic),
+`docs/knowledge-tax-review-2026-09-05.md` (open tax-knowledge findings), `docs/ISSUES.md` (backend/UX audit
 2026-08-25), `docs/scale/*` (capacity, load, rule-source audit), `fixtures/golden/README.md`,
 `backend/README.md`, `critics/*` (round-by-round critiques), `log.md` (the full history).

@@ -60,7 +60,7 @@ export interface LegalProvision {
   supersededBy?: string;
   reviewer: string;
   reviewedOn: string;
-  /** SHA-256 of ruleText, so a silent edit is detectable. */
+  /** SHA-256 of ruleText + summary (see provisionHash), so a silent edit is detectable. */
   contentHash: string;
 }
 
@@ -90,8 +90,12 @@ export interface TaxpayerFacts {
   regime?: "new" | "old";
   /** Whether the taxpayer has previously opted OUT of the new regime with business income (s.115BAC(6)). */
   priorRegimeOptOut?: boolean;
+  /** Whether the return is (or will be) filed by the s.139(1) due date — the old regime can only be chosen in such a return. */
+  returnByDueDate?: boolean;
   claims?: { section: string; amount: number; evidence?: boolean }[];
   ltcg112A?: number;
+  /** All income taxed at special rates (ss.111A, 112, 112A) — the s.87A rebate never reaches tax on it. */
+  specialRateIncome?: number;
 }
 
 export interface EvidenceBundle {

@@ -70,6 +70,10 @@
   --color-flow-in: var(--flow-in);
   --color-flow-out: var(--flow-out);
   --color-flow-keep: var(--flow-keep);
+  /* D13 amber text/tint pair as utilities (bg-amber-bg / text-amber-ink) for
+     the Agentic shell's citizen bubbles and pending-state chips. */
+  --color-amber-bg: var(--d13-amber-bg);
+  --color-amber-ink: var(--d13-amber);
 }
 
 @layer base {

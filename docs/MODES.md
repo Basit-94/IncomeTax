@@ -24,6 +24,27 @@ session token yet, so localStorage remains the client's source of truth for now)
 | **ITR-V receipt** | Paper-white replica in both themes. | Same. | It is a picture of a printed form. |
 | **Assistant (agent)** | Answers in plain words (the system prompt keys off the mode). | Precise, cites sections, shows arithmetic. | Same tools, same guardrails, different register. |
 
+## Manual vs Agentic — the outer shell (added 2026-09-05)
+
+This is a different axis from Simple/Full detail. Simple/Full changes *how much is
+explained* inside the Manual journey; Manual/Agentic changes *who drives*. Both Manual
+(`/`) and Agentic (`/app`) render inside the same `components/agentic/app-shell.tsx`: one header with the
+Agentic/Manual switch in a reserved slot of identical size on both routes
+(`data-testid="mode-slot"`, 210×38 px), and the top-right Progress/Outputs/Sources inspector,
+live in Agentic and a note in Manual. The chat sidebar (New chat, Tax Vault, My return, recent
+chats, account/language/theme/memory) is **Agentic only** — Manual keeps its own PortalHeader
+navigation and shows the brand in place of the hamburger (user, 2026-09-05).
+
+| Surface | Manual (`/`) | Agentic (`/app`) | Shared |
+|---|---|---|---|
+| Centre | The existing citizen journey, unchanged (PortalHeader compact `inShell` variant). | With no active run: a standalone **landing** (`components/agentic/landing.tsx`, no sidebar — serif question, one "Ask →" box with dictation, four icon shortcuts, header with My return / Tax Vault / language / theme / citizen). The first question or shortcut creates a run and only then the chat shell (sidebar + transcript + inspector) appears; **New chat** returns to the landing. | Language, theme, RTL, all 23 languages. |
+| Tax Vault | `CitizenVaultModal` from the sidebar. | The same `CitizenVaultModal`, same records (user request 2026-09-05). | One vault, one owner check. |
+| The return | Local `ReturnState`, mirrored to `PUT /api/return` with the last-seen revision; 409 → adopt. | Server-side `applyReturnCommand` via the run; every mutation is a command. | One snapshot store, monotonic revision, idempotency keys. |
+| Filing | OTP flow → `submitReturn`; unreachable backend → explicit `simulatedFiling`. | Review card bound to `{revision, snapshotHash}`; confirm → the same `finalize_filing` command. | Manual shows the agent's filing on arrival (`pullReturn`). |
+| Mode switch | `router.push("/app")` | `router.push("/")` | Nothing is lost: both read the same server snapshot. |
+
+Feature flag: `NEXT_PUBLIC_WAPSI_AGENTIC=false` hides the Agentic route and switch.
+
 ## Known residual compromises (deliberate, revisit when warranted)
 
 - The wizard and the actions tab are not yet designed twice (rows above say why).

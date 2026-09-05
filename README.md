@@ -30,8 +30,11 @@ npm run dev
 ```
 
 Open `http://localhost:3000`. The app includes seeded synthetic personas,
-English, Hindi, and Tamil UI states, a reviewer sandbox, and the disclosure
-pages at `/honesty` and `/architecture`.
+23 UI languages, and — behind the same shell — a Manual journey at `/` and an
+Agentic workspace at `/app` (server-owned runs, review cards bound to a return
+revision, simulated filing; see `docs/MODES.md` and `plan.md`). Without
+`DATABASE_URL` the vault and run stores are in-process memory for the demo
+personas and disclosed as non-durable; see `.env.example`.
 
 On a new browser, Wapsi starts with a short onboarding profile. Language is
 asked first, followed by intent, work situation, rough income, filing history,

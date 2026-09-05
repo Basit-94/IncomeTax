@@ -8,7 +8,10 @@
  * REVIEW STATUS: drafted from official sources by the implementing engineer;
  * `reviewer` records that. Plan §5.7 requires a qualified Indian tax reviewer to
  * sign the release before rule-based recommendations reach citizens. That gate
- * is open — see docs/CONTEXT.md.
+ * is open — see docs/CONTEXT.md. An engineering review on 2026-09-05
+ * (docs/knowledge-tax-review-2026-09-05.md) corrected the text below; its
+ * engine-level findings (80CCE aggregation, 80D senior cap, 80CCD(2) salary
+ * percentage, s.112A basic-exemption adjustment) remain open.
  */
 
 import { createHash } from "crypto";
@@ -51,8 +54,13 @@ function hash(text: string) {
   return createHash("sha256").update(text).digest("hex");
 }
 
+/** The hash covers everything a citizen may be shown: the rule and its summary. */
+export function provisionHash(p: Pick<LegalProvision, "ruleText" | "summary">) {
+  return hash(`${p.ruleText}\n${p.summary}`);
+}
+
 function provision(p: Omit<LegalProvision, "contentHash" | "jurisdiction" | "reviewer" | "reviewedOn">): LegalProvision {
-  return { ...p, jurisdiction: "IN", reviewer: REVIEWER, reviewedOn: REVIEWED_ON, contentHash: hash(p.ruleText) };
+  return { ...p, jurisdiction: "IN", reviewer: REVIEWER, reviewedOn: REVIEWED_ON, contentHash: provisionHash(p) };
 }
 
 const rupees = (n: number) => `₹${n.toLocaleString("en-IN")}`;
@@ -82,7 +90,7 @@ export const PROVISIONS: readonly LegalProvision[] = [
     section: "87A",
     title: "Rebate for resident individuals",
     summary: "Below a total-income threshold the slab tax is waived; just above it, relief tapers so an extra rupee of income cannot cost more than a rupee of tax.",
-    ruleText: `New regime: full rebate up to ${rupees(REBATE_87A_NEW_MAX_AMOUNT)} where total income does not exceed ${rupees(REBATE_87A_NEW_THRESHOLD)}; marginal relief above it caps pre-cess slab tax at the excess over the threshold. Old regime: rebate up to ${rupees(REBATE_87A_OLD_MAX_AMOUNT)} where total income does not exceed ${rupees(REBATE_87A_OLD_THRESHOLD)}. Resident individuals only. The rebate does not apply to tax on income chargeable at special rates under s.112A.`,
+    ruleText: `New regime: full rebate up to ${rupees(REBATE_87A_NEW_MAX_AMOUNT)} where total income does not exceed ${rupees(REBATE_87A_NEW_THRESHOLD)}; marginal relief above it caps pre-cess slab tax at the excess over the threshold. Old regime: rebate up to ${rupees(REBATE_87A_OLD_MAX_AMOUNT)} where total income does not exceed ${rupees(REBATE_87A_OLD_THRESHOLD)}. Resident individuals only. Under the new regime the rebate is limited to tax computed at the s.115BAC(1A) slab rates, so it does not reach tax on income chargeable at special rates (ss.111A, 112, 112A and the like); marginal relief likewise only arises where that slab tax exceeds the excess of total income over the threshold.`,
     financialYears: [FY],
     effectiveFrom: "2025-04-01",
     sourceKind: "act",
@@ -151,13 +159,13 @@ export const PROVISIONS: readonly LegalProvision[] = [
     subsection: "(2)",
     title: "Employer's contribution to NPS",
     summary: "What an employer pays into the employee's pension account is deductible — in both regimes. The employee's own PF is not this.",
-    ruleText: "Employer contribution to the employee's NPS account under s.80CCD(2) is deductible in both regimes, up to 14% of salary (basic plus DA) under s.115BAC and 10% otherwise (14% for government employers). Employee contributions fall under s.80CCD(1)/(1B), which the new regime does not allow. Provident fund is not NPS.",
+    ruleText: "Employer contribution to the employee's NPS account under s.80CCD(2) is deductible in both regimes, up to 14% of salary under s.115BAC and 10% otherwise (14% for Central and State Government employers). Salary for this purpose means basic pay plus dearness allowance forming part of retirement benefits, not the whole package. Employee contributions fall under s.80CCD(1)/(1B), which the new regime does not allow. Provident fund is not NPS.",
     financialYears: [FY],
     effectiveFrom: "2025-04-01",
     sourceKind: "act",
     sourceUrl: `${IT_PORTAL}/iec/foportal/help/individual/return-applicable-1`,
-    locator: "Income-tax Act, 1961, s.80CCD(2)",
-    categories: ["individual"],
+    locator: "Income-tax Act, 1961, s.80CCD(2) and Explanation",
+    categories: ["individual", "senior", "super_senior"],
     incomeHeads: ["salary"],
     keywords: ["80CCD(2)", "NPS", "employer contribution", "pension", "both regimes", "14%", "10%", "PF is not NPS"],
     linked: ["1961:115BAC@FY2025-26"],
@@ -185,7 +193,7 @@ export const PROVISIONS: readonly LegalProvision[] = [
     section: "112A",
     title: "Long-term capital gains on listed equity with STT",
     summary: "Profit on shares or equity funds held over a year is tax-free up to a yearly threshold and taxed at a flat rate above it.",
-    ruleText: `Long-term capital gains under s.112A are taxed at ${LTCG_112A_RATE * 100}% on the amount exceeding ${rupees(LTCG_112A_EXEMPTION)} in the year, for transfers on or after 23 July 2024. The whole gain forms part of total income; the threshold is a tax computation rule, not an exclusion from income. The s.87A rebate does not apply to tax under this section.`,
+    ruleText: `Long-term capital gains under s.112A are taxed at ${LTCG_112A_RATE * 100}% on the amount exceeding ${rupees(LTCG_112A_EXEMPTION)} in the year, for transfers on or after 23 July 2024. The whole gain forms part of total income; the threshold is a tax computation rule, not an exclusion from income. For a resident individual or HUF whose other income is below the basic exemption limit, the unused part of that limit is set against the gain before the rate applies (proviso to s.112A(2)). The s.87A rebate does not apply to tax under this section.`,
     financialYears: [FY],
     effectiveFrom: "2024-07-23",
     sourceKind: "finance_act",
@@ -202,7 +210,7 @@ export const PROVISIONS: readonly LegalProvision[] = [
     section: "112",
     title: "Long-term capital gains on other assets",
     summary: "Long-term gains on assets other than listed equity are taxed at a flat rate.",
-    ruleText: `Long-term capital gains not covered by s.112A are taxed at ${LTCG_112_RATE * 100}% without indexation for transfers on or after 23 July 2024.`,
+    ruleText: `Long-term capital gains not covered by s.112A are taxed at ${LTCG_112_RATE * 100}% without indexation for transfers on or after 23 July 2024. For a resident individual or HUF transferring land or a building acquired before 23 July 2024, tax is limited to what the earlier 20%-with-indexation computation would give; the unused basic exemption limit is set against the gain first (s.112(1)(a) provisos).`,
     financialYears: [FY],
     effectiveFrom: "2024-07-23",
     sourceKind: "finance_act",
@@ -219,13 +227,13 @@ export const PROVISIONS: readonly LegalProvision[] = [
     section: "139",
     subsection: "(1)",
     title: "Due date for filing the return",
-    summary: "Individuals whose accounts need no audit file by 31 July after the year ends; later filings attract a fee and interest.",
-    ruleText: "Return under s.139(1) due by 31 July 2026 for individuals not subject to audit; belated or revised returns under ss.139(4)/(5) by 31 December 2026. Late filing attracts a fee under s.234F (₹5,000; ₹1,000 where total income does not exceed ₹5,00,000) and interest under s.234A.",
+    summary: "Salaried individuals whose accounts need no audit file by 31 July after the year ends; a late return can still be filed until 31 December, and a filed return can be corrected until 31 March, at a cost.",
+    ruleText: "Return under s.139(1) due by 31 July 2026 for salaried individuals not subject to audit (the department's notified calendar sets later dates for some other non-audit categories and for business or professional cases; check the category). Belated return under s.139(4) by 31 December 2026. Revised return under s.139(5) by 31 March 2027, provided the assessment is not completed earlier; a revision after 31 December 2026 attracts an additional fee under s.234-I. Late filing attracts a fee under s.234F (₹5,000; ₹1,000 where total income does not exceed ₹5,00,000) and interest under s.234A on unpaid tax, not on lateness alone.",
     financialYears: [FY],
     effectiveFrom: "2025-04-01",
-    sourceKind: "act",
-    sourceUrl: `${IT_PORTAL}/iec/foportal/help/individual/return-applicable-1`,
-    locator: "Income-tax Act, 1961, ss.139(1), 139(4), 139(5), 234A, 234F",
+    sourceKind: "departmental_faq",
+    sourceUrl: `${IT_PORTAL}/iec/foportal/help/all-topics/e-filing-services/ITR1-FAQ`,
+    locator: "Income-tax Act, 1961, ss.139(1), 139(4), 139(5), 234A, 234F, 234-I; ITR-1 FAQs Q19–20 and return-transition FAQ Q6 (AY 2026-27 dates)",
     categories: ["individual", "huf", "senior", "super_senior"],
     incomeHeads: ["salary", "other_sources", "house_property", "capital_gains", "business_profession"],
     keywords: ["due date", "31 July", "139(1)", "belated", "revised", "139(5)", "234F", "late fee"],
@@ -237,16 +245,16 @@ export const PROVISIONS: readonly LegalProvision[] = [
     section: "139",
     subsection: "(9)",
     title: "Defective return",
-    summary: "If what you declared falls short of what others reported about you, the department can call the return defective; left unanswered, it is treated as never filed.",
-    ruleText: "Where the Assessing Officer considers a return defective, the assessee is given 15 days (extendable) to rectify it; failing rectification the return is treated as invalid. A return filed with self-assessment tax under s.140A unpaid is defective.",
+    summary: "If the return is incomplete in a way the law lists — missing schedules, statements or figures — the department sends a defect notice; left unanswered, the return is treated as never filed. A mismatch with what others reported is handled by its own notice, not by this rule.",
+    ruleText: "Where the Assessing Officer considers a return defective on a ground listed in the Explanation to s.139(9), the assessee is given 15 days (extendable) to rectify it; failing rectification the return is treated as invalid. Unpaid self-assessment tax under s.140A no longer makes a return defective (clause (aa) omitted from AY 2017-18); the tax remains payable with interest, which is a separate consequence.",
     financialYears: [FY],
     effectiveFrom: "2025-04-01",
-    sourceKind: "act",
-    sourceUrl: `${IT_PORTAL}/iec/foportal/help/individual/return-applicable-1`,
-    locator: "Income-tax Act, 1961, s.139(9); s.140A",
+    sourceKind: "circular",
+    sourceUrl: "https://incometaxindia.gov.in/communications/circular/circular03_2017.pdf",
+    locator: "Income-tax Act, 1961, s.139(9) and Explanation; CBDT Circular 3/2017 paras 55.9–55.10 (omission of clause (aa))",
     categories: ["individual", "huf", "senior", "super_senior"],
     incomeHeads: ["salary", "other_sources", "house_property", "capital_gains", "business_profession"],
-    keywords: ["defective", "139(9)", "140A", "self-assessment tax", "challan 280", "AIS mismatch", "26AS"],
+    keywords: ["defective", "139(9)", "defect notice", "invalid return", "rectify"],
     linked: ["1961:139(1)@FY2025-26"],
   }),
   provision({

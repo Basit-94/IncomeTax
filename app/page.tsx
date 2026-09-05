@@ -1,7 +1,14 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { LazyMotion, domMax, m, AnimatePresence } from "motion/react";
+import AppShell from "../components/agentic/app-shell";
+import { useRuns } from "../components/agentic/use-run";
+import { agenticEnabled } from "../lib/agentic/flags";
+import { agenticStrings } from "../lib/i18n/agenticStrings";
+import { endServerSession, ensureServerSession } from "../lib/session-client";
+import { forgetReturnRevision, mirrorReturn, pullReturn } from "../lib/return-sync-client";
 
 import { PERSONAS, TODAY, findPersonaByPan } from "../lib/personas";
 import type { Persona, PersonaId, Lang, IncomeFact, IncomeKind, BankAccount, Notice, RefundState, TimelineKey, Provenance, TaxAlreadyPaid, Claim } from "../lib/types";
@@ -142,6 +149,9 @@ const ADVANCE_COPY: Partial<Record<Exclude<RefundState, "not_filed" | "filed_unv
 
 export default function WapsiPrototype() {
   const { dispatch: taxDispatch } = useTax();
+  const router = useRouter();
+  const inShell = agenticEnabled();
+  const shellRuns = useRuns();
 
   // --- CORE UI STATES ---
   const [lang, setLang] = useState<Lang>("en");
@@ -173,6 +183,7 @@ export default function WapsiPrototype() {
     if (!returnState || !taxDispatch) return;
     taxDispatch({ type: "SYNC_STATE", payload: buildSyncPayload(returnState) });
   }, [returnState, taxDispatch]);
+
   const [undoStack, setUndoStack] = useState<ReturnState[]>([]);
   const [restoredFrom, setRestoredFrom] = useState<string | null>(null);
   const [ingestedDoc, setIngestedDoc] = useState<IngestedDocument | null>(null);
@@ -256,6 +267,48 @@ export default function WapsiPrototype() {
   /** The REAL backend session (T2.7/T2.8): hashed-token identity for history,
       preferences, documents and the agent's backend tools. */
   const [session, setSession] = useState<SessionInfo | null>(null);
+
+  // The shared server snapshot (plan.md §3.3). Once the client session has a
+  // server session, pull whatever the agent changed while Manual was away,
+  // then mirror every local change with the revision last seen. A 409 means
+  // the agent wrote in between: adopt its snapshot rather than overwrite it.
+  const serverSessionReady = useRef(false);
+  const adoptingFromServer = useRef(false);
+  useEffect(() => {
+    if (!inShell) return;
+    let cancelled = false;
+    (async () => {
+      const ok = (await ensureServerSession(session)).ok;
+      if (cancelled) return;
+      serverSessionReady.current = ok;
+      if (!ok) return;
+      void shellRuns.refresh();
+      const remote = await pullReturn();
+      if (cancelled || !remote) return;
+      if (!returnState || JSON.stringify(remote.state) !== JSON.stringify(returnState)) {
+        adoptingFromServer.current = true;
+        setReturnState(remote.state);
+        savePersist(remote.state);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [session, inShell]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!inShell || !returnState || !serverSessionReady.current) return;
+    if (adoptingFromServer.current) {
+      adoptingFromServer.current = false;
+      return;
+    }
+    void mirrorReturn(returnState).then((r) => {
+      if (r.adopt) {
+        adoptingFromServer.current = true;
+        setReturnState(r.adopt);
+        savePersist(r.adopt);
+      }
+    });
+  }, [returnState, inShell]);
   const [serverFilings, setServerFilings] = useState<ServerFiling[] | null>(null);
   const [autoFillCode, setAutoFillCode] = useState("949494");
 
@@ -1380,6 +1433,9 @@ export default function WapsiPrototype() {
     if (session) {
       void signOut(session.token);
     }
+    // The server session and the mirrored revision go with the client copy.
+    void endServerSession();
+    forgetReturnRevision();
     setSession(null);
     setServerFilings(null);
     clearSession();
@@ -2203,9 +2259,46 @@ export default function WapsiPrototype() {
       : "claim"
     : undefined;
 
+  /**
+   * The shared application shell (plan.md §6). With the agentic flag on, `/`
+   * is Manual INSIDE the same shell `/app` renders — same sidebar, same mode
+   * switch in the same slot, same inspector controls — so switching modes
+   * changes only the centre. The legacy full-width layout remains behind the
+   * flag.
+   */
+  const shellStrings = agenticStrings(lang);
+  const frame = (children: React.ReactNode) =>
+    inShell ? (
+      <AppShell
+        mode="manual"
+        onModeChange={(next) => {
+          if (next === "agentic") router.push("/app");
+        }}
+        lang={lang}
+        changeLang={changeLang}
+        theme={theme}
+        toggleTheme={toggleTheme}
+        s={shellStrings}
+        t={t}
+        citizen={persona ? { name: persona.name, pan: persona.pan, isDemo: session?.isMock } : null}
+        onSignOut={persona || session ? handleLogOut : undefined}
+        onOpenVault={() => setIsVaultOpen(true)}
+        onMyReturn={() => setStep(!persona && !session ? "auth" : "dashboard")}
+        runs={shellRuns.runs}
+        activeRunId={null}
+        onSelectRun={(id) => router.push(`/app?run=${id}`)}
+        onNewChat={() => router.push("/app")}
+        inspector={{ steps: [], outputs: [], sources: [], runId: null, manualNote: shellStrings.manualInspectorNote }}
+      >
+        <div className="service-shell flex-1 text-ink selection:bg-money/20 relative overflow-x-hidden flex flex-col">{children}</div>
+      </AppShell>
+    ) : (
+      <div className="service-shell flex-1 text-ink selection:bg-money/20 relative overflow-x-hidden min-h-dvh flex flex-col">{children}</div>
+    );
+
   return (
     <LazyMotion features={domMax} strict>
-      <div className="service-shell flex-1 text-ink selection:bg-money/20 relative overflow-x-hidden min-h-dvh flex flex-col">
+      {frame(<>
 
         {/* Judge sandbox bar removed entirely (user directive 2026-08-29): tester
             chrome is not part of the product. Quick Edit stays reachable via the
@@ -2257,6 +2350,7 @@ export default function WapsiPrototype() {
           }}
           onLogout={handleLogOut}
           onOpenVault={() => setIsVaultOpen(true)}
+          inShell={inShell}
         />
 
         {/* --- MAIN BODY --- */}
@@ -2924,7 +3018,7 @@ export default function WapsiPrototype() {
           </>
         )}
 
-      </div>
+      </>)}
     </LazyMotion>
   );
 }

@@ -6,7 +6,9 @@
  * Each result cites the provision ids it rests on, so a recommendation can
  * show its supporting text (§5.6: "Every recommendation records ... rule
  * versions"). The arithmetic itself stays in lib/engine; these predicates
- * decide whether the engine should be asked at all.
+ * decide whether the engine should be asked at all — and where the engine does
+ * not model a statutory adjustment, they say so instead of promising a figure
+ * (review of 2026-09-05, docs/knowledge-tax-review-2026-09-05.md).
  */
 
 import {
@@ -16,6 +18,8 @@ import {
   STANDARD_DEDUCTION_NEW,
   STANDARD_DEDUCTION_OLD,
 } from "../engine/constants";
+import { computeSlabs, slabTable } from "../engine/slab";
+import type { AgeBand } from "../engine/types";
 import type { ApplicabilityResult, TaxpayerFacts } from "./types";
 
 const need = (rule: string, provisions: string[], missing: string[]): ApplicabilityResult => ({
@@ -25,6 +29,19 @@ const need = (rule: string, provisions: string[], missing: string[]): Applicabil
   reason: `To decide this I still need: ${missing.join(", ")}.`,
   missing,
 });
+
+const rupees = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+
+function ageBand(facts: TaxpayerFacts): AgeBand {
+  if (facts.category === "super_senior" || (facts.age ?? 0) >= 80) return "above_80";
+  if (facts.category === "senior" || (facts.age ?? 0) >= 60) return "60_to_80";
+  return "below_60";
+}
+
+/** The income level at which slab tax starts — the engine's own table, not a second copy of it. */
+function basicExemption(regime: "new" | "old", band: AgeBand): number {
+  return slabTable(regime, band).find((row) => row.rate > 0)?.from ?? 0;
+}
 
 /** The Act that governs the period must be the one the corpus covers. */
 export function periodSupported(facts: TaxpayerFacts): ApplicabilityResult {
@@ -48,28 +65,47 @@ export function standardDeduction(facts: TaxpayerFacts): ApplicabilityResult {
   }
   if (!facts.regime) return need(rule, provisions, ["tax regime"]);
   const cap = facts.regime === "new" ? STANDARD_DEDUCTION_NEW : STANDARD_DEDUCTION_OLD;
-  const salaryNote = facts.grossSalary !== undefined && facts.grossSalary < cap ? ` — limited to the salary of ₹${facts.grossSalary.toLocaleString("en-IN")}` : "";
-  return { rule, outcome: "eligible", provisions, reason: `₹${cap.toLocaleString("en-IN")} under s.16(ia) in the ${facts.regime} regime, once for the year however many employers${salaryNote}.` };
+  const salaryNote = facts.grossSalary !== undefined && facts.grossSalary < cap ? ` — limited to the salary of ${rupees(facts.grossSalary)}` : "";
+  return { rule, outcome: "eligible", provisions, reason: `${rupees(cap)} under s.16(ia) in the ${facts.regime} regime, once for the year however many employers${salaryNote}.` };
 }
 
 export function rebate87A(facts: TaxpayerFacts): ApplicabilityResult {
   const rule = "rebate_87A";
   const provisions = ["1961:87A@FY2025-26"];
   const missing: string[] = [];
+  if (facts.category === undefined) missing.push("taxpayer category");
   if (facts.resident === undefined) missing.push("residential status");
   if (facts.totalIncome === undefined) missing.push("total income");
   if (!facts.regime) missing.push("tax regime");
   if (missing.length) return need(rule, provisions, missing);
   if (!facts.resident) return { rule, outcome: "ineligible", provisions, reason: "The s.87A rebate is for resident individuals only." };
-  if (facts.category && facts.category === "huf") return { rule, outcome: "ineligible", provisions, reason: "The s.87A rebate is for individuals, not an HUF." };
+  if (facts.category === "huf") return { rule, outcome: "ineligible", provisions, reason: "The s.87A rebate is for individuals, not an HUF." };
+  const totalIncome = facts.totalIncome!;
   const threshold = facts.regime === "new" ? REBATE_87A_NEW_THRESHOLD : REBATE_87A_OLD_THRESHOLD;
-  if (facts.totalIncome! <= threshold) {
-    return { rule, outcome: "eligible", provisions, reason: `Total income ₹${facts.totalIncome!.toLocaleString("en-IN")} is within the ₹${threshold.toLocaleString("en-IN")} threshold, so the slab tax is rebated.` };
+  if (totalIncome <= threshold) {
+    return { rule, outcome: "eligible", provisions, reason: `Total income ${rupees(totalIncome)} is within the ${rupees(threshold)} threshold, so the slab tax is rebated.` };
   }
-  if (facts.regime === "new") {
-    return { rule, outcome: "eligible", provisions, reason: `Above the threshold, marginal relief applies: slab tax is capped at the excess over ₹${threshold.toLocaleString("en-IN")}. The engine computes the exact figure.` };
+  if (facts.regime === "old") {
+    return { rule, outcome: "ineligible", provisions, reason: `Total income exceeds the old-regime threshold of ${rupees(threshold)}; no rebate.` };
   }
-  return { rule, outcome: "ineligible", provisions, reason: `Total income exceeds the old-regime threshold of ₹${threshold.toLocaleString("en-IN")}; no rebate.` };
+  // New regime above the threshold: relief exists only while slab tax exceeds the excess,
+  // and the rebate never reaches tax at special rates — so the composition matters.
+  if (facts.specialRateIncome === undefined) return need(rule, provisions, ["whether any income is taxed at special rates (capital gains)"]);
+  const excess = totalIncome - threshold;
+  if (facts.specialRateIncome > 0) {
+    return {
+      rule,
+      outcome: "insufficient_information",
+      provisions,
+      reason: `Above the threshold, relief depends on the slab tax on the non-special-rate part of the income; with ${rupees(facts.specialRateIncome)} at special rates the engine has to compute it.`,
+      missing: ["the engine's slab tax net of special-rate income"],
+    };
+  }
+  const slabTax = computeSlabs(totalIncome, slabTable("new", ageBand(facts))).total;
+  if (slabTax > excess) {
+    return { rule, outcome: "eligible", provisions, reason: `Marginal relief applies: slab tax of ${rupees(slabTax)} exceeds the ${rupees(excess)} by which income tops the threshold, so pre-cess tax is capped at ${rupees(excess)}.` };
+  }
+  return { rule, outcome: "ineligible", provisions, reason: `Total income tops the ${rupees(threshold)} threshold by ${rupees(excess)}, which is not less than the slab tax of ${rupees(slabTax)}; neither the rebate nor marginal relief applies.` };
 }
 
 /** Chapter VI-A deductions the old regime allows and the new does not. */
@@ -83,10 +119,15 @@ export function oldRegimeDeduction(facts: TaxpayerFacts, section: "80C" | "80D")
   const claim = facts.claims?.find((c) => c.section === section || c.section.startsWith(`${section}_`));
   if (!claim) return need(rule, provisions, [`whether any s.${section} payment was actually made this year, and how much`]);
   if (claim.amount <= 0) return { rule, outcome: "ineligible", provisions, reason: `No s.${section} payment was made.` };
-  if (claim.evidence === false) {
-    return { rule, outcome: "insufficient_information", provisions, reason: `A s.${section} claim of ₹${claim.amount.toLocaleString("en-IN")} needs its receipt or statement before it is relied on.`, missing: [`proof of the s.${section} payment`] };
+  // Unknown evidence is not evidence: only an attached proof lets a claim be relied on.
+  if (claim.evidence !== true) {
+    return { rule, outcome: "insufficient_information", provisions, reason: `A s.${section} claim of ${rupees(claim.amount)} needs its receipt or statement before it is relied on.`, missing: [`proof of the s.${section} payment`] };
   }
-  return { rule, outcome: "eligible", provisions, reason: `s.${section} applies under the old regime; the engine caps it at the statutory limit.` };
+  const amountNote =
+    section === "80C"
+      ? "the engine caps this section at its limit, but does not enforce the shared s.80CCE ceiling across 80C, 80CCC and 80CCD(1) — check that where more than one is claimed"
+      : "the allowed amount depends on who is covered, their age and non-cash payment; the engine applies the self-and-family cap only, so senior-citizen and parent limits need a professional's figure";
+  return { rule, outcome: "eligible", provisions, reason: `s.${section} applies under the old regime; ${amountNote}.` };
 }
 
 /**
@@ -101,7 +142,12 @@ export function regimeSwitch(facts: TaxpayerFacts): ApplicabilityResult {
     return need(rule, provisions, ["whether there is any business or professional income"]);
   }
   if (!facts.hasBusinessOrProfessionIncome) {
-    return { rule, outcome: "eligible", provisions, reason: "With no business or professional income, the regime is chosen each year in the return itself; nothing else to file." };
+    // The option to the old regime is exercised in the return under s.139(1): a belated return cannot take it.
+    if (facts.returnByDueDate === undefined) return need(rule, provisions, ["whether the return will be filed by the s.139(1) due date"]);
+    if (!facts.returnByDueDate) {
+      return { rule, outcome: "ineligible", provisions, reason: "The old regime can only be chosen in a return filed by the s.139(1) due date; a belated return stays in the new regime." };
+    }
+    return { rule, outcome: "eligible", provisions, reason: "With no business or professional income, the regime is chosen each year in the return itself, filed on time; nothing else to file." };
   }
   if (facts.priorRegimeOptOut === undefined) {
     return need(rule, provisions, ["whether Form 10-IEA was filed in an earlier year and whether that option was later withdrawn"]);
@@ -120,24 +166,62 @@ export function ltcg112AExemption(facts: TaxpayerFacts): ApplicabilityResult {
   const provisions = ["1961:112A@FY2025-26"];
   if (facts.ltcg112A === undefined) return need(rule, provisions, ["long-term equity gains for the year"]);
   if (facts.ltcg112A <= 0) return { rule, outcome: "ineligible", provisions, reason: "No long-term equity gain to exempt." };
+  const missing: string[] = [];
+  if (facts.resident === undefined) missing.push("residential status");
+  if (facts.totalIncome === undefined) missing.push("total income");
+  if (!facts.regime) missing.push("tax regime");
+  if (missing.length) return need(rule, provisions, missing);
+  if (facts.resident) {
+    // Proviso to s.112A(2): a resident's unused basic exemption is set against the gain first.
+    // The engine does not model that adjustment, so the taxable figure cannot be promised here.
+    const otherIncome = facts.totalIncome! - facts.ltcg112A;
+    const edge = basicExemption(facts.regime!, ageBand(facts));
+    if (otherIncome < edge) {
+      return {
+        rule,
+        outcome: "insufficient_information",
+        provisions,
+        reason: `Other income of ${rupees(Math.max(0, otherIncome))} is below the ${rupees(edge)} basic exemption, so the unused ${rupees(edge - Math.max(0, otherIncome))} is set against the gain before the ${rupees(LTCG_112A_EXEMPTION)} threshold and the 12.5% rate apply. This release's engine does not make that adjustment; the taxable gain needs a professional's figure.`,
+        missing: ["s.112A(2) basic-exemption adjustment"],
+      };
+    }
+  }
   const taxable = Math.max(0, facts.ltcg112A - LTCG_112A_EXEMPTION);
   return {
     rule,
     outcome: "eligible",
     provisions,
-    reason: `The first ₹${LTCG_112A_EXEMPTION.toLocaleString("en-IN")} of the ₹${facts.ltcg112A.toLocaleString("en-IN")} gain is tax-free; ₹${taxable.toLocaleString("en-IN")} is taxed at 12.5%. The whole gain still counts in total income.`,
+    reason: `The first ${rupees(LTCG_112A_EXEMPTION)} of the ${rupees(facts.ltcg112A)} gain is tax-free; ${rupees(taxable)} is taxed at 12.5%. The whole gain still counts in total income.`,
   };
 }
 
-/** Everything the salaried slice checks, in one call. */
+/**
+ * Everything the salaried slice checks, in one call. An unsupported period is
+ * a prerequisite, not one result among others: every dependent rule is then
+ * marked unsupported rather than answered from the wrong Act.
+ */
 export function evaluateSalariedSlice(facts: TaxpayerFacts): ApplicabilityResult[] {
-  return [
-    periodSupported(facts),
-    standardDeduction(facts),
-    rebate87A(facts),
-    oldRegimeDeduction(facts, "80C"),
-    oldRegimeDeduction(facts, "80D"),
-    regimeSwitch(facts),
-    ltcg112AExemption(facts),
+  const period = periodSupported(facts);
+  const rules: ((f: TaxpayerFacts) => ApplicabilityResult)[] = [
+    standardDeduction,
+    rebate87A,
+    (f) => oldRegimeDeduction(f, "80C"),
+    (f) => oldRegimeDeduction(f, "80D"),
+    regimeSwitch,
+    ltcg112AExemption,
   ];
+  if (period.outcome !== "eligible") {
+    const label = facts.period ? `${facts.period.label} (${facts.period.act === "IT_ACT_2025" ? "Income-tax Act, 2025" : "Income-tax Act, 1961"})` : "this period";
+    return [
+      period,
+      ...rules.map((r) => ({
+        rule: r(facts).rule,
+        outcome: "insufficient_information" as const,
+        provisions: ["transition:1961-to-2025"],
+        reason: `This release has no reviewed rules for ${label}, so this cannot be decided here.`,
+        missing: [`reviewed rules for ${label}`],
+      })),
+    ];
+  }
+  return [period, ...rules.map((r) => r(facts))];
 }

@@ -29,6 +29,14 @@ interface PortalHeaderProps {
   onViewChange?: (view: "hub" | "dashboard") => void;
   onLogout?: () => void;
   onOpenVault?: () => void;
+  /**
+   * Rendered inside the shared application shell (components/agentic/app-shell.tsx),
+   * which already carries the brand, the mode switch, language, theme and the
+   * vault. This header then keeps only what the shell does not: the Hub /
+   * Return switcher and the signed-in citizen strip (plan.md §6: "Avoid
+   * duplicating the same navigation across the canvas and header").
+   */
+  inShell?: boolean;
 }
 
 export default function PortalHeader({
@@ -46,8 +54,47 @@ export default function PortalHeader({
   onViewChange,
   onLogout,
   onOpenVault,
+  inShell = false,
 }: PortalHeaderProps) {
   const ps = getPortalStrings(lang);
+
+  if (inShell) {
+    return (
+      <header className="border-b border-line bg-paper text-ink z-30 relative print:hidden">
+        <div className="px-4 py-2.5 max-w-6xl mx-auto w-full flex flex-wrap items-center justify-between gap-2">
+          {activeCitizen && onViewChange && (
+            <div className="flex items-center gap-1 rounded-xl border border-line bg-paper-2 p-1 font-sans text-xs">
+              <button type="button" onClick={() => onViewChange("hub")} className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition cursor-pointer ${currentView === "hub" ? "bg-paper text-money shadow-sm border border-line" : "text-ink-2 hover:text-ink"}`}>
+                <LayoutGrid size={13} />
+                <span>{ps.portalHub}</span>
+              </button>
+              <button type="button" onClick={() => onViewChange("dashboard")} className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition cursor-pointer ${currentView === "dashboard" ? "bg-paper text-money shadow-sm border border-line" : "text-ink-2 hover:text-ink"}`}>
+                <FileText size={13} />
+                <span>{ps.myReturn}</span>
+              </button>
+            </div>
+          )}
+          {activeCitizen ? (
+            <div className="flex items-center gap-2 min-w-0 ms-auto">
+              <div className="flex items-center gap-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800/60 px-2.5 py-1 text-xs min-w-0">
+                <User size={12} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span className="font-semibold text-ink truncate">{activeCitizen.name}</span>
+                <span className="font-mono text-ink-3 hidden sm:inline">({activeCitizen.pan})</span>
+              </div>
+              {onLogout && (
+                <button type="button" onClick={onLogout} className="flex items-center gap-1.5 rounded-lg border border-line bg-paper-2 px-2.5 py-1 text-xs text-ink-2 hover:text-ink cursor-pointer">
+                  <LogOut size={12} />
+                  <span className="hidden sm:inline">{ps.logOut}</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="text-[11px] text-ink-3 font-mono ms-auto">{t.shell.independent} · {t.shell.taxYear}</div>
+          )}
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="border-b border-line bg-paper text-ink z-30 relative print:hidden">
@@ -59,7 +106,7 @@ export default function PortalHeader({
         </span>
         <span className="hidden md:inline font-semibold">{t.shell.taxYear}</span>
       </div>
-      
+
       <div className="px-4 py-2.5 sm:py-3 max-w-6xl mx-auto w-full space-y-2.5">
         {/* Row 1: brand left, Hub/Return switch in middle if logged in (desktop), Agentic/Manual switch in top-right */}
         <div className="flex items-center justify-between gap-2">

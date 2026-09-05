@@ -85,12 +85,16 @@ export function retrieve(query: RetrievalQuery): EvidenceBundle {
   if (query.period.act === "IT_ACT_2025" && transition && !scored.includes(transition)) scored.push(transition);
 
   // Expand linked provisions one hop: a deduction without its regime exception is not evidence.
+  // A linked rule still has to apply to this taxpayer: an HUF asking about s.115BAC must not
+  // receive the resident-individual rebate as unqualified evidence.
   const expanded = new Map<string, LegalProvision>();
   for (const p of scored) {
     expanded.set(p.id, p);
     for (const id of p.linked) {
       const l = provisionById(id);
-      if (l && l.financialYears.includes(query.period.financialYear)) expanded.set(l.id, l);
+      if (!l || !l.financialYears.includes(query.period.financialYear)) continue;
+      if (query.category !== undefined && !l.categories.includes(query.category)) continue;
+      expanded.set(l.id, l);
     }
   }
 
@@ -103,10 +107,10 @@ export function retrieve(query: RetrievalQuery): EvidenceBundle {
   };
 }
 
-/** Citations for a recommendation: id, title, locator, URL — what the Sources panel shows. */
-export function cite(ids: string[]): { id: string; title: string; locator: string; url: string; section: string }[] {
+/** Citations for a recommendation: id, title, locator, URL and review status — what the Sources panel shows. */
+export function cite(ids: string[]): { id: string; title: string; locator: string; url: string; section: string; reviewer: string }[] {
   return ids
     .map(provisionById)
     .filter((p): p is LegalProvision => !!p)
-    .map((p) => ({ id: p.id, title: p.title, locator: p.locator, url: p.sourceUrl, section: `s.${p.section}${p.subsection ?? ""}` }));
+    .map((p) => ({ id: p.id, title: p.title, locator: p.locator, url: p.sourceUrl, section: `s.${p.section}${p.subsection ?? ""}`, reviewer: p.reviewer }));
 }
