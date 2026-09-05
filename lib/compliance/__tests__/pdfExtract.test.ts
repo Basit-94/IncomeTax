@@ -150,5 +150,15 @@ describe("extractFieldsFromPdf async", () => {
       expect(fields.tds).toBe(85_000);
     }
   });
+
+  it("extracts from Form 16 - Arjun Mehta.pdf", async () => {
+    const p = path.resolve(process.cwd(), "Form 16 - Arjun Mehta.pdf");
+    if (fs.existsSync(p)) {
+      const bytes = new Uint8Array(fs.readFileSync(p));
+      const fields = await extractFieldsFromPdf(bytes);
+      console.log("Arjun Mehta fields extracted:", fields);
+      expect(isEmptyExtraction(fields)).toBe(false);
+    }
+  });
 });
 

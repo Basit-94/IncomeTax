@@ -289,6 +289,7 @@ export default function MatchRecordsModal({
   const [uploadPhase, setUploadPhase] = useState<"idle" | "reading" | "success" | "error">("idle");
   const [uploadError, setUploadError] = useState<string>("");
   const [isDragging, setIsDragging] = useState(false);
+  const dragCounter = useRef(0);
   const [uploadedDoc, setUploadedDoc] = useState<{
     fileName: string;
     kind: string;
@@ -816,38 +817,64 @@ export default function MatchRecordsModal({
                 </div>
               ) : (
                 <div
-                  onDragOver={(e) => {
+                  onDragEnter={(e) => {
                     e.preventDefault();
+                    e.stopPropagation();
+                    dragCounter.current += 1;
                     setIsDragging(true);
                   }}
-                  onDragLeave={() => setIsDragging(false)}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.dataTransfer.dropEffect = "copy";
+                    setIsDragging(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dragCounter.current -= 1;
+                    if (dragCounter.current <= 0) {
+                      dragCounter.current = 0;
+                      setIsDragging(false);
+                    }
+                  }}
                   onDrop={(e) => {
                     e.preventDefault();
+                    e.stopPropagation();
+                    dragCounter.current = 0;
                     setIsDragging(false);
                     const file = e.dataTransfer.files?.[0];
                     if (file) void handleProcessPdf(file);
                   }}
                   onClick={() => fileInputRef.current?.click()}
-                  className={`rounded-2xl border-2 border-dashed p-8 transition text-center cursor-pointer ${
+                  className={`rounded-2xl border-2 border-dashed p-8 transition-all text-center cursor-pointer ${
                     isDragging
-                      ? "border-blue-600 bg-blue-50/60 dark:bg-blue-950/40"
+                      ? "border-blue-600 bg-blue-50/70 dark:bg-blue-950/60 ring-4 ring-blue-500/20 scale-[1.01]"
                       : "border-line hover:border-blue-500 bg-paper-2"
                   }`}
                 >
-                  <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-950/70 text-blue-600 dark:text-blue-300 mb-3">
-                    <Upload size={24} />
-                  </div>
-                  <h3 className="font-sans text-base font-bold text-ink">
-                    {isHindi ? "अपनी AIS, 26AS या फॉर्म 16 PDF यहाँ खींचें व छोड़ें" : "Drop your AIS, Form 26AS or Form 16 PDF here"}
-                  </h3>
-                  <p className="text-xs text-ink-2 mt-1 max-w-md mx-auto leading-relaxed">
-                    {isHindi
-                      ? "फ़ाइल चुनने के लिए क्लिक करें या PDF यहाँ छोड़ें। यह आपके ब्राउज़र में 100% स्थानीय रूप से पढ़ा जाएगा और तालिका 1 में स्वतः भर जाएगा।"
-                      : "Click to browse or drop file here. Unpacks stream locally in browser and populates Tab 1 with exact figures."}
-                  </p>
-                  <div className="mt-4 flex items-center justify-center gap-1.5 text-[11px] font-medium text-ink-3">
-                    <Lock size={12} className="text-emerald-600" />
-                    <span>{isHindi ? "100% शून्य-सर्वर अपलोड (ब्राउज़र में प्रोसेस)" : "100% Client-side · Zero server storage"}</span>
+                  <div className="pointer-events-none">
+                    <div className={`mx-auto flex size-14 items-center justify-center rounded-full mb-3 transition-transform ${
+                      isDragging
+                        ? "bg-blue-600 text-white scale-110 shadow-lg"
+                        : "bg-blue-100 dark:bg-blue-950/70 text-blue-600 dark:text-blue-300"
+                    }`}>
+                      <Upload size={24} />
+                    </div>
+                    <h3 className="font-sans text-base font-bold text-ink">
+                      {isDragging
+                        ? (isHindi ? "PDF फ़ाइल यहाँ छोड़ें" : "Drop your PDF file here now")
+                        : (isHindi ? "अपनी AIS, 26AS या फॉर्म 16 PDF यहाँ खींचें व छोड़ें" : "Drop your AIS, Form 26AS or Form 16 PDF here")}
+                    </h3>
+                    <p className="text-xs text-ink-2 mt-1 max-w-md mx-auto leading-relaxed">
+                      {isHindi
+                        ? "फ़ाइल चुनने के लिए क्लिक करें या PDF यहाँ छोड़ें। यह आपके ब्राउज़र में 100% स्थानीय रूप से पढ़ा जाएगा और तालिका 1 में स्वतः भर जाएगा।"
+                        : "Click to browse or drop file here. Unpacks stream locally in browser and populates Tab 1 with exact figures."}
+                    </p>
+                    <div className="mt-4 flex items-center justify-center gap-1.5 text-[11px] font-medium text-ink-3">
+                      <Lock size={12} className="text-emerald-600" />
+                      <span>{isHindi ? "100% शून्य-सर्वर अपलोड (ब्राउज़र में प्रोसेस)" : "100% Client-side · Zero server storage"}</span>
+                    </div>
                   </div>
                 </div>
               )}

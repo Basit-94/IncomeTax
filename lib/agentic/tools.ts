@@ -89,7 +89,7 @@ function figures(snapRegime: "new" | "old" | undefined, persona: Parameters<type
 
 export const TOOLS = {
   list_vault_documents: tool({
-    name: \"list_vault_documents",
+    name: "list_vault_documents",
     description: "List the signed-in citizen's stored documents for the year, with provenance. Never lists another owner's.",
     args: z.object({ docType: z.enum(["FORM_16", "ANNUAL_INFO_STATEMENT", "FORM_26AS", "BANK_STATEMENT", "CHALLAN_280", "ITR_V", "OTHER"]).optional() }).strict(),
     permission: "auto",
@@ -113,7 +113,7 @@ export const TOOLS = {
   }),
 
   read_document_fields: tool({
-    name: \"read_document_fields",
+    name: "read_document_fields",
     description: "Read the structured fields already extracted from a stored document. Values are proposals, not facts.",
     args: z.object({ documentId: z.string().min(1) }).strict(),
     permission: "auto",
@@ -138,7 +138,7 @@ export const TOOLS = {
   }),
 
   open_vault_document: tool({
-    name: \"open_vault_document",
+    name: "open_vault_document",
     description: "Hand the citizen a stored original to view on their screen. The agent never reads raw document text.",
     args: z.object({ documentId: z.string().min(1) }).strict(),
     permission: "auto",
@@ -152,7 +152,7 @@ export const TOOLS = {
   }),
 
   get_current_return: tool({
-    name: \"get_current_return",
+    name: "get_current_return",
     description: "The owner's return as the engine sees it: facts by kind, claims, credits, regime and revision. No identifiers.",
     args: none,
     permission: "auto",
@@ -175,7 +175,7 @@ export const TOOLS = {
   }),
 
   compute_current_tax: tool({
-    name: \"compute_current_tax",
+    name: "compute_current_tax",
     description: "Every figure of the current return under its chosen regime, from the engine.",
     args: none,
     permission: "auto",
@@ -187,7 +187,7 @@ export const TOOLS = {
   }),
 
   compare_regimes: tool({
-    name: \"compare_regimes",
+    name: "compare_regimes",
     description: "Both regimes side by side for the current return, plus which is cheaper and by how much.",
     args: none,
     permission: "auto",
@@ -209,7 +209,7 @@ export const TOOLS = {
   }),
 
   check_applicability: tool({
-    name: \"check_applicability",
+    name: "check_applicability",
     description: "Run the reviewed eligibility rules for the salaried slice against known facts. Missing facts come back named.",
     args: z.object({ facts: z.object({
       hasSalaryIncome: z.boolean().optional(), grossSalary: z.number().optional(), hasBusinessOrProfessionIncome: z.boolean().optional(),
@@ -225,7 +225,7 @@ export const TOOLS = {
   }),
 
   review_return: tool({
-    name: \"review_return",
+    name: "review_return",
     description: "Computed findings: TDS vs liability, unclassified gains, cheaper regime, missing old-regime claims, CASS risk.",
     args: none,
     permission: "auto",
@@ -253,7 +253,7 @@ export const TOOLS = {
   }),
 
   propose_fact_updates: tool({
-    name: \"propose_fact_updates",
+    name: "propose_fact_updates",
     description: "Stage return commands for the citizen to review. Nothing is applied until they confirm.",
     args: z.object({ commands: z.array(z.custom<ReturnCommand>((v) => typeof v === "object" && v !== null && "type" in (v as object))).min(1).max(10) }).strict(),
     permission: "reviewable",
@@ -263,7 +263,7 @@ export const TOOLS = {
   }),
 
   prepare_filing: tool({
-    name: \"prepare_filing",
+    name: "prepare_filing",
     description: "Compute the final figures and stage a SIMULATED filing for explicit confirmation. Never files by itself.",
     args: none,
     permission: "confirm_required",
@@ -275,7 +275,7 @@ export const TOOLS = {
   }),
 
   prepare_simulated_payment: tool({
-    name: \"prepare_simulated_payment",
+    name: "prepare_simulated_payment",
     description: "Stage a SIMULATED Challan 280 for the balance payable, for explicit confirmation.",
     args: none,
     permission: "confirm_required",
@@ -288,7 +288,7 @@ export const TOOLS = {
   }),
 
   memory_get: tool({
-    name: \"memory_get",
+    name: "memory_get",
     description: "Read the citizen's explicitly remembered preferences.",
     args: none,
     permission: "auto",
@@ -298,7 +298,7 @@ export const TOOLS = {
   }),
 
   memory_set: tool({
-    name: \"memory_set",
+    name: "memory_set",
     description: "Remember one typed preference. Only allow-listed keys; never amounts or identifiers.",
     args: z.object({ key: z.enum(MEMORY_KEYS as unknown as [MemoryKey, ...MemoryKey[]]), value: z.union([z.string().max(64), z.number(), z.boolean()]) }).strict(),
     permission: "auto",

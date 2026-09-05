@@ -54,12 +54,12 @@ export function detectDocumentKind(
 const RUPEE_SIGN = "(?:₹|\\u00e2\\u0082\\u00b9|Rs\\.?)?";
 
 export const GROSS_SALARY_RE = new RegExp(
-  `(?:Gross Salary|Salary u/s 17\\(1\\))[\\s:]+${RUPEE_SIGN}\\s*([0-9,]+)`,
+  `(?:Gross Total Income|Total Gross Salary|Gross Salary|Salary u/s 17\\(1\\)|Taxable Salary|Income from Salary|Gross Amount)[\\s:]+${RUPEE_SIGN}\\s*([0-9,]+)`,
   "i",
 );
 
 export const TDS_RE = new RegExp(
-  `(?:Total Tax Deducted|TDS)[\\s:]+${RUPEE_SIGN}\\s*([0-9,]+)`,
+  `(?:Total Tax Deducted|Tax Deducted at Source|Total Tax Deposited|Total TDS|TDS Deducted|TDS)[\\s:]+${RUPEE_SIGN}\\s*([0-9,]+)`,
   "i",
 );
 
@@ -145,24 +145,40 @@ async function decompressDeflateStream(rawBytes: Uint8Array): Promise<Uint8Array
     try {
       const ds = new DecompressionStream(format);
       const writer = ds.writable.getWriter();
-      writer.write(rawBytes as unknown as BufferSource);
-      writer.close();
-
       const reader = ds.readable.getReader();
+
+      const writePromise = writer.write(rawBytes as unknown as BufferSource).catch(() => {});
+      const closePromise = writer.close().catch(() => {});
+
       const chunks: Uint8Array[] = [];
       let total = 0;
+      let readOk = true;
+
       while (true) {
-        const { done, value } = await reader.read();
+        let readResult;
+        try {
+          readResult = await reader.read();
+        } catch {
+          readOk = false;
+          break;
+        }
+        const { done, value } = readResult;
         if (done) break;
         if (value) {
           total += value.length;
           if (total > MAX_DECOMPRESSED_BYTES) {
-            await reader.cancel();
-            return null;
+            try { await reader.cancel(); } catch {}
+            readOk = false;
+            break;
           }
           chunks.push(value);
         }
       }
+
+      await writePromise;
+      await closePromise;
+
+      if (!readOk) continue;
 
       const totalLen = chunks.reduce((acc, c) => acc + c.length, 0);
       const out = new Uint8Array(totalLen);

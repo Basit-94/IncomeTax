@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useId, useEffect } from "react";
+import { useState, useRef, useId, useEffect, useCallback } from "react";
 import {
   X,
   FileText,
@@ -35,6 +35,7 @@ interface FileReturnModalProps {
   onLaunchPan: (pan: string) => void;
   onLaunchWithForm16: (doc: IngestedDocument) => void;
   initialTab?: TabType;
+  initialFile?: File | null;
 }
 
 type TabType = "custom_pan" | "form16" | "demo_personas";
@@ -47,15 +48,10 @@ export default function FileReturnModal({
   onLaunchPan,
   onLaunchWithForm16,
   initialTab = "custom_pan",
+  initialFile,
 }: FileReturnModalProps) {
   // Active Tab state initialized from initialTab
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
-
-  useEffect(() => {
-    if (isOpen && initialTab) {
-      setActiveTab(initialTab);
-    }
-  }, [isOpen, initialTab]);
 
   // Custom PAN State
   const [customPanInput, setCustomPanInput] = useState("");
@@ -68,50 +64,71 @@ export default function FileReturnModal({
   const [pdfResult, setPdfResult] = useState<IngestedDocument | null>(null);
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-
-  if (!isOpen) return null;
+  const dragCounter = useRef(0);
 
   const ps = getPortalStrings(lang);
 
-  const handleFileDrop = async (file: File) => {
-    if (!file.name.toLowerCase().endsWith(".pdf")) {
-      setPdfError(ps.docError);
-      return;
-    }
+  const handleFileDrop = useCallback(
+    async (file: File) => {
+      const isPdf =
+        file.name.toLowerCase().endsWith(".pdf") ||
+        file.type === "application/pdf" ||
+        file.type === "application/x-pdf";
 
-    setIsReadingPdf(true);
-    setPdfError(null);
-    setPdfResult(null);
-
-    try {
-      const buffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      const extracted: ExtractedFields = await extractFieldsFromPdf(bytes);
-      const kind = detectDocumentKind(bytes, file.name);
-
-      // Brief parse beat for comfortable user perception
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
-      if (isEmptyExtraction(extracted)) {
+      if (!isPdf) {
         setPdfError(ps.docError);
-        setIsReadingPdf(false);
         return;
       }
 
-      const doc: IngestedDocument = {
-        fileName: file.name,
-        kind,
-        ingestedAt: new Date().toISOString(),
-        extracted,
-      };
+      setIsReadingPdf(true);
+      setPdfError(null);
+      setPdfResult(null);
 
-      setPdfResult(doc);
-      setIsReadingPdf(false);
-    } catch {
-      setPdfError(ps.docError);
-      setIsReadingPdf(false);
+      try {
+        const buffer = await file.arrayBuffer();
+        const bytes = new Uint8Array(buffer);
+        const extracted: ExtractedFields = await extractFieldsFromPdf(bytes);
+        const kind = detectDocumentKind(bytes, file.name);
+
+        // Brief parse beat for comfortable user perception
+        await new Promise((resolve) => setTimeout(resolve, 600));
+
+        if (isEmptyExtraction(extracted)) {
+          setPdfError(
+            "We could not find readable digital tax figures in this PDF. It may be a scanned copy (image) or require a password. You can enter your PAN directly or try our sample Form 16."
+          );
+          setIsReadingPdf(false);
+          return;
+        }
+
+        const doc: IngestedDocument = {
+          fileName: file.name,
+          kind,
+          ingestedAt: new Date().toISOString(),
+          extracted,
+        };
+
+        setPdfResult(doc);
+        setIsReadingPdf(false);
+      } catch {
+        setPdfError(ps.docError);
+        setIsReadingPdf(false);
+      }
+    },
+    [ps.docError],
+  );
+
+  useEffect(() => {
+    if (isOpen && initialTab) {
+      setActiveTab(initialTab);
     }
-  };
+    if (isOpen && initialFile) {
+      setActiveTab("form16");
+      void handleFileDrop(initialFile);
+    }
+  }, [isOpen, initialTab, initialFile, handleFileDrop]);
+
+  if (!isOpen) return null;
 
   const handleSampleForm16 = () => {
     setIsReadingPdf(true);
@@ -367,15 +384,33 @@ export default function FileReturnModal({
               </p>
             </div>
 
-            {/* Dropzone */}
+            {/* Dropzone with full Drag & Drop resilience */}
             <div
-              onDragOver={(e) => {
+              onDragEnter={(e) => {
                 e.preventDefault();
+                e.stopPropagation();
+                dragCounter.current += 1;
                 setIsDragging(true);
               }}
-              onDragLeave={() => setIsDragging(false)}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.dataTransfer.dropEffect = "copy";
+                setIsDragging(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dragCounter.current -= 1;
+                if (dragCounter.current <= 0) {
+                  dragCounter.current = 0;
+                  setIsDragging(false);
+                }
+              }}
               onDrop={(e) => {
                 e.preventDefault();
+                e.stopPropagation();
+                dragCounter.current = 0;
                 setIsDragging(false);
                 const file = e.dataTransfer.files?.[0];
                 if (file) void handleFileDrop(file);
@@ -383,7 +418,7 @@ export default function FileReturnModal({
               onClick={() => fileInputRef.current?.click()}
               className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 text-center transition cursor-pointer ${
                 isDragging
-                  ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30"
+                  ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 ring-4 ring-emerald-500/20 scale-[1.01]"
                   : "border-line bg-paper-2 hover:border-emerald-500/60 hover:bg-paper-3"
               }`}
             >
@@ -400,19 +435,23 @@ export default function FileReturnModal({
               />
 
               {isReadingPdf ? (
-                <div className="flex flex-col items-center gap-2 py-3">
+                <div className="pointer-events-none flex flex-col items-center gap-2 py-3">
                   <Loader2 size={26} className="animate-spin text-emerald-600" />
                   <p className="text-xs font-bold text-ink">
                     {ps.readingDoc}
                   </p>
                 </div>
               ) : (
-                <>
-                  <div className="flex size-11 items-center justify-center rounded-xl bg-paper-3 text-emerald-700 dark:text-emerald-300 mb-2">
+                <div className="pointer-events-none flex flex-col items-center">
+                  <div className={`flex size-11 items-center justify-center rounded-xl transition-transform mb-2 ${
+                    isDragging
+                      ? "bg-emerald-600 text-white scale-110"
+                      : "bg-paper-3 text-emerald-700 dark:text-emerald-300"
+                  }`}>
                     <Upload size={20} />
                   </div>
                   <h4 className="font-sans text-sm font-bold text-ink">
-                    {ps.dropPdfPrompt}
+                    {isDragging ? "Drop your PDF file here now" : ps.dropPdfPrompt}
                   </h4>
                   <p className="text-xs text-ink-3 mt-0.5">
                     {ps.dropzoneTitle}
@@ -423,7 +462,7 @@ export default function FileReturnModal({
                       {ps.clientSideOnly}
                     </span>
                   </div>
-                </>
+                </div>
               )}
             </div>
 
@@ -444,18 +483,38 @@ export default function FileReturnModal({
               </div>
             )}
 
-            {/* Error Message */}
+            {/* Error Message with direct recovery actions */}
             {pdfError && (
-              <div className="flex items-start gap-2 rounded-xl border border-alarm/30 bg-alarm/5 p-3 text-xs text-alarm">
-                <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                <div>
+              <div className="rounded-xl border border-alarm/30 bg-alarm/5 dark:bg-alarm/10 p-3.5 text-xs text-alarm space-y-2.5">
+                <div className="flex items-start gap-2">
+                  <AlertCircle size={16} className="shrink-0 mt-0.5" />
                   <p className="m-0 font-medium leading-relaxed">{pdfError}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-alarm/20">
                   <button
                     type="button"
                     onClick={() => setActiveTab("custom_pan")}
-                    className="mt-2 text-xs font-bold underline cursor-pointer hover:opacity-80"
+                    className="inline-flex items-center gap-1 font-bold text-money underline cursor-pointer hover:opacity-80"
                   >
-                    {ps.proceedPanPrompt}
+                    <span>{ps.proceedPanPrompt}</span>
+                  </button>
+                  <span className="text-ink-3">·</span>
+                  <button
+                    type="button"
+                    onClick={handleSampleForm16}
+                    className="inline-flex items-center gap-1 font-bold text-money underline cursor-pointer hover:opacity-80"
+                  >
+                    <FileSpreadsheet size={12} />
+                    <span>{ps.loadSampleDocBtn}</span>
+                  </button>
+                  <span className="text-ink-3">·</span>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex items-center gap-1 font-bold text-ink underline cursor-pointer hover:opacity-80"
+                  >
+                    <Upload size={12} />
+                    <span>Choose another file</span>
                   </button>
                 </div>
               </div>
