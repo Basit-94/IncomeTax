@@ -23,6 +23,7 @@ import { generateItrvPdf } from "../compliance/itrvPdf";
 import { evaluateSalariedSlice } from "../knowledge/applicability";
 import { cite } from "../knowledge/retrieval";
 import { answerTaxQuestion } from "../knowledge/rag";
+import { getSmartTaxAnswer } from "../knowledge/smart-answers";
 import { assessAdvice, type AdviceContext } from "../knowledge/advice";
 import { approvedForAdvice } from "../knowledge/release";
 import type { TaxpayerFacts } from "../knowledge/types";
@@ -44,6 +45,7 @@ import { consentItems, fetchedFacts, listIssuedDocuments } from "./digilocker";
 import { buildPlan, classifyByRules, isCapabilityInquiry, isPaymentInquiry, isTaxInformationQuestion, nextStep, setStep, taskTitle, type PlanningFacts } from "./planner";
 import { CHALLAN_MAJOR_HEAD_LABEL, CHALLAN_MINOR_HEAD_LABEL, splitTaxAndCess, syntheticChallanIdentifiers } from "../compliance/challan280";
 import type { SelfAssessmentPayment } from "../../context/TaxReturnContext";
+import { getLatestReviewForPan } from "../ca/ca-store";
 import { redactText, stripInjection } from "./redact";
 import { recommendationText, regimeName, strings } from "./response";
 import { newId, snapshotHash, type RunStore } from "./store";
@@ -582,19 +584,35 @@ function smallTalkIntent(kind: NonNullable<Run["state"]["smallTalk"]>): string {
 
 async function ensureSnapshot(deps: RuntimeDeps, owner: Owner, run: Run): Promise<VersionedReturn | null> {
   const existing = await deps.returns.get(owner, AY);
-  if (existing) return existing;
+  const caReview = getLatestReviewForPan(owner.pan);
+  const hasCa = caReview && (caReview.status === "reviewed" || caReview.status === "accepted") && caReview.caPersona;
+
+  if (existing) {
+    // If CA has completed an audit that hasn't been merged yet into the snapshot, update it
+    if (hasCa && caReview.caPersona && existing.state.persona !== caReview.caPersona) {
+      const updatedState: ReturnState = {
+        ...existing.state,
+        persona: caReview.caPersona,
+        regime: caReview.caRegime || existing.state.regime || "new",
+      };
+      const rep = await deps.returns.replace(owner, AY, updatedState, null);
+      if (rep.ok) return rep.snapshot;
+    }
+    return existing;
+  }
+
   const persona = personaForOwner(owner);
   if (!persona && owner.kind === "demo") return null;
-  const base: Persona = persona ?? blankPersona(owner);
+  const base: Persona = hasCa ? caReview.caPersona! : (persona ?? blankPersona(owner));
   const state: ReturnState = {
     version: CURRENT_VERSION,
     lang: run.lang,
     personaId: base.id === "custom" ? "custom" : base.id,
-    baselinePersona: base,
+    baselinePersona: persona ?? base,
     persona: base,
     corrections: [],
     confirmedFactIds: [],
-    regime: "new",
+    regime: hasCa && caReview.caRegime ? caReview.caRegime : "new",
   };
   const created = await deps.returns.replace(owner, AY, state, null);
   return created.ok ? created.snapshot : await deps.returns.get(owner, AY);
@@ -899,6 +917,8 @@ async function handleChosenTask(
       if (snapshot?.state.filedAt) {
         lines.push("", `*Note: Your return was filed under the **${snapshot.state.regime === "old" ? "Old Regime" : "New Regime (s. 115BAC)"}**.*`);
       }
+      run.title = saving > 0 ? `Regime Comparison · ${cheaper === "new" ? "New" : "Old"} saves ${formatMoney(saving, run.lang)}` : "Regime Comparison · AY 2026-27";
+      await deps.store.saveRun(run);
       await emit({ type: "message", role: "assistant", text: lines.join("\n") });
       await emitTaskCapabilitiesSummary(deps, owner, run, s, emit, "Tax regime comparison completed.");
       run.status = "completed";
@@ -913,6 +933,8 @@ async function handleChosenTask(
         "",
         `To get an exact side-by-side calculation with your numbers, select **Prepare & File Return** so I can read your Form 16 or intake details.`,
       ];
+      run.title = "Regime Comparison · AY 2026-27";
+      await deps.store.saveRun(run);
       await emit({ type: "message", role: "assistant", text: lines.join("\n") });
       await emitTaskCapabilitiesSummary(deps, owner, run, s, emit, "Tax regime comparison completed.");
       run.status = "completed";
@@ -922,6 +944,8 @@ async function handleChosenTask(
   }
 
   if (chosen === "reconcile_facts") {
+    run.title = "Reconciliation · AIS & 26AS";
+    await deps.store.saveRun(run);
     const p = snapshot?.state.persona;
     const grossSalary = p?.facts.filter((f) => f.kind === "salary").reduce((sum, f) => sum + f.amount, 0) ?? 0;
     const tdsPaid = p?.taxPaid.reduce((sum, t) => sum + t.amount, 0) ?? 0;
@@ -949,44 +973,106 @@ async function handleChosenTask(
   }
 
   if (chosen === "challan_280") {
-    const p = snapshot?.state.persona;
-    const b = p ? computeForPersona(p, snapshot?.state.regime ?? "new") : null;
+    const currentSnap = snapshot ?? (await ensureSnapshot(deps, owner, run));
+    const caReview = getLatestReviewForPan(owner.pan);
+    const hasCa = caReview && (caReview.status === "reviewed" || caReview.status === "accepted") && caReview.caPersona;
+    const p = hasCa ? caReview.caPersona! : currentSnap?.state.persona;
+    const regime = hasCa && caReview.caRegime ? caReview.caRegime : (currentSnap?.state.regime ?? "new");
+    const b = p ? computeForPersona(p, regime) : null;
     const due = b && b.refundOrDue < 0 ? -b.refundOrDue : 0;
-    const amountToPay = due > 0 ? due : 5000;
+
+    if (due === 0) {
+      const refund = b && b.refundOrDue > 0 ? b.refundOrDue : 0;
+      run.title = refund > 0 ? "Challan 280 · Nil Tax Due (Refund)" : "Challan 280 · Nil Tax Due";
+      await deps.store.saveRun(run);
+
+      const lines = [
+        `### 💳 Advance Tax & Challan ITNS 280 (AY 2026-27)`,
+        "",
+        `• **Taxpayer**: ${p?.name || owner.displayName} (${p?.pan || owner.pan})`,
+        refund > 0
+          ? `• **Net Balance Tax Due**: **₹0** *(Net Refund Due: **${formatMoney(refund, run.lang)}**)*`
+          : `• **Net Balance Tax Due**: **₹0** *(Nil Balance Tax Payable)*`,
+        hasCa
+          ? `• **CA Audit Status**: Audited & Verified by **${caReview.caDetails?.name || "Chartered Accountant"}** ✓`
+          : `• **Liability Status**: Prepaid taxes satisfy or exceed total computed tax liability ✓`,
+        `• **Major Head**: 0021 (Income Tax other than Companies)`,
+        `• **Minor Head**: 100 (Advance Tax / Nil Clearance)`,
+        `• **Assessment Year**: 2026-27`,
+        "",
+        refund > 0
+          ? `Your prepaid taxes exceed your computed liability. You are eligible for an **income tax refund of ${formatMoney(refund, run.lang)}**, which will be credited directly to your bank account by the CPC refund banker. You do **not** owe any self-assessment tax!`
+          : `All computed tax liabilities have been fully covered. Your outstanding self-assessment tax liability u/s 140A is **₹0**.`,
+        "",
+        `You can simulate a ₹0 / Nil Challan clearance below, or proceed directly to return filing.`,
+      ];
+      await emit({ type: "message", role: "assistant", text: lines.join("\n") });
+
+      const choices = [
+        { value: "pay_challan_upi", label: "⚡ Simulate UPI / QR (₹0 — Nil Due)" },
+        { value: "pay_challan_sbi", label: "🏦 Net Banking — SBI (₹0 — Nil Due)" },
+        { value: "skip_challan_pay", label: "Proceed to Return Filing (Nil Due)" },
+      ];
+
+      const q: Question = {
+        id: newId("q"),
+        text: refund > 0
+          ? `You have a refund of ${formatMoney(refund, run.lang)} due (₹0 payable). Simulate Challan 280 or proceed?`
+          : `Your balance tax payable is ₹0. Simulate Challan 280 or proceed?`,
+        why: "Section 140A tax clearance verification",
+        expects: "choice",
+        resolves: "challan_payment_mode",
+        choices,
+      };
+      run.state.pendingQuestion = q;
+      await emit({ type: "question", question: q });
+      run.status = "waiting_for_input";
+      await emit({ type: "status", status: "waiting_for_input" });
+      return;
+    }
+
+    const amountToPay = due;
     const { baseTax, cess } = splitTaxAndCess(amountToPay);
 
     const lines = [
       `### 💳 Advance Tax & Challan ITNS 280 (AY 2026-27)`,
       "",
       `• **Taxpayer**: ${p?.name || owner.displayName} (${p?.pan || owner.pan})`,
-      due > 0
-        ? `• **Net Balance Tax Due**: **${formatMoney(due, run.lang)}**`
-        : `• **Current Tax Due**: **₹0** *(Simulating Challan 280 for Advance Tax)*`,
+      hasCa
+        ? `• **Net Balance Tax Due**: **${formatMoney(due, run.lang)}** *(Audited by ${caReview.caDetails?.name || "CA"})*`
+        : `• **Net Balance Tax Due**: **${formatMoney(due, run.lang)}**`,
       `• **Base Income Tax**: ${formatMoney(baseTax, run.lang)}`,
       `• **Health & Education Cess (4%)**: ${formatMoney(cess, run.lang)}`,
       `• **Major Head**: 0021 (Income Tax other than Companies)`,
-      `• **Minor Head**: ${due > 0 ? "300 (Self-Assessment Tax u/s 140A)" : "100 (Advance Tax)"}`,
+      `• **Minor Head**: 300 (Self-Assessment Tax u/s 140A)`,
       `• **Assessment Year**: 2026-27`,
       "",
-      `Select a payment method below to simulate your Challan 280 transaction. Upon simulation, your tax payment will be credited instantly and an official ITNS 280 receipt generated.`,
+      hasCa
+        ? `This figure incorporates your Chartered Accountant's audited deductions and recommendations under the **${regime === "old" ? "Old Regime" : "New Regime"}**.`
+        : `Select a payment method below to simulate your Challan 280 transaction. Or, you can **Review with a CA** to audit deductions and reduce this payable amount before payment.`,
     ];
     await emit({ type: "message", role: "assistant", text: lines.join("\n") });
 
+    const choices = [
+      { value: "pay_challan_upi", label: `⚡ Simulate UPI / QR (${formatMoney(amountToPay, run.lang)})` },
+      { value: "pay_challan_sbi", label: `🏦 Net Banking — SBI (${formatMoney(amountToPay, run.lang)})` },
+      { value: "pay_challan_hdfc", label: `🏦 Net Banking — HDFC (${formatMoney(amountToPay, run.lang)})` },
+      { value: "pay_challan_icici", label: `🏦 Net Banking — ICICI (${formatMoney(amountToPay, run.lang)})` },
+    ];
+    if (!hasCa) {
+      choices.unshift({ value: "review_with_ca", label: "🎖️ Review with CA First (Audit Deductions)" });
+    }
+    choices.push({ value: "skip_challan_pay", label: "❌ Cancel / Return to Tasks" });
+
     const q: Question = {
       id: newId("q"),
-      text: due > 0
-        ? `Would you like to simulate paying the ${formatMoney(amountToPay, run.lang)} tax challan now?`
-        : `Simulate Challan 280 payment for ${formatMoney(amountToPay, run.lang)}?`,
+      text: hasCa
+        ? `Simulate paying the CA-audited ${formatMoney(amountToPay, run.lang)} tax challan now?`
+        : `Would you like to simulate paying the ${formatMoney(amountToPay, run.lang)} tax challan now?`,
       why: "Clears outstanding self-assessment tax liability before return filing",
       expects: "choice",
       resolves: "challan_payment_mode",
-      choices: [
-        { value: "pay_challan_upi", label: `⚡ Simulate UPI / QR (${formatMoney(amountToPay, run.lang)})` },
-        { value: "pay_challan_sbi", label: `🏦 Net Banking — SBI (${formatMoney(amountToPay, run.lang)})` },
-        { value: "pay_challan_hdfc", label: `🏦 Net Banking — HDFC (${formatMoney(amountToPay, run.lang)})` },
-        { value: "pay_challan_icici", label: `🏦 Net Banking — ICICI (${formatMoney(amountToPay, run.lang)})` },
-        { value: "skip_challan_pay", label: "❌ Cancel / Return to Tasks" },
-      ],
+      choices,
     };
     run.state.pendingQuestion = q;
     await emit({ type: "question", question: q });
@@ -996,6 +1082,8 @@ async function handleChosenTask(
   }
 
   if (chosen === "notice_defense") {
+    run.title = "Notice Defense · Section 139(9)";
+    await deps.store.saveRun(run);
     const notices = snapshot?.state.persona.notices ?? [];
     const lines = notices.length > 0
       ? [
@@ -1022,6 +1110,8 @@ async function handleChosenTask(
   }
 
   if (chosen === "refund_tracker") {
+    run.title = "Refund Tracker · CPC Status";
+    await deps.store.saveRun(run);
     const filedAt = snapshot?.state.filedAt;
     const refund = snapshot?.state.persona.refund;
     const b = snapshot ? computeForPersona(snapshot.state.persona, snapshot.state.regime ?? "new") : null;
@@ -1052,6 +1142,8 @@ async function handleChosenTask(
   }
 
   if (chosen === "tax_vault") {
+    run.title = "Citizen Tax Vault · Documents";
+    await deps.store.saveRun(run);
     const docs = deps.vault ? await deps.vault.list(owner, { assessmentYear: AY }, "agent", run.id) : [];
     const docList = docs.length > 0
       ? docs.map((d) => `• **${d.title}** (${d.docType}) · Verified ✓`).join("\n")
@@ -1087,10 +1179,35 @@ async function handleChallanPaymentExecution(
 
   if (val === "review_with_ca" || val.includes("ca") || val.includes("chartered")) {
     const currentSnap = snapshot ?? (await ensureSnapshot(deps, owner, run));
-    const p = currentSnap?.state.persona;
-    const regime = currentSnap?.state.regime ?? "new";
+    const caReview = getLatestReviewForPan(owner.pan);
+    const hasCa = caReview && (caReview.status === "reviewed" || caReview.status === "accepted") && caReview.caPersona;
+    const p = hasCa ? caReview.caPersona! : currentSnap?.state.persona;
+    const regime = hasCa && caReview.caRegime ? caReview.caRegime : (currentSnap?.state.regime ?? "new");
     const b = p ? computeForPersona(p, regime) : null;
-    const due = b && b.refundOrDue < 0 ? -b.refundOrDue : 4700;
+    const due = b && b.refundOrDue < 0 ? -b.refundOrDue : 0;
+
+    if (due === 0) {
+      const refund = b && b.refundOrDue > 0 ? b.refundOrDue : 0;
+      const caLines = [
+        `### 🎖️ CA Review Audit Verified`,
+        "",
+        hasCa
+          ? `Your Chartered Accountant (**${caReview.caDetails?.name || "CA"}**) has audited your return and optimized deductions under the **${regime === "old" ? "Old Regime" : "New Regime"}**.`
+          : `Your return has been audited against statutory provisions.`,
+        refund > 0
+          ? `• **Net Balance Tax Due**: **₹0** *(Net Refund Due: **${formatMoney(refund, run.lang)}**)*`
+          : `• **Net Balance Tax Due**: **₹0** *(Nil Balance Payable)*`,
+        "",
+        `You do not have any pending self-assessment tax to pay under Section 140A. You can proceed directly to return filing!`,
+      ];
+      await emit({ type: "message", role: "assistant", text: caLines.join("\n") });
+      if (run.task === "prepare_salaried_return") {
+        run.status = "running";
+        return;
+      }
+      await emitTaskCapabilitiesSummary(deps, owner, run, s, emit, "No tax due after CA review.");
+      return;
+    }
 
     const caLines = [
       `### 🎖️ Review with CA Selected`,
@@ -1139,11 +1256,14 @@ async function handleChallanPaymentExecution(
   }
 
   const currentSnap = snapshot ?? (await ensureSnapshot(deps, owner, run));
-  const p = currentSnap?.state.persona;
-  const regime = currentSnap?.state.regime ?? "new";
+  const caReview = getLatestReviewForPan(owner.pan);
+  const hasCa = caReview && (caReview.status === "reviewed" || caReview.status === "accepted") && caReview.caPersona;
+  const p = hasCa ? caReview.caPersona! : currentSnap?.state.persona;
+  const regime = hasCa && caReview.caRegime ? caReview.caRegime : (currentSnap?.state.regime ?? "new");
   const b = p ? computeForPersona(p, regime) : null;
   const due = b && b.refundOrDue < 0 ? -b.refundOrDue : 0;
-  const amountToPay = due > 0 ? due : 5000;
+
+  const amountToPay = due;
 
   let method: "UPI" | "NET_BANKING" = "UPI";
   let bankName = "State Bank of India";
@@ -1190,6 +1310,9 @@ async function handleChallanPaymentExecution(
       run.state.returnRevision = res.snapshot.revision;
     }
   }
+
+  run.title = `Challan 280 · ${formatMoney(amountToPay, run.lang)} Paid`;
+  await deps.store.saveRun(run);
 
   const receiptLines = [
     `### ✅ Payment Successful — Challan ITNS 280 Receipt`,
@@ -1398,12 +1521,30 @@ async function stepCompute(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
       return;
     }
     const answer = answerTaxQuestion(userMsg, deps.today());
-    run.state.taxAnswer = answer;
-    run.knowledgeRelease = answer.release;
-    run.state.sources = answer.citations.map((c) => ({ kind: "rule", id: c.id, label: c.title,
-      detail: `${c.locator} · ${c.reviewer} · ${c.contentHash}`, verified: false, url: c.url }));
-    await emit({ type: "source_lookup", sources: run.state.sources });
-    // Exact evidence text is not passed through a model that can remove qualifications.
+    if (answer.status === "grounded") {
+      run.state.taxAnswer = answer;
+      run.knowledgeRelease = answer.release;
+      run.state.sources = answer.citations.map((c) => ({ kind: "rule", id: c.id, label: c.title,
+        detail: `${c.locator} · ${c.reviewer} · ${c.contentHash}`, verified: false, url: c.url }));
+      await emit({ type: "source_lookup", sources: run.state.sources });
+      await emit({ type: "message", role: "assistant", text: answer.text });
+      const smart = getSmartTaxAnswer(userMsg, run.lang);
+      if (smart) {
+        run.title = smart.title;
+        await deps.store.saveRun(run);
+      }
+      return;
+    }
+
+    const smart = getSmartTaxAnswer(userMsg, run.lang);
+    if (smart) {
+      run.title = smart.title;
+      run.state.sources = smart.sources;
+      await emit({ type: "source_lookup", sources: run.state.sources });
+      await emit({ type: "message", role: "assistant", text: smart.text });
+      await deps.store.saveRun(run);
+      return;
+    }
     await emit({ type: "message", role: "assistant", text: answer.text });
     return;
   }
@@ -1457,7 +1598,19 @@ async function stepCompute(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
   await emit({ type: "tool_outcome", tool: "compare_regimes", ok: true, summary: `new ${both.new.totalTax} · old ${both.old.totalTax}` });
   await emit({ type: "source_lookup", sources: run.state.sources });
 
-  const brief = recommendationText({ cheaper, saving: Math.abs(both.new.totalTax - both.old.totalTax), taxableIncome: b.taxableIncome, totalTax: b.totalTax, refundOrDue: b.refundOrDue }, run.lang);
+  const saving = Math.abs(both.new.totalTax - both.old.totalTax);
+  if (run.task === "compare_regimes") {
+    run.title = saving > 0 ? `Regime Comparison · ${cheaper === "new" ? "New" : "Old"} saves ${formatMoney(saving, run.lang)}` : "Regime Comparison · AY 2026-27";
+    await deps.store.saveRun(run);
+  } else if (run.task === "prepare_salaried_return") {
+    const gross = state.persona.facts.filter((f) => f.kind === "salary").reduce((x, f) => x + f.amount, 0);
+    const employer = state.persona.facts.find((f) => f.kind === "salary")?.label?.replace(/^Gross salary \((.*)\)$/, "$1") ?? "";
+    const cleanEmployer = employer && !employer.startsWith("Gross") ? employer : "";
+    run.title = cleanEmployer ? `Prepare Return · ${cleanEmployer} (${formatMoney(gross, run.lang)})` : `Prepare Return · ${formatMoney(gross, run.lang)}`;
+    await deps.store.saveRun(run);
+  }
+
+  const brief = recommendationText({ cheaper, saving, taxableIncome: b.taxableIncome, totalTax: b.totalTax, refundOrDue: b.refundOrDue }, run.lang);
   // Financial conclusions and their caveats stay deterministic: no model rephrases them. The model may
   // add ONE warm, figure-free sentence in front (docs/VOICE.md); otherwise a deterministic lead is used.
   let lead = s.leadRecommendation;
@@ -1498,10 +1651,13 @@ async function stepReview(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnTy
   }
 
   const state = projected(snapshot, run.state.pendingCommands);
-  const both = compareForPersona(state.persona);
+  const caReview = getLatestReviewForPan(owner.pan);
+  const hasCa = caReview && (caReview.status === "reviewed" || caReview.status === "accepted") && caReview.caPersona;
+  const p = hasCa ? caReview.caPersona! : state.persona;
+  const both = compareForPersona(p);
   const cheaper: "new" | "old" = both.new.totalTax <= both.old.totalTax ? "new" : "old";
-  const regime = run.task === "compare_regimes" ? cheaper : (state.regime ?? "new");
-  const b = computeForPersona(state.persona, regime);
+  const regime = run.task === "compare_regimes" ? cheaper : (hasCa && caReview.caRegime ? caReview.caRegime : (state.regime ?? "new"));
+  const b = computeForPersona(p, regime);
 
   if (b.refundOrDue < 0 && !run.state.answers.challan_prompted && run.task === "prepare_salaried_return") {
     run.state.answers.challan_prompted = true;
@@ -1509,29 +1665,41 @@ async function stepReview(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnTy
     const { baseTax, cess } = splitTaxAndCess(due);
 
     const lines = [
-      `### ⚠️ Balance Tax Due: ${formatMoney(due, run.lang)}`,
+      hasCa
+        ? `### ⚠️ Balance Tax Due: ${formatMoney(due, run.lang)} *(Audited by ${caReview.caDetails?.name || "CA"})*`
+        : `### ⚠️ Balance Tax Due: ${formatMoney(due, run.lang)}`,
       "",
-      `Your return computation under the **${regimeName(regime, run.lang)}** shows a net balance tax payable of **${formatMoney(due, run.lang)}** (Base Tax: ${formatMoney(baseTax, run.lang)} + 4% Cess: ${formatMoney(cess, run.lang)}).`,
+      hasCa
+        ? `Your return computation under the **${regimeName(regime, run.lang)}** (incorporating your Chartered Accountant's audit) shows a net balance tax payable of **${formatMoney(due, run.lang)}** (Base Tax: ${formatMoney(baseTax, run.lang)} + 4% Cess: ${formatMoney(cess, run.lang)}).`
+        : `Your return computation under the **${regimeName(regime, run.lang)}** shows a net balance tax payable of **${formatMoney(due, run.lang)}** (Base Tax: ${formatMoney(baseTax, run.lang)} + 4% Cess: ${formatMoney(cess, run.lang)}).`,
       "",
       `Under Section 140A of the Income-tax Act, self-assessment tax must be paid before filing to prevent defective filing notices under Section 139(9) and penal interest under Section 234B/C.`,
       "",
-      `Before paying, you can **Review with a CA** to audit deductions and exemptions (80C, 80D, 80CCD, HRA, 24b) to reduce or eliminate this payable amount, or simulate paying now via Challan 280:`,
+      hasCa
+        ? `Simulate paying this balance now via Challan 280 to proceed to final filing:`
+        : `Before paying, you can **Review with a CA** to audit deductions and exemptions (80C, 80D, 80CCD, HRA, 24b) to reduce or eliminate this payable amount, or simulate paying now via Challan 280:`,
     ];
     await emit({ type: "message", role: "assistant", text: lines.join("\n") });
 
+    const choices = [
+      { value: "pay_challan_upi", label: `⚡ Pay ${formatMoney(due, run.lang)} Now (UPI / QR)` },
+      { value: "pay_challan_sbi", label: `🏦 Pay ${formatMoney(due, run.lang)} (SBI Net Banking)` },
+      { value: "pay_challan_hdfc", label: `🏦 Pay ${formatMoney(due, run.lang)} (HDFC Net Banking)` },
+      { value: "skip_challan_pay", label: "Proceed to Review without paying" },
+    ];
+    if (!hasCa) {
+      choices.unshift({ value: "review_with_ca", label: "🎖️ Review with CA First (Audit Deductions to Reduce Tax)" });
+    }
+
     const q: Question = {
       id: newId("q"),
-      text: `Pay self-assessment tax of ${formatMoney(due, run.lang)} now, or Review with CA?`,
+      text: hasCa
+        ? `Pay CA-audited self-assessment tax of ${formatMoney(due, run.lang)} now?`
+        : `Pay self-assessment tax of ${formatMoney(due, run.lang)} now, or Review with CA?`,
       why: "Section 140A compliance before return filing",
       expects: "choice",
       resolves: "challan_payment_mode",
-      choices: [
-        { value: "review_with_ca", label: "🎖️ Review with CA First (Audit Deductions to Reduce Tax)" },
-        { value: "pay_challan_upi", label: `⚡ Pay ${formatMoney(due, run.lang)} Now (UPI / QR)` },
-        { value: "pay_challan_sbi", label: `🏦 Pay ${formatMoney(due, run.lang)} (SBI Net Banking)` },
-        { value: "pay_challan_hdfc", label: `🏦 Pay ${formatMoney(due, run.lang)} (HDFC Net Banking)` },
-        { value: "skip_challan_pay", label: "Proceed to Review without paying" },
-      ],
+      choices,
     };
     run.state.pendingQuestion = q;
     await emit({ type: "question", question: q });
@@ -1745,6 +1913,8 @@ async function stepOutputs(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
     }
     const { body: _pb, runId: _pr, ...itrvRef } = itrvOutput;
     await emit({ type: "output", output: itrvRef });
+    run.title = `ITR-1 Filed · Acknowledgement (${AY})`;
+    await deps.store.saveRun(run);
     await emitTaskCapabilitiesSummary(deps, owner, run, s, emit, "Your return for AY 2026-27 has been successfully prepared and filed.");
   } else {
     const { body: _b, runId: _r, ...ref } = output;

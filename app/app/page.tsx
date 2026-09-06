@@ -259,7 +259,7 @@ function AgenticWorkspace() {
     };
 
     savePersist(updatedState);
-    void mirrorReturn(updatedState);
+    void mirrorReturn(updatedState, true);
     setReturnState(updatedState);
     try {
       window.dispatchEvent(new CustomEvent("wapsi_state_changed"));
@@ -345,35 +345,6 @@ function AgenticWorkspace() {
       <main className="min-h-dvh flex items-center justify-center p-8 text-ink">
         <p className="text-sm text-ink-2">The Agentic workspace is disabled in this deployment.</p>
       </main>
-    );
-  }
-
-  // No active run → the landing (no sidebar); the chat shell appears once a question starts a run.
-  if (!activeRunId) {
-    return (
-      <LazyMotion features={domMax} strict>
-        {sessionState === "checking" ? (
-          <main className="min-h-dvh bg-paper" />
-        ) : (
-          <AgenticLanding
-            s={s}
-            t={t}
-            lang={lang}
-            changeLang={changeLang}
-            theme={theme}
-            toggleTheme={toggleTheme}
-            onModeChange={handleModeChange}
-            citizen={citizen}
-            onSignOut={citizen ? signOut : undefined}
-            onOpenVault={() => setVaultOpen(true)}
-            onMyReturn={() => router.push("/")}
-            onStart={(input) => void start(input)}
-            signIn={sessionState !== "ready" ? <SignInPrompt s={s} state={sessionState} onDemo={signInDemo} onManual={() => router.push("/")} compact /> : undefined}
-            notice={sessionState === "ready" && runs.status === "unavailable" ? s.storageUnavailable : server && !server.durable ? s.notDurable : undefined}
-          />
-        )}
-        <CitizenVaultModal isOpen={vaultOpen} onClose={() => setVaultOpen(false)} vaultUser={vaultUser} onUpdateUser={setVaultUser} lang={lang} />
-      </LazyMotion>
     );
   }
 

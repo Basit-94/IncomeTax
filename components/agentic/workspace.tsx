@@ -19,6 +19,8 @@ import type { Lang } from "@/lib/types";
 import { renderAssistantText } from "../agent/format";
 
 import type { CAReviewRecord } from "@/lib/ca/ca-store";
+import { computeForPersona } from "@/lib/return/compute";
+import { formatMoney } from "@/lib/money";
 
 export interface WorkspaceProps {
   s: AgenticStrings;
@@ -138,8 +140,11 @@ export default function Workspace(props: WorkspaceProps) {
             <QuestionCard
               q={run.pendingQuestion}
               s={s}
+              lang={props.lang}
               disabled={props.loading}
               onReviewWithCA={props.onReviewWithCA}
+              activeCAReview={props.activeCAReview}
+              onOpenComparison={props.onOpenComparison}
               onAnswer={(value) => props.onSend({ answer: { questionId: run.pendingQuestion!.id, value } })}
             />
           )}
@@ -329,10 +334,34 @@ function Avatar() {
   );
 }
 
-function QuestionCard({ q, s, disabled, onAnswer, onReviewWithCA }: { q: Question; s: AgenticStrings; disabled: boolean; onAnswer: (v: string | number | boolean) => void; onReviewWithCA?: () => void }) {
+function QuestionCard({
+  q,
+  s,
+  lang = "en",
+  disabled,
+  onAnswer,
+  onReviewWithCA,
+  activeCAReview,
+  onOpenComparison,
+}: {
+  q: Question;
+  s: AgenticStrings;
+  lang?: Lang;
+  disabled: boolean;
+  onAnswer: (v: string | number | boolean) => void;
+  onReviewWithCA?: () => void;
+  activeCAReview?: CAReviewRecord | null;
+  onOpenComparison?: () => void;
+}) {
   const [value, setValue] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const hasReviewedCA = activeCAReview && (activeCAReview.status === "reviewed" || activeCAReview.status === "accepted");
+  const caPersona = activeCAReview?.caPersona || activeCAReview?.originalPersona;
+  const caRegime = activeCAReview?.caRegime || "new";
+  const caB = caPersona ? computeForPersona(caPersona, caRegime) : null;
+  const caDue = caB && caB.refundOrDue < 0 ? -caB.refundOrDue : 0;
 
   /** A document answered inline: stored in the citizen's vault, then its id is the answer. */
   const upload = async (file: File | undefined, answerWith: (id: string) => void = onAnswer) => {
@@ -371,7 +400,30 @@ function QuestionCard({ q, s, disabled, onAnswer, onReviewWithCA }: { q: Questio
         {q.resolves === "challan_payment_mode" && (
           <div className="space-y-2.5 my-2">
             {/* Prominent CA Review Banner for Balance Tax Due */}
-            {onReviewWithCA && (
+            {hasReviewedCA ? (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 dark:bg-emerald-950/30">
+                <div className="space-y-0.5 min-w-0">
+                  <div className="flex items-center gap-1.5 font-bold text-sm text-emerald-900 dark:text-emerald-200">
+                    <Award size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>🎖️ CA Audit Complete from {activeCAReview.caDetails?.name || "Chartered Accountant"}</span>
+                  </div>
+                  <p className="text-xs text-emerald-800/80 dark:text-emerald-300/80">
+                    {caDue === 0
+                      ? `Your CA audited deductions and eliminated your balance tax! (Eligible Refund: ${formatMoney(caB?.refundOrDue || 0, lang)})`
+                      : `Your CA revised your balance tax due to ${formatMoney(caDue, lang)} under the ${caRegime === "old" ? "Old Regime" : "New Regime"}.`}
+                  </p>
+                </div>
+                {onOpenComparison && (
+                  <button
+                    type="button"
+                    onClick={onOpenComparison}
+                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-800 hover:bg-teal-900 text-white text-xs font-bold shrink-0 shadow-xs transition cursor-pointer"
+                  >
+                    <span>View Diff →</span>
+                  </button>
+                )}
+              </div>
+            ) : onReviewWithCA ? (
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-teal-600/30 bg-teal-500/10 dark:bg-teal-950/30">
                 <div className="space-y-0.5 min-w-0">
                   <div className="flex items-center gap-1.5 font-bold text-sm text-teal-900 dark:text-teal-200">
@@ -391,7 +443,7 @@ function QuestionCard({ q, s, disabled, onAnswer, onReviewWithCA }: { q: Questio
                   <span>🎖️ Review with CA</span>
                 </button>
               </div>
-            )}
+            ) : null}
 
             <div className="flex flex-col sm:flex-row items-center gap-4 p-3.5 bg-paper rounded-xl border border-line">
               <div className="p-2 bg-white rounded-lg shadow-xs border border-slate-200 shrink-0">
@@ -404,7 +456,11 @@ function QuestionCard({ q, s, disabled, onAnswer, onReviewWithCA }: { q: Questio
                 </div>
                 <p className="text-ink-3">Payee UPI VPA: <span className="font-mono text-ink font-semibold">epaytax.cbdt@sbi</span></p>
                 <p className="text-ink-3">Major Head: <span className="font-semibold text-ink">0021</span> · Minor Head: <span className="font-semibold text-ink">300 (Self-Assessment)</span></p>
-                <p className="text-ink-3">Select your payment method below to simulate and credit this challan:</p>
+                <p className="text-ink-3">
+                  {hasReviewedCA && caDue === 0
+                    ? "Your CA audited deductions. Total payable tax is ₹0."
+                    : "Select your payment method below to simulate and credit this challan:"}
+                </p>
               </div>
             </div>
           </div>
@@ -457,12 +513,26 @@ function QuestionCard({ q, s, disabled, onAnswer, onReviewWithCA }: { q: Questio
             {q.choices.map((c) => {
               const isChallanAction = q.resolves === "challan_payment_mode" && c.value.startsWith("pay_");
               const isCAAction = c.value === "review_with_ca";
+
+              let label = c.label;
+              if (hasReviewedCA && isChallanAction) {
+                if (caDue === 0) {
+                  label = c.label.replace(/₹[\d,]+(\s*Now)?/gi, "₹0 (Nil Due)");
+                } else {
+                  label = c.label.replace(/₹[\d,]+/g, formatMoney(caDue, lang));
+                }
+              }
+
               return (
                 <button
                   key={c.value}
                   type="button"
                   disabled={disabled}
                   onClick={() => {
+                    if (isCAAction && hasReviewedCA && onOpenComparison) {
+                      onOpenComparison();
+                      return;
+                    }
                     if (isCAAction && onReviewWithCA) {
                       onReviewWithCA();
                     }
@@ -471,13 +541,15 @@ function QuestionCard({ q, s, disabled, onAnswer, onReviewWithCA }: { q: Questio
                   className={`rounded-lg border px-3.5 py-2 text-sm font-medium transition-all disabled:opacity-50 cursor-pointer ${
                     isCAAction
                       ? "bg-teal-700/10 border-teal-700/40 text-teal-950 dark:text-teal-200 font-bold hover:bg-teal-700/20 shadow-xs flex items-center gap-1.5"
+                      : isChallanAction && hasReviewedCA && caDue === 0
+                      ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-800 dark:text-emerald-200 font-semibold shadow-xs hover:bg-emerald-500/20"
                       : isChallanAction
                       ? "bg-money/10 border-money/40 text-money font-semibold shadow-xs hover:bg-money/20"
                       : "border-line bg-paper text-ink hover:bg-paper-3"
                   }`}
                 >
                   {isCAAction && <Award size={14} className="text-teal-600 shrink-0" />}
-                  {c.label}
+                  {label}
                 </button>
               );
             })}

@@ -25,7 +25,7 @@ export async function PUT(req: NextRequest) {
   const store = returnStoreFor(guard.services, guard.session);
   if (!store) return storageUnavailable();
 
-  let body: { state?: ReturnState; expectedRevision?: number | null };
+  let body: { state?: ReturnState; expectedRevision?: number | null; force?: boolean };
   try {
     body = await req.json();
   } catch {
@@ -39,7 +39,7 @@ export async function PUT(req: NextRequest) {
   if (state.persona.pan.toUpperCase() !== guard.session.owner.pan) {
     return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
   }
-  const expected = typeof body.expectedRevision === "number" ? body.expectedRevision : null;
+  const expected = body.force ? null : typeof body.expectedRevision === "number" ? body.expectedRevision : null;
   const result = await store.replace(guard.session.owner, AY, state, expected);
   if (!result.ok) {
     return NextResponse.json(result, { status: result.error === "conflict" ? 409 : 400 });

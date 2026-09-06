@@ -67,7 +67,13 @@ export function generateReviewCode(): string {
   return `CA-${part1}-${part2}`;
 }
 
-const memStore: Record<string, CAReviewRecord> = {};
+declare global {
+  // eslint-disable-next-line no-var
+  var __WAPSI_CA_REVIEWS__: Record<string, CAReviewRecord> | undefined;
+}
+
+const memStore: Record<string, CAReviewRecord> =
+  globalThis.__WAPSI_CA_REVIEWS__ || (globalThis.__WAPSI_CA_REVIEWS__ = {});
 
 /**
  * Read all reviews from localStorage (or memory store in Node/SSR).
@@ -76,7 +82,12 @@ export function loadLocalReviews(): Record<string, CAReviewRecord> {
   if (typeof window !== "undefined" && window.localStorage) {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        // Merge with memory store so server updates are visible
+        Object.assign(memStore, parsed);
+        return { ...memStore };
+      }
     } catch {
       // fallback to memStore
     }
@@ -88,7 +99,7 @@ export function loadLocalReviews(): Record<string, CAReviewRecord> {
  * Save all reviews to localStorage (or memory store in Node/SSR).
  */
 export function saveLocalReviews(reviews: Record<string, CAReviewRecord>): void {
-  // Always update in-memory store
+  // Always update in-memory global store
   for (const k of Object.keys(memStore)) delete memStore[k];
   Object.assign(memStore, reviews);
 
@@ -281,14 +292,24 @@ export async function acceptCAReview(code: string): Promise<CAReviewRecord | nul
  * Get any active review record for a given citizen's PAN.
  */
 export function getActiveReviewForPan(pan: string): CAReviewRecord | null {
+  if (!pan) return null;
   const cleanPan = pan.toUpperCase().trim();
   const local = loadLocalReviews();
-  const records = Object.values(local).filter((r) => r.citizenPan === cleanPan);
+  const records = Object.values(local).filter((r) => r.citizenPan?.toUpperCase().trim() === cleanPan);
   if (!records.length) return null;
-  // Return the most recently updated or created one
-  records.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  // Return the most recently updated or reviewed one
+  records.sort((a, b) => {
+    const timeA = new Date(b.reviewedAt || b.createdAt).getTime();
+    const timeB = new Date(a.reviewedAt || a.createdAt).getTime();
+    return timeA - timeB;
+  });
   return records[0];
 }
+
+/**
+ * Retrieve the latest active or reviewed record for a citizen's PAN (alias for server/agent use).
+ */
+export const getLatestReviewForPan = getActiveReviewForPan;
 
 /**
  * Generates an instant demo review with Sunita Rao for quick testing/evaluation.

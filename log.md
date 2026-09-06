@@ -5037,3 +5037,119 @@ things there are already true and will NOT be rewritten:
     7. Returned to `/app`: verified the green "🎖️ CA Review Complete from CA Rajesh Sharma, FCA!" banner appeared with `[ View Diff → ]`.
     8. Clicked `[ View Diff → ]`: verified comparison matrix opened cleanly with "Adopt CA Recommendations & Proceed to File" button.
 - **Git Policy:** Explicitly instructed by user to push to `dev-2`. Committed as `1923fee` and pushed cleanly to `origin dev-2` (never touched `main`).
+
+## [2026-09-06 21:05] orchestrator
+- **Action:** MODIFY | VERIFY
+- **Target:** components/agentic/app-shell.tsx; app/app/page.tsx; lib/agentic/runtime.ts; lib/knowledge/smart-answers.ts; app/signin/page.tsx; log.md
+- **Intent:** Implement Agentic previous chats visibility, smart chat renaming, single sidebar collapse control, fixed viewport height lock, chat pagination with See More/Show Less, top header language selector, comprehensive statutory Q&A engine, and post-login mode selection:
+  1. **Previous Chats Visible on Arrival (`app/app/page.tsx`):**
+     - Removed the restrictive `if (!activeRunId) return <AgenticLanding />` bypass which previously rendered a sidebar-free landing screen on arrival at `/app`.
+     - `AppShell` now renders unconditionally across active and zero-run states, ensuring the previous chats sidebar and quick-action tools are immediately visible and accessible upon opening `/app`.
+     - When `run` is null, `Workspace` presents the welcoming prompt, quick-start task buttons, and conversational composer inside `AppShell`.
+  2. **Smart Chat Renaming (`lib/agentic/runtime.ts` & `lib/knowledge/smart-answers.ts`):**
+     - Replaced generic chat titles ("Prepare my return") with informative, context-aware titles:
+       - Form 16 / Salary: `Prepare Return · {Employer} ({GrossSalary})`
+       - Regime comparison: `Regime Comparison · {Cheaper} Regime saves {Saving}`
+       - Challan 280: `Challan 280 · {Amount} Paid`
+       - Filing completion: `ITR-1 Filed · Acknowledgement (2026-27)`
+       - AIS/26AS: `Reconciliation · AIS & 26AS`
+       - Notice defense: `Notice Defense · Section 139(9)`
+       - Refund tracker: `Refund Tracker · CPC Status`
+       - Tax questions: `Tax Query · {Topic}` (e.g. `Tax Query · Standard Deduction u/s 16(ia)`, `Tax Query · Section 87A Tax Rebate`, etc.)
+     - Persists title modifications immediately to `deps.store.saveRun(run)`.
+  3. **Eliminate Duplicate Collapse Sliders & Clean Controls (`components/agentic/app-shell.tsx`):**
+     - Removed the redundant duplicate collapse/menu button from `HeaderBar.children` (far right).
+     - Consolidated navigation toggle into a single, clean collapse/expand button in `HeaderBar.after` on the left directly adjacent to the sidebar and mode switch, responsive across desktop (`toggleCollapsed`) and mobile drawer (`setDrawer(true)`).
+  4. **Fixed Viewport Pinning & Height Lock (`components/agentic/app-shell.tsx`):**
+     - Pinned root shell container to `h-dvh max-h-dvh overflow-hidden flex flex-col bg-paper text-ink`.
+     - Configured `main` with `overflow-y-auto min-h-0 flex-1`.
+     - Prevented infinite vertical stretching of the sidebar when chat conversation histories grow long.
+  5. **Chat List Truncation & Toggle Bar (`components/agentic/app-shell.tsx`):**
+     - Added `showAllChats` state with `CHATS_PREVIEW_COUNT = 3`.
+     - Displays the 3 most recent chats by default, and renders a tactile `[ See more (N) ↓ ]` / `[ Show less ↑ ]` button when additional chats exist.
+  6. **Move Language Selector to Top Header (`components/agentic/app-shell.tsx`):**
+     - Relocated `<LanguageMenu ... />` from the cramped bottom settings cluster to the top right of `HeaderBar` alongside theme and inspector controls.
+     - Guarantees the 23-language dropdown menu and search input open smoothly downward into full screen view without clipping.
+  7. **Comprehensive Statutory Tax Intelligence (`lib/knowledge/smart-answers.ts` & `lib/agentic/runtime.ts`):**
+     - Created `getSmartTaxAnswer(query, lang)` covering all statutory AY 2026-27 rules (tax slabs u/s 115BAC, standard deduction ₹75,000, Section 87A rebate up to ₹7L/₹12L, Chapter VI-A 80C/80D caps, HRA u/s 10(13A), capital gains u/s 111A/112A, Challan 280 self-assessment tax, AIS/26AS reconciliation codes, deadlines u/s 139(1), and CPC refund processing).
+     - Integrated as an authoritative fallback in `lib/agentic/runtime.ts` so the agent never fails or issues generic "no evidence" responses when citizens ask natural-language tax questions.
+  8. **Post-Login/Signup Mode Selection Screen (`app/signin/page.tsx`):**
+     - Introduced interactive Mode Selection step following successful authentication:
+       - **Agentic Copilot Mode**: "Conversational AI agent that reads your Form 16, checks AIS/26AS, optimizes deductions, and files your return step-by-step."
+       - **Manual Filing Mode**: "Hands-on, visual 5-step interactive workflow with full control over each deduction and tax head."
+       - Sets `wapsi_user_mode` and routes to `/app` or `/` seamlessly.
+- **Verification Results:**
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run test`: **365/365 tests passed** across all 39 test suites.
+  - `npm run build`: Production Turbopack build succeeded with 0 errors across all 18 routes.
+  - **Live Browser Automation via Playwright MCP:**
+    1. Navigated to `/signin`: verified clean Mode Selection screen rendered with Agentic and Manual cards with 2-line descriptions.
+    2. Clicked "Enter Agentic Mode →": arrived at `/app`.
+    3. Verified sidebar displays recent chats on arrival without requiring a prior run.
+    4. Verified single collapse slider button on the top left.
+    5. Verified top header displays `Language: English` dropdown; opened it and verified all 23 languages and search input render clearly downwards without clipping.
+    6. Verified `See more (28)` chat pagination button in sidebar; clicked it and verified expansion to full list and toggle to `Show less`.
+    7. Asked tax question: "What is standard deduction and section 87A rebate for AY 2026-27?": verified detailed authoritative answer returned with Section 16(ia) and 87A statutory evidence.
+    8. Verified sidebar chat dynamically smart-renamed to `Tax Query · Standard Deduction u/s 16(ia)`.
+    9. Verified container height remains strictly locked to viewport during chat expansion.
+
+## [2026-09-06 21:18] orchestrator
+- **Action:** MODIFY
+- **Target:** components/agentic/app-shell.tsx; components/ui/language-menu.tsx; app/signin/page.tsx; log.md
+- **Intent:** Relocate the language selector to the far-right of the workspace header with elevated z-index (`z-[100]`) and live search across 23 languages so it is never obscured by chats/canvas, and redesign the post-login Mode Selection screen (`/signin`) into a Direction 13 luxury visual experience.
+- **Why:** 
+  1. User reported that the language selector could get obscured by chats or underlying workspace elements when open, and asked for it to be moved to the far right with top-level visibility over all other elements.
+  2. User requested a premium, elevated design for the Mode Selection page (Agentic vs Manual) that appears immediately after login/signup.
+- **Expected effect:**
+  1. Header has `relative z-50` stacking context; the language menu sits at the far right (`HeaderBar.children` after `InspectorControls`), with a floating dropdown menu at `z-[100]`, backdrop blur, and search filter input covering all 23 languages.
+  2. `/signin` mode selection presents high-aesthetic cards for "Agentic Copilot Mode" (AI Autonomous) and "Manual Filing Mode" (Visual 5-Step Control) with feature pillars, badges, status indicator, and engine parity disclaimer.
+- **Verification Results:**
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run test`: **365/365 tests passed** across all 39 test suites.
+  - `npm run build`: Production Next.js Turbopack build succeeded with 0 errors across all 18 routes.
+  - **Live Browser Automation via Playwright MCP:**
+    1. `/signin`: Verified luxury Mode Selection screen renders cleanly with AY 2026-27 authenticated badge, distinct Agentic and Manual cards, and feature pills.
+    2. Clicked "Launch Agentic Copilot →": Routed directly to `/app`.
+    3. `/app`: Verified language selector is positioned on the far right of the top header bar.
+    4. Clicked language selector: Verified dropdown opened with `z-[100]` floating cleanly over all canvas and chat elements.
+    5. Typed search filter "Hindi": Verified live filtering smoothly isolates the target language without clipping.
+- **Result:** DONE. No uninstructed git commit or push performed; all changes maintained on branch `dev-2`.
+
+## [2026-09-06 21:46] orchestrator
+- **Action:** MODIFY
+- **Target:** lib/ca/ca-store.ts; app/api/ca/review/route.ts; app/api/return/route.ts; lib/return-sync-client.ts; app/app/page.tsx; lib/agentic/runtime.ts; components/agentic/workspace.tsx; log.md
+- **Intent:** Fix Challan 280 showing hardcoded amount (₹5,000 / ₹4,700) when zero tax is due or net refund is due, and synchronize CA review audit adjustments into the Agentic Challan computation and payment cards.
+- **Why:**
+  1. User reported: "in the agentic if i click chalan even though i dont have any to pay it still shows up with a amount why ? and same when i use ca to review he had done now in chalan tha mt isnt changing as the ca one fix."
+  2. Investigation identified hardcoded fallbacks `const amountToPay = due > 0 ? due : 5000;` and `const due = b && b.refundOrDue < 0 ? -b.refundOrDue : 4700;` in `lib/agentic/runtime.ts`, which forced taxpayers with nil balance or refund into paying ₹5,000.
+  3. Furthermore, reviews saved in CA Portal (`/ca`) were in client localStorage / isolated in-memory store and not immediately reflected in the agentic copilot runtime calculations and cards until adopted or synchronized.
+- **Key Changes:**
+  1. `lib/ca/ca-store.ts`: Added global singleton backing (`globalThis.__WAPSI_CA_REVIEWS__`) and exported `getLatestReviewForPan(pan)` sorted by latest audit timestamp.
+  2. `app/api/ca/review/route.ts`: Added server return synchronization via `getServices()` to update server returns on CA review completion.
+  3. `app/api/return/route.ts` & `lib/return-sync-client.ts`: Added `force: true` support to allow CA adoption without 409 conflict.
+  4. `lib/agentic/runtime.ts`:
+     - Consults `getLatestReviewForPan(owner.pan)`: uses `caPersona` and `caRegime` for audited figures and tax due computations.
+     - When `due === 0`: Clearly presents `Net Balance Tax Due: ₹0` (with net refund due if applicable), presents nil simulation options, and never defaults to ₹5,000.
+     - When `due > 0`: Computes exact liability and cess based on CA-audited figures (or baseline if not audited) and presents exact amount on payment buttons.
+     - Updated `handleChallanPaymentExecution` to process exact `amountToPay = due` (including ₹0 for nil clearance), generating valid ITNS 280 receipts with proper minor heads (100 for advance/nil clearance, 300 for self-assessment tax) and recording payment on the return.
+  5. `components/agentic/workspace.tsx`:
+     - `QuestionCard` incorporates `activeCAReview` banner with `View Diff →` modal button.
+     - Dynamically formats payment mode choice labels with exact CA-audited amounts or `₹0 (Nil Due)`.
+- **Verification Results:**
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run test`: **365/365 tests passed** across all 39 test suites (including all 18 agentic runtime tests).
+  - **Live Browser Automation via Playwright MCP:**
+    1. Navigated to `/app` with Citizen 4821 having completed CA review.
+    2. Invoked "Challan 280": verified copilot replied with `Your balance tax payable is ₹0. Simulate Challan 280 or proceed?`.
+    3. Verified emerald CA Audit badge: `🎖️ CA Audit Complete from CA Rajesh Sharma, FCA - Your CA audited deductions and eliminated your balance tax! (Eligible Refund: ₹0) [View Diff →]`.
+    4. Verified buttons show `Simulate UPI / QR (₹0 (Nil Due) — Nil Due)` and `Proceed to Return Filing (Nil Due)` with NO hardcoded ₹5,000.
+    5. Clicked `View Diff →`: verified comparison matrix modal opens showing Original Draft vs CA Version with tax impact.
+    6. Clicked `Simulate UPI / QR (₹0 (Nil Due) — Nil Due)`: verified payment succeeded, generated valid ITNS 280 receipt with CIN `62269962026090625285`, BSR code, Minor Head 100, Total Amount Deposited **₹0**, and updated sidebar chat title to `Challan 280 · Nil Tax Due`.
+- **Result:** DONE. Maintained on branch `dev-2` with no uninstructed commits.
+
+## [2026-09-06 21:54] orchestrator
+- **Action:** GIT COMMIT & PUSH
+- **Target:** origin/dev-2
+- **Intent:** Push all verified features and bug fixes (Challan 280 Nil-due handling, CA review synchronization, language menu relocation, signin mode selection redesign, chat pagination, smart answers) to `dev-2` per user instruction.
+- **Result:** Executing `git add .`, `git commit`, and `git push origin dev-2`.
+
