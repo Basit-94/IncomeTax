@@ -10,6 +10,7 @@ import { loadVaultKey } from "../../vault/crypto";
 import { nullModel } from "../model";
 import { advance, cancelRun, createRun, type RuntimeDeps } from "../runtime";
 import { MemoryRunStore } from "../store";
+import { saveLocalReviews, type CAReviewRecord } from "../../ca/ca-store";
 import { runBudget } from "../types";
 import type { Run } from "../types";
 
@@ -421,4 +422,92 @@ describe("runtime — the first end-to-end milestone (plan §7)", () => {
     // Net tax due should now be cleared to ₹0 in the review card
     expect(r.state.pendingCard?.boundTo.amount).toBe(0);
   });
+
+  it("compare_regimes: confirming when already in recommended regime completes cleanly without looping", async () => {
+    const d = deps();
+    // Sunita's cheaper regime is new, and return defaults to new
+    const run = await createRun(d, sunita, { task: "compare_regimes", lang: "en" });
+    let r = (await advance(d, sunita, run.id))!;
+
+    // Intake form for deductions
+    if (r.state.pendingQuestion?.resolves === "details") {
+      r = (await advance(d, sunita, r.id, {
+        answer: {
+          questionId: r.state.pendingQuestion.id,
+          value: JSON.stringify({ pf_amount: 150000, health_amount: 0, interest_amount: 0, resident: true }),
+        },
+      }))!;
+    }
+
+    expect(r.status).toBe("waiting_for_review");
+    const card = r.state.pendingCard!;
+    expect(card).toBeDefined();
+    expect(card.kind).toBe("regime");
+
+    // User confirms / clicks "Apply this regime"
+    r = (await advance(d, sunita, r.id, { confirm: { cardId: card.id, accepted: true } }))!;
+
+    // Run must be completed, NOT stuck in waiting_for_review or looping
+    expect(r.status).toBe("completed");
+    expect(r.state.pendingCard).toBeUndefined();
+    expect(r.state.steps.find((p) => p.id === "act")?.state).toBe("done");
+    expect(r.state.steps.find((p) => p.id === "outputs")?.state).toBe("done");
+
+    const outs = await d.store.listOutputs(sunita, r.id);
+    expect(outs.some((o) => o.kind === "regime_comparison_json")).toBe(true);
+
+    const evs = await events(d, sunita, r);
+    expect(evs.some((e) => e.type === "message" && /applied/i.test(e.text))).toBe(true);
+  });
+
+  it("ensureSnapshot does not infinitely bump revision when a CA review is present", async () => {
+    const d = deps();
+    const caPersona: Persona = {
+      ...PERSONAS.sunita,
+      facts: PERSONAS.sunita.facts.map((f) => (f.id === "sunita-interest" ? { ...f, amount: 20000 } : f)),
+    };
+    const caRecord: CAReviewRecord = {
+      code: "CA-9999-01",
+      pinHash: "dummy",
+      citizenPan: sunita.pan,
+      citizenName: sunita.displayName,
+      assessmentYear: "2026-27",
+      originalPersona: PERSONAS.sunita,
+      originalRegime: "new",
+      caPersona,
+      caRegime: "new",
+      status: "reviewed",
+      createdAt: "2026-09-05T10:00:00.000Z",
+      reviewedAt: "2026-09-05T11:00:00.000Z",
+    };
+    saveLocalReviews({ [caRecord.code]: caRecord });
+
+    const run = await createRun(d, sunita, { task: "compare_regimes", lang: "en" });
+    let r = (await advance(d, sunita, run.id))!;
+
+    if (r.state.pendingQuestion?.resolves === "details") {
+      r = (await advance(d, sunita, r.id, {
+        answer: {
+          questionId: r.state.pendingQuestion.id,
+          value: JSON.stringify({ pf_amount: 150000, health_amount: 0, interest_amount: 20000, resident: true }),
+        },
+      }))!;
+    }
+
+    expect(r.status).toBe("waiting_for_review");
+    const card = r.state.pendingCard!;
+    expect(card).toBeDefined();
+
+    // The return revision should be small (1 or 2), not 40+!
+    const snapBefore = await d.returns.get(sunita, "2026-27");
+    expect(snapBefore!.revision).toBeLessThanOrEqual(3);
+
+    // Confirm the review
+    r = (await advance(d, sunita, r.id, { confirm: { cardId: card.id, accepted: true } }))!;
+    expect(r.status).toBe("completed");
+
+    // Clean up local reviews
+    saveLocalReviews({});
+  });
 });
+

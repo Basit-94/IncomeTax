@@ -36,13 +36,13 @@ export async function pullReturn(): Promise<{ state: ReturnState; revision: numb
   }
 }
 
-export async function mirrorReturn(state: ReturnState): Promise<MirrorResult> {
+export async function mirrorReturn(state: ReturnState, force = false): Promise<MirrorResult> {
   try {
     const res = await fetch("/api/return", {
       method: "PUT",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ state, expectedRevision: knownRevision }),
+      body: JSON.stringify({ state, expectedRevision: force ? null : knownRevision, force }),
     });
     if (res.status === 409) {
       const body = (await res.json()) as { current: { state: ReturnState; revision: number } };

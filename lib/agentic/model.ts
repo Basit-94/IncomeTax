@@ -32,10 +32,28 @@ export interface PhraseInput {
   shape: "simple" | "question" | "progress" | "recommendation" | "review" | "explanation" | "warm" | "chat";
 }
 
+export interface TaxExpertInput {
+  query: string;
+  lang: Lang;
+  langEnglishName: string;
+  taxpayerName?: string;
+  regime?: "new" | "old";
+  knownFacts?: string[];
+  reasonsAdviceUnavailable?: string[];
+}
+
+export interface TaxExpertResult {
+  text: string;
+  title?: string;
+  usage: ModelUsage;
+  detectedProvisions?: string[];
+}
+
 export interface ModelAdapter {
   readonly name: string;
   classify(text: string, lang: Lang): Promise<ClassifyResult | null>;
   phrase(input: PhraseInput): Promise<{ text: string; usage: ModelUsage } | null>;
+  askTaxExpert?(input: TaxExpertInput): Promise<TaxExpertResult | null>;
   /** Why the last call returned null ("HTTP 429", "timeout"…), so a fallback is never silent. */
   lastFailure?(): string | null;
 }
@@ -49,6 +67,9 @@ export const nullModel: ModelAdapter = {
     return null;
   },
   async phrase() {
+    return null;
+  },
+  async askTaxExpert() {
     return null;
   },
 };
@@ -154,6 +175,52 @@ export function geminiModel(env: Record<string, string | undefined> = process.en
         input.shape === "chat" || input.shape === "warm" ? 0.9 : 0.2,
       );
       return out ? { text: out.text, usage: { tokens: out.tokens } } : null;
+    },
+    async askTaxExpert(input) {
+      const systemPrompt = [
+        `You are Wapsi's senior Indian Chartered Accountant & Tax Advisory Specialist.`,
+        `You provide clear, authoritative, and actionable tax advice for Assessment Year 2026-27 (Financial Year 2025-26) under the Income-tax Act, 1961.`,
+        ``,
+        `Statutory Reference Facts (AY 2026-27 / FY 2025-26):`,
+        `• New Tax Regime (s. 115BAC): Default regime. Standard deduction ₹75,000 for salaried employees. Rebate u/s 87A up to ₹7,00,000 taxable income (effective zero tax up to ₹7,75,000 for salaried). Slabs: 0-3L Nil, 3-7L 5%, 7-10L 10%, 10-12L 15%, 12-15L 20%, >15L 30%. Surcharge rates capped at 25%. Chapter VI-A deductions (80C, 80D, HRA) are forgone.`,
+        `• Old Tax Regime: Standard deduction ₹50,000. Chapter VI-A deductions allowed: Section 80C (up to ₹1,50,000: PF, PPF, ELSS, Life Insurance), Section 80D (health insurance: up to ₹25,000 for self/family; additional ₹25,000 or ₹50,000 for senior citizen parents up to ₹1,00,000 max), Section 80CCD(1B) (additional ₹50,000 for NPS Tier-1), Section 24(b) (home loan interest up to ₹2,00,000 for self-occupied property), and HRA exemption u/s 10(13A). Rebate 87A up to ₹5,00,000. Slabs: 0-2.5L Nil, 2.5-5L 5%, 5-10L 20%, >10L 30%.`,
+        `• Capital Gains: Listed equity / equity mutual funds LTCG u/s 112A taxed at 12.5% on gains exceeding ₹1,25,000. STCG u/s 111A taxed at 20%. Unlisted shares / other assets taxed per Budget 2024 rationalized rules. Cannot use Form ITR-1; requires Form ITR-2.`,
+        `• Business & Profession: Presumptive taxation u/s 44ADA (specified professionals with gross receipts up to ₹75L, 50% deemed income) and s. 44AD (small businesses up to ₹3Cr, 6% digital / 8% cash). Uses ITR-4 (Sugam). Regular business with books uses ITR-3.`,
+        `• Crypto & Virtual Digital Assets (VDAs): Taxed at flat 30% u/s 115BBH plus 4% cess; 1% TDS u/s 194S; no loss set-off against other income heads.`,
+        `• Challan 280: Self-Assessment Tax u/s 140A (Minor Head 300) must be paid before filing. Advance Tax (Minor Head 100) if tax liability exceeds ₹10,000.`,
+        ``,
+        `Instruction for this answer:`,
+        `1. Answer the citizen's query directly and authoritatively in ${input.langEnglishName}. Never say "I can't make a recommendation" or "no evidence found".`,
+        `2. Explain the statutory rule, section numbers, thresholds, and why they apply.`,
+        `3. Provide practical, clear, numbered or bulleted steps on what the citizen should do (e.g. which ITR form to use, which deductions to claim, or how to review with a CA).`,
+        `4. Format with clean markdown headers and bullet points. Vary your phrasing; do not sound robotic.`,
+      ].join("\n");
+
+      const userParts = [
+        `Query: ${redactText(input.query).text.slice(0, 3000)}`,
+        input.taxpayerName ? `Taxpayer Name: ${input.taxpayerName}` : null,
+        input.regime ? `Selected Regime: ${input.regime === "old" ? "Old Regime" : "New Regime"}` : null,
+        input.knownFacts && input.knownFacts.length > 0 ? `Current Return Facts:\n${input.knownFacts.map((f) => `- ${f}`).join("\n")}` : null,
+        input.reasonsAdviceUnavailable && input.reasonsAdviceUnavailable.length > 0
+          ? `Return Ineligibility Context (Why standard ITR-1 salaried flow abstained):\n${input.reasonsAdviceUnavailable.map((r) => `- ${r}`).join("\n")}\nAddress these specific points and tell the taxpayer exactly what forms/steps they need.`
+          : null,
+      ].filter(Boolean).join("\n\n");
+
+      const out = await generate(systemPrompt, userParts, 0.7);
+      if (!out) return null;
+
+      const provisionMatches = out.text.match(/(?:Section|u\/s|s\.)\s*(\d+[A-Z]*(?:\([0-9a-zA-Z]+\))*)/gi) ?? [];
+      const cleanProvisions = [...new Set(provisionMatches.map((m) => m.replace(/^(?:Section|u\/s|s\.)\s*/i, "").trim()))].slice(0, 6);
+
+      const titleMatch = out.text.match(/^#{1,3}\s+(.+)$/m);
+      const title = titleMatch ? titleMatch[1].replace(/[*_#]/g, "").slice(0, 50).trim() : undefined;
+
+      return {
+        text: out.text,
+        title,
+        usage: { tokens: out.tokens },
+        detectedProvisions: cleanProvisions,
+      };
     },
   };
 }

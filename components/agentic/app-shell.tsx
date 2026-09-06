@@ -15,7 +15,7 @@
  */
 
 import { useEffect, useState, type ReactNode } from "react";
-import { Brain, FileText, History, LogOut, Menu, Moon, PanelLeftClose, PanelLeftOpen, Plus, Search, ShieldCheck, Sun, Trash2, X } from "lucide-react";
+import { Brain, ChevronDown, ChevronUp, FileText, History, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Plus, Search, ShieldCheck, Sun, Trash2, X } from "lucide-react";
 import type { Dict } from "@/lib/i18n";
 import type { AgenticStrings } from "@/lib/i18n/agenticStrings";
 import type { Lang } from "@/lib/types";
@@ -85,7 +85,10 @@ export default function AppShell(props: AppShellProps) {
     });
   };
 
+  const [showAllChats, setShowAllChats] = useState(false);
+  const CHATS_PREVIEW_COUNT = 3;
   const visibleRuns = runs.filter((r) => !query.trim() || r.title.toLowerCase().includes(query.trim().toLowerCase()));
+  const displayedRuns = showAllChats ? visibleRuns : visibleRuns.slice(0, CHATS_PREVIEW_COUNT);
   // The chat sidebar (New chat, recent chats) belongs to Agentic only; Manual keeps its own navigation (user, 2026-09-05).
   const withSidebar = mode === "agentic";
 
@@ -141,30 +144,42 @@ export default function AppShell(props: AppShellProps) {
         {visibleRuns.length === 0 ? (
           <p className="px-1 text-xs text-ink-3 leading-relaxed">{s.noChats}</p>
         ) : (
-          <ul className="space-y-0.5 overflow-y-auto min-h-0 pr-1">
-            {visibleRuns.map((r) => {
-              const active = r.id === props.activeRunId;
-              return (
-                <li key={r.id} className="group flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => { props.onSelectRun(r.id); setDrawer(false); }}
-                    aria-current={active ? "page" : undefined}
-                    className={`flex-1 min-w-0 flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-start cursor-pointer ${active ? "bg-amber-bg border border-amber-500/40 text-ink" : "text-ink-2 hover:bg-paper-3 hover:text-ink"}`}
-                  >
-                    <FileText size={13} className="shrink-0 text-ink-3" aria-hidden="true" />
-                    <span className="truncate">{r.title}</span>
-                    {r.status !== "completed" && r.status !== "cancelled" && r.status !== "failed" && <span className="ms-auto size-1.5 rounded-full bg-money shrink-0" aria-hidden="true" />}
-                  </button>
-                  {props.onDeleteRun && (
-                    <button type="button" onClick={() => props.onDeleteRun?.(r.id)} className="opacity-0 group-hover:opacity-100 focus:opacity-100 size-7 flex items-center justify-center rounded text-ink-3 hover:text-alarm cursor-pointer" aria-label={`${s.forget}: ${r.title}`}>
-                      <Trash2 size={13} aria-hidden="true" />
+          <>
+            <ul className="space-y-0.5 overflow-y-auto min-h-0 pr-1">
+              {displayedRuns.map((r) => {
+                const active = r.id === props.activeRunId;
+                return (
+                  <li key={r.id} className="group flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => { props.onSelectRun(r.id); setDrawer(false); }}
+                      aria-current={active ? "page" : undefined}
+                      className={`flex-1 min-w-0 flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-start cursor-pointer ${active ? "bg-amber-bg border border-amber-500/40 text-ink" : "text-ink-2 hover:bg-paper-3 hover:text-ink"}`}
+                    >
+                      <FileText size={13} className="shrink-0 text-ink-3" aria-hidden="true" />
+                      <span className="truncate">{r.title}</span>
+                      {r.status !== "completed" && r.status !== "cancelled" && r.status !== "failed" && <span className="ms-auto size-1.5 rounded-full bg-money shrink-0" aria-hidden="true" />}
                     </button>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+                    {props.onDeleteRun && (
+                      <button type="button" onClick={() => props.onDeleteRun?.(r.id)} className="opacity-0 group-hover:opacity-100 focus:opacity-100 size-7 flex items-center justify-center rounded text-ink-3 hover:text-alarm cursor-pointer" aria-label={`${s.forget}: ${r.title}`}>
+                        <Trash2 size={13} aria-hidden="true" />
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+            {visibleRuns.length > CHATS_PREVIEW_COUNT && (
+              <button
+                type="button"
+                onClick={() => setShowAllChats((prev) => !prev)}
+                className="w-full mt-2 flex items-center justify-between px-2.5 py-1.5 rounded-lg border border-line bg-paper/60 hover:bg-paper-3 text-xs font-medium text-ink-2 hover:text-ink transition cursor-pointer"
+              >
+                <span>{showAllChats ? "Show less" : `See more (${visibleRuns.length - CHATS_PREVIEW_COUNT})`}</span>
+                {showAllChats ? <ChevronUp size={13} aria-hidden="true" /> : <ChevronDown size={13} aria-hidden="true" />}
+              </button>
+            )}
+          </>
         )}
       </div>
 
@@ -191,9 +206,9 @@ export default function AppShell(props: AppShellProps) {
           <p className="text-xs text-ink-3 px-1">{s.signInPrompt}</p>
         )}
         <div className="flex items-center gap-1.5">
-          <LanguageMenu lang={props.lang} onChange={props.changeLang} label={t.shell.language} className="flex-1 min-w-0" />
-          <button type="button" onClick={props.toggleTheme} className="h-[34px] px-2.5 rounded-lg border border-line bg-paper text-ink-2 hover:text-ink flex items-center gap-1.5 text-xs font-mono cursor-pointer shrink-0" aria-label={props.theme === "dark" ? t.shell.light : t.shell.dark}>
+          <button type="button" onClick={props.toggleTheme} className="h-[34px] flex-1 rounded-lg border border-line bg-paper text-ink-2 hover:text-ink flex items-center justify-center gap-1.5 text-xs font-mono cursor-pointer shrink-0" aria-label={props.theme === "dark" ? t.shell.light : t.shell.dark}>
             {props.theme === "dark" ? <Sun size={13} className="text-money" aria-hidden="true" /> : <Moon size={13} className="text-money" aria-hidden="true" />}
+            <span>{props.theme === "dark" ? t.shell.light : t.shell.dark}</span>
           </button>
           {props.onOpenMemory && (
             <button type="button" onClick={props.onOpenMemory} className="h-[34px] px-2.5 rounded-lg border border-line bg-paper text-ink-2 hover:text-ink flex items-center cursor-pointer shrink-0" aria-label={s.memory} title={s.memory}>
@@ -210,11 +225,11 @@ export default function AppShell(props: AppShellProps) {
   );
 
   return (
-    <div className="min-h-dvh flex flex-col bg-paper text-ink">
+    <div className="h-dvh max-h-dvh overflow-hidden flex flex-col bg-paper text-ink">
       {/* The shared frame: banner + header bar span the full width ABOVE the sidebar, so the
           Agentic/Manual switch sits at the same x/y as on the landing and the Manual page. */}
       <PrototypeBanner t={t} />
-      <header className="shrink-0 border-b border-line bg-paper/95 backdrop-blur" data-testid="shell-header">
+      <header className="relative z-50 shrink-0 border-b border-line bg-paper/95 backdrop-blur" data-testid="shell-header">
         <HeaderBar
           t={t}
           s={s}
@@ -225,8 +240,8 @@ export default function AppShell(props: AppShellProps) {
             withSidebar ? (
               <button
                 type="button"
-                onClick={toggleCollapsed}
-                className={`size-9 hidden lg:flex items-center justify-center rounded-lg border border-line bg-paper text-ink-2 hover:text-ink hover:border-money/60 transition cursor-pointer shrink-0 ${collapsed ? "text-money border-money/40 shadow-xs" : ""}`}
+                onClick={() => (window.matchMedia("(min-width: 1024px)").matches ? toggleCollapsed() : setDrawer(true))}
+                className={`size-9 flex items-center justify-center rounded-lg border border-line bg-paper text-ink-2 hover:text-ink hover:border-money/60 transition cursor-pointer shrink-0 ${collapsed ? "text-money border-money/40 shadow-xs" : ""}`}
                 title={collapsed ? "Expand sidebar (chats & tools)" : "Collapse sidebar"}
                 aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
@@ -235,16 +250,16 @@ export default function AppShell(props: AppShellProps) {
             ) : undefined
           }
         >
-          {withSidebar && (
-            <button type="button" onClick={() => (window.matchMedia("(min-width: 1024px)").matches ? toggleCollapsed() : setDrawer(true))} className="size-9 flex items-center justify-center rounded-lg text-ink-2 hover:text-ink hover:bg-paper-2 cursor-pointer shrink-0" aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}>
-              {collapsed ? <PanelLeftOpen size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
-            </button>
-          )}
-          {withSidebar && <InspectorControls s={s} open={inspectorTab} onToggle={(tab) => setInspectorTab((cur) => (cur === tab ? null : tab))} steps={inspector.steps} outputs={inspector.outputs} sources={inspector.sources} />}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {withSidebar && <InspectorControls s={s} open={inspectorTab} onToggle={(tab) => setInspectorTab((cur) => (cur === tab ? null : tab))} steps={inspector.steps} outputs={inspector.outputs} sources={inspector.sources} />}
+            <div className="relative z-[60]">
+              <LanguageMenu lang={props.lang} onChange={props.changeLang} label={t.shell.language} className="shrink-0" />
+            </div>
+          </div>
         </HeaderBar>
       </header>
 
-      <div className="flex-1 min-h-0 flex relative">
+      <div className="flex-1 min-h-0 flex relative overflow-hidden">
         {/* Docked quick-open button on the canvas when sidebar is collapsed */}
         {withSidebar && collapsed && (
           <button
@@ -269,7 +284,7 @@ export default function AppShell(props: AppShellProps) {
         )}
 
         <div className="flex-1 min-w-0 min-h-0 flex flex-col lg:flex-row">
-          <main id="main-content" className="flex-1 min-w-0 min-h-0 flex flex-col">{props.children}</main>
+          <main id="main-content" className="flex-1 min-w-0 min-h-0 flex flex-col overflow-y-auto">{props.children}</main>
           {withSidebar && <InspectorPanel s={s} open={inspectorTab} onToggle={(tab) => setInspectorTab(tab)} steps={inspector.steps} outputs={inspector.outputs} sources={inspector.sources} runId={inspector.runId} manualNote={inspector.manualNote} modelNotes={inspector.modelNotes} />}
         </div>
       </div>

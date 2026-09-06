@@ -12,7 +12,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Moon, Sun } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bot, CheckCircle2, LayoutDashboard, Moon, ShieldCheck, Sliders, Sparkles, Sun, Zap } from "lucide-react";
 import type { IngestedDocument } from "@/context/TaxReturnContext";
 import { clearSession, loadSession, saveSession, type SessionInfo } from "@/lib/auth-client";
 import { ensureServerSession } from "@/lib/session-client";
@@ -58,7 +58,10 @@ function SignIn() {
     // client-only session (e.g. an old vault sign-up with no backend) is cleared so this page can start over.
     const existing = loadSession();
     if (existing) {
-      void ensureServerSession(existing).then((r) => (r.ok ? router.replace("/app") : clearSession()));
+      void ensureServerSession(existing).then((r) => {
+        if (r.ok) setShowModeSelect(true);
+        else clearSession();
+      });
     }
   }, [router]);
   useEffect(() => {
@@ -82,7 +85,7 @@ function SignIn() {
     localStorage.setItem("wapsi_theme", next);
   };
 
-  /* --- the sign-in state machine: portal → code → /app -------------------- */
+  /* --- the sign-in state machine: portal → code → mode selection ----------- */
   const [panInput, setPanInput] = useState("");
   const [panInputError, setPanInputError] = useState<string | null>(null);
   const [pending, setPending] = useState<Persona | null>(null);
@@ -90,8 +93,12 @@ function SignIn() {
   const [otpError, setOtpError] = useState(false);
   const [authNote, setAuthNote] = useState<string | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
+  const [showModeSelect, setShowModeSelect] = useState(false);
 
-  const arrive = useCallback(() => router.replace("/app"), [router]);
+  const arrive = useCallback(() => {
+    setPending(null);
+    setShowModeSelect(true);
+  }, []);
 
   const onPanChange = (val: string) => {
     const clean = val.toUpperCase().trim();
@@ -351,7 +358,163 @@ function SignIn() {
 
       <main id="main-content" className="flex-1 px-4 py-6 sm:py-10">
         <div className="mx-auto w-full max-w-5xl">
-          {pending ? (
+          {showModeSelect ? (
+            <div className="mx-auto w-full max-w-4xl text-center py-6 sm:py-12 space-y-9 animate-in fade-in zoom-in-95 duration-200">
+              {/* Header block with status pill and rich typography */}
+              <div className="space-y-3.5 max-w-2xl mx-auto">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 shadow-xs">
+                  <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Session Authenticated · AY 2026-27</span>
+                </div>
+                <h1 className="font-serif text-3xl sm:text-5xl text-ink font-normal tracking-tight text-balance">
+                  Choose Your Filing Path
+                </h1>
+                <p className="text-sm sm:text-base text-ink-2 leading-relaxed text-balance">
+                  Wapsi offers two distinct ways to file with full mathematical parity. Switch between autonomous AI assistance and granular visual control at any time.
+                </p>
+              </div>
+
+              {/* Two Master Choice Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 text-start">
+                {/* Card 1: Agentic Copilot Mode */}
+                <div
+                  onClick={() => {
+                    try { localStorage.setItem("wapsi_user_mode", "agentic"); } catch {}
+                    router.replace("/app");
+                  }}
+                  className="group relative flex flex-col justify-between p-7 sm:p-8 rounded-3xl border-2 border-amber-500/40 hover:border-money bg-paper shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden"
+                >
+                  {/* Subtle decorative aura */}
+                  <div className="absolute -top-16 -right-16 size-36 bg-amber-500/10 rounded-full blur-2xl pointer-events-none group-hover:bg-amber-500/15 transition-all" />
+
+                  <div className="space-y-6 relative">
+                    {/* Top Row: Icon + Badge */}
+                    <div className="flex items-center justify-between">
+                      <div className="size-13 rounded-2xl bg-amber-bg border border-amber-500/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                        <Bot size={26} aria-hidden="true" />
+                      </div>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-bg text-amber-800 dark:text-amber-200 border border-amber-500/30">
+                        <Sparkles size={12} className="text-amber-500" />
+                        <span>Recommended · AI Autonomous</span>
+                      </span>
+                    </div>
+
+                    {/* Headline & Description */}
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-bold text-ink group-hover:text-money transition font-serif">
+                        Agentic Copilot Mode
+                      </h2>
+                      <p className="text-xs sm:text-sm text-ink-2 mt-2 leading-relaxed">
+                        Conversational AI agent that reads your Form 16, checks AIS/26AS, optimizes deductions, and files your return step-by-step.
+                      </p>
+                    </div>
+
+                    {/* Feature Pillars */}
+                    <div className="space-y-2.5 pt-1">
+                      <div className="flex items-start gap-2 text-xs text-ink-2">
+                        <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                        <span><strong>Zero Data Entry:</strong> Auto-reads PDF & DigiLocker Form 16 in seconds</span>
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-ink-2">
+                        <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                        <span><strong>AIS/26AS Audit:</strong> Detects mismatches & auto-stages CBDT feedback</span>
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-ink-2">
+                        <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                        <span><strong>Regime Optimizer:</strong> Computes exact rupee delta between New & Old</span>
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-ink-2">
+                        <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                        <span><strong>CA Collaboration:</strong> 1-click review sharing with your trusted CA</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action CTA Button */}
+                  <div className="mt-8 pt-5 border-t border-line/70">
+                    <button
+                      type="button"
+                      className="w-full py-3.5 px-5 rounded-2xl bg-ink text-paper group-hover:bg-money group-hover:text-white font-semibold text-sm flex items-center justify-between transition-all duration-200 shadow-sm cursor-pointer"
+                    >
+                      <span>Launch Agentic Copilot</span>
+                      <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Card 2: Manual Filing Mode */}
+                <div
+                  onClick={() => {
+                    try { localStorage.setItem("wapsi_user_mode", "manual"); } catch {}
+                    router.replace("/");
+                  }}
+                  className="group relative flex flex-col justify-between p-7 sm:p-8 rounded-3xl border-2 border-line hover:border-ink-2 bg-paper shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden"
+                >
+                  <div className="space-y-6 relative">
+                    {/* Top Row: Icon + Badge */}
+                    <div className="flex items-center justify-between">
+                      <div className="size-13 rounded-2xl bg-paper-3 border border-line text-ink flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                        <LayoutDashboard size={26} aria-hidden="true" />
+                      </div>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-paper-3 text-ink-2 border border-line">
+                        <Sliders size={12} className="text-ink-3" />
+                        <span>Visual 5-Step · Full Control</span>
+                      </span>
+                    </div>
+
+                    {/* Headline & Description */}
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-bold text-ink group-hover:text-money transition font-serif">
+                        Manual Filing Mode
+                      </h2>
+                      <p className="text-xs sm:text-sm text-ink-2 mt-2 leading-relaxed">
+                        Hands-on, visual 5-step interactive workflow with full control over each deduction and tax head.
+                      </p>
+                    </div>
+
+                    {/* Feature Pillars */}
+                    <div className="space-y-2.5 pt-1">
+                      <div className="flex items-start gap-2 text-xs text-ink-2">
+                        <CheckCircle2 size={15} className="text-ink-3 shrink-0 mt-0.5" />
+                        <span><strong>Structured 5-Stage Form:</strong> Guided steps from Income to Final ITR-V</span>
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-ink-2">
+                        <CheckCircle2 size={15} className="text-ink-3 shrink-0 mt-0.5" />
+                        <span><strong>Direct Rupee Precision:</strong> Fine-tune 80C, 80D, 80CCD, HRA & 24(b)</span>
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-ink-2">
+                        <CheckCircle2 size={15} className="text-ink-3 shrink-0 mt-0.5" />
+                        <span><strong>Live Calculation Meter:</strong> Real-time tax breakdown & marginal relief</span>
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-ink-2">
+                        <CheckCircle2 size={15} className="text-ink-3 shrink-0 mt-0.5" />
+                        <span><strong>Zero Lock-in:</strong> Client-side storage with instant export and reset</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action CTA Button */}
+                  <div className="mt-8 pt-5 border-t border-line/70">
+                    <button
+                      type="button"
+                      className="w-full py-3.5 px-5 rounded-2xl border-2 border-line bg-paper-2 group-hover:border-ink-2 text-ink font-semibold text-sm flex items-center justify-between transition-all duration-200 shadow-xs cursor-pointer"
+                    >
+                      <span>Enter Manual Dashboard</span>
+                      <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Assurance Strip */}
+              <div className="pt-2">
+                <p className="text-xs text-ink-3 font-mono flex items-center justify-center gap-2">
+                  <ShieldCheck size={14} className="text-money shrink-0" />
+                  <span>Both modes use the exact same AY 2026-27 statutory calculation engine and secure Tax Vault.</span>
+                </p>
+              </div>
+            </div>
+          ) : pending ? (
             <OtpScreen
               persona={pending}
               t={t}
