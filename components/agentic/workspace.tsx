@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Check, CircleDot, Download, FileText, Mic, MicOff, Send, ShieldAlert, ShieldCheck, Sparkles, Upload, X } from "lucide-react";
+import { ArrowRight, Check, CircleDot, Download, FileText, Mic, MicOff, Send, ShieldAlert, ShieldCheck, Sparkles, Upload, X, Award } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import type { PublicRun } from "@/lib/agentic/runtime";
 import type { OutputRef, Question, ReviewCard, RunEvent, RunTask } from "@/lib/agentic/types";
@@ -17,6 +17,8 @@ import type { AgenticStrings } from "@/lib/i18n/agenticStrings";
 import { isSpeechSupported, startDictation, type Dictation } from "@/lib/speech";
 import type { Lang } from "@/lib/types";
 import { renderAssistantText } from "../agent/format";
+
+import type { CAReviewRecord } from "@/lib/ca/ca-store";
 
 export interface WorkspaceProps {
   s: AgenticStrings;
@@ -31,6 +33,9 @@ export interface WorkspaceProps {
   onStart: (input: { message?: string; task?: RunTask }) => void;
   onSend: (input: { message?: string; answer?: { questionId: string; value: string | number | boolean }; confirm?: { cardId: string; accepted: boolean } }) => void;
   onOpenVault?: () => void;
+  onReviewWithCA?: () => void;
+  activeCAReview?: CAReviewRecord | null;
+  onOpenComparison?: () => void;
 }
 
 const STATUS_KEY: Record<PublicRun["status"], keyof AgenticStrings> = {
@@ -96,16 +101,50 @@ export default function Workspace(props: WorkspaceProps) {
         {!props.durable && <span className="text-ink-3 truncate">{s.notDurable}</span>}
       </div>
 
+      {/* CA Review Complete Banner */}
+      {props.activeCAReview?.status === "reviewed" && (
+        <div className="px-4 sm:px-6 pt-2">
+          <div className="mx-auto w-full max-w-3xl p-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="size-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-emerald-900 dark:text-emerald-200 block truncate">
+                  🎖️ CA Review Complete from {props.activeCAReview.caDetails?.name || "Chartered Accountant"}!
+                </span>
+                <span className="text-[11px] text-ink-3 block truncate">
+                  Your CA has audited deductions & figures. Check side-by-side diff before paying challan or filing.
+                </span>
+              </div>
+            </div>
+            {props.onOpenComparison && (
+              <button
+                type="button"
+                onClick={props.onOpenComparison}
+                className="px-3 py-1.5 bg-teal-800 hover:bg-teal-900 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer shrink-0"
+              >
+                View Diff →
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4">
         <div className="mx-auto w-full max-w-3xl space-y-3">
           {events.map((e) => (
             <EventRow key={e.seq} event={e} s={s} answered={answeredIds} confirmed={confirmedIds} questions={questionsById} runId={run.id} onOpenVault={props.onOpenVault} />
           ))}
           {run.pendingQuestion && !answeredIds.has(run.pendingQuestion.id) && (
-            <QuestionCard q={run.pendingQuestion} s={s} disabled={props.loading} onAnswer={(value) => props.onSend({ answer: { questionId: run.pendingQuestion!.id, value } })} />
+            <QuestionCard
+              q={run.pendingQuestion}
+              s={s}
+              disabled={props.loading}
+              onReviewWithCA={props.onReviewWithCA}
+              onAnswer={(value) => props.onSend({ answer: { questionId: run.pendingQuestion!.id, value } })}
+            />
           )}
           {run.pendingCard && !confirmedIds.has(run.pendingCard.id) && (
-            <ReviewCardView card={run.pendingCard} s={s} disabled={props.loading} onDecide={(accepted) => props.onSend({ confirm: { cardId: run.pendingCard!.id, accepted } })} />
+            <ReviewCardView card={run.pendingCard} s={s} disabled={props.loading} onReviewWithCA={props.onReviewWithCA} onDecide={(accepted) => props.onSend({ confirm: { cardId: run.pendingCard!.id, accepted } })} />
           )}
           {props.loading && (
             <p className="text-xs text-ink-3 font-mono animate-pulse px-1">{s.statusRunning}…</p>
@@ -290,7 +329,7 @@ function Avatar() {
   );
 }
 
-function QuestionCard({ q, s, disabled, onAnswer }: { q: Question; s: AgenticStrings; disabled: boolean; onAnswer: (v: string | number | boolean) => void }) {
+function QuestionCard({ q, s, disabled, onAnswer, onReviewWithCA }: { q: Question; s: AgenticStrings; disabled: boolean; onAnswer: (v: string | number | boolean) => void; onReviewWithCA?: () => void }) {
   const [value, setValue] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -330,18 +369,43 @@ function QuestionCard({ q, s, disabled, onAnswer }: { q: Question; s: AgenticStr
         )}
         <p className="text-xs text-ink-3">{q.why}</p>
         {q.resolves === "challan_payment_mode" && (
-          <div className="flex flex-col sm:flex-row items-center gap-4 p-3.5 bg-paper rounded-xl border border-line my-2">
-            <div className="p-2 bg-white rounded-lg shadow-xs border border-slate-200 shrink-0">
-              <QRCodeSVG value="upi://pay?pa=epaytax.cbdt@sbi&pn=Income%20Tax%20Department&cu=INR" size={105} />
-            </div>
-            <div className="text-xs space-y-1 text-ink-2">
-              <div className="font-bold text-ink text-sm flex items-center gap-1.5">
-                <span className="size-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
-                e-Pay Tax · Official CBDT Payment Gateway
+          <div className="space-y-2.5 my-2">
+            {/* Prominent CA Review Banner for Balance Tax Due */}
+            {onReviewWithCA && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-teal-600/30 bg-teal-500/10 dark:bg-teal-950/30">
+                <div className="space-y-0.5 min-w-0">
+                  <div className="flex items-center gap-1.5 font-bold text-sm text-teal-900 dark:text-teal-200">
+                    <Award size={16} className="text-teal-600 dark:text-teal-400 shrink-0" />
+                    <span>Have Balance Tax Due? Review with a CA First</span>
+                  </div>
+                  <p className="text-xs text-teal-800/80 dark:text-teal-300/80">
+                    A CA can audit eligible deductions (80C, 80D, 80CCD, HRA, 24b) to help reduce or eliminate your payable tax before paying.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={onReviewWithCA}
+                  className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold shrink-0 shadow-xs transition cursor-pointer"
+                >
+                  <Award size={14} />
+                  <span>🎖️ Review with CA</span>
+                </button>
               </div>
-              <p className="text-ink-3">Payee UPI VPA: <span className="font-mono text-ink font-semibold">epaytax.cbdt@sbi</span></p>
-              <p className="text-ink-3">Major Head: <span className="font-semibold text-ink">0021</span> · Minor Head: <span className="font-semibold text-ink">300 (Self-Assessment)</span></p>
-              <p className="text-ink-3">Select your payment method below to simulate and credit this challan:</p>
+            )}
+
+            <div className="flex flex-col sm:flex-row items-center gap-4 p-3.5 bg-paper rounded-xl border border-line">
+              <div className="p-2 bg-white rounded-lg shadow-xs border border-slate-200 shrink-0">
+                <QRCodeSVG value="upi://pay?pa=epaytax.cbdt@sbi&pn=Income%20Tax%20Department&cu=INR" size={105} />
+              </div>
+              <div className="text-xs space-y-1 text-ink-2">
+                <div className="font-bold text-ink text-sm flex items-center gap-1.5">
+                  <span className="size-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
+                  e-Pay Tax · Official CBDT Payment Gateway
+                </div>
+                <p className="text-ink-3">Payee UPI VPA: <span className="font-mono text-ink font-semibold">epaytax.cbdt@sbi</span></p>
+                <p className="text-ink-3">Major Head: <span className="font-semibold text-ink">0021</span> · Minor Head: <span className="font-semibold text-ink">300 (Self-Assessment)</span></p>
+                <p className="text-ink-3">Select your payment method below to simulate and credit this challan:</p>
+              </div>
             </div>
           </div>
         )}
@@ -392,18 +456,27 @@ function QuestionCard({ q, s, disabled, onAnswer }: { q: Question; s: AgenticStr
           <div className="flex flex-wrap gap-2">
             {q.choices.map((c) => {
               const isChallanAction = q.resolves === "challan_payment_mode" && c.value.startsWith("pay_");
+              const isCAAction = c.value === "review_with_ca";
               return (
                 <button
                   key={c.value}
                   type="button"
                   disabled={disabled}
-                  onClick={() => onAnswer(c.value)}
+                  onClick={() => {
+                    if (isCAAction && onReviewWithCA) {
+                      onReviewWithCA();
+                    }
+                    onAnswer(c.value);
+                  }}
                   className={`rounded-lg border px-3.5 py-2 text-sm font-medium transition-all disabled:opacity-50 cursor-pointer ${
-                    isChallanAction
+                    isCAAction
+                      ? "bg-teal-700/10 border-teal-700/40 text-teal-950 dark:text-teal-200 font-bold hover:bg-teal-700/20 shadow-xs flex items-center gap-1.5"
+                      : isChallanAction
                       ? "bg-money/10 border-money/40 text-money font-semibold shadow-xs hover:bg-money/20"
                       : "border-line bg-paper text-ink hover:bg-paper-3"
                   }`}
                 >
+                  {isCAAction && <Award size={14} className="text-teal-600 shrink-0" />}
                   {c.label}
                 </button>
               );
@@ -483,7 +556,7 @@ function FormFields({ q, s, disabled, onAnswer }: { q: Question; s: AgenticStrin
   );
 }
 
-function ReviewCardView({ card, s, disabled, inert = false, onDecide }: { card: ReviewCard; s: AgenticStrings; disabled: boolean; inert?: boolean; onDecide?: (accepted: boolean) => void }) {
+function ReviewCardView({ card, s, disabled, inert = false, onDecide, onReviewWithCA }: { card: ReviewCard; s: AgenticStrings; disabled: boolean; inert?: boolean; onDecide?: (accepted: boolean) => void; onReviewWithCA?: () => void }) {
   return (
     <div className="flex items-start gap-3">
       <Avatar />
@@ -499,8 +572,14 @@ function ReviewCardView({ card, s, disabled, inert = false, onDecide }: { card: 
         </dl>
         <p className="font-mono text-[10px] text-ink-3">rev {card.boundTo.revision} · {card.boundTo.snapshotHash.slice(0, 10)} · {s.simulatedBadge}</p>
         {!inert && (
-          <div className="flex gap-2 pt-1">
+          <div className="flex flex-wrap gap-2 pt-1">
             <button type="button" disabled={disabled} onClick={() => onDecide?.(true)} className="flex-1 rounded-lg bg-ink text-paper px-4 py-2.5 text-sm font-bold hover:opacity-90 disabled:opacity-50 cursor-pointer">{card.confirmLabel}</button>
+            {card.kind === "filing" && onReviewWithCA && (
+              <button type="button" onClick={onReviewWithCA} className="rounded-lg border border-teal-700/40 bg-teal-500/10 hover:bg-teal-500/20 text-teal-950 dark:text-teal-200 px-3 py-2.5 text-xs font-bold transition cursor-pointer flex items-center gap-1.5">
+                <Award size={14} className="text-teal-600" />
+                <span>Review with CA</span>
+              </button>
+            )}
             <button type="button" disabled={disabled} onClick={() => onDecide?.(false)} className="rounded-lg border border-line bg-paper px-4 py-2.5 text-sm font-semibold text-ink-2 hover:bg-paper-3 disabled:opacity-50 cursor-pointer">{card.cancelLabel}</button>
           </div>
         )}

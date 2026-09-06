@@ -2,12 +2,13 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { m } from "motion/react";
-import { Banknote, CheckCircle2, FileCheck, Loader2 } from "lucide-react";
+import { Banknote, CheckCircle2, FileCheck, Loader2, Award, ShieldCheck } from "lucide-react";
 import type { Persona, Lang } from "../../lib/types";
 import type { Dict } from "../../lib/i18n";
 import { formatMoney } from "../../lib/money";
 import { computeForPersona } from "../../lib/return/compute";
 import { localize } from "../mock-i18n";
+import type { CAReviewRecord } from "@/lib/ca/ca-store";
 
 type Stage = "idle" | "checking" | "sealing" | "committing" | "done" | "error";
 
@@ -26,6 +27,9 @@ interface FilingStepProps {
    * the balance is cleared.
    */
   onPayOutstanding?: () => void;
+  onReviewWithCA?: () => void;
+  activeCAReview?: CAReviewRecord | null;
+  onOpenComparison?: () => void;
 }
 
 /**
@@ -41,6 +45,9 @@ export default function FilingStep({
   onFile,
   onBack,
   onPayOutstanding,
+  onReviewWithCA,
+  activeCAReview,
+  onOpenComparison,
 }: FilingStepProps) {
   const [stage, setStage] = useState<Stage>("idle");
   const [networkError, setNetworkError] = useState(false);
@@ -233,31 +240,85 @@ export default function FilingStep({
       )}
 
       {stage === "idle" ? (
-        <div className="flex gap-3 pt-1">
-          <button
-            onClick={onBack}
-            className="flex-1 border border-line text-ink-2 py-3 px-4 rounded-lg hover:bg-paper-2 transition-colors text-sm font-semibold"
-          >
-            {t.common.back}
-          </button>
-          {mustPayFirst ? (
+        <div className="space-y-3 pt-1">
+          {/* CA Review Status Cards */}
+          {activeCAReview?.status === "reviewed" ? (
+            <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-between gap-3 animate-in fade-in">
+              <div className="flex items-center gap-2.5">
+                <div className="size-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <div>
+                  <span className="text-xs font-bold text-emerald-900 dark:text-emerald-200 block">
+                    CA Review Complete from {activeCAReview.caDetails?.name || "Tax Professional"}!
+                  </span>
+                  <span className="text-[11px] text-ink-3">
+                    Recommendations and tax deltas ready for side-by-side adoption.
+                  </span>
+                </div>
+              </div>
+              {onOpenComparison && (
+                <button
+                  type="button"
+                  onClick={onOpenComparison}
+                  className="px-3.5 py-2 bg-teal-800 hover:bg-teal-900 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer shrink-0"
+                >
+                  View Diff →
+                </button>
+              )}
+            </div>
+          ) : activeCAReview?.status === "pending" ? (
+            <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-between text-xs animate-in fade-in">
+              <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200">
+                <ShieldCheck size={16} className="text-amber-600 shrink-0" />
+                <span>Shared with CA (Code: <strong className="font-mono">{activeCAReview.code}</strong>)</span>
+              </div>
+              {onReviewWithCA && (
+                <button
+                  type="button"
+                  onClick={onReviewWithCA}
+                  className="text-xs font-bold text-teal-800 dark:text-teal-300 hover:underline cursor-pointer"
+                >
+                  Share / PIN
+                </button>
+              )}
+            </div>
+          ) : null}
+
+          <div className="flex flex-wrap gap-2.5">
             <button
-              onClick={onPayOutstanding}
-              data-action="pay-outstanding"
-              className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-alarm px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:opacity-90"
+              onClick={onBack}
+              className="flex-1 border border-line text-ink-2 py-3 px-3 rounded-xl hover:bg-paper-2 transition-colors text-xs font-semibold"
             >
-              <Banknote size={16} />
-              <span>{localize("Pay outstanding tax (Challan 280)", lang)}</span>
+              {t.common.back}
             </button>
-          ) : (
-            <button
-              onClick={beginFiling}
-              className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-navy px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:opacity-90"
-            >
-              <FileCheck size={16} />
-              <span>{t.file.confirmAndFile}</span>
-            </button>
-          )}
+            {onReviewWithCA && (
+              <button
+                type="button"
+                onClick={onReviewWithCA}
+                className="flex-1 border border-teal-700/30 bg-teal-500/10 hover:bg-teal-500/20 text-teal-950 dark:text-teal-200 py-3 px-3 rounded-xl transition-colors text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+              >
+                <Award size={15} className="text-teal-600" />
+                <span>Review with CA</span>
+              </button>
+            )}
+            {mustPayFirst ? (
+              <button
+                onClick={onPayOutstanding}
+                data-action="pay-outstanding"
+                className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-alarm px-4 py-3 text-xs font-bold text-white shadow-sm transition-colors hover:opacity-90 cursor-pointer"
+              >
+                <Banknote size={16} />
+                <span>{localize("Pay outstanding tax (Challan 280)", lang)}</span>
+              </button>
+            ) : (
+              <button
+                onClick={beginFiling}
+                className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-navy px-4 py-3 text-xs font-bold text-white shadow-sm transition-colors hover:opacity-90 cursor-pointer"
+              >
+                <FileCheck size={16} />
+                <span>{t.file.confirmAndFile}</span>
+              </button>
+            )}
+          </div>
         </div>
       ) : (
         !busy && null

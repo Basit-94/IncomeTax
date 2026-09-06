@@ -99,6 +99,13 @@ import {
   addDocumentToVault,
   type CitizenVaultUser,
 } from "../lib/vault/vault-store";
+import CAShareModal from "../components/ca/ca-share-modal";
+import CAComparisonModal from "../components/ca/ca-comparison-modal";
+import {
+  getActiveReviewForPan,
+  fetchReviewRecord,
+  type CAReviewRecord,
+} from "../lib/ca/ca-store";
 import type { ReconcileRow } from "../components/modals/MatchRecordsModal";
 import AgenticModeModal from "../components/modals/AgenticModeModal";
 import PortalFooter from "../components/layout/portal-footer";
@@ -201,6 +208,95 @@ export default function WapsiPrototype() {
       });
     }
   }, [persona?.pan]);
+
+  // CA Review Portal state for Citizen
+  const [caShareOpen, setCaShareOpen] = useState(false);
+  const [caComparisonOpen, setCaComparisonOpen] = useState(false);
+  const [activeCAReview, setActiveCAReview] = useState<CAReviewRecord | null>(null);
+
+  useEffect(() => {
+    if (!persona?.pan) return;
+
+    let isSubscribed = true;
+
+    const syncReview = async () => {
+      // 1. Read local storage
+      const local = getActiveReviewForPan(persona.pan);
+      if (local && isSubscribed) {
+        setActiveCAReview((prev) => {
+          if (!prev || prev.status !== local.status || prev.reviewedAt !== local.reviewedAt) {
+            return local;
+          }
+          return prev;
+        });
+
+        // 2. If review is pending or has been updated, verify from server API
+        if (local.status === "pending" || local.status === "reviewed") {
+          try {
+            const serverRec = await fetchReviewRecord(local.code, true);
+            if (serverRec && isSubscribed) {
+              setActiveCAReview((prev) => {
+                if (!prev || prev.status !== serverRec.status || prev.reviewedAt !== serverRec.reviewedAt) {
+                  return serverRec;
+                }
+                return prev;
+              });
+            }
+          } catch {
+            // Ignore background sync errors
+          }
+        }
+      }
+    };
+
+    void syncReview();
+
+    // Cross-tab storage change listener
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "wapsi_ca_reviews" || !e.key) {
+        void syncReview();
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+
+    // Custom in-window review update listener
+    const handleCustom = () => {
+      void syncReview();
+    };
+    window.addEventListener("wapsi_ca_review_updated", handleCustom);
+
+    // Focus listener (when taxpayer switches back from CA tab)
+    const handleFocus = () => {
+      void syncReview();
+    };
+    window.addEventListener("focus", handleFocus);
+
+    // Polling interval (every 2.5s) while review is pending or reviewed
+    const interval = setInterval(() => {
+      void syncReview();
+    }, 2500);
+
+    return () => {
+      isSubscribed = false;
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("wapsi_ca_review_updated", handleCustom);
+      window.removeEventListener("focus", handleFocus);
+      clearInterval(interval);
+    };
+  }, [persona?.pan]);
+
+  const handleAdoptCAReview = (newPersona: Persona, newRegime: "new" | "old") => {
+    if (!returnState) return;
+    const updatedState: ReturnState = {
+      ...returnState,
+      baselinePersona: newPersona,
+      persona: newPersona,
+      corrections: [],
+      regime: newRegime,
+    };
+    saveState(updatedState);
+    setActiveCAReview((prev) => (prev ? { ...prev, status: "accepted" } : null));
+  };
 
   // Tab control inside dashboard (filed view) + default-path flow control
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
@@ -2852,6 +2948,9 @@ export default function WapsiPrototype() {
                             setFlowStep("check");
                             setActiveTab("overview");
                           }}
+                          onReviewWithCA={() => setCaShareOpen(true)}
+                          activeCAReview={activeCAReview}
+                          onOpenComparison={() => setCaComparisonOpen(true)}
                         />
                       )}
                     </m.div>
@@ -3037,6 +3136,34 @@ export default function WapsiPrototype() {
           onUpdateUser={setVaultUser}
           lang={lang}
         />
+
+        {/* --- CA REVIEW SHARE & PIN MODAL --- */}
+        {persona && (
+          <CAShareModal
+            isOpen={caShareOpen}
+            onClose={() => setCaShareOpen(false)}
+            persona={persona}
+            regime={regime}
+            lang={lang}
+            onRecordCreated={(rec) => setActiveCAReview(rec)}
+            onReviewReceived={(rec) => {
+              setActiveCAReview(rec);
+              setCaShareOpen(false);
+              setCaComparisonOpen(true);
+            }}
+          />
+        )}
+
+        {/* --- CA SIDE-BY-SIDE RECONCILIATION MODAL --- */}
+        {activeCAReview && (
+          <CAComparisonModal
+            isOpen={caComparisonOpen}
+            onClose={() => setCaComparisonOpen(false)}
+            record={activeCAReview}
+            lang={lang}
+            onAdopt={handleAdoptCAReview}
+          />
+        )}
 
         {/* --- AGENTIC MODE MODAL --- */}
         <AgenticModeModal

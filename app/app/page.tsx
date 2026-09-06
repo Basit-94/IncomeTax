@@ -20,10 +20,11 @@ import { agenticStrings } from "@/lib/i18n/agenticStrings";
 import { isRtl } from "@/lib/i18n/languages";
 import { PERSONAS, PERSONA_ORDER, findPersonaByPan } from "@/lib/personas";
 import { CURRENT_VERSION, load, save as savePersist } from "@/lib/return/persist";
-import { mirrorReturn } from "@/lib/return-sync-client";
+import { mirrorReturn, pullReturn } from "@/lib/return-sync-client";
 import type { ReturnState } from "@/lib/return/state";
 import { endServerSession, ensureServerSession, type ServerSessionInfo } from "@/lib/session-client";
-import type { Lang } from "@/lib/types";
+import { blankPersona } from "@/lib/signin-flow";
+import type { Lang, Persona } from "@/lib/types";
 import { fetchVaultUser, getSeededVaultForPersona, addDocumentToVault, type CitizenVaultUser } from "@/lib/vault/vault-store";
 import AppShell from "@/components/agentic/app-shell";
 import AgenticLanding from "@/components/agentic/landing";
@@ -31,6 +32,14 @@ import Workspace from "@/components/agentic/workspace";
 import type { WorkMode } from "@/components/agentic/mode-switch";
 import { useRun, useRuns } from "@/components/agentic/use-run";
 import CitizenVaultModal from "@/components/vault/citizen-vault-modal";
+import CAShareModal from "@/components/ca/ca-share-modal";
+import CAComparisonModal from "@/components/ca/ca-comparison-modal";
+import {
+  getActiveReviewForPan,
+  fetchReviewRecord,
+  type CAReviewRecord,
+} from "@/lib/ca/ca-store";
+import { Award } from "lucide-react";
 
 /** `useSearchParams` bails out of prerendering; Next 16 requires the boundary. */
 export default function AgenticPage() {
@@ -116,13 +125,150 @@ function AgenticWorkspace() {
     if (sessionState === "none" || sessionState === "unverifiable") router.replace("/signin");
   }, [sessionState, router]);
 
-  const persona = useMemo(() => (server ? findPersonaByPan(server.owner.pan) ?? null : null), [server]);
+  const [returnState, setReturnState] = useState<ReturnState | null>(null);
+
+  // Sync latest return snapshot from server
+  useEffect(() => {
+    if (sessionState !== "ready") return;
+    void pullReturn().then((res) => {
+      if (res?.state) setReturnState(res.state);
+    });
+  }, [sessionState, activeRunId]);
+
+  const persona = useMemo(() => {
+    if (!server) return null;
+    // 1. If server return has a persona for this PAN, use it (carries Form 16 facts / deductions / salary)
+    if (returnState?.persona && returnState.persona.pan.toUpperCase() === server.owner.pan.toUpperCase()) {
+      return returnState.persona;
+    }
+    // 2. If localStorage has a return for this PAN, use it
+    const local = load();
+    if (local && "state" in local && local.state.persona && local.state.persona.pan.toUpperCase() === server.owner.pan.toUpperCase()) {
+      return local.state.persona;
+    }
+    // 3. If seeded demo persona
+    const seeded = findPersonaByPan(server.owner.pan);
+    if (seeded) return seeded;
+    // 4. Default to blankPersona so CA review and all features work unconditionally for any PAN
+    return blankPersona(server.owner.pan, server.owner.displayName, lang);
+  }, [server, returnState, lang]);
   const citizen = useMemo(() => (server ? { name: server.owner.displayName, pan: server.owner.pan, isDemo: server.owner.kind === "demo" } : null), [server]);
   useEffect(() => {
     if (!server) return setVaultUser(null);
     if (persona) setVaultUser((prev) => (prev && prev.pan === persona.pan ? prev : getSeededVaultForPersona(persona)));
     void fetchVaultUser(server.owner.pan).then((u) => u && setVaultUser(u));
   }, [server, persona]);
+
+  // CA Review Portal state for Agentic mode
+  const [caShareOpen, setCaShareOpen] = useState(false);
+  const [caComparisonOpen, setCaComparisonOpen] = useState(false);
+  const [activeCAReview, setActiveCAReview] = useState<CAReviewRecord | null>(null);
+
+  useEffect(() => {
+    if (!persona?.pan) return;
+
+    let isSubscribed = true;
+
+    const syncReview = async () => {
+      // 1. Read local storage
+      const local = getActiveReviewForPan(persona.pan);
+      if (local && isSubscribed) {
+        setActiveCAReview((prev) => {
+          if (!prev || prev.status !== local.status || prev.reviewedAt !== local.reviewedAt) {
+            return local;
+          }
+          return prev;
+        });
+
+        // 2. If review is pending or has updates, check server
+        if (local.status === "pending" || local.status === "reviewed") {
+          try {
+            const serverRec = await fetchReviewRecord(local.code, true);
+            if (serverRec && isSubscribed) {
+              setActiveCAReview((prev) => {
+                if (!prev || prev.status !== serverRec.status || prev.reviewedAt !== serverRec.reviewedAt) {
+                  return serverRec;
+                }
+                return prev;
+              });
+            }
+          } catch {
+            // Ignore background sync errors
+          }
+        }
+      }
+    };
+
+    void syncReview();
+
+    // Cross-tab storage change listener
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "wapsi_ca_reviews" || !e.key) {
+        void syncReview();
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+
+    // Custom in-window review update listener
+    const handleCustom = () => {
+      void syncReview();
+    };
+    window.addEventListener("wapsi_ca_review_updated", handleCustom);
+
+    // Focus listener
+    const handleFocus = () => {
+      void syncReview();
+    };
+    window.addEventListener("focus", handleFocus);
+
+    // Periodic polling (every 2.5s)
+    const interval = setInterval(() => {
+      void syncReview();
+    }, 2500);
+
+    return () => {
+      isSubscribed = false;
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("wapsi_ca_review_updated", handleCustom);
+      window.removeEventListener("focus", handleFocus);
+      clearInterval(interval);
+    };
+  }, [persona?.pan]);
+
+  const handleAdoptCAReview = (newPersona: Persona, newRegime: "new" | "old") => {
+    const loaded = load();
+    const baseState: ReturnState = (loaded && "state" in loaded)
+      ? loaded.state
+      : {
+          version: CURRENT_VERSION,
+          lang,
+          personaId: newPersona.id === "custom" ? "custom" : newPersona.id,
+          baselinePersona: newPersona,
+          persona: newPersona,
+          corrections: [],
+          confirmedFactIds: [],
+          regime: newRegime,
+        };
+
+    const updatedState: ReturnState = {
+      ...baseState,
+      baselinePersona: newPersona,
+      persona: newPersona,
+      corrections: [],
+      regime: newRegime,
+    };
+
+    savePersist(updatedState);
+    void mirrorReturn(updatedState);
+    setReturnState(updatedState);
+    try {
+      window.dispatchEvent(new CustomEvent("wapsi_state_changed"));
+      window.dispatchEvent(new Event("storage"));
+      window.dispatchEvent(new CustomEvent("wapsi_ca_review_updated"));
+    } catch {}
+
+    setActiveCAReview((prev) => (prev ? { ...prev, status: "accepted" } : null));
+  };
 
   /** Demo sign-in: the same client session shape the manual page mints, so both modes agree. */
   const signInDemo = async (personaId: (typeof PERSONA_ORDER)[number]) => {
@@ -285,11 +431,42 @@ function AgenticWorkspace() {
             onStart={(input) => void start(input)}
             onSend={(input) => void view.send(input)}
             onOpenVault={() => setVaultOpen(true)}
+            onReviewWithCA={() => setCaShareOpen(true)}
+            activeCAReview={activeCAReview}
+            onOpenComparison={() => setCaComparisonOpen(true)}
           />
         )}
       </AppShell>
 
       <CitizenVaultModal isOpen={vaultOpen} onClose={() => setVaultOpen(false)} vaultUser={vaultUser} onUpdateUser={setVaultUser} lang={lang} />
+
+      {/* --- CA REVIEW SHARE & PIN MODAL --- */}
+      {persona && (
+        <CAShareModal
+          isOpen={caShareOpen}
+          onClose={() => setCaShareOpen(false)}
+          persona={persona}
+          regime={returnState?.regime ?? "new"}
+          lang={lang}
+          onRecordCreated={(rec) => setActiveCAReview(rec)}
+          onReviewReceived={(rec) => {
+            setActiveCAReview(rec);
+            setCaShareOpen(false);
+            setCaComparisonOpen(true);
+          }}
+        />
+      )}
+
+      {/* --- CA SIDE-BY-SIDE RECONCILIATION MODAL --- */}
+      {activeCAReview && (
+        <CAComparisonModal
+          isOpen={caComparisonOpen}
+          onClose={() => setCaComparisonOpen(false)}
+          record={activeCAReview}
+          lang={lang}
+          onAdopt={handleAdoptCAReview}
+        />
+      )}
 
       {memoryOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true" aria-label={s.memory}>

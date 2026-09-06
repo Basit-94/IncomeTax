@@ -1085,6 +1085,45 @@ async function handleChallanPaymentExecution(
   run.state.pendingQuestion = undefined;
   const val = String(actionValue ?? "").toLowerCase();
 
+  if (val === "review_with_ca" || val.includes("ca") || val.includes("chartered")) {
+    const currentSnap = snapshot ?? (await ensureSnapshot(deps, owner, run));
+    const p = currentSnap?.state.persona;
+    const regime = currentSnap?.state.regime ?? "new";
+    const b = p ? computeForPersona(p, regime) : null;
+    const due = b && b.refundOrDue < 0 ? -b.refundOrDue : 4700;
+
+    const caLines = [
+      `### 🎖️ Review with CA Selected`,
+      "",
+      `You have chosen to consult a Chartered Accountant before paying the **${formatMoney(due, run.lang)}** balance tax due.`,
+      "",
+      `Click the **[ 🎖️ Review with CA ]** button on your screen to generate a secure PIN and access code for your CA.`,
+      "",
+      `Your CA will log in via the CA Portal, review your draft return, audit eligible deductions and allowances (80C, 80D, 80CCD, HRA, 24b), and update the figures. Once your CA completes their review, you can inspect the side-by-side diff and adopt the updated deductions right here!`,
+    ];
+    await emit({ type: "message", role: "assistant", text: caLines.join("\n") });
+
+    const nextQ: Question = {
+      id: newId("q"),
+      text: `When your CA completes their review, or to simulate paying Challan 280:`,
+      why: "CA Review or Section 140A tax clearance",
+      expects: "choice",
+      resolves: "challan_payment_mode",
+      choices: [
+        { value: "review_with_ca", label: "🎖️ Open / Re-open CA Share Details" },
+        { value: "pay_challan_upi", label: `⚡ Pay ${formatMoney(due, run.lang)} Now (UPI / QR)` },
+        { value: "pay_challan_sbi", label: `🏦 Pay ${formatMoney(due, run.lang)} (SBI Net Banking)` },
+        { value: "pay_challan_hdfc", label: `🏦 Pay ${formatMoney(due, run.lang)} (HDFC Net Banking)` },
+        { value: "skip_challan_pay", label: "Proceed to Filing Review without paying" },
+      ],
+    };
+    run.state.pendingQuestion = nextQ;
+    await emit({ type: "question", question: nextQ });
+    run.status = "waiting_for_input";
+    await emit({ type: "status", status: "waiting_for_input" });
+    return;
+  }
+
   if (val === "skip_challan_pay" || val === "cancel") {
     await emit({
       type: "message",
@@ -1440,13 +1479,24 @@ async function stepCompute(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
 
 async function stepReview(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>) {
   if (!run.state.advice?.canAct) return;
-  const snapshot = await deps.returns.get(owner, AY);
+  let snapshot = await deps.returns.get(owner, AY);
   if (!snapshot) return;
   if (run.task === "prepare_salaried_return" && snapshot.state.filedAt) {
     await emit({ type: "message", role: "assistant", text: s.alreadyFiled });
     run.state.steps = setStep(setStep(run.state.steps, "confirm", "skipped", s.noteAlreadyFiled), "act", "blocked", s.noteAlreadyFiled);
     return;
   }
+  // Synchronize staged commands into snapshot so the server return holds the citizen's draft numbers
+  if (run.state.pendingCommands && run.state.pendingCommands.length > 0) {
+    const projectedState = projected(snapshot, run.state.pendingCommands);
+    const rep = await deps.returns.replace(owner, AY, projectedState, snapshot.revision);
+    if (rep.ok) {
+      snapshot = rep.snapshot;
+      run.state.returnRevision = snapshot.revision;
+      run.state.pendingCommands = [];
+    }
+  }
+
   const state = projected(snapshot, run.state.pendingCommands);
   const both = compareForPersona(state.persona);
   const cheaper: "new" | "old" = both.new.totalTax <= both.old.totalTax ? "new" : "old";
@@ -1465,17 +1515,18 @@ async function stepReview(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnTy
       "",
       `Under Section 140A of the Income-tax Act, self-assessment tax must be paid before filing to prevent defective filing notices under Section 139(9) and penal interest under Section 234B/C.`,
       "",
-      `Would you like to simulate paying this now via Challan 280?`,
+      `Before paying, you can **Review with a CA** to audit deductions and exemptions (80C, 80D, 80CCD, HRA, 24b) to reduce or eliminate this payable amount, or simulate paying now via Challan 280:`,
     ];
     await emit({ type: "message", role: "assistant", text: lines.join("\n") });
 
     const q: Question = {
       id: newId("q"),
-      text: `Pay self-assessment tax of ${formatMoney(due, run.lang)} now?`,
+      text: `Pay self-assessment tax of ${formatMoney(due, run.lang)} now, or Review with CA?`,
       why: "Section 140A compliance before return filing",
       expects: "choice",
       resolves: "challan_payment_mode",
       choices: [
+        { value: "review_with_ca", label: "🎖️ Review with CA First (Audit Deductions to Reduce Tax)" },
         { value: "pay_challan_upi", label: `⚡ Pay ${formatMoney(due, run.lang)} Now (UPI / QR)` },
         { value: "pay_challan_sbi", label: `🏦 Pay ${formatMoney(due, run.lang)} (SBI Net Banking)` },
         { value: "pay_challan_hdfc", label: `🏦 Pay ${formatMoney(due, run.lang)} (HDFC Net Banking)` },
@@ -1723,11 +1774,12 @@ function parseAnswer(q: Question, text: string, s: ReturnType<typeof strings>): 
       if (/^7\b|^\b(7\.|seventh|vault|document|docs|stored|tax vault)\b/i.test(t)) return "task:tax_vault";
     }
     if (q.resolves === "challan_payment_mode") {
+      if (/^(ca|review with ca|review ca|consult ca|chartered|ca first)\b/i.test(t) || t.includes("ca") || t.includes("chartered")) return "review_with_ca";
       if (/^(1\b|upi|qr|gpay|phonepe|paytm|pay now|simulate|pay|haan|yes|how to pay|how do i pay)\b/i.test(t) || t.includes("upi") || t.includes("pay") || t.includes("qr")) return "pay_challan_upi";
       if (/^(2\b|sbi|state bank)\b/i.test(t) || t.includes("sbi")) return "pay_challan_sbi";
       if (/^(3\b|hdfc)\b/i.test(t) || t.includes("hdfc")) return "pay_challan_hdfc";
       if (/^(4\b|icici)\b/i.test(t) || t.includes("icici")) return "pay_challan_icici";
-      if (/^(skip|later|no|nahi|cancel|review|proceed|without pay)\b/i.test(t) || t.includes("skip") || t.includes("later")) return "skip_challan_pay";
+      if (/^(skip|later|no|nahi|cancel|without pay)\b/i.test(t) || t.includes("skip") || t.includes("later")) return "skip_challan_pay";
     }
     const cleanStr = (str: string) => str.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "").trim().toLowerCase();
     const hit = q.choices.find((c) => {

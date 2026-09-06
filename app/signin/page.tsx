@@ -386,6 +386,17 @@ function SignIn() {
               authBusy={authBusy}
             />
           )}
+
+          {/* Chartered Accountant Entry Link */}
+          <div className="mt-8 text-center">
+            <a
+              href="/ca"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-ink-3 hover:text-teal-700 dark:hover:text-teal-400 transition"
+            >
+              <span>Are you a Chartered Accountant or Tax Professional?</span>
+              <span className="font-bold underline">Access Client Review Portal →</span>
+            </a>
+          </div>
         </div>
       </main>
     </div>

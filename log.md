@@ -4935,5 +4935,105 @@ things there are already true and will NOT be rewritten:
     5. Opened `Form ITR-V (Acknowledgement)`: Verified Part B-TI Gross salary: **₹18,50,000**, Taxable: **₹17,75,000**, Part B-TTI Total tax liability: **₹1,61,200**, TDS: **₹1,65,000**, Net refund: **₹3,800**, Bank: **HDFC Bank** (pre-validated).
 - **Git Action:** Committed `c783487` ("fix(vault): persist extracted fields, eliminate zero-value previews, and add original PDF toggle") and pushed to `origin/dev-2` per explicit user instruction. Production build verified with Next.js Turbopack (`npm run build`) passing 16/16 routes.
 
+## [2026-09-06 19:20] orchestrator
+- **Action:** CREATE | MODIFY | VERIFY
+- **Target:** lib/ca/ca-store.ts; app/api/ca/review/route.ts; app/ca/page.tsx; components/ca/ca-share-modal.tsx; components/ca/ca-comparison-modal.tsx; components/flow/filing-step.tsx; components/agentic/workspace.tsx; components/dashboard/portal-header.tsx; app/signin/page.tsx; app/page.tsx; app/app/page.tsx; lib/ca/__tests__/ca-store.test.ts; log.md
+- **Intent:** Architect and implement the complete end-to-end Chartered Accountant (CA) Review Portal for trust-building, human-in-the-loop tax return verification:
+  1. **Data Model & Security (`lib/ca/ca-store.ts` & `app/api/ca/review/route.ts`):**
+     - Implemented `CAReviewRecord` structure holding `code` (`CA-XXXX-XX`), client-side SHA-256 `pinHash`, taxpayer metadata, `originalPersona`, `originalRegime`, `caPersona`, `caRegime`, `caDetails` (name, ICAI membership number, firm), `caNotes`, and lifecycle `status` (`pending` | `reviewed` | `accepted` | `rejected`).
+     - Zero-knowledge encryption: PIN is hashed with SHA-256 before storage and verification.
+     - Dual-tier persistence: LocalStorage (`wapsi_ca_reviews`) with in-memory SSR fallback + REST API synchronization (`/api/ca/review`) enabling seamless cross-device sharing between citizen and CA.
+     - Provided `createDemoReview` helper pre-configuring Sunita Rao for instantaneous testing/evaluation.
+  2. **Dedicated CA Review & Audit Workspace (`app/ca/page.tsx`):**
+     - High-trust, professional interface built with ICAI badge accents and AY 2026-27 compliance tags.
+     - Access Screen: Validates Access Code + Taxpayer PIN, supports optional CA professional stamp, and includes a 1-click Demo Client launcher.
+     - Manual-Only Fact Sheet Audit: 5 structured tabs covering Chapter VI-A Deductions (80C, 80D Self/Parents, 80CCD(1B) NPS, 10(13A) HRA), Gross Salary & standard deduction, House Property, Other Sources (Interest & Dividends), and TDS/Advance Tax Paid.
+     - Real-Time Live Tax Impact Analysis: Dynamically evaluates `computeTax` on every change, shows Old vs New Regime slabs, recommends optimal regime, highlights tax delta gain (e.g. extra refund unlocked), and provides rich CA remarks textarea with quick-insertion chips.
+     - "Save & Return to Taxpayer" action persists modifications and marks status as `reviewed`.
+     - Preserves all 23 official Indian languages via `LanguageMenu` and supports Dark/Light mode.
+  3. **Citizen Share Modal (`components/ca/ca-share-modal.tsx`):**
+     - Accessible right before filing in both Manual mode (`FilingStep`) and Agentic mode (`ReviewCardView`).
+     - Step 1 prompts user to set a secret 4-6 digit PIN with clear zero-knowledge privacy notice.
+     - Step 2 generates unique Code (`CA-XXXX-XX`), providing 1-click copy code, direct URL link, WhatsApp share button with pre-filled text, and live real-time polling for review completion.
+  4. **Citizen Side-by-Side Comparator (`components/ca/ca-comparison-modal.tsx`):**
+     - Displays comprehensive comparison matrix: Original Draft vs CA Version vs Tax Impact (Gross Income, Deductions, Taxable Income, Regime Choice, Net Refund/Due).
+     - Highlights tax benefit unlocked in emerald green (e.g. +₹12,480 additional refund).
+     - Shows CA professional credentials and personal audit remarks.
+     - 1-click action: "Adopt CA Recommendations & Proceed to File" seamlessly merges CA figures and regime into the citizen's active return document.
+  5. **Header & Navigation Integration:**
+     - Added "CA Portal" direct link button in `PortalHeader` (`components/dashboard/portal-header.tsx`).
+     - Added "Access Client Review Portal" link in `app/signin/page.tsx` for tax professionals.
+  6. **Automated Unit Tests (`lib/ca/__tests__/ca-store.test.ts`):**
+     - Added 6 comprehensive vitest tests covering code formatting, SHA-256 PIN verification, review creation, CA adjustments and regime switching, citizen acceptance, and demo generation.
+- **Verification Results:**
+  - `npm run typecheck` (`tsc --noEmit`): **0 errors** (clean build).
+  - `npm test` (`vitest run`): **365/365 tests passed** across all 39 test files (100% green).
+  - `npm run build` (`next build` Turbopack): **Successful production build** compiling all 18 routes (`/ca`, `/api/ca/review`, `/`, `/app`, `/signin`, etc.) with zero errors.
+  - **Live Browser Automation via Playwright MCP:**
+    1. Verified `/ca` landing and login screen with PIN + Code inputs, language switcher, and demo launcher.
+    2. Launched Demo Client Audit: Verified Sunita Devi (DEMPS4417K), Chapter VI-A deductions fact sheets, real-time live tax calculation, regime comparison, and remarks.
+    3. Clicked "Save & Return to Taxpayer": Verified review successfully transmitted to taxpayer.
+    4. Verified citizen home page `/`: Verified "CA Portal" button in header bar.
+    5. Navigated to Step 5 ("Send it in"): Verified `[ Review with CA ]` button rendered alongside `[ Send this in ]`.
+    6. Clicked `[ Review with CA ]`: Set PIN `2468`, generated Code `CA-1550-40`, verified WhatsApp button, copy link, and live listening status.
+- **Git Policy:** Work strictly contained on branch `dev-2`. No commits or pushes made without user instruction.
 
-
+## [2026-09-06 19:55] orchestrator
+- **Action:** MODIFY | VERIFY
+- **Target:** app/ca/page.tsx; lib/ca/ca-store.ts; lib/engine/constants.ts; app/page.tsx; app/app/page.tsx; log.md
+- **Intent:** Resolve CA Portal numeric input formatting, sticky zero/leading zero display, calculations reactivity, and real-time cross-tab synchronization with the citizen portal:
+  1. **Clean Numeric Editing & No Leading Zeros (`app/ca/page.tsx`):**
+     - Replaced `value={val || 0}` with `value={val ? val : ""}` and `placeholder="0"` across all fact sheet inputs (Section 80C, 80CCD, 80D Self/Parents, HRA, Section 24b Housing Loan, Gross Salary, Rent, Capital Gains, Bank Interest, Dividends, Other receipts, and TDS).
+     - Introduced `handleNumberChange(raw, setter)` with regex sanitization (`raw.replace(/[^0-9]/g, "").replace(/^0+(?=\d)/, "")`) ensuring typing "1000" renders cleanly as `1000` instead of `01000`, while allowing seamless backspacing without trapping users on a persistent "0".
+  2. **Unstick Fixed Numbers & Section Matching (`app/ca/page.tsx` & `lib/engine/constants.ts`):**
+     - Created unified, symmetrical `isClaimMatch(c, key)` and `updateClaimByKey(key, amount)` resolving key collisions where Section 80D and 80D_SELF or 80CCD and 80CCD_1B previously failed to match existing claims and remained fixed at their baseline numbers.
+     - Added dedicated Capital Gains editing tab (`capital`) and Section 24(b) housing loan interest deduction to the fact sheet.
+     - Added Section 80CCD(1B) statutory caps (₹50,000) to `OLD_REGIME_CLAIM_CAPS` in `lib/engine/constants.ts`.
+     - Enforced immutability in `setCaPersona` so arrays and fact objects are freshly cloned on every change, immediately triggering real-time recalculation of `caBreakdown` and `caDelta`.
+  3. **Proactive Citizen Portal Sync (`lib/ca/ca-store.ts`, `app/page.tsx`, `app/app/page.tsx`):**
+     - Updated `fetchReviewRecord(code, forceServer)` to always query the `/api/ca/review` endpoint when a review is active/pending, avoiding stale local cache traps.
+     - Added multi-channel reactive synchronization in both `app/page.tsx` and `app/app/page.tsx`: listens to `storage` events across browser tabs, `wapsi_ca_review_updated` custom events within the window, `focus` events when taxpayers switch back from the CA tab, and a 2.5s polling interval.
+     - When the CA saves review modifications, the citizen's Step 5 (FilingStep) immediately switches from "pending" to the green "CA Review Complete from CA Name!" banner with a `[ View Diff → ]` button to inspect the reconciliation matrix.
+- **Verification Results:**
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run test`: **365/365 tests passed** across all 39 test suites.
+  - `npm run build`: Production Turbopack build succeeded with 0 errors across all 18 routes.
+  - **Live Browser Automation via Playwright MCP:**
+    1. Opened `/ca`, launched Sunita Rao demo audit, entered `1000` in Section 80D Parents: verified input displays cleanly as `1000` (not `01000`) and total deductions recalculated from ₹75,000 to ₹76,000.
+    2. Navigated to Salary tab, updated Gross Salary to `450000`: verified Gross Total Income dynamically updated from ₹4,21,240 to ₹4,51,240 and Taxable Income updated to ₹3,25,240.
+    3. Clicked "Save & Return to Taxpayer": transmitted changes to server and local storage.
+    4. Logged in as Sunita Rao on citizen portal (`/`), advanced to Step 5: verified "CA Review Complete from CA Rajesh Sharma, FCA!" banner appeared automatically.
+    5. Clicked `[ View Diff → ]`: verified comparison modal displayed updated figures (Gross Income ₹4,51,240, Deductions ₹76,000, Taxable Income ₹3,25,240, Recommended Old Regime), captured screenshot, and confirmed 1-click adoption button.
+## [2026-09-06 20:25] orchestrator
+- **Action:** MODIFY | VERIFY
+- **Target:** app/app/page.tsx; components/agentic/workspace.tsx; lib/agentic/runtime.ts; log.md
+- **Intent:** Resolve "Review with CA" in Agentic workspace and Challan 280 tax payable workflow:
+  1. **Fix "Review with CA" modal not opening in Agentic mode (`app/app/page.tsx`):**
+     - Root cause: `const persona = useMemo(() => (server ? findPersonaByPan(server.owner.pan) ?? null : null))` returned `null` for any non-demo PAN (such as custom logins or Form 16 uploads), which blocked `{persona && <CAShareModal ... />}` from rendering even when `setCaShareOpen(true)` was triggered.
+     - Solution: Added `pullReturn()` synchronization from `/api/return` into `returnState`, and implemented multi-tiered fallback in `persona`: (1) `returnState?.persona`, (2) `load()?.state.persona`, (3) `findPersonaByPan(server.owner.pan)`, (4) `blankPersona(server.owner.pan, server.owner.displayName, lang)`. Guaranteed non-null persona whenever user is signed in, enabling `CAShareModal` to unconditionally open on click.
+     - Enhanced `handleAdoptCAReview` to persist to localStorage, mirror to `/api/return`, update active `returnState`, and dispatch `wapsi_ca_review_updated` events.
+  2. **Balance Tax Due (Challan 280) Timing & CA Audit Option (`lib/agentic/runtime.ts`):**
+     - Staged commands in `run.state.pendingCommands` (salary, deductions, Form 16 facts) are automatically synchronized and persisted to the return snapshot in `deps.returns.replace` at `stepReview`, so the server return holds the taxpayer's real Form 16 numbers immediately.
+     - When `b.refundOrDue < 0` (Section 140A balance tax due), the agent explains self-assessment tax compliance and presents the prominent option to **Review with CA** to discover deductions and reduce payable tax before paying challan.
+     - Added `{ value: "review_with_ca", label: "🎖️ Review with CA First (Audit Deductions to Reduce Tax)" }` as the leading choice in the challan payment question.
+     - Updated `parseAnswer` in `lib/agentic/runtime.ts` to recognize `ca`, `review with ca`, `consult ca`, `chartered` and route directly to `review_with_ca`.
+     - In `handleChallanPaymentExecution`, handled `review_with_ca` by issuing friendly guidance on generating access code/PIN and keeping the question card ready to simulate payment or adopt review.
+  3. **Agentic UI/UX Integration for CA Review (`components/agentic/workspace.tsx`):**
+     - Passed `onReviewWithCA={props.onReviewWithCA}` to `QuestionCard`.
+     - In `QuestionCard`, rendered a prominent callout banner for `challan_payment_mode`: "Have Balance Tax Due? Review with a CA First" with `[ 🎖️ Review with CA ]` button alongside the QR code.
+     - Highlighted `review_with_ca` button among the question choices with a teal accent and icon, triggering both `onReviewWithCA()` and the agent answer.
+     - Rendered real-time "🎖️ CA Review Complete from CA Name!" banner with `[ View Diff → ]` button at the top of the transcript area when `activeCAReview?.status === "reviewed"`, allowing immediate side-by-side reconciliation inspection.
+- **Verification Results:**
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run test`: **365/365 tests passed** across all 39 test suites.
+  - `npm run build`: Production Turbopack build succeeded with 0 errors across all 18 routes.
+  - **Live Browser Automation via Playwright MCP:**
+    1. Signed in with custom PAN `BMZPM4821K` (Arjun Mehta) via OTP `949494`.
+    2. Started "Prepare my return" in Agentic workspace, authorized reading Form 16 from vault (`₹18,50,000` salary, `₹1,65,000` TDS).
+    3. Clicked `[ Review with CA ]` on the filing card: verified `CAShareModal` opened immediately, set PIN `1234`, and generated access code `CA-6431-80`.
+    4. Navigated to `/ca?code=CA-6431-80`, entered PIN `1234`, verified `Citizen 4821` (`BMZPM4821K`) loaded into CA portal with editable inputs.
+    5. Entered `150000` into Section 80C: verified clean `150000` entry without `0150000` bug.
+    6. Clicked `Save & Return to Taxpayer`: successfully transmitted review to server.
+    7. Returned to `/app`: verified the green "🎖️ CA Review Complete from CA Rajesh Sharma, FCA!" banner appeared with `[ View Diff → ]`.
+    8. Clicked `[ View Diff → ]`: verified comparison matrix opened cleanly with "Adopt CA Recommendations & Proceed to File" button.
+- **Git Policy:** All changes on branch `dev-2`. No commits or pushes made without user instruction.

@@ -20,6 +20,7 @@ import {
   Loader2,
   HelpCircle,
   KeyRound,
+  Award,
 } from "lucide-react";
 import type { Dict } from "@/lib/i18n";
 import type { Lang, PersonaId } from "@/lib/types";
@@ -841,8 +842,39 @@ export default function AuthPortal({
             )}
           </div>
 
+          {/* --- CHARTERED ACCOUNTANT / TAX EXPERT WORKSPACE SECTION --- */}
+          <div className="mt-6 pt-4 border-t border-line/70">
+            <div className="p-3.5 bg-gradient-to-r from-teal-500/10 via-slate-50 dark:via-slate-900/40 to-indigo-500/10 border border-teal-500/30 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="size-9 rounded-xl bg-teal-800 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Award size={18} className="text-teal-200" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-xs text-ink uppercase tracking-wider">
+                      Are you a Chartered Accountant?
+                    </span>
+                    <span className="px-1.5 py-0.2 rounded bg-teal-800/10 text-teal-800 dark:text-teal-300 text-[9px] font-bold font-mono">
+                      ICAI AUDIT
+                    </span>
+                  </div>
+                  <p className="text-xs text-ink-2 mt-0.5">
+                    Review and audit client return drafts using their Access Code & PIN.
+                  </p>
+                </div>
+              </div>
+              <a
+                href="/ca"
+                className="px-3.5 py-2 bg-teal-800 hover:bg-teal-900 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 shrink-0 whitespace-nowrap"
+              >
+                <span>Enter CA Portal</span>
+                <ArrowRight size={13} />
+              </a>
+            </div>
+          </div>
+
           {/* Bottom Security Reassurance - Cleaned: Removed guest exploration per strict security directive */}
-          <div className="pt-5 border-t border-line/60 mt-6 flex items-center justify-between text-xs text-ink-3">
+          <div className="pt-4 border-t border-line/60 mt-4 flex items-center justify-between text-xs text-ink-3">
             <span className="flex items-center gap-1.5 font-mono text-[11px] text-emerald-600 dark:text-emerald-400">
               <Lock size={12} />
               <span>{ps.bankGrade}</span>
