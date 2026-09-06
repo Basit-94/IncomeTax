@@ -59,7 +59,7 @@ function CheckRow({
 }) {
   return (
     <div
-      className={`check ${done ? "done" : ""}`}
+      className={`check ${done ?"done" : ""}`}
       role="checkbox"
       aria-checked={done}
       tabIndex={0}

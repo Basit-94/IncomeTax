@@ -61,15 +61,15 @@ export default function PortalHeader({
 
   if (inShell) {
     return (
-      <header className="border-b border-line bg-paper text-ink z-30 relative print:hidden">
+      <header className="border-b border-line text-ink z-30 relative print:hidden">
         <div className="px-4 py-2.5 max-w-6xl mx-auto w-full flex flex-wrap items-center justify-between gap-2">
           {activeCitizen && onViewChange && (
-            <div className="flex items-center gap-1 rounded-xl border border-line bg-paper-2 p-1 font-sans text-xs">
-              <button type="button" onClick={() => onViewChange("hub")} className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition cursor-pointer ${currentView === "hub" ? "bg-paper text-money shadow-sm border border-line" : "text-ink-2 hover:text-ink"}`}>
+            <div className="glass-flat flex items-center gap-1 rounded-[12px] p-1 font-sans text-[12.5px]">
+              <button type="button" onClick={() => onViewChange("hub")} className={`flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 font-bold transition cursor-pointer ${currentView === "hub" ? "ink-surface" : "text-ink-2 hover:text-ink"}`}>
                 <LayoutGrid size={13} />
                 <span>{ps.portalHub}</span>
               </button>
-              <button type="button" onClick={() => onViewChange("dashboard")} className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition cursor-pointer ${currentView === "dashboard" ? "bg-paper text-money shadow-sm border border-line" : "text-ink-2 hover:text-ink"}`}>
+              <button type="button" onClick={() => onViewChange("dashboard")} className={`flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 font-bold transition cursor-pointer ${currentView === "dashboard" ? "ink-surface" : "text-ink-2 hover:text-ink"}`}>
                 <FileText size={13} />
                 <span>{ps.myReturn}</span>
               </button>
@@ -77,13 +77,13 @@ export default function PortalHeader({
           )}
           {activeCitizen ? (
             <div className="flex items-center gap-2 min-w-0 ms-auto">
-              <div className="flex items-center gap-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800/60 px-2.5 py-1 text-xs min-w-0">
-                <User size={12} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <div className="glass-flat flex items-center gap-1.5 rounded-full px-3 py-1 text-xs min-w-0">
+                <User size={12} className="text-money shrink-0" />
                 <span className="font-semibold text-ink truncate">{activeCitizen.name}</span>
                 <span className="font-mono text-ink-3 hidden sm:inline">({activeCitizen.pan})</span>
               </div>
               {onLogout && (
-                <button type="button" onClick={onLogout} className="flex items-center gap-1.5 rounded-lg border border-line bg-paper-2 px-2.5 py-1 text-xs text-ink-2 hover:text-ink cursor-pointer">
+                <button type="button" onClick={onLogout} className="glass-flat flex items-center gap-1.5 rounded-full px-3 py-1 text-xs text-ink-2 hover:text-ink cursor-pointer">
                   <LogOut size={12} />
                   <span className="hidden sm:inline">{ps.logOut}</span>
                 </button>
@@ -101,13 +101,13 @@ export default function PortalHeader({
   // identical x/y on every route (user directive 2026-09-05).
   const workMode = mode === "agentic" ? "agentic" : "manual";
   const hubReturnSwitcher = activeCitizen && onViewChange && (
-    <div className="hidden md:flex items-center gap-1 rounded-xl border border-line bg-paper-2 p-1 font-sans text-xs shrink-0">
+    <div className="glass-flat hidden md:flex items-center gap-1 rounded-[12px] p-1 font-sans text-[12.5px] shrink-0">
       <button
         type="button"
         onClick={() => onViewChange("hub")}
-        className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition cursor-pointer ${
+        className={`flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 font-bold transition cursor-pointer ${
           currentView === "hub"
-            ? "bg-paper text-money shadow-sm border border-line"
+            ? "ink-surface"
             : "text-ink-2 hover:text-ink"
         }`}
       >
@@ -117,9 +117,9 @@ export default function PortalHeader({
       <button
         type="button"
         onClick={() => onViewChange("dashboard")}
-        className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition cursor-pointer ${
+        className={`flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 font-bold transition cursor-pointer ${
           currentView === "dashboard"
-            ? "bg-paper text-money shadow-sm border border-line"
+            ? "ink-surface"
             : "text-ink-2 hover:text-ink"
         }`}
       >
@@ -130,7 +130,7 @@ export default function PortalHeader({
   );
 
   return (
-    <header className="border-b border-line bg-paper text-ink z-30 relative print:hidden">
+    <header className="border-b border-line text-ink z-30 relative print:hidden">
       <PrototypeBanner t={t} />
 
       {/* Row 1: the shared frame — brand box, Agentic/Manual switch, subtitle; theme toggle right */}
@@ -179,7 +179,7 @@ export default function PortalHeader({
               onClick={() => onViewChange("hub")}
               className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-1.5 font-bold transition cursor-pointer ${
                 currentView === "hub"
-                  ? "bg-paper text-money shadow-sm border border-line"
+                  ? "ink-surface"
                   : "text-ink-2 hover:text-ink"
               }`}
             >
@@ -191,7 +191,7 @@ export default function PortalHeader({
               onClick={() => onViewChange("dashboard")}
               className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-1.5 font-bold transition cursor-pointer ${
                 currentView === "dashboard"
-                  ? "bg-paper text-money shadow-sm border border-line"
+                  ? "ink-surface"
                   : "text-ink-2 hover:text-ink"
               }`}
             >

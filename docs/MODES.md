@@ -29,9 +29,10 @@ session token yet, so localStorage remains the client's source of truth for now)
 This is a different axis from Simple/Full detail. Simple/Full changes *how much is
 explained* inside the Manual journey; Manual/Agentic changes *who drives*. Both Manual
 (`/`) and Agentic (`/app`) start with the same frame, `components/agentic/header-frame.tsx`: a 28 px banner strip,
-then a 56 px full-width bar whose first two items are a 128 px brand box and the Agentic/Manual
-switch (`data-testid="mode-slot"`). That pins the switch to the identical x/y on every route —
-measured `x=158 y=39 210×38` at 1200 px on `/`, `/app` and `/app?run=…` (user directive
+then a 64 px full-width bar whose first two items are a 150 px brand box (Munshi ji avatar + the stacked
+wordmark) and the Agentic/Manual pill switch (`data-testid="mode-slot"`). That pins the switch to the
+identical x/y on every route — measured `x=190 y=43 218×38` on `/app` after the 2026-09-06 redesign
+(was `x=158 y=39 210×38` under Direction 13) (user directive
 2026-09-05: "the toggle must be in the same spot in both modes"). Manual `/` renders the legacy
 full-width `PortalHeader` on top of that frame (the Manual-in-shell variant exists behind
 `NEXT_PUBLIC_WAPSI_MANUAL_SHELL=true`); the chat sidebar, hamburger and Progress/Outputs/Sources

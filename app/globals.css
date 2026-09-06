@@ -1,6 +1,104 @@
 @import "tailwindcss";
 @import "./d13.css";
 
+/* Redesign 2026-09-07: the marketing and agentic headers use a bare <nav>. d13.css styles the
+   element itself (sticky bar, 2px rule, blue links), which boxed those links and wrapped them
+   word by word. Unlayered like d13, later in the cascade, so it wins. */
+header > nav{position:static;background:none;border-bottom:0;backdrop-filter:none;flex-shrink:0;white-space:nowrap}
+header > nav a{color:inherit}
+
+/* Redesign 2026-09-06: d13.css keeps its verbatim classes, but its palette variables are
+   remapped here (unlayered, later in source order) onto the new tokens, so the dashboard,
+   wizard and hub recolour with the rest. Fonts: one face (Outfit). */
+:root, .dark-mode, .dark {
+  --paper: var(--bg-color); --grid: transparent; --card: var(--glass-color); --card-2: var(--input-color);
+  --ink: var(--text-color); --ink-2: var(--muted-color); --ink-3: var(--subtle-color);
+  --edge: var(--glass-edge-color); --hair: var(--border-color);
+  --blue: var(--d13-blue); --blue-bg: var(--d13-blue-bg);
+  --amber: var(--d13-amber); --amber-bg: var(--d13-amber-bg);
+  --brick: var(--d13-brick); --brick-bg: var(--d13-brick-bg);
+  --green: var(--d13-green); --green-bg: var(--d13-green-bg);
+  --in: var(--flow-in); --out: var(--flow-out); --keep: var(--flow-keep);
+  --shadow: var(--glass-shadow); --shadow-hi: var(--shadow-d13-hi);
+  --pin-a: var(--soft-color); --pin-b: var(--primary-accent);
+  --veil: none; --motes-blend: normal;
+  --disp: var(--font-outfit), system-ui, sans-serif; --serif: var(--font-outfit), system-ui, sans-serif;
+  --mono: var(--font-jb-mono), ui-monospace, monospace; --hand: var(--font-caveat), cursive;
+}
+
+/* Redesign 2026-09-06, hub + dashboard: D13's verbatim classes reshaped to the handoff geometry —
+   glass panels at 22–24 px with the soft shadow, pill badges, Outfit 800 money, no offset shadows,
+   no index-card corners. The markup in headline-channels / fact-row / overview stays the prototype's. */
+.ch,.split,.card,.sheet,.rail,.checklist,.finish{background:var(--glass-color);border:1px solid var(--glass-edge-color);
+  border-radius:22px;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:var(--glass-shadow)}
+.sheet,.rail,.finish{border-radius:24px}
+.card:hover{box-shadow:var(--shadow-d13-hi)}
+.ch{padding:20px 22px 22px}
+.ch::after{height:5px;border-radius:0 4px 4px 0}
+.ch .k,.split .cap,.ro .k,.finish .k,.divider .label{font-family:var(--disp);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.ch .v{font-family:var(--disp);font-weight:800;font-size:34px;letter-spacing:-.03em}
+.ch .pct{font-family:var(--disp);font-size:11px;letter-spacing:0}
+.ch .d{font-size:12.5px}
+.split{padding:18px 22px}
+.bar{height:22px;border:0;border-radius:8px;gap:3px;background:transparent}
+.bar i{border-radius:4px}
+.key{font-size:13px}
+.key i{border-radius:50%}
+.key .amt-s{font-family:var(--disp);font-weight:800}
+.thread{background:var(--accent-soft-bg);border-inline-start:0;border-radius:16px;color:var(--d13-amber);padding:14px 18px;font-size:14px}
+.divider .line{background:var(--border-color)}
+.stamp{border-radius:999px;transform:none;background:var(--accent-soft-bg);color:var(--d13-amber);border:0;font-family:var(--disp);font-weight:700;font-size:12px;padding:4px 11px}
+h1.title{font-weight:800;letter-spacing:-.03em}
+.pin{width:16px;height:16px;top:-9px}
+.no{font-family:var(--mono);font-size:11px;color:var(--ink-3);letter-spacing:.02em}
+.card{padding:22px 22px 18px}
+.card h3{font-size:18px;font-weight:700;letter-spacing:-.01em}
+.card .who{font-size:13px;color:var(--ink-3);margin-bottom:8px}
+.badges{margin:8px 0 10px;gap:6px}
+.badge{font-family:var(--disp);text-transform:none;letter-spacing:0;font-size:12px;font-weight:700;padding:4px 11px;border-radius:999px;border:0}
+.badge.rep{color:var(--muted-color);background:var(--glass-color);box-shadow:inset 0 0 0 1px var(--glass-edge-color)}
+.amt{font-family:var(--disp);font-weight:800;font-size:30px;letter-spacing:-.03em}
+/* Money is Outfit 800 even when the animated amount span carries a mono utility. */
+.amt *,.ch .v *,.ro .v *,.finish .big *{font-family:inherit;font-weight:inherit}
+.margin{background:transparent;border:0;border-top:1px dashed var(--border-color);border-radius:0;margin:12px 0 0;font-size:13.5px}
+.margin summary{padding:10px 0 6px}
+.margin .hand{font-size:19px;color:var(--muted-color)}
+.margin .mbody{padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.55);color:var(--muted-color);line-height:1.5}
+.dark .margin .mbody,.dark-mode .margin .mbody{background:rgba(255,255,255,.06)}
+.card.ok{border-color:var(--ok-color)}
+.card.ok .pin{background:radial-gradient(circle at 35% 30%,var(--ok-color),#0C6540)}
+.links button{color:var(--primary-accent)}
+.confirmline{font-family:var(--disp);font-size:12px;text-transform:none;letter-spacing:0;font-weight:600;margin-top:10px}
+.card.ok .confirmline{color:var(--ok-color)}
+.tier{border-bottom:1px dashed var(--border-color)}
+.stat{background:var(--input-color);border:1px solid var(--glass-edge-color);border-radius:14px}
+.stat .num{font-family:var(--disp);font-weight:800;color:var(--primary-accent)}
+.trace tr.g td{border-top:2px solid var(--border-color)}
+.trace tr.head-row:hover td,.trace tr.exp td{background:rgba(255,255,255,.35)}
+.tracehead{font-family:var(--disp);font-size:11px;font-weight:700;letter-spacing:.08em}
+.ro{border-bottom:1px dashed var(--border-color)}
+.ro .v{font-family:var(--disp);font-weight:800;font-size:40px;letter-spacing:-.03em;color:var(--ok-color)}
+.meter{height:9px;border-radius:999px;border:0;background:var(--input-color)}
+.meter i{border-radius:999px}
+.legend span::before{border-radius:50%}
+.finish .big{font-family:var(--disp);font-weight:800;color:var(--ok-color)}
+.file{background:var(--primary-accent);color:#fff;border-radius:14px;box-shadow:var(--accent-glow);font-weight:700;font-size:14.5px;padding:0 22px;height:50px;font-family:var(--disp)}
+.dark .file,.dark-mode .file{color:var(--bg-color)}
+.file:disabled{background:var(--primary-accent);color:#fff;opacity:.45;box-shadow:none}
+.file .pg{background:var(--ok-color)}
+.box{border-radius:6px;border-color:var(--subtle-color)}
+.jump{color:var(--primary-accent);border-bottom-color:color-mix(in srgb,var(--primary-accent) 38%,transparent)}
+.seg{border:1px solid var(--glass-edge-color);border-radius:999px;background:var(--glass-color);padding:3px;gap:2px}
+.seg button{font-family:var(--disp);font-size:12px;font-weight:700;letter-spacing:0;border-radius:999px;padding:5px 12px;color:var(--subtle-color)}
+.seg button:hover{background:rgba(255,255,255,.4)}
+.seg button[aria-pressed="true"]{background:var(--ink-surface-color);color:var(--on-ink-color)}
+.disclosure{border-radius:24px;background:var(--glass-color);border:1px solid var(--glass-edge-color);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.recovery-callout{background:var(--accent-soft-bg);border:0;border-radius:18px}
+.recovery-callout .cap{color:var(--d13-amber);font-family:var(--disp);font-size:12px;font-weight:700;letter-spacing:.08em}
+.error-callout{border-radius:18px}
+.provenance-badge{border-radius:999px;background:var(--glass-color);border:1px solid var(--glass-edge-color)}
+.tag{border-radius:10px}
+
 @custom-variant dark (&:where(.dark, .dark-mode, .dark *, .dark-mode *));
 
 /* There was a @font-face for a variable font called DIN here, pointing at
@@ -52,17 +150,18 @@
   /* Direction 13 faces (DESIGN.md SS4). Grotesk leads the sans stack for
      headings/buttons/badges; the serif is applied to body copy in @layer base;
      JetBrains Mono carries every number. Noto fallbacks keep hi/ta glyphs. */
-  --font-sans: var(--font-grotesk), system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Devanagari", "Noto Sans Tamil", sans-serif;
-  --font-serif: var(--font-serif-d13), Georgia, "Noto Serif Devanagari", "Noto Sans Devanagari", "Noto Sans Tamil", serif;
+  --font-sans: var(--font-outfit), system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Devanagari", "Noto Sans Tamil", sans-serif;
+  /* Redesign 2026-09-06: one face. `font-serif` classes stay in the markup and render Outfit. */
+  --font-serif: var(--font-outfit), system-ui, "Noto Sans Devanagari", "Noto Sans Tamil", sans-serif;
   --font-mono: var(--font-jb-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, "Noto Sans Devanagari", "Noto Sans Tamil", monospace;
   --font-caveat-stack: var(--font-caveat), "Segoe Script", cursive;
-  /* D13 shape language: crisp index-card corners instead of soft pills. */
-  --radius-sm: 2px;
-  --radius-md: 3px;
-  --radius-lg: 4px;
-  --radius-xl: 4px;
-  --radius-2xl: 6px;
-  --radius-3xl: 8px;
+  /* Redesign 2026-09-06 shape language: soft — 14px controls, 20–24px cards, pills. */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 24px;
   --text-hero: 3.8rem;
   --text-hero--line-height: 1.04;
   --text-hero--letter-spacing: -0.03em;
@@ -74,100 +173,151 @@
      the Agentic shell's citizen bubbles and pending-state chips. */
   --color-amber-bg: var(--d13-amber-bg);
   --color-amber-ink: var(--d13-amber);
+  /* Redesign 2026-09-06 (docs/redesign): glass surfaces, the ink surface for dark cards and
+     Munshi ji's bubbles (a real colour in both themes — never the text colour), status pairs. */
+  --color-glass: var(--glass-color);
+  --color-glass-edge: var(--glass-edge-color);
+  --color-ink-surface: var(--ink-surface-color);
+  --color-on-ink: var(--on-ink-color);
+  --color-soft: var(--soft-color);
+  --color-ok: var(--ok-color);
+  --color-ok-soft: var(--ok-soft-color);
+  --color-ok-ink: var(--ok-ink-color);
+  --color-bad: var(--alarm-color);
+  --color-bad-soft: var(--alarm-soft-color);
+  --color-tertiary: var(--tertiary-color);
+  --shadow-glass: var(--glass-shadow);
+  --shadow-glow: var(--accent-glow);
 }
 
 @layer base {
   /* Direction 13 "graph paper on a desk" - DESIGN.md SS2.1 + SS2.3.
      Text shades pass 4.5:1 on the card and on their own tints; fill shades
      (--flow-*) are 3:1 and reserved for bars/motes/large bold numerals. */
+  /* Redesign 2026-09-06 — "Sunrise/Lilac" light theme (docs/redesign/README.md tokens). The
+     old token NAMES stay (paper/ink/money/line/amber…) so every component recolours at once:
+     paper = lilac ground, paper-2 = glass, paper-3 = input fill, money = the tangerine accent,
+     amber-bg/amber-ink = accentSoft + its text, warn/alarm = the status pairs. */
   :root {
-    --bg-color: #F2EFE4;
-    --surface-color: #FBF9F1;
-    --input-color: #F4F1E6;
-    --text-color: #1C2233;
-    --muted-color: #4A4E5C;
-    --subtle-color: #646878;
-    --border-color: #D9D2B9;
-    --edge-color: #1C2233;
-    --grid-color: #D9D2B9;
-    --accent-soft-bg: #DEEAFB;
-    --white-override: #FBF9F1;
-    --slate-50-override: #F4F1E6;
-    --slate-100-override: #EFEBDD;
-    --slate-200-override: #E4DEC9;
-    --slate-300-override: #A9A28A;
-    --slate-700-override: #1C2233;
-    --navy-dark-override: #1C2233;
-    --navy-color: #0F172A;
-    --card-radius: 4px;
-    /* D13 SS2.3: blue is the accent and link colour; green is reserved for
-       confirmed / coming-back semantics (use --d13-green / --flow-keep). */
-    --primary-accent: #1361C7;
-    --primary-accent-deep: #0F4FA3;
-    --primary-accent-soft: #DEEAFB;
-    --warn-color: #8C5D08;
-    --warn-deep-color: #6E4906;
-    --warn-soft-color: #FAEBCE;
-    --alarm-color: #C6331D;
-    --alarm-soft-color: #FCE6E1;
-    --shadow-d13: 4px 6px 0 rgba(28, 34, 51, 0.13);
-    --shadow-d13-hi: 6px 9px 0 rgba(28, 34, 51, 0.16);
-    /* SS2.3 TEXT shades - 4.5:1 on the card AND on their own tint. */
-    --d13-blue: #1361C7;
-    --d13-blue-bg: #DEEAFB;
-    --d13-brick: #C6331D;
-    --d13-brick-bg: #FCE6E1;
-    --d13-green: #107A50;
-    --d13-green-bg: #E0F2E8;
-    --d13-amber: #8C5D08;
-    --d13-amber-bg: #FAEBCE;
-    /* Direction-13 FILL shades (DESIGN.md SS2.3): bars, meters, motes, and
-       numerals >=24px bold ONLY - never small text (3:1 gate, not 4.5:1). */
-    --flow-in: #1A6FE0;
-    --flow-out: #DE4025;
-    --flow-keep: #149B67;
+    --bg-color: #F3EEFF;
+    --surface-color: rgba(255, 255, 255, 0.62);
+    --input-color: rgba(255, 255, 255, 0.8);
+    --text-color: #2A1B4A;
+    --muted-color: #4A3580;
+    --subtle-color: #7562A8;
+    --border-color: rgba(74, 53, 128, 0.16);
+    --edge-color: rgba(255, 255, 255, 0.95);
+    --grid-color: transparent;
+    --glass-color: rgba(255, 255, 255, 0.62);
+    --glass-edge-color: rgba(255, 255, 255, 0.95);
+    --ink-surface-color: #2A1B4A;
+    --on-ink-color: #F3EEFF;
+    --accent-soft-bg: #FFE3C9;
+    --white-override: #ffffff;
+    --slate-50-override: rgba(255, 255, 255, 0.5);
+    --slate-100-override: rgba(255, 255, 255, 0.7);
+    --slate-200-override: rgba(74, 53, 128, 0.16);
+    --slate-300-override: #7562A8;
+    --slate-700-override: #2A1B4A;
+    --navy-dark-override: #2A1B4A;
+    --navy-color: #2A1B4A;
+    --card-radius: 24px;
+    --primary-accent: #FF7A1A;
+    --primary-accent-deep: #C24F00;
+    --primary-accent-soft: #FFE3C9;
+    --soft-color: #FFC08A;
+    --tertiary-color: #8B6CF0;
+    --ok-color: #1E9E70;
+    --ok-soft-color: #DDF5EA;
+    --ok-ink-color: #0F6B48;
+    --warn-color: #B87A00;
+    --warn-deep-color: #8A5A00;
+    --warn-soft-color: #FFF1D6;
+    --alarm-color: #D9403A;
+    --alarm-soft-color: #FBE3E1;
+    --glass-shadow: 0 24px 50px -28px rgba(42, 27, 74, 0.35);
+    --accent-glow: 0 12px 30px -8px rgba(255, 122, 26, 0.55);
+    --shadow-d13: var(--glass-shadow);
+    --shadow-d13-hi: 0 30px 60px -30px rgba(42, 27, 74, 0.4);
+    /* Status text shades, each on its own tint. */
+    --d13-blue: #FF7A1A;
+    --d13-blue-bg: #FFE3C9;
+    --d13-brick: #A32A24;
+    --d13-brick-bg: #FBE3E1;
+    --d13-green: #0F6B48;
+    --d13-green-bg: #DDF5EA;
+    --d13-amber: #9A3C00;
+    --d13-amber-bg: #FFE3C9;
+    /* Fill shades: earned/stayed = tertiary, tax = bad, coming back = ok. */
+    --flow-in: #8B6CF0;
+    --flow-out: #D9403A;
+    --flow-keep: #1E9E70;
+    --banner-bg: #1B1140;
+    --banner-fg: #CDBDFF;
+    --blob-1: radial-gradient(circle at 35% 30%, #FFE3C9, #FF7A1A 60%, #C24F00);
+    --blob-2: radial-gradient(circle at 40% 35%, #FAF7FF, #CDBDFF 65%, #8B6CF0);
+    --blob-1-opacity: 0.55;
+    --blob-2-opacity: 0.6;
   }
 
+  /* "P5 Navy & Coral" dark theme. Text on the coral accent is the page colour, not white. */
   .dark-mode, .dark {
-    --bg-color: #12141A;
-    --surface-color: #1A1E27;
-    --input-color: #171B23;
-    --text-color: #E9ECF2;
-    --muted-color: #B0B6C4;
-    --subtle-color: #8890A0;
-    --border-color: #282E3A;
-    --edge-color: #333B4B;
-    --grid-color: #232833;
-    --accent-soft-bg: #1B2A3C;
-    --white-override: #ffffff;
-    --slate-50-override: #171B23;
-    --slate-100-override: #1E2330;
-    --slate-200-override: #2A3140;
-    --slate-300-override: #94A3B8;
-    --slate-700-override: #E9ECF2;
-    --navy-dark-override: #0D0F14;
-    --navy-color: #1E3A8A;
-    --primary-accent: #7FA9D8;
-    --primary-accent-deep: #A5C4E4;
-    --primary-accent-soft: #1B2A3C;
-    --warn-color: #DFA855;
-    --warn-deep-color: #EDC286;
-    --warn-soft-color: #2E2413;
-    --alarm-color: #E08471;
-    --alarm-soft-color: #331F1B;
-    --shadow-d13: 4px 6px 0 rgba(0, 0, 0, 0.45);
-    --shadow-d13-hi: 6px 9px 0 rgba(0, 0, 0, 0.55);
-    --d13-blue: #7FA9D8;
-    --d13-blue-bg: #1B2A3C;
-    --d13-brick: #E08471;
-    --d13-brick-bg: #331F1B;
-    --d13-green: #77BC90;
-    --d13-green-bg: #16281D;
-    --d13-amber: #DFA855;
-    --d13-amber-bg: #2E2413;
-    --flow-in: #7FA9D8;
-    --flow-out: #E08471;
-    --flow-keep: #77BC90;
+    --bg-color: #0B1424;
+    --surface-color: rgba(255, 255, 255, 0.07);
+    --input-color: rgba(255, 255, 255, 0.06);
+    --text-color: #EEF4FF;
+    --muted-color: #B6C6E6;
+    --subtle-color: #7A8DB3;
+    --border-color: rgba(255, 255, 255, 0.12);
+    --edge-color: rgba(255, 255, 255, 0.14);
+    --grid-color: transparent;
+    --glass-color: rgba(255, 255, 255, 0.07);
+    --glass-edge-color: rgba(255, 255, 255, 0.14);
+    --ink-surface-color: #14213A;
+    --on-ink-color: #EEF4FF;
+    --accent-soft-bg: #3A1C17;
+    --white-override: #14213A;
+    --slate-50-override: rgba(255, 255, 255, 0.05);
+    --slate-100-override: rgba(255, 255, 255, 0.08);
+    --slate-200-override: rgba(255, 255, 255, 0.12);
+    --slate-300-override: #7A8DB3;
+    --slate-700-override: #EEF4FF;
+    --navy-dark-override: #060C18;
+    --navy-color: #14213A;
+    --primary-accent: #FF6B5B;
+    --primary-accent-deep: #FFB3A8;
+    --primary-accent-soft: #3A1C17;
+    --soft-color: #FFB3A8;
+    --tertiary-color: #4F8DFF;
+    --ok-color: #2ECF9A;
+    --ok-soft-color: #0F3329;
+    --ok-ink-color: #7FEBC6;
+    --warn-color: #E6B03A;
+    --warn-deep-color: #FFDB8C;
+    --warn-soft-color: #382A0C;
+    --alarm-color: #FF7A7A;
+    --alarm-soft-color: #3A1B1B;
+    --glass-shadow: 0 24px 50px -28px rgba(0, 0, 0, 0.6);
+    --accent-glow: 0 12px 30px -8px rgba(255, 107, 91, 0.45);
+    --shadow-d13: var(--glass-shadow);
+    --shadow-d13-hi: 0 30px 60px -30px rgba(0, 0, 0, 0.7);
+    --d13-blue: #FF6B5B;
+    --d13-blue-bg: #3A1C17;
+    --d13-brick: #FFB0B0;
+    --d13-brick-bg: #3A1B1B;
+    --d13-green: #7FEBC6;
+    --d13-green-bg: #0F3329;
+    --d13-amber: #FFB3A8;
+    --d13-amber-bg: #3A1C17;
+    --flow-in: #4F8DFF;
+    --flow-out: #FF7A7A;
+    --flow-keep: #2ECF9A;
+    --banner-bg: #060C18;
+    --banner-fg: #B6C6E6;
+    --blob-1: radial-gradient(circle at 35% 30%, #FFC7BF, #FF6B5B 60%, #8A2E24);
+    --blob-2: radial-gradient(circle at 40% 35%, #B6C6E6, #4F8DFF 65%, #1F4AA8);
+    --blob-1-opacity: 0.28;
+    --blob-2-opacity: 0.3;
   }
 
   /* U8: the ITR-V replica is a picture of a PRINTED form. Paper stays white in
@@ -194,8 +344,8 @@
     /* The graph paper lives on the fixed .paper layer (d13.css), under the motes. */
     background-color: transparent;
     color: var(--color-ink);
-    /* Body reads as a document: the serif carries running copy (SS4)... */
-    font-family: var(--font-serif);
+    /* Redesign 2026-09-06: Outfit for everything (the serif variable is an alias). */
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     text-wrap: pretty;
   }
@@ -243,7 +393,8 @@
   h3,
   h4 {
     text-wrap: balance;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.03em;
+    font-weight: 800;
   }
 
   .tabular {
@@ -251,24 +402,71 @@
   }
 
   :focus-visible {
-    outline: 3px solid var(--color-money);
-    outline-offset: 3px;
-    border-radius: 5px;
+    outline: 3px solid color-mix(in srgb, var(--color-money) 45%, transparent);
+    outline-offset: 2px;
+    border-radius: 10px;
   }
 }
 
 @layer components {
+  /* Redesign 2026-09-06 surfaces (docs/redesign/README.md "Design tokens"). */
+  .glass {
+    background: var(--color-glass);
+    border: 1px solid var(--color-glass-edge);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    box-shadow: var(--shadow-glass);
+  }
+  .glass-flat {
+    background: var(--color-glass);
+    border: 1px solid var(--color-glass-edge);
+  }
+  .glass-avatar {
+    background: var(--color-glass);
+    border: 1px solid var(--color-glass-edge);
+  }
+  .ink-surface {
+    background: var(--color-ink-surface);
+    color: var(--color-on-ink);
+  }
+  .munshi-bubble {
+    background: var(--color-ink-surface);
+    color: var(--color-on-ink);
+    border-radius: 18px 18px 18px 4px;
+    padding: 12px 16px;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .btn-primary {
+    background: var(--color-money);
+    color: var(--on-accent-color, #ffffff);
+    box-shadow: var(--shadow-glow);
+    font-weight: 700;
+  }
+  .btn-primary:hover {
+    opacity: 0.9;
+  }
+  .dark .btn-primary, .dark-mode .btn-primary {
+    color: var(--bg-color);
+  }
+  /* The mascot's loop; stops with every other animation under reduced motion. */
+  .munshi-nod { transform-origin: 60px 95px; animation: munshi-nod 5s ease-in-out infinite; }
+  .munshi-blink { transform-origin: 60px 58px; animation: munshi-blink 4.5s infinite; }
+  .munshi-wave { transform-origin: 96px 82px; animation: munshi-wave 2.6s ease-in-out infinite; }
+
   .service-shell {
     /* Transparent so the body's graph paper (and the motes beneath it) shows. */
     background: transparent;
   }
 
-  /* D13 index cards: card surface, ink edge, hard offset shadow, crisp corner. */
+  /* Cards are glass now (was: D13 index cards with a hard offset shadow). */
   .surface-panel {
-    background: var(--color-paper-2);
-    border: 1px solid color-mix(in srgb, var(--edge-color) 80%, transparent);
+    background: var(--color-glass);
+    border: 1px solid var(--color-glass-edge);
     border-radius: var(--card-radius);
-    box-shadow: var(--shadow-d13);
+    box-shadow: var(--shadow-glass);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
   }
 
   /* .fact-card is only a JS hook now; the verbatim d13 .card carries the look. */
@@ -372,6 +570,39 @@
   0%, 55% { box-shadow: 0 0 0 3px var(--blue); }
   100% { box-shadow: 0 0 0 3px transparent; }
 }
+
+@keyframes munshi-wave { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-22deg); } 50% { transform: rotate(14deg); } 75% { transform: rotate(-12deg); } }
+@keyframes munshi-nod { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(-5deg); } 60% { transform: rotate(4deg); } }
+@keyframes munshi-blink { 0%, 92%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.1); } }
+@keyframes drift { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(30px, -20px) scale(1.06); } }
+@keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes caret-blink { 50% { opacity: 0; } }
+
+/* The ground (replaces D13's graph paper, which d13.css paints on .paper): the lilac page
+   with two ambient blobs drifting. .veil, which faded the old motes, is not needed. */
+.paper {
+  background: var(--bg-color) !important;
+  overflow: hidden;
+}
+.paper::before, .paper::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.paper::before {
+  width: 620px; height: 620px; top: -260px; right: -180px;
+  background: var(--blob-1); filter: blur(2px); opacity: var(--blob-1-opacity);
+  animation: drift 12s ease-in-out infinite;
+}
+.paper::after {
+  width: 380px; height: 380px; bottom: -160px; left: -140px;
+  background: var(--blob-2); opacity: var(--blob-2-opacity);
+  animation: drift 15s ease-in-out infinite reverse;
+}
+.veil { display: none; }
+/* The D13 motes canvas (drifting dots on the Manual page) does not belong to the redesign's ground. */
+#sketch { display: none; }
 
 @keyframes skeleton-shimmer {
   0% { background-position: 200% 0; }

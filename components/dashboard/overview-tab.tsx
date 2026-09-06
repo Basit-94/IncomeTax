@@ -162,10 +162,10 @@ export default function OverviewTab({
           <summary className={mode === "full" ? "hidden" : "cursor-pointer font-semibold text-ink"}>
             {t.check.showCalculationTrail}
           </summary>
-          <div className="mt-3 border border-line rounded-xl overflow-hidden bg-paper pb-0 text-left">
+          <div className="mt-3 glass-flat rounded-[18px] overflow-hidden pb-0 text-left">
             {/* Header: Show source and calculation trail */}
-            <div className="p-4 bg-paper-2 border-b border-line">
-              <span className="font-bold text-navy dark:text-ink">Tax Calculation Trail</span>
+            <div className="p-4 bg-white/40 dark:bg-white/[0.04] border-b border-line">
+              <span className="font-bold text-ink">Tax Calculation Trail</span>
             </div>
 
             <div className="p-4 space-y-4">
@@ -300,7 +300,7 @@ export default function OverviewTab({
               <div className="space-y-6 border-t border-line mt-2 pt-4">
 
               {refund.cohortWindowDays && (
-                <p className="text-[0.7rem] text-ink-2 leading-relaxed bg-paper-2 border border-line rounded-lg p-3">
+                <p className="glass-flat text-[0.7rem] text-ink-2 leading-relaxed rounded-[14px] p-3">
                   {t.refund.cohortWindow(refund.cohortWindowDays[0], refund.cohortWindowDays[1])}
                 </p>
               )}
@@ -309,7 +309,7 @@ export default function OverviewTab({
                 <div className="absolute left-[7.5px] top-2 bottom-2 w-[2px] bg-line">
                   {/* Progress fill */}
                   <span 
-                    className="absolute inset-x-0 top-0 rounded-full bg-navy transition-all duration-500" 
+                    className="absolute inset-x-0 top-0 rounded-full bg-money transition-all duration-500"
                     style={{ 
                       height: `${Math.min(100, Math.max(0, ((getCurrentStepId(refund.state) - 1) / (6 - 1)) * 100))}%` 
                     }} 
@@ -328,9 +328,9 @@ export default function OverviewTab({
                       <span
                         className={`absolute -left-[23px] w-4 h-4 rounded-full border-2 border-paper flex items-center justify-center transition-colors duration-300 z-10 ${
                           isCompleted
-                            ? "bg-navy text-paper dark:text-white animate-none"
+                            ? "bg-money text-white animate-none"
                             : isCurrent
-                            ? "bg-warn text-paper animate-pulse"
+                            ? "bg-warn text-white animate-pulse"
                             : "bg-line text-ink-3"
                         }`}
                       >
@@ -338,7 +338,7 @@ export default function OverviewTab({
                       </span>
                       <div className="space-y-0.5">
                         <span className={`font-semibold leading-snug block ${
-                          isCurrent ? "text-navy dark:text-ink font-bold" : isCompleted ? "text-ink" : "text-ink-3"
+                          isCurrent ? "text-ink font-bold" : isCompleted ? "text-ink" : "text-ink-3"
                         }`}>
                           {step.title}
                         </span>
@@ -399,7 +399,7 @@ export default function OverviewTab({
             </div>
           )}
       {/* REFUND TICKET */}
-      <div className="bg-money-soft border border-money/20 rounded-2xl p-6 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm print:hidden">
+      <div className="ink-surface rounded-3xl p-6 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6 print:hidden">
         {refund.state !== "not_filed" && stampFired && (
           <m.div
             initial={{ scale: 2.5, opacity: 0, rotate: -20 }}
@@ -412,16 +412,16 @@ export default function OverviewTab({
         )}
 
         <div className="space-y-2">
-          <span className="text-xs font-mono text-money uppercase tracking-wider font-semibold">
+          <span className="text-xs text-soft uppercase tracking-[.08em] font-bold">
             {t.dashboard.returnSummary}
           </span>
-          <h2 className="text-3xl font-extrabold text-navy dark:text-ink tracking-tight tabular flex items-baseline gap-2 flex-wrap">
+          <h2 className="text-[40px] leading-none font-extrabold text-on-ink tracking-[-0.03em] tabular flex items-baseline gap-2 flex-wrap">
             {refundFigure > 0 ? (
               <>
-                <span style={{ color: "var(--flow-keep)" }}>
+                <span className="text-[#5EE6B0]">
                   <AnimatedAmount value={Math.abs(refundFigure)} lang={lang} />
                 </span>
-                <span className="text-lg font-medium text-ink-2">
+                <span className="text-lg font-medium text-on-ink/70">
                   {t.file.outcomeRefund("").replace(/^\s*₹?\s*/, "")}
                 </span>
               </>
@@ -431,7 +431,7 @@ export default function OverviewTab({
               <>
                 <span>−</span>
                 <AnimatedAmount value={Math.abs(refundFigure)} lang={lang} />
-                <span className="text-lg font-medium text-alarm">
+                <span className="text-lg font-medium text-[#FFB0B0]">
                   {t.file.outcomeOwes("").replace(/^\s*₹?\s*/, "")}
                 </span>
               </>
@@ -439,19 +439,19 @@ export default function OverviewTab({
           </h2>
           <div className="flex items-center gap-3 flex-wrap">
             <span
-              className={`inline-block px-2 py-0.5 rounded font-mono font-semibold text-xs ${
-                openHolds.length > 0 ? "bg-warn-soft text-warn" : "bg-money-soft text-money"
+              className={`inline-block px-2.5 py-0.5 rounded-full font-bold text-xs ${
+                openHolds.length > 0 ? "bg-warn-soft text-warn" : "bg-ok-soft text-ok-ink"
               }`}
             >
               {t.refund.states[refund.state]}
             </span>
             {openHolds.length > 0 && (
-              <span className="text-xs text-ink-2">{t.refund.holdsHeading(openHolds.length)}</span>
+              <span className="text-xs text-on-ink/70">{t.refund.holdsHeading(openHolds.length)}</span>
             )}
             {onEditFacts && (
               <button
                 onClick={onEditFacts}
-                className="text-xs text-money hover:text-money-deep font-bold underline cursor-pointer"
+                className="text-xs text-soft hover:text-on-ink font-bold underline cursor-pointer"
               >
                 Edit Actual Figures
               </button>
@@ -481,7 +481,7 @@ export default function OverviewTab({
 
 
           <div className="surface-panel space-y-4 p-5">
-            <h3 className="text-xs font-mono uppercase tracking-wider text-ink-2 border-b border-line pb-2 font-bold">
+            <h3 className="text-xs uppercase tracking-[.08em] text-ink-3 pb-1 font-bold">
               {t.dashboard.verifiedBanks}
             </h3>
 
@@ -489,8 +489,8 @@ export default function OverviewTab({
               {persona.banks.map((bank) => (
                 <div
                   key={bank.id}
-                  className={`bg-slate-50 border rounded-xl p-4 flex flex-col justify-between gap-3 text-left ${
-                    bank.status === "failed" ? "border-alarm bg-alarm-soft/10" : "border-line"
+                  className={`rounded-[16px] p-4 flex flex-col justify-between gap-3 text-left ${
+                    bank.status === "failed" ? "border border-bad/40 bg-bad-soft" : "glass-flat"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -506,12 +506,12 @@ export default function OverviewTab({
                     </div>
 
                     <div className="text-right shrink-0">
-                      <span className={`text-[0.7rem] font-mono px-2 py-0.5 rounded uppercase font-semibold ${
+                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
                         bank.status === "validated"
-                          ? "bg-money-soft text-money"
+                          ? "bg-ok-soft text-ok-ink"
                           : bank.status === "under_process"
                           ? "bg-warn-soft text-warn"
-                          : "bg-alarm-soft text-alarm"
+                          : "bg-bad-soft text-bad"
                       }`}>
                         {bank.status === "validated"
                           ? t.dashboard.bankValidated
@@ -534,7 +534,7 @@ export default function OverviewTab({
                       </p>
                       <button
                         onClick={() => handleFixBank(bank)}
-                        className="text-xs bg-alarm text-paper py-1.5 px-3 rounded font-semibold hover:bg-alarm-deep transition-colors"
+                        className="text-[13px] bg-bad text-white h-[38px] px-4 rounded-[14px] font-bold hover:opacity-90 transition-opacity cursor-pointer"
                       >
                         {t.dashboard.switchToNewIfsc(bank.supersededBy.ifsc)}
                       </button>
@@ -547,8 +547,8 @@ export default function OverviewTab({
 
           {/* HOLDS with clear-by windows */}
           {openHolds.length > 0 && (
-            <div className="bg-warn-soft/40 border border-warn/30 rounded-xl p-5 space-y-4 shadow-sm">
-              <h4 className="text-xs font-mono uppercase tracking-wider text-warn font-bold flex items-center gap-1.5 border-b border-warn/25 pb-2">
+            <div className="bg-warn-soft rounded-3xl p-5 space-y-4">
+              <h4 className="text-xs uppercase tracking-[.08em] text-warn font-bold flex items-center gap-1.5 border-b border-warn/25 pb-2">
                 <AlertTriangle size={14} />
                 <span>{t.refund.holdsHeading(openHolds.length)}</span>
               </h4>

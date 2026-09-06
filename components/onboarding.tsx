@@ -58,8 +58,8 @@ const FOCUSES: OnboardingFocus[] = [
 
 function selectedClass(selected: boolean): string {
   return selected
-    ? "border-money bg-money-soft text-ink shadow-sm"
-    : "border-line bg-paper-2 text-ink hover:border-money/50 hover:bg-paper-3";
+    ? "border-money bg-amber-bg text-amber-ink"
+    : "border-glass-edge bg-white/55 dark:bg-white/[0.05] text-ink hover:border-money/50";
 }
 
 function ChoiceButton({
@@ -78,7 +78,7 @@ function ChoiceButton({
       type="button"
       aria-pressed={selected}
       onClick={onClick}
-      className={`flex min-h-14 w-full items-start justify-between gap-4 rounded-xl border px-4 py-3 text-left transition-colors active:translate-y-px ${selectedClass(selected)}`}
+      className={`flex min-h-14 w-full items-start justify-between gap-4 rounded-[16px] border-[1.5px] px-4 py-3.5 text-left transition-colors active:translate-y-px cursor-pointer ${selectedClass(selected)}`}
     >
       <span className="min-w-0">
         <span className="block text-sm font-semibold leading-snug">{children}</span>
@@ -86,7 +86,7 @@ function ChoiceButton({
       </span>
       <span
         className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-          selected ? "border-navy bg-navy text-white" : "border-line text-transparent"
+ selected ? "border-money bg-money text-white" : "border-line text-transparent"
         }`}
         aria-hidden="true"
       >
@@ -187,13 +187,13 @@ export default function Onboarding({
   return (
     <div className="mx-auto max-w-3xl py-2 sm:py-5">
       <div className="surface-panel overflow-hidden">
-        <div className="border-b border-line bg-paper-2 px-5 py-3 sm:px-8 sm:py-3.5">
+        <div className="border-b border-line px-5 py-3.5 sm:px-7">
           <div className="flex items-center justify-between gap-4">
-            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-money">
+            <span className="text-xs font-bold text-money">
               {t.onboarding.eyebrow}
             </span>
             {screen !== "language" && screen !== "ready" && (
-              <span className="text-xs font-mono text-ink-2">
+              <span className="text-[11.5px] text-ink-3">
                 {t.onboarding.questionsLabel} {t.onboarding.questionsProgress(questionNumber, 4)}
               </span>
             )}
@@ -203,7 +203,7 @@ export default function Onboarding({
               {[1, 2, 3, 4].map((item) => (
                 <span
                   key={item}
-                  className={`h-1.5 flex-1 rounded-full ${item <= questionNumber ? "bg-navy" : "bg-line"}`}
+                  className={`h-1.5 flex-1 rounded-[3px] ${item <= questionNumber ? "bg-money" : "bg-ink-2/15"}`}
                 />
               ))}
             </div>
@@ -214,7 +214,7 @@ export default function Onboarding({
           {screen === "language" && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
+                <h1 className="text-[28px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink sm:text-[32px]">
                   {t.onboarding.languageQuestion}
                 </h1>
                 <p className="max-w-xl text-sm leading-relaxed text-ink-2">{t.onboarding.languageHelp}</p>
@@ -236,7 +236,7 @@ export default function Onboarding({
           {screen === "intent" && (
             <div className="space-y-6">
               <div className="space-y-2">
-                <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
+                <h1 className="text-[28px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink sm:text-[32px]">
                   {t.onboarding.intentQuestion}
                 </h1>
                 <p className="text-sm leading-relaxed text-ink-2">{t.onboarding.intentHelp}</p>
@@ -259,7 +259,7 @@ export default function Onboarding({
           {screen === "situation" && (
             <div className="space-y-7">
               <div className="space-y-2">
-                <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
+                <h1 className="text-[28px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink sm:text-[32px]">
                   {t.onboarding.situationQuestion}
                 </h1>
                 <p className="text-sm leading-relaxed text-ink-2">{t.onboarding.situationHelp}</p>
@@ -298,7 +298,7 @@ export default function Onboarding({
           {screen === "mode" && (
             <div className="space-y-6">
               <div className="space-y-2">
-                <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
+                <h1 className="text-[28px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink sm:text-[32px]">
                   {t.onboarding.modeQuestion}
                 </h1>
                 <p className="text-sm leading-relaxed text-ink-2">{t.onboarding.modeHelp}</p>
@@ -321,7 +321,7 @@ export default function Onboarding({
           {screen === "focus" && (
             <div className="space-y-6">
               <div className="space-y-2">
-                <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
+                <h1 className="text-[28px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink sm:text-[32px]">
                   {t.onboarding.focusQuestion}
                 </h1>
                 <p className="text-sm leading-relaxed text-ink-2">{t.onboarding.focusHelp}</p>
@@ -352,7 +352,7 @@ export default function Onboarding({
                     {t.onboarding.tailoredBadge}
                   </span>
                 </div>
-                <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
+                <h1 className="text-[28px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink sm:text-[32px]">
                   {t.onboarding.readyTitle}
                 </h1>
                 <p className="text-sm leading-relaxed text-ink-2">{t.onboarding.readyBody}</p>
@@ -388,7 +388,7 @@ export default function Onboarding({
               <button
                 type="button"
                 onClick={back}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line px-4 py-3 text-sm font-semibold text-ink-2 transition-colors hover:bg-paper-2"
+                className="glass-flat inline-flex h-[46px] items-center justify-center gap-2 rounded-[14px] px-4 text-[14.5px] font-semibold text-ink-2 transition-colors hover:text-ink cursor-pointer"
               >
                 <ChevronLeft size={16} />
                 {t.common.back}
@@ -400,7 +400,7 @@ export default function Onboarding({
               type="button"
               onClick={next}
               disabled={!canContinue}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-navy px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
+              className="btn-primary inline-flex h-[46px] items-center justify-center gap-2 rounded-[14px] px-5 text-[14.5px] transition-colors disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer"
             >
               {screen === "ready" ? t.onboarding.startPath : t.common.continue}
               <ChevronRight size={16} />

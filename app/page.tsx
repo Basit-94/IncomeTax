@@ -162,7 +162,7 @@ export default function WapsiPrototype() {
 
   // --- CORE UI STATES ---
   const [lang, setLang] = useState<Lang>("en");
-  const [theme, setTheme] = useState<"dark" | "light">("light");
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [antigravityUi, setAntigravityUi] = useState(false);
   const [step, setStep] = useState<"auth" | "onboarding" | "landing" | "otp" | "dashboard">("auth");
   const [activePersonaId, setActivePersonaId] = useState<PersonaId | "custom" | null>(null);

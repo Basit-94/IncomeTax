@@ -35,7 +35,7 @@ and `/architecture` no longer exist on `dev-2`; the disclosure lives in `README.
 | Layer | Choice | Notes |
 |---|---|---|
 | Framework | Next.js **16.3** (App Router, Turbopack), React **19.2**, TypeScript **7** strict | `AGENTS.md` warns: APIs differ from training data — read `node_modules/next/dist/docs/` when unsure |
-| Styling | Tailwind **4** via `@tailwindcss/postcss`; design tokens in `app/globals.css`; the "Direction 13" index-card look in `app/d13.css` | Money classes: `.tabular` (journey) or `font-mono tabular-nums` (spec surfaces) |
+| Styling | Tailwind **4** via `@tailwindcss/postcss`; design tokens in `app/globals.css`. **Redesign 2026-09-06** (`docs/redesign/README.md`, "Sunrise/Lilac" light + "Navy & Coral" dark): the token NAMES stayed (`paper/ink/money/line/amber-*`) and were remapped — paper = lilac `#F3EEFF`, paper-2 = glass `rgba(255,255,255,.62)`, money = tangerine `#FF7A1A`, amber-bg/ink = the accent-soft pair — plus new `glass / glass-edge / ink-surface / on-ink / soft / ok(-soft,-ink) / bad / tertiary` colours, `shadow-glass`, `shadow-glow`, soft radii (14/20/24 px) and the component classes `.glass .glass-flat .ink-surface .munshi-bubble .btn-primary`. `app/d13.css` keeps its verbatim classes; its palette variables are remapped unlayered at the top of `globals.css`. Fonts: **Outfit** for everything (`--font-outfit`; `font-serif` classes are an alias), JetBrains Mono for numbers, Caveat for Munshi ji's notes. Mascot: `components/brand/munshi.tsx` (`Munshi`, `MunshiAvatar`, `MunshiBubble`; vector placeholder, loop `munshi-nod/-blink/-wave`). The ground is the lilac page with two drifting blobs (`.paper::before/::after`), no graph paper. | Money classes: `.tabular` (journey) or `font-mono tabular-nums` (spec surfaces) |
 | Motion | `motion` v13 (framer-motion's successor). `m.*` components under `<LazyMotion features={domMax} strict>` | Rule: never gate correctness or the visibility of a figure on an animation (`AnimatePresence mode="wait"` is banned where content matters — see log 2026-09-02 22:32) |
 | Icons / QR | `lucide-react`, `qrcode.react` | |
 | Tests | `vitest` 4, node environment, **no jsdom** — nothing mounts a component; browser checks are done live (agent-browser CLI or the Chrome extension) | |
@@ -58,7 +58,7 @@ Env (see `.env.example`): `NEXT_PUBLIC_BACKEND_URL` (default `http://localhost:8
 |---|---|---|
 | `/` | `app/page.tsx` (~2,100 lines, `"use client"`) | **Signed out (2026-09-06): the public landing page** (`components/marketing/landing-page.tsx` — serif thesis, live fact card, "Sign in" / "Try a demo citizen" → `/signin`; no mode switch). **Signed in:** the Manual citizen journey, reached via the mode switch: onboarding → landing hub → dashboard. Unfiled returns walk a 5-step flow (facts → deductions → regime → check → file); filed returns get three tabs (overview/refund tracker, tax prefills, pending actions). |
 | `/signin` | `app/signin/page.tsx` | **Sign-in as its own page (2026-09-06):** the existing `AuthPortal` (Sign In / Sign Up / With Doc / Demo, `?tab=personas` preselects Demo) and `OtpScreen` under a plain brand bar (language, theme, no mode switch). `lib/signin-flow.ts` verifies the code (`949494`) with the backend, saves the client session + seeded/blank `ReturnState`, tries for a server session, then `router.replace("/app")` — no filing flow starts. A stale client-only session is cleared here; `/app` redirects signed-out visitors to `/signin`. |
-| `/reconcile` | `app/reconcile/page.tsx` → `components/InteractiveTaxDashboard.tsx` | The flat **reconciliation matrix**: 13 AIS/26AS rows, confirm/dispute per row, net-position headline, calculation dock, Challan 280, s.139(9) card, CASS radar, PDF dropzone, ITR-V preview. Starts from a synthetic prefill (₹15,00,000 salary etc.). Reachable by URL only. |
+| `/reconcile` | `app/reconcile/page.tsx` → `components/InteractiveTaxDashboard.tsx` | The flat **reconciliation matrix**: 13 AIS/26AS rows, confirm/dispute per row, net-position headline, live both-regimes rail (regime tiles, net figure, file/pay CTA), Challan 280, s.139(9) card, CASS radar, PDF dropzone, ITR-V preview. Starts from a synthetic prefill (₹15,00,000 salary etc.). Reachable by URL only. |
 | `/app` | `app/app/page.tsx` (`"use client"`, `Suspense`-wrapped for `useSearchParams`) | The **Agentic workspace** (plan.md §6). Without `?run=` it is a standalone landing (`components/agentic/landing.tsx`: no sidebar, serif question, "Ask →" box, icon shortcuts, sign-in when there is no session). A question or shortcut creates a run and routes to `?run=<id>`, which renders the same `AppShell` as `/` with the transcript, question/review cards and inspector. Disabled by `NEXT_PUBLIC_WAPSI_AGENTIC=false`. |
 | `/api/agent` | `app/api/agent/route.ts` | The legacy copilot endpoint (§8). |
 | `/api/session`, `/api/session/demo`, `/api/session/bridge` | `app/api/session/…` | HttpOnly `wapsi_sid` cookie sessions: read / revoke; issue a demo session for one of the three synthetic PANs; bridge a Java backend token via `GET /api/v1/auth/session`. |
@@ -260,7 +260,7 @@ procedure or regime comparison.
 - Provenance is the differentiator: every figure says who reported it and whether only the reporter
   can fix it.
 - Filing with tax outstanding is blocked by the product: while a balance is due, the file button becomes
-  "Pay outstanding tax (Challan 280)" (`before-filing.tsx`, `filing-step.tsx`, the `/reconcile` dock).
+  "Pay outstanding tax (Challan 280)" (`before-filing.tsx`, `filing-step.tsx`, the `/reconcile` rail).
   This is a product choice, not s.139(9) law — unpaid s.140A tax stopped making a return defective from
   AY 2017-18 (clause (aa) omitted; CBDT Circular 3/2017). UI copy that still says "defective u/s 139(9)"
   is an open follow-up from the 2026-09-05 knowledge review.
@@ -282,7 +282,7 @@ procedure or regime comparison.
    hooks exist for automation: `data-testid="net-position"` + `data-position`, `data-fact-id`,
    `data-fact-status`, `data-action="confirm|dispute|save-dispute|auto-reconcile|attach-proof|pay-outstanding|download-itrv"`,
    `data-testid="cass-radar"` + `data-risk`, `data-testid="itrv-timestamp"`, `#fact-<personaFactId>`,
-   `#dashboard-tabs`. Note the fixed dock on `/reconcile` covers the bottom ~90px; scroll before clicking.
+   `#dashboard-tabs`. The `/reconcile` header and the `/ca` client strip are sticky; scroll a row into the clear before clicking.
 5. Append what you did to `log.md`; update this file if a contract changed.
 
 ## 11. Where else to look

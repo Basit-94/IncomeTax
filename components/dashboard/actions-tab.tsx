@@ -50,8 +50,8 @@ export default function ActionsTab({
 
       {/* PENDING NOTICES */}
       {persona.notices.length > 0 ? (
-        <div className="bg-white dark:bg-paper-2 border border-line rounded-xl p-5 space-y-4 shadow-sm">
-          <h3 className="text-xs font-mono uppercase tracking-wider text-ink-2 border-b border-line pb-2 font-bold">
+        <div className="glass rounded-3xl p-5 space-y-4">
+          <h3 className="text-xs uppercase tracking-[.08em] text-ink-3 border-b border-line pb-2 font-bold">
             {localize("Outstanding Compliance Notices", lang)}
           </h3>
 
@@ -59,18 +59,18 @@ export default function ActionsTab({
             {persona.notices.map((notice) => (
               <div 
                 key={notice.id} 
-                className={`p-4 border rounded-xl space-y-3 text-left ${
-                  notice.status === "responded" 
-                    ? "border-line bg-slate-50" 
-                    : "border-alarm bg-alarm-soft/10"
+                className={`p-4 rounded-[18px] space-y-3 text-left ${
+                  notice.status === "responded"
+                    ? "glass-flat"
+                    : "border border-bad/40 bg-bad-soft"
                 }`}
               >
                 <div className="flex justify-between items-start">
-                  <span className="text-[0.65rem] font-mono bg-white dark:bg-paper-2 border border-line text-ink-2 px-2 py-0.5 rounded">
+                  <span className="glass-flat text-[0.65rem] font-mono text-ink-3 px-2.5 py-0.5 rounded-full">
                     {localize("DIN Validated • CBDT Circular 19/2019", lang)}
                   </span>
-                  <span className={`text-[0.65rem] font-mono font-semibold px-2 py-0.5 rounded uppercase ${
-                    notice.status === "responded" ? "bg-money-soft text-money" : "bg-alarm-soft text-alarm"
+                  <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full uppercase ${
+                    notice.status === "responded" ? "bg-ok-soft text-ok-ink" : "bg-bad text-white"
                   }`}>
                     {notice.status}
                   </span>
@@ -92,7 +92,7 @@ export default function ActionsTab({
                 {notice.status === "open" && (
                   <button
                     onClick={() => handleNoticeClick(notice)}
-                    className="text-xs bg-alarm text-paper py-1.5 px-3 rounded font-semibold hover:bg-alarm-deep transition-colors"
+                    className="text-[13px] bg-bad text-white h-[38px] px-4 rounded-[14px] font-bold hover:opacity-90 transition-opacity cursor-pointer"
                   >
                     {localize("Draft Legal Response", lang)}
                   </button>
@@ -102,8 +102,8 @@ export default function ActionsTab({
           </div>
         </div>
       ) : (
-        <div className="bg-white dark:bg-paper-2 border border-line rounded-xl p-10 text-center space-y-3">
-          <CheckCircle2 size={36} className="text-money mx-auto" />
+        <div className="glass rounded-3xl p-10 text-center space-y-3">
+          <CheckCircle2 size={36} className="text-ok mx-auto" />
           <h3 className="font-bold text-ink text-sm">{localize("No Pending Actions", lang)}</h3>
           <p className="text-xs text-ink-2">{localize("Your account is fully compliant with no outstanding notices or tax demands.", lang)}</p>
         </div>
@@ -111,8 +111,8 @@ export default function ActionsTab({
 
       {/* ACTIVE HOLDS LIST */}
       {persona.refund.state !== "not_filed" && persona.refund.holds.filter(h => !h.resolved).length > 0 && (
-        <div className="bg-warn-soft/40 border border-warn/30 rounded-xl p-5 space-y-4 text-left shadow-sm">
-          <h4 className="text-xs font-mono uppercase tracking-wider text-warn font-bold flex items-center gap-1.5 border-b border-warn/25 pb-2">
+        <div className="bg-warn-soft rounded-3xl p-5 space-y-4 text-left">
+          <h4 className="text-xs uppercase tracking-[.08em] text-warn font-bold flex items-center gap-1.5 border-b border-warn/25 pb-2">
             <AlertTriangle size={14} />
             <span>{localize("Actionable Assessment Holds", lang)} ({persona.refund.holds.filter(h => !h.resolved).length})</span>
           </h4>
@@ -129,7 +129,7 @@ export default function ActionsTab({
 
                 {/* Rent verification receipt upload form */}
                 {hold.kind === "nudge_deduction" && (
-                  <div className="bg-white dark:bg-paper-2 border border-line rounded-lg p-3 space-y-3 mt-2">
+                  <div className="glass-flat rounded-[14px] p-3 space-y-3 mt-2">
                     <span className="block text-xs font-mono text-ink-2">{localize("Upload Rent Agreement / Receipts", lang)}</span>
                     
                     <div className="space-y-2">

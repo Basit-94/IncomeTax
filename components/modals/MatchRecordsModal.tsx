@@ -192,8 +192,8 @@ function FeedbackDropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
         className={`flex min-h-[36px] cursor-pointer items-center justify-between gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-colors ${
-          row.status === "mismatch"
-            ? "border-amber-400 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 hover:border-amber-500"
+ row.status === "mismatch"
+            ? "border-money/40 bg-amber-bg  text-amber-ink  hover:border-money/40"
             : "border-line bg-paper-2 hover:bg-paper text-ink"
         }`}
       >
@@ -202,7 +202,7 @@ function FeedbackDropdown({
           size={13}
           aria-hidden="true"
           className={`shrink-0 text-ink-2 transition-transform duration-150 ${
-            open ? "rotate-180 text-blue-600" : ""
+ open ? "rotate-180 text-tertiary" : ""
           }`}
         />
       </button>
@@ -210,8 +210,8 @@ function FeedbackDropdown({
       {open && (
         <div
           role="listbox"
-          className={`absolute right-0 z-50 max-h-60 w-80 overflow-y-auto rounded-xl border border-line bg-paper p-1 shadow-2xl animate-in fade-in ${
-            popUp ? "bottom-full mb-1.5" : "top-full mt-1.5"
+          className={`absolute right-0 z-50 max-h-60 w-80 overflow-y-auto rounded-xl border border-line bg-paper p-1 shadow-glass animate-in fade-in ${
+ popUp ? "bottom-full mb-1.5" : "top-full mt-1.5"
           }`}
         >
           {AIS_FEEDBACK_CODES.map((code) => {
@@ -230,14 +230,14 @@ function FeedbackDropdown({
                   setOpen(false);
                 }}
                 className={`flex w-full flex-col gap-0.5 rounded-lg p-2.5 text-start text-xs transition-colors cursor-pointer hover:bg-paper-2 ${
-                  isSelected
-                    ? "bg-blue-50 dark:bg-blue-950/50 font-semibold text-blue-700 dark:text-blue-300"
+ isSelected
+ ? "bg-tertiary/15  font-semibold text-tertiary "
                     : "text-ink"
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
-                    {isSelected && <Check size={13} className="text-blue-600 shrink-0" />}
+                    {isSelected && <Check size={13} className="text-tertiary shrink-0" />}
                     <span>{label}</span>
                   </span>
                   <span className="font-mono text-[9px] text-ink-3 bg-paper-3 px-1.5 py-0.5 rounded border border-line">
@@ -444,11 +444,11 @@ export default function MatchRecordsModal({
       aria-labelledby="match-records-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-2 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
     >
-      <div className="surface-panel relative w-full max-w-4xl h-[88vh] flex flex-col rounded-3xl bg-paper shadow-2xl border border-blue-500/40 text-start overflow-hidden">
+      <div className="surface-panel relative w-full max-w-4xl h-[88vh] flex flex-col rounded-3xl bg-paper shadow-glass border border-tertiary/40 text-start overflow-hidden">
         {/* Fixed Header */}
         <div className="shrink-0 flex items-start justify-between border-b border-line p-5 sm:p-6 bg-paper">
           <div className="flex items-center gap-3.5">
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-600/30 shrink-0">
+            <div className="flex size-11 items-center justify-center rounded-2xl bg-tertiary text-white shadow-md shadow-blue-600/30 shrink-0">
               <FileCheck2 size={24} />
             </div>
             <div>
@@ -456,7 +456,7 @@ export default function MatchRecordsModal({
                 <h2 id="match-records-title" className="font-sans text-xl md:text-2xl font-bold text-ink">
                   {isHindi ? "सरकारी रिकॉर्ड का मिलान (AIS · 26AS · TDS)" : "Match Official Records (AIS · 26AS · Form 16)"}
                 </h2>
-                <span className="rounded-full bg-blue-500/10 border border-blue-500/30 px-2.5 py-0.5 text-[11px] font-mono font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                <span className="rounded-full bg-tertiary/15 border border-tertiary/40 px-2.5 py-0.5 text-[11px] font-mono font-bold text-tertiary uppercase tracking-wider">
                   Card 02
                 </span>
               </div>
@@ -493,8 +493,8 @@ export default function MatchRecordsModal({
             type="button"
             onClick={() => setActiveTab("matcher")}
             className={`rounded-xl px-4 py-2 text-xs font-bold transition cursor-pointer ${
-              activeTab === "matcher"
-                ? "bg-blue-600 text-white shadow-sm"
+ activeTab === "matcher"
+                ? "bg-tertiary text-white shadow-sm"
                 : "bg-paper-2 text-ink-2 hover:bg-paper-3 hover:text-ink"
             }`}
           >
@@ -504,21 +504,21 @@ export default function MatchRecordsModal({
             type="button"
             onClick={() => setActiveTab("upload")}
             className={`rounded-xl px-4 py-2 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "upload"
-                ? "bg-blue-600 text-white shadow-sm"
+ activeTab === "upload"
+                ? "bg-tertiary text-white shadow-sm"
                 : "bg-paper-2 text-ink-2 hover:bg-paper-3 hover:text-ink"
             }`}
           >
             <Upload size={13} />
             <span>{isHindi ? "2. AIS / 26AS PDF अपलोड करें" : "2. Drop AIS / 26AS PDF"}</span>
-            {uploadedDoc && <span className="size-2 rounded-full bg-emerald-400" />}
+            {uploadedDoc && <span className="size-2 rounded-full bg-ok" />}
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("personas")}
             className={`rounded-xl px-4 py-2 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "personas"
-                ? "bg-blue-600 text-white shadow-sm"
+ activeTab === "personas"
+                ? "bg-tertiary text-white shadow-sm"
                 : "bg-paper-2 text-ink-2 hover:bg-paper-3 hover:text-ink"
             }`}
           >
@@ -554,7 +554,7 @@ export default function MatchRecordsModal({
                   <span className="font-mono text-[10px] uppercase text-ink-3 block">
                     {isHindi ? "करदाता द्वारा वास्तविक घोषित" : "Actual Declared in Return"}
                   </span>
-                  <span className="font-mono text-base font-bold text-emerald-600 dark:text-emerald-400">
+                  <span className="font-mono text-base font-bold text-ok-ink">
                     {formatMoney(totalDeclared, lang)}
                   </span>
                 </div>
@@ -562,7 +562,7 @@ export default function MatchRecordsModal({
                   <span className="font-mono text-[10px] uppercase text-ink-3 block">
                     {isHindi ? "सुलझाया गया अंतर (फीडबैक दर्ज)" : "Discrepancy Defended"}
                   </span>
-                  <span className="font-mono text-base font-bold text-amber-600 dark:text-amber-400">
+                  <span className="font-mono text-base font-bold text-amber-ink">
                     {totalMismatch > 0 ? `+${formatMoney(totalMismatch, lang)}` : "Fully Reconciled"}
                   </span>
                 </div>
@@ -570,17 +570,17 @@ export default function MatchRecordsModal({
 
               {/* Upload Notification if a PDF was ingested */}
               {uploadedDoc && (
-                <div className="flex items-center justify-between gap-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 p-3 text-xs">
+                <div className="flex items-center justify-between gap-3 rounded-xl bg-ok-soft border border-ok/40 p-3 text-xs">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-                    <span className="text-emerald-900 dark:text-emerald-200">
+                    <CheckCircle2 size={16} className="text-ok-ink shrink-0" />
+                    <span className="text-ok-ink">
                       <strong>{uploadedDoc.fileName}</strong> {isHindi ? "से आंकड़े स्वतः लोड किए गए।" : "extracted & loaded into table."}
                     </span>
                   </div>
                   <button
                     type="button"
                     onClick={() => setActiveTab("upload")}
-                    className="text-emerald-700 dark:text-emerald-400 font-bold hover:underline cursor-pointer"
+                    className="text-ok-ink font-bold hover:underline cursor-pointer"
                   >
                     {isHindi ? "विवरण देखें" : "View details"}
                   </button>
@@ -588,8 +588,8 @@ export default function MatchRecordsModal({
               )}
 
               {/* Instructions Callout */}
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-[11px] text-ink-2">
-                <ChevronDown size={14} className="text-blue-600 shrink-0" />
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-tertiary/15 border border-tertiary/40 text-[11px] text-ink-2">
+                <ChevronDown size={14} className="text-tertiary shrink-0" />
                 <span>
                   {isHindi
                     ? "भाषा मेनू की तरह ही स्क्रॉल ड्रॉपडाउन में CBDT फीडबैक विकल्प देखें व चुनें।"
@@ -622,7 +622,7 @@ export default function MatchRecordsModal({
                             <span className="font-bold text-ink block">{r.category}</span>
                             <span className="text-[11px] text-ink-3 truncate block max-w-xs">{r.source}</span>
                             {r.explanation && (
-                              <span className="text-[10px] text-amber-600 dark:text-amber-400 italic block mt-0.5">
+                              <span className="text-[10px] text-amber-ink italic block mt-0.5">
                                 {r.explanation}
                               </span>
                             )}
@@ -646,12 +646,12 @@ export default function MatchRecordsModal({
                                   autoFocus
                                   value={tempAmountInput}
                                   onChange={(e) => setTempAmountInput(e.target.value)}
-                                  className="w-24 rounded border border-blue-500 bg-paper px-1.5 py-0.5 text-end font-mono font-bold text-ink text-xs focus:outline-none"
+                                  className="w-24 rounded border border-tertiary/40 bg-paper px-1.5 py-0.5 text-end font-mono font-bold text-ink text-xs focus:outline-none"
                                 />
                                 <button
                                   type="button"
                                   onClick={() => handleSaveCustomAmount(r.id)}
-                                  className="rounded bg-emerald-600 p-1 text-white hover:bg-emerald-700 cursor-pointer"
+                                  className="rounded bg-ok p-1 text-white hover:opacity-90 cursor-pointer"
                                   title="Save"
                                 >
                                   <Check size={12} />
@@ -659,7 +659,7 @@ export default function MatchRecordsModal({
                               </div>
                             ) : (
                               <div className="flex items-center justify-end gap-1.5 group">
-                                <span className="font-mono font-bold text-emerald-700 dark:text-emerald-300">
+                                <span className="font-mono font-bold text-ok-ink">
                                   {formatMoney(r.declared, lang)}
                                 </span>
                                 <button
@@ -668,7 +668,7 @@ export default function MatchRecordsModal({
                                     setEditingAmountRowId(r.id);
                                     setTempAmountInput(String(r.declared));
                                   }}
-                                  className="opacity-0 group-hover:opacity-100 text-ink-3 hover:text-blue-600 transition cursor-pointer p-0.5"
+                                  className="opacity-0 group-hover:opacity-100 text-ink-3 hover:text-tertiary transition cursor-pointer p-0.5"
                                   title="Edit amount"
                                 >
                                   <Edit2 size={11} />
@@ -680,12 +680,12 @@ export default function MatchRecordsModal({
                           {/* Status */}
                           <td className="p-3 text-center">
                             {hasMismatch ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-bg px-2 py-0.5 text-[10px] font-bold text-amber-ink">
                                 <AlertCircle size={11} />
                                 <span>{isHindi ? "अंतर" : "Discrepancy"}</span>
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-ok-soft px-2 py-0.5 text-[10px] font-bold text-ok-ink">
                                 <CheckCircle2 size={11} />
                                 <span>{isHindi ? "सत्यापित" : "Matched"}</span>
                               </span>
@@ -726,8 +726,8 @@ export default function MatchRecordsModal({
               />
 
               {uploadPhase === "reading" ? (
-                <div className="rounded-2xl border border-blue-300 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 p-10 text-center space-y-3">
-                  <Loader2 size={32} className="animate-spin text-blue-600 mx-auto" />
+                <div className="rounded-2xl border border-tertiary/40 bg-tertiary/15 p-10 text-center space-y-3">
+                  <Loader2 size={32} className="animate-spin text-tertiary mx-auto" />
                   <h4 className="font-bold text-ink text-sm">
                     {isHindi ? "PDF का विश्लेषण किया जा रहा है..." : "Parsing PDF bytes & decrypting SFT streams..."}
                   </h4>
@@ -738,15 +738,15 @@ export default function MatchRecordsModal({
                   </p>
                 </div>
               ) : uploadPhase === "success" && uploadedDoc ? (
-                <div className="rounded-2xl border-2 border-emerald-500/40 bg-emerald-50/30 dark:bg-emerald-950/20 p-6 space-y-4 text-start">
+                <div className="rounded-2xl border-2 border-ok/40 bg-ok-soft p-6 space-y-4 text-start">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 size={20} className="text-emerald-600" />
-                      <h4 className="font-bold text-emerald-900 dark:text-emerald-200 text-sm">
+                      <CheckCircle2 size={20} className="text-ok-ink" />
+                      <h4 className="font-bold text-ok-ink text-sm">
                         {isHindi ? "दस्तावेज़ सफलतापूर्वक पढ़ा गया!" : "Document Successfully Analyzed & Applied!"}
                       </h4>
                     </div>
-                    <span className="font-mono text-[11px] bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 px-2.5 py-1 rounded-full border border-emerald-300 dark:border-emerald-700">
+                    <span className="font-mono text-[11px] bg-ok-soft text-ok-ink px-2.5 py-1 rounded-full border border-ok/40">
                       {uploadedDoc.kind}
                     </span>
                   </div>
@@ -770,7 +770,7 @@ export default function MatchRecordsModal({
                       <span className="text-[10px] font-mono uppercase text-ink-3 block">
                         {isHindi ? "सकल वेतन" : "Gross Salary"}
                       </span>
-                      <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
+                      <span className="font-mono font-bold text-xs text-ok-ink">
                         {uploadedDoc.extracted.grossSalary
                           ? formatMoney(uploadedDoc.extracted.grossSalary, lang)
                           : "—"}
@@ -780,7 +780,7 @@ export default function MatchRecordsModal({
                       <span className="text-[10px] font-mono uppercase text-ink-3 block">
                         {isHindi ? "काटा गया TDS" : "TDS Credit"}
                       </span>
-                      <span className="font-mono font-bold text-xs text-blue-600 dark:text-blue-400">
+                      <span className="font-mono font-bold text-xs text-tertiary">
                         {uploadedDoc.extracted.tds
                           ? formatMoney(uploadedDoc.extracted.tds, lang)
                           : "—"}
@@ -802,7 +802,7 @@ export default function MatchRecordsModal({
                     <button
                       type="button"
                       onClick={() => setActiveTab("matcher")}
-                      className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-emerald-700 transition cursor-pointer"
+                      className="flex items-center gap-1.5 rounded-xl bg-ok px-4 py-2 text-xs font-bold text-white shadow hover:opacity-90 transition cursor-pointer"
                     >
                       <span>{isHindi ? "तालिका (Tab 1) में आंकड़े देखें →" : "View Extracted Figures in Matcher (Tab 1) →"}</span>
                     </button>
@@ -848,16 +848,16 @@ export default function MatchRecordsModal({
                   }}
                   onClick={() => fileInputRef.current?.click()}
                   className={`rounded-2xl border-2 border-dashed p-8 transition-all text-center cursor-pointer ${
-                    isDragging
-                      ? "border-blue-600 bg-blue-50/70 dark:bg-blue-950/60 ring-4 ring-blue-500/20 scale-[1.01]"
-                      : "border-line hover:border-blue-500 bg-paper-2"
+ isDragging
+ ? "border-tertiary/40 bg-tertiary/15  ring-4 ring-tertiary/40 scale-[1.01]"
+                      : "border-line hover:border-tertiary/40 bg-paper-2"
                   }`}
                 >
                   <div className="pointer-events-none">
                     <div className={`mx-auto flex size-14 items-center justify-center rounded-full mb-3 transition-transform ${
-                      isDragging
-                        ? "bg-blue-600 text-white scale-110 shadow-lg"
-                        : "bg-blue-100 dark:bg-blue-950/70 text-blue-600 dark:text-blue-300"
+ isDragging
+ ? "bg-tertiary text-white scale-110 shadow-glass"
+                        : "bg-tertiary/15  text-tertiary "
                     }`}>
                       <Upload size={24} />
                     </div>
@@ -872,7 +872,7 @@ export default function MatchRecordsModal({
                         : "Click to browse or drop file here. Unpacks stream locally in browser and populates Tab 1 with exact figures."}
                     </p>
                     <div className="mt-4 flex items-center justify-center gap-1.5 text-[11px] font-medium text-ink-3">
-                      <Lock size={12} className="text-emerald-600" />
+                      <Lock size={12} className="text-ok-ink" />
                       <span>{isHindi ? "100% शून्य-सर्वर अपलोड (ब्राउज़र में प्रोसेस)" : "100% Client-side · Zero server storage"}</span>
                     </div>
                   </div>
@@ -880,8 +880,8 @@ export default function MatchRecordsModal({
               )}
 
               {uploadError && (
-                <div className="flex items-center gap-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 p-3 text-xs text-rose-800 dark:text-rose-200">
-                  <AlertCircle size={15} className="shrink-0 text-rose-600" />
+                <div className="flex items-center gap-2 rounded-xl bg-bad-soft border border-bad/40 p-3 text-xs text-bad">
+                  <AlertCircle size={15} className="shrink-0 text-bad" />
                   <span>{uploadError}</span>
                 </div>
               )}
@@ -893,15 +893,15 @@ export default function MatchRecordsModal({
             <div className="space-y-4 animate-in fade-in duration-150">
               {/* PRIMARY CARD: Logged-in Citizen's Own Case */}
               {activeCitizen ? (
-                <div className="rounded-2xl border-2 border-emerald-500/50 bg-emerald-50/20 dark:bg-emerald-950/30 p-5 space-y-3">
+                <div className="rounded-2xl border-2 border-ok/40 bg-ok-soft p-5 space-y-3">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="size-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="font-mono text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                      <span className="size-2.5 rounded-full bg-ok animate-pulse" />
+                      <span className="font-mono text-xs font-bold uppercase tracking-wider text-ok-ink">
                         {isHindi ? "★ आपका सक्रिय रिटर्न केस" : "★ Your Active Filing Case"}
                       </span>
                     </div>
-                    <span className="font-mono text-xs font-bold bg-paper px-2.5 py-1 rounded border border-emerald-500/30 text-ink">
+                    <span className="font-mono text-xs font-bold bg-paper px-2.5 py-1 rounded border border-ok/40 text-ink">
                       {activeCitizen.pan}
                     </span>
                   </div>
@@ -930,7 +930,7 @@ export default function MatchRecordsModal({
                       <span className="text-[10px] font-mono uppercase text-ink-3 block">
                         {isHindi ? "काटा गया TDS" : "TDS Paid"}
                       </span>
-                      <span className="font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400">
+                      <span className="font-mono font-bold text-xs text-ok-ink">
                         {formatMoney(activeCitizen.tds || 85000, lang)}
                       </span>
                     </div>
@@ -938,7 +938,7 @@ export default function MatchRecordsModal({
                       <span className="text-[10px] font-mono uppercase text-ink-3 block">
                         {isHindi ? "स्थिति" : "Filing Status"}
                       </span>
-                      <span className="font-bold text-xs text-blue-600 dark:text-blue-400">
+                      <span className="font-bold text-xs text-tertiary">
                         {isHindi ? "ड्राफ्ट सक्रिय" : "Draft Active (ITR-1)"}
                       </span>
                     </div>
@@ -953,7 +953,7 @@ export default function MatchRecordsModal({
                       onClick={() => {
                         setActiveTab("matcher");
                       }}
-                      className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-emerald-700 transition cursor-pointer"
+                      className="flex items-center gap-1.5 rounded-xl bg-ok px-4 py-2 text-xs font-bold text-white shadow hover:opacity-90 transition cursor-pointer"
                     >
                       <span>{isHindi ? "मेरे आंकड़े मिलान में लोड करें →" : "Reconcile My Active Return →"}</span>
                       <ArrowRight size={14} />
@@ -993,7 +993,7 @@ export default function MatchRecordsModal({
                       : "SBI duplicate reporting due to branch IFSC merger. AIS showed ₹45k vs actual ₹15k. Resolved with CBDT code 'Information is duplicate' (CODE_5)."}
                   </p>
                   <div className="pt-2 flex items-center justify-between border-t border-line/60 text-xs">
-                    <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                    <span className="font-mono text-ok-ink font-bold">
                       {isHindi ? "बचत: ₹9,360" : "Defended: ₹9,360"}
                     </span>
                     <button
@@ -1002,7 +1002,7 @@ export default function MatchRecordsModal({
                         handleSelectFeedbackCode("savings_interest", "CODE_5");
                         setActiveTab("matcher");
                       }}
-                      className="font-bold text-blue-600 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                      className="font-bold text-tertiary hover:underline inline-flex items-center gap-1 cursor-pointer"
                     >
                       <span>{isHindi ? "डेमो लोड करें" : "Load Demo Case"}</span>
                       <ArrowRight size={13} />
@@ -1024,7 +1024,7 @@ export default function MatchRecordsModal({
                       : "CPC Section 143(1)(a) notice proposing adjustment on capital gains u/s 112A. Reconciled with CAMS/KFintech records to clear refund hold."}
                   </p>
                   <div className="pt-2 flex items-center justify-between border-t border-line/60 text-xs">
-                    <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                    <span className="font-mono text-ok-ink font-bold">
                       {isHindi ? "रिफंड होल्ड मुक्त" : "Refund Hold Cleared"}
                     </span>
                     <button
@@ -1033,7 +1033,7 @@ export default function MatchRecordsModal({
                         handleSelectFeedbackCode("capital_gains", "CODE_1");
                         setActiveTab("matcher");
                       }}
-                      className="font-bold text-blue-600 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                      className="font-bold text-tertiary hover:underline inline-flex items-center gap-1 cursor-pointer"
                     >
                       <span>{isHindi ? "डेमो लोड करें" : "Load Demo Case"}</span>
                       <ArrowRight size={13} />
@@ -1048,7 +1048,7 @@ export default function MatchRecordsModal({
         {/* Fixed Footer */}
         <div className="shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-line p-4 sm:p-5 bg-paper">
           <div className="flex items-center gap-2 text-xs text-ink-3">
-            <ShieldCheck size={16} className="text-blue-600" />
+            <ShieldCheck size={16} className="text-tertiary" />
             <span>
               {isHindi
                 ? "CBDT अनुदेश संख्या 1/2022 के अनुरूप स्वचालित फीडबैक प्रणाली।"
@@ -1067,7 +1067,7 @@ export default function MatchRecordsModal({
             <button
               type="button"
               onClick={handleApply}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white shadow-md shadow-blue-600/25 hover:bg-blue-700 transition cursor-pointer"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-tertiary px-5 py-2 text-xs font-bold text-white shadow-md shadow-blue-600/25 hover:opacity-90 transition cursor-pointer"
             >
               <Sparkles size={14} />
               <span>{isHindi ? "रिटर्न में आंकड़े लागू करें" : "Apply to My Return Draft"}</span>

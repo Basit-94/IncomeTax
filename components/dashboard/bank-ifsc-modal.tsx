@@ -38,7 +38,7 @@ export default function BankIfscModal({
             initial={{ scale: 0.95, y: 15 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, y: 15 }}
-            className="bg-paper border border-line max-w-md w-full rounded-2xl p-6 shadow-2xl space-y-5 text-left"
+            className="bg-paper border border-line max-w-md w-full rounded-2xl p-6 shadow-glass space-y-5 text-left"
           >
             <div className="space-y-2">
               <h3 className="text-base font-bold text-ink border-b border-line pb-2 flex items-center gap-1.5">
@@ -61,7 +61,7 @@ export default function BankIfscModal({
                   onChange={(e) => handleIfscInputChange(e.target.value)}
                   maxLength={11}
                   className={`w-full bg-paper-2 border ${
-                    ifscError ? "border-alarm animate-shake" : "border-line focus:border-money"
+ ifscError ? "border-alarm animate-shake" : "border-line focus:border-money"
                   } text-base font-mono font-semibold tracking-wider px-3 py-2 rounded focus:outline-none uppercase`}
                 />
                   <MockFill onFill={() => handleIfscInputChange(MOCK.ifsc)} />
@@ -83,7 +83,7 @@ export default function BankIfscModal({
               </button>
               <button
                 onClick={saveBankFix}
-                className="flex-1 bg-navy hover:opacity-90 text-paper dark:text-white py-2 rounded text-sm font-semibold transition-colors"
+                className="flex-1 ink-surface hover:opacity-90 text-paper py-2 rounded text-sm font-semibold transition-colors"
               >
                 {localize("Validate Bank Code", lang)}
               </button>

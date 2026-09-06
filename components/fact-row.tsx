@@ -8,6 +8,7 @@ import type { Dict } from "../lib/i18n";
 import type { Correction } from "../lib/return/state";
 import { formatDate, formatMoney } from "../lib/money";
 import { AnimatedAmount } from "./ui/animated-amount";
+import { MunshiAvatar } from "./brand/munshi";
 
 export interface FactRowProps {
   id: string;
@@ -122,7 +123,7 @@ export default function FactRow({
       >
         <summary>
           {meaning ? (
-            <span className="hand">{t.factCard.whatThisMeans}</span>
+            <span className="hand flex items-center gap-2"><MunshiAvatar size={24} /> Munshi ji: {t.factCard.whatThisMeans}</span>
           ) : (
             <span className="font-mono text-[11px] uppercase tracking-wider text-ink-2">
               {t.groups.fromWhere}
@@ -168,7 +169,7 @@ export default function FactRow({
           {onConfirm && !confirmed && !correction && (
             <div className="confirmline">{gated ? t.factCard.readFirst : t.factCard.readyToConfirm}</div>
           )}
-          <div className="mt-3 flex flex-col gap-2 border-t border-line pt-3 text-xs sm:flex-row sm:items-center sm:justify-end">
+          <div className="mt-3 flex flex-col gap-2 text-xs sm:flex-row sm:items-center sm:justify-end">
             {confirmed ? (
               <div className="flex items-center gap-2">
                 <span className="badge you flex items-center gap-1">
@@ -178,7 +179,7 @@ export default function FactRow({
                 {onCorrect && (
                   <button
                     onClick={onCorrect}
-                    className="ml-2 cursor-pointer text-xs font-semibold text-ink-2 hover:text-navy dark:hover:text-ink hover:underline"
+                    className="ml-2 cursor-pointer text-[13px] font-semibold text-ink-2 hover:text-ink"
                   >
                     Change
                   </button>
@@ -193,7 +194,7 @@ export default function FactRow({
                 {onUndo && (
                   <button
                     onClick={onUndo}
-                    className="ml-2 cursor-pointer text-xs font-semibold text-ink-2 hover:text-navy dark:hover:text-ink hover:underline"
+                    className="ml-2 cursor-pointer text-[13px] font-semibold text-ink-2 hover:text-ink"
                   >
                     Undo Correction
                   </button>
@@ -204,7 +205,7 @@ export default function FactRow({
                 {onCorrect && (
                   <button
                     onClick={onCorrect}
-                    className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded border border-line px-4 text-sm font-semibold text-ink-2 transition hover:border-warn hover:text-warn"
+                    className="glass-flat inline-flex h-[38px] cursor-pointer items-center justify-center gap-2 rounded-[14px] px-4 text-[13px] font-semibold text-ink-2 transition hover:text-ink"
                   >
                     <PencilLine size={14} aria-hidden="true" />
                     {t.common.noThisIsWrong}
@@ -215,7 +216,7 @@ export default function FactRow({
                     onClick={onConfirm}
                     disabled={gated}
                     title={gated ? t.factCard.readFirst : undefined}
-                    className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded bg-navy px-5 text-sm font-bold text-paper dark:text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="ink-surface inline-flex h-[38px] cursor-pointer items-center justify-center gap-2 rounded-[14px] px-4 text-[13px] font-bold transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     <Check size={14} aria-hidden="true" />
                     {t.common.yesThatsRight}

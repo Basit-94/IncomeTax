@@ -197,13 +197,13 @@ export default function TaxCalendarModal({ isOpen, onClose, lang }: TaxCalendarM
       aria-labelledby="tax-calendar-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-3 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
     >
-      <div className="surface-panel relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl bg-paper shadow-2xl border border-line overflow-hidden">
+      <div className="surface-panel relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl bg-paper shadow-glass border border-line overflow-hidden">
         {/* ========================================================================= */}
         {/* MODAL HEADER                                                              */}
         {/* ========================================================================= */}
         <div className="shrink-0 flex items-start justify-between border-b border-line p-5 sm:px-6 sm:py-4 bg-paper-2">
           <div className="flex items-center gap-3">
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 shadow-xs">
+            <div className="flex size-11 items-center justify-center rounded-2xl bg-tertiary/15 text-tertiary shadow-xs">
               <Calendar size={22} aria-hidden="true" />
             </div>
             <div>
@@ -211,7 +211,7 @@ export default function TaxCalendarModal({ isOpen, onClose, lang }: TaxCalendarM
                 <h2 id="tax-calendar-title" className="font-sans text-lg sm:text-xl font-black text-ink">
                   {isHindi ? "टैक्स कैलेंडर और वैधानिक समय सीमा" : "Statutory Tax Calendar & Deadlines"}
                 </h2>
-                <span className="hidden sm:inline-flex rounded-full bg-purple-100 dark:bg-purple-950/80 px-2.5 py-0.5 text-[10px] font-mono font-bold text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                <span className="hidden sm:inline-flex rounded-full bg-tertiary/15 px-2.5 py-0.5 text-[10px] font-mono font-bold text-tertiary border border-tertiary/40">
                   AY 2026-27
                 </span>
               </div>
@@ -241,8 +241,8 @@ export default function TaxCalendarModal({ isOpen, onClose, lang }: TaxCalendarM
             type="button"
             onClick={() => setActiveTab("calendar")}
             className={`pb-2.5 px-3 text-xs font-bold transition flex items-center gap-2 border-b-2 cursor-pointer ${
-              activeTab === "calendar"
-                ? "border-purple-600 text-purple-600 dark:text-purple-400"
+ activeTab === "calendar"
+                ? "border-tertiary/40 text-tertiary "
                 : "border-transparent text-ink-2 hover:text-ink"
             }`}
           >
@@ -254,8 +254,8 @@ export default function TaxCalendarModal({ isOpen, onClose, lang }: TaxCalendarM
             type="button"
             onClick={() => setActiveTab("penalty_calc")}
             className={`pb-2.5 px-3 text-xs font-bold transition flex items-center gap-2 border-b-2 cursor-pointer ${
-              activeTab === "penalty_calc"
-                ? "border-purple-600 text-purple-600 dark:text-purple-400"
+ activeTab === "penalty_calc"
+                ? "border-tertiary/40 text-tertiary "
                 : "border-transparent text-ink-2 hover:text-ink"
             }`}
           >
@@ -267,8 +267,8 @@ export default function TaxCalendarModal({ isOpen, onClose, lang }: TaxCalendarM
             type="button"
             onClick={() => setActiveTab("exemptions")}
             className={`pb-2.5 px-3 text-xs font-bold transition flex items-center gap-2 border-b-2 cursor-pointer ${
-              activeTab === "exemptions"
-                ? "border-purple-600 text-purple-600 dark:text-purple-400"
+ activeTab === "exemptions"
+                ? "border-tertiary/40 text-tertiary "
                 : "border-transparent text-ink-2 hover:text-ink"
             }`}
           >
@@ -287,18 +287,18 @@ export default function TaxCalendarModal({ isOpen, onClose, lang }: TaxCalendarM
           {activeTab === "calendar" && (
             <div className="space-y-6 animate-in fade-in duration-200">
               {/* Critical Countdown Banner */}
-              <div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-3xl bg-gradient-to-r from-purple-900 to-indigo-900 text-white shadow-lg">
+              <div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-3xl bg-gradient-to-r text-white shadow-glass">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="size-2 rounded-full bg-emerald-400 animate-ping" />
-                    <span className="font-mono text-xs font-bold uppercase tracking-widest text-purple-200">
+                    <span className="size-2 rounded-full bg-ok animate-ping" />
+                    <span className="font-mono text-xs font-bold uppercase tracking-widest text-tertiary">
                       Primary Filing Cutoff
                     </span>
                   </div>
                   <h3 className="text-base sm:text-lg font-black">
                     31 July 2026 — Non-Audit ITR-1 / ITR-2 Deadline
                   </h3>
-                  <p className="text-xs text-purple-200 max-w-xl">
+                  <p className="text-xs text-tertiary max-w-xl">
                     Filing on or before July 31 avoids mandatory Section 234F late fees (₹5,000) and preserves the right to carry forward losses.
                   </p>
                 </div>
@@ -307,7 +307,7 @@ export default function TaxCalendarModal({ isOpen, onClose, lang }: TaxCalendarM
                   <button
                     type="button"
                     onClick={handlePrintPdfCalendar}
-                    className="px-3.5 py-2 rounded-xl bg-white text-purple-900 hover:bg-white/90 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+                    className="px-3.5 py-2 rounded-xl bg-paper-3 text-tertiary hover:bg-white/90 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-sm"
                   >
                     <Printer size={14} />
                     <span>{isHindi ? "पीडीएफ प्रिंट करें" : "Print / PDF Schedule"}</span>
@@ -343,8 +343,8 @@ export default function TaxCalendarModal({ isOpen, onClose, lang }: TaxCalendarM
                       type="button"
                       onClick={() => setCategory(cat.id)}
                       className={`px-3 py-1 rounded-xl border text-xs font-semibold transition cursor-pointer ${
-                        category === cat.id
-                          ? "bg-purple-600 text-white border-purple-600 font-bold"
+ category === cat.id
+ ? "bg-tertiary text-white border-tertiary/40 font-bold"
                           : "bg-paper-2 border-line text-ink-2 hover:text-ink"
                       }`}
                     >
@@ -364,8 +364,8 @@ export default function TaxCalendarModal({ isOpen, onClose, lang }: TaxCalendarM
                   <div
                     key={d.id}
                     className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl p-4 border transition ${
-                      d.isCrucial
-                        ? "border-purple-600 bg-purple-50/30 dark:bg-purple-950/20 shadow-xs ring-1 ring-purple-600"
+ d.isCrucial
+ ? "border-tertiary/40 bg-tertiary/15  shadow-xs ring-1 ring-tertiary/40"
                         : "border-line bg-paper-2"
                     }`}
                   >
@@ -373,7 +373,7 @@ export default function TaxCalendarModal({ isOpen, onClose, lang }: TaxCalendarM
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs font-bold text-ink">{d.dateStr}</span>
                         {d.isCrucial && (
-                          <span className="rounded-full bg-purple-600 text-white px-2.5 py-0.5 text-[10px] font-bold">
+                          <span className="rounded-full bg-tertiary text-white px-2.5 py-0.5 text-[10px] font-bold">
                             {isHindi ? "अंतिम तारीख" : "Statutory Due Date"}
                           </span>
                         )}
@@ -384,7 +384,7 @@ export default function TaxCalendarModal({ isOpen, onClose, lang }: TaxCalendarM
 
                     <div className="text-start sm:text-end shrink-0 text-xs">
                       <span className="flex items-center sm:justify-end gap-1 text-[11px] text-ink-3 font-mono">
-                        <AlertTriangle size={13} className="text-amber-500 shrink-0" />
+                        <AlertTriangle size={13} className="text-money shrink-0" />
                         <span>{isHindi ? d.penaltyHi : d.penaltyEn}</span>
                       </span>
                     </div>
@@ -401,7 +401,7 @@ export default function TaxCalendarModal({ isOpen, onClose, lang }: TaxCalendarM
             <div className="space-y-6 animate-in fade-in duration-200">
               <div className="rounded-2xl border border-line bg-paper-2 p-5 space-y-2">
                 <span className="font-bold text-sm text-ink flex items-center gap-2">
-                  <Calculator size={18} className="text-purple-600" />
+                  <Calculator size={18} className="text-tertiary" />
                   <span>{isHindi ? "धारा 234 ब्याज एवं विलंब शुल्क सिम्युलेटर:" : "Section 234 Interest & Penalty Estimator:"}</span>
                 </span>
                 <p className="text-xs text-ink-2 leading-relaxed">
@@ -423,7 +423,7 @@ export default function TaxCalendarModal({ isOpen, onClose, lang }: TaxCalendarM
                       step={5000}
                       value={unpaidTaxAmount}
                       onChange={(e) => setUnpaidTaxAmount(Math.max(0, parseInt(e.target.value, 10) || 0))}
-                      className="w-full pl-8 pr-4 py-2.5 font-mono text-sm font-bold rounded-xl border border-line bg-paper text-ink focus:border-purple-600 focus:outline-none"
+                      className="w-full pl-8 pr-4 py-2.5 font-mono text-sm font-bold rounded-xl border border-line bg-paper text-ink focus:border-tertiary/40 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -435,7 +435,7 @@ export default function TaxCalendarModal({ isOpen, onClose, lang }: TaxCalendarM
                   <select
                     value={monthsLate}
                     onChange={(e) => setMonthsLate(parseInt(e.target.value, 10))}
-                    className="w-full p-2.5 font-semibold text-xs rounded-xl border border-line bg-paper text-ink focus:border-purple-600 focus:outline-none"
+                    className="w-full p-2.5 font-semibold text-xs rounded-xl border border-line bg-paper text-ink focus:border-tertiary/40 focus:outline-none"
                   >
                     <option value={0}>On Time (Filing by July 31) — ₹0 Penalty</option>
                     <option value={1}>1 Month Delay (Filed in August)</option>
@@ -451,7 +451,7 @@ export default function TaxCalendarModal({ isOpen, onClose, lang }: TaxCalendarM
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="p-4 rounded-2xl border border-line bg-paper space-y-1">
                   <span className="text-[10px] font-mono uppercase text-ink-3 block">Section 234A Interest</span>
-                  <span className="font-mono text-lg font-black text-rose-600">
+                  <span className="font-mono text-lg font-black text-bad">
                     {formatMoney(sec234AInterest, lang)}
                   </span>
                   <span className="text-[10px] text-ink-2 block">1% per month on unpaid tax</span>
@@ -459,20 +459,20 @@ export default function TaxCalendarModal({ isOpen, onClose, lang }: TaxCalendarM
 
                 <div className="p-4 rounded-2xl border border-line bg-paper space-y-1">
                   <span className="text-[10px] font-mono uppercase text-ink-3 block">Section 234F Late Fee</span>
-                  <span className="font-mono text-lg font-black text-amber-600">
+                  <span className="font-mono text-lg font-black text-amber-ink">
                     {formatMoney(sec234FLateFee, lang)}
                   </span>
                   <span className="text-[10px] text-ink-2 block">Mandatory statutory fee</span>
                 </div>
 
-                <div className="p-4 rounded-2xl border-2 border-purple-500 bg-purple-50/20 dark:bg-purple-950/20 space-y-1">
-                  <span className="text-[10px] font-mono uppercase font-bold text-purple-700 dark:text-purple-300 block">
+                <div className="p-4 rounded-2xl border-2 border-tertiary/40 bg-tertiary/15 space-y-1">
+                  <span className="text-[10px] font-mono uppercase font-bold text-tertiary block">
                     Total Avoidable Penal Cost
                   </span>
-                  <span className="font-mono text-xl font-black text-purple-700 dark:text-purple-300">
+                  <span className="font-mono text-xl font-black text-tertiary">
                     {formatMoney(totalPenalCost, lang)}
                   </span>
-                  <span className="text-[10px] text-purple-600 dark:text-purple-400 block font-semibold">
+                  <span className="text-[10px] text-tertiary block font-semibold">
                     Saved by filing before July 31!
                   </span>
                 </div>
@@ -485,8 +485,8 @@ export default function TaxCalendarModal({ isOpen, onClose, lang }: TaxCalendarM
           {/* ======================================================================= */}
           {activeTab === "exemptions" && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex items-start gap-3 rounded-2xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/40 dark:bg-emerald-950/20 p-5 text-xs">
-                <ShieldCheck size={20} className="text-emerald-600 shrink-0 mt-0.5" />
+              <div className="flex items-start gap-3 rounded-2xl border border-ok/40 bg-ok-soft p-5 text-xs">
+                <ShieldCheck size={20} className="text-ok-ink shrink-0 mt-0.5" />
                 <div className="space-y-1.5">
                   <h4 className="font-bold text-sm text-ink">
                     {isHindi ? "धारा 207 — वरिष्ठ नागरिकों को अग्रिम कर से पूर्ण छूट" : "Section 207 — Full Advance Tax Exemption for Senior Citizens"}
@@ -502,7 +502,7 @@ export default function TaxCalendarModal({ isOpen, onClose, lang }: TaxCalendarM
               {/* Section 119(2)(b) Condonation Procedure */}
               <div className="rounded-2xl border border-line bg-paper-2 p-5 space-y-3 text-xs">
                 <h4 className="font-bold text-ink flex items-center gap-2">
-                  <Info size={16} className="text-blue-600" />
+                  <Info size={16} className="text-tertiary" />
                   <span>{isHindi ? "धारा 119(2)(b) विलंब माफी याचिका (Condonation of Delay):" : "Section 119(2)(b) Condonation of Delay Procedure:"}</span>
                 </h4>
                 <p className="text-ink-2 leading-relaxed">
@@ -520,7 +520,7 @@ export default function TaxCalendarModal({ isOpen, onClose, lang }: TaxCalendarM
         {/* ========================================================================= */}
         <div className="shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-line p-4 sm:p-5 bg-paper">
           <div className="flex items-center gap-2 text-xs text-ink-3">
-            <Calendar size={15} className="text-purple-600" />
+            <Calendar size={15} className="text-tertiary" />
             <span>
               {isHindi
                 ? "निर्धारण वर्ष 2026-27 के लिए सीबीडीटी वैधानिक तिथियां"
@@ -541,7 +541,7 @@ export default function TaxCalendarModal({ isOpen, onClose, lang }: TaxCalendarM
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 sm:flex-initial rounded-xl bg-purple-600 hover:bg-purple-700 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-purple-600/25 transition cursor-pointer"
+              className="flex-1 sm:flex-initial rounded-xl bg-tertiary hover:opacity-90 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-purple-600/25 transition cursor-pointer"
             >
               {isHindi ? "बंद करें" : "Close"}
             </button>

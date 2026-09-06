@@ -45,7 +45,7 @@ export default function NoticeModal({
             initial={{ scale: 0.95, y: 15 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, y: 15 }}
-            className="bg-paper border border-line max-w-lg w-full rounded-2xl p-6 shadow-2xl space-y-5 text-left"
+            className="bg-paper border border-line max-w-lg w-full rounded-2xl p-6 shadow-glass space-y-5 text-left"
           >
             <div className="space-y-2 border-b border-line pb-3">
               <h3 className="text-base font-bold text-ink leading-tight">
@@ -64,7 +64,7 @@ export default function NoticeModal({
                   <button
                     onClick={() => setNoticeAgreed("agree")}
                     className={`flex-1 py-2 px-3 rounded border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
-                      noticeAgreed === "agree" 
+ noticeAgreed === "agree"
                         ? "bg-money-soft border-money text-money" 
                         : "border-line text-ink-2 hover:bg-paper-2"
                     }`}
@@ -76,7 +76,7 @@ export default function NoticeModal({
                   <button
                     onClick={() => setNoticeAgreed("disagree")}
                     className={`flex-1 py-2 px-3 rounded border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
-                      noticeAgreed === "disagree" 
+ noticeAgreed === "disagree"
                         ? "bg-alarm-soft border-alarm text-alarm" 
                         : "border-line text-ink-2 hover:bg-paper-2"
                     }`}
@@ -119,7 +119,7 @@ export default function NoticeModal({
               <button
                 onClick={saveNoticeResponse}
                 disabled={!noticeAgreed || !noticeResponseText}
-                className="flex-1 bg-navy hover:opacity-90 text-paper dark:text-white py-2 rounded text-sm font-semibold transition-colors disabled:opacity-50"
+                className="flex-1 ink-surface hover:opacity-90 text-paper py-2 rounded text-sm font-semibold transition-colors disabled:opacity-50"
               >
                 {localize("Send Response", lang)}
               </button>

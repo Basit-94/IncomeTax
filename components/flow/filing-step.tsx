@@ -9,6 +9,7 @@ import { formatMoney } from "../../lib/money";
 import { computeForPersona } from "../../lib/return/compute";
 import { localize } from "../mock-i18n";
 import type { CAReviewRecord } from "@/lib/ca/ca-store";
+import { Munshi, MunshiAvatar } from "../brand/munshi";
 
 type Stage = "idle" | "checking" | "sealing" | "committing" | "done" | "error";
 
@@ -107,8 +108,8 @@ export default function FilingStep({
   if (stage === "done") {
     return (
       <div className="max-w-md mx-auto space-y-6 py-8 text-center">
-        <m.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
-          <CheckCircle2 size={48} className="text-money mx-auto" />
+        <m.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex justify-center">
+          <Munshi size={96} />
         </m.div>
         {/* WCAG 4.1.3: the success screen replaces the form, so the outcome is
             announced rather than left to the user to discover. */}
@@ -116,15 +117,15 @@ export default function FilingStep({
           {t.filing.stepFiled} {t.filing.ackHeading}
         </p>
         <div className="space-y-2">
-          <h2 className="text-3xl font-extrabold tracking-tight text-ink">{t.filing.stepFiled}</h2>
+          <h2 className="text-[30px] font-extrabold tracking-[-0.03em] text-ink">{t.filing.stepFiled}</h2>
           <p className="text-base font-bold text-ink">{t.filing.ackHeading}</p>
           <p className="text-sm text-ink-2 leading-relaxed text-left">{t.filing.ackBody}</p>
           {submissionId && (
-            <div className="my-4 p-4 bg-teal-50 border border-teal-200 rounded-2xl text-left space-y-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
-              <span className="block text-[10px] font-bold text-teal-800 uppercase tracking-wider">
+            <div className="my-4 px-4 py-3.5 bg-ok-soft rounded-[16px] text-left space-y-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
+              <span className="block text-xs font-bold text-ok">
                 e-Filing Receipt ID (Spring Boot)
               </span>
-              <code className="block text-xs font-mono font-semibold text-teal-950 break-all select-all">
+              <code className="block text-[12.5px] font-mono font-semibold text-ink break-all select-all">
                 {submissionId}
               </code>
             </div>
@@ -133,7 +134,7 @@ export default function FilingStep({
         </div>
         <button
           onClick={onBack}
-          className="w-full bg-navy hover:opacity-90 text-paper dark:text-white font-semibold py-3.5 px-6 rounded-xl transition-colors shadow-sm text-sm"
+          className="ink-surface w-full hover:opacity-90 font-bold h-[46px] px-6 rounded-[14px] transition-opacity text-[14.5px] cursor-pointer"
         >
           {t.dashboard.refundTimeline}
         </button>
@@ -161,21 +162,21 @@ export default function FilingStep({
           : ""}
       </p>
       <div className="space-y-1">
-        <p className="text-sm font-semibold text-money">{t.flow.file}</p>
-        <h2 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">{t.filing.heading}</h2>
+        <div className="flex items-center gap-3 pb-1"><MunshiAvatar size={36} /><p className="text-xs font-bold uppercase tracking-[.08em] text-money">{t.flow.file}</p></div>
+        <h2 className="text-[26px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink">{t.filing.heading}</h2>
         <p className="text-sm text-ink-2 leading-relaxed">{t.filing.sub}</p>
       </div>
 
       {/* FINAL FIGURE — one number, engine-computed */}
       <div className="recovery-callout space-y-1 p-5">
-        <span className="block text-xs font-mono uppercase tracking-wider text-money font-semibold">
+        <span className="block text-xs text-amber-ink font-bold">
           {b.refundOrDue >= 0 ? t.check.refundDue : t.check.balanceDue}
         </span>
-        <span className={`block text-3xl font-extrabold tabular tracking-tight ${b.refundOrDue >= 0 ? "text-money" : "text-alarm"}`}>
+        <span className={`block text-[34px] leading-none font-extrabold tabular tracking-[-0.03em] ${b.refundOrDue >= 0 ? "text-ok" : "text-bad"}`}>
           {formatMoney(Math.abs(b.refundOrDue), lang)}
         </span>
         {mustPayFirst && (
-          <p className="pt-1 text-xs leading-relaxed text-ink-2">
+          <p className="pt-1 text-xs leading-relaxed text-amber-ink/80">
             {localize("A return filed with tax outstanding is defective under section 139(9). Pay the balance first; filing unlocks once nothing is due.", lang)}
           </p>
         )}
@@ -204,15 +205,15 @@ export default function FilingStep({
             return (
               <div key={key} className="flex items-center gap-2 text-sm">
                 {failed ? (
-                  <span className="w-4 h-4 rounded-full bg-alarm shrink-0" />
+                  <span className="w-4 h-4 rounded-full bg-bad shrink-0" />
                 ) : complete ? (
-                  <CheckCircle2 size={16} className="text-money shrink-0" />
+                  <CheckCircle2 size={16} className="text-ok shrink-0" />
                 ) : active ? (
-                  <Loader2 size={16} className="text-navy dark:text-ink animate-spin shrink-0" />
+                  <Loader2 size={16} className="text-money animate-spin shrink-0" />
                 ) : (
                   <span className="w-4 h-4 rounded-full border-2 border-line shrink-0" />
                 )}
-                <span className={complete ? "text-ink-2 line-through decoration-line" : failed ? "text-alarm font-semibold" : active ? "text-navy dark:text-ink font-semibold" : "text-ink-3"}>
+                <span className={complete ? "text-ink-2 line-through decoration-line" : failed ? "text-bad font-semibold" : active ? "text-ink font-semibold" : "text-ink-3"}>
                   {label}
                 </span>
               </div>
@@ -223,8 +224,8 @@ export default function FilingStep({
 
       {/* ERROR LADDER: cause + next action, nothing generic */}
       {stage === "error" && (
-        <div className="error-callout space-y-2 p-4">
-          <p className="text-sm font-semibold text-alarm">
+        <div className="bg-bad-soft rounded-[16px] space-y-2 px-4 py-3.5">
+          <p className="text-sm font-extrabold text-bad">
             {networkError ? t.filing.errorCauseNetwork : t.filing.errorCause}
           </p>
           <p className="text-xs text-ink-2 leading-relaxed">
@@ -232,7 +233,7 @@ export default function FilingStep({
           </p>
           <button
             onClick={beginFiling}
-            className="mt-1 bg-alarm hover:bg-alarm-deep text-paper text-xs font-semibold py-2 px-4 rounded-lg transition-colors"
+            className="btn-primary mt-1 text-[13px] h-[38px] px-4 rounded-[14px] transition-opacity cursor-pointer"
           >
             {t.filing.retry}
           </button>
@@ -286,7 +287,7 @@ export default function FilingStep({
           <div className="flex flex-wrap gap-2.5">
             <button
               onClick={onBack}
-              className="flex-1 border border-line text-ink-2 py-3 px-3 rounded-xl hover:bg-paper-2 transition-colors text-xs font-semibold"
+              className="glass-flat flex-1 text-ink-2 hover:text-ink h-[46px] px-4 rounded-[14px] transition-colors text-[14.5px] font-semibold cursor-pointer"
             >
               {t.common.back}
             </button>
@@ -294,9 +295,9 @@ export default function FilingStep({
               <button
                 type="button"
                 onClick={onReviewWithCA}
-                className="flex-1 border border-teal-700/30 bg-teal-500/10 hover:bg-teal-500/20 text-teal-950 dark:text-teal-200 py-3 px-3 rounded-xl transition-colors text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                className="glass-flat flex-1 text-ink-2 hover:text-ink h-[46px] px-4 rounded-[14px] transition-colors text-[14.5px] font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <Award size={15} className="text-teal-600" />
+                <Award size={15} className="text-money" />
                 <span>Review with CA</span>
               </button>
             )}
@@ -304,7 +305,7 @@ export default function FilingStep({
               <button
                 onClick={onPayOutstanding}
                 data-action="pay-outstanding"
-                className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-alarm px-4 py-3 text-xs font-bold text-white shadow-sm transition-colors hover:opacity-90 cursor-pointer"
+                className="flex-[2] flex items-center justify-center gap-2 rounded-[14px] bg-bad h-[46px] px-4 text-[14.5px] font-bold text-white transition-opacity hover:opacity-90 cursor-pointer"
               >
                 <Banknote size={16} />
                 <span>{localize("Pay outstanding tax (Challan 280)", lang)}</span>
@@ -312,7 +313,7 @@ export default function FilingStep({
             ) : (
               <button
                 onClick={beginFiling}
-                className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-navy px-4 py-3 text-xs font-bold text-white shadow-sm transition-colors hover:opacity-90 cursor-pointer"
+                className="btn-primary flex-[2] flex items-center justify-center gap-2 rounded-[14px] h-[46px] px-4 text-[14.5px] transition-opacity cursor-pointer"
               >
                 <FileCheck size={16} />
                 <span>{t.file.confirmAndFile}</span>

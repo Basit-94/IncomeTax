@@ -68,7 +68,7 @@ export function QuickEditModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-navy/60 backdrop-blur-sm"
+            className="fixed inset-0 ink-surface backdrop-blur-sm"
           />
 
           {/* Modal Content */}
@@ -76,19 +76,19 @@ export function QuickEditModal({
             initial={{ scale: 0.95, opacity: 0, y: 15 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 15 }}
-            className="bg-paper rounded-2xl max-w-md w-full border border-line shadow-2xl relative overflow-hidden z-10 flex flex-col"
+            className="bg-paper rounded-2xl max-w-md w-full border border-line shadow-glass relative overflow-hidden z-10 flex flex-col"
           >
             {/* Header */}
             <div className="p-5 border-b border-line flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-navy dark:text-ink">Quick Edit Actual Figures</h3>
+                <h3 className="text-lg font-bold text-ink dark:text-ink">Quick Edit Actual Figures</h3>
                 <p className="text-xs text-ink-2 mt-0.5">
                   Update primary facts below to recalculate tax liabilities instantly.
                 </p>
               </div>
               <button
                 onClick={onClose}
-                className="text-ink-2 hover:text-ink hover:bg-slate-100 p-1.5 rounded-full transition cursor-pointer"
+                className="text-ink-2 hover:text-ink hover:bg-paper-3 p-1.5 rounded-full transition cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -161,13 +161,13 @@ export function QuickEditModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="min-h-10 px-4 rounded-xl border border-line text-sm font-semibold text-ink-2 hover:bg-slate-50 transition cursor-pointer"
+                  className="min-h-10 px-4 rounded-xl border border-line text-sm font-semibold text-ink-2 hover:bg-paper-3 transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="min-h-10 px-5 rounded-xl bg-navy hover:opacity-90 text-white text-sm font-bold flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+                  className="min-h-10 px-5 rounded-xl ink-surface hover:opacity-90 text-white text-sm font-bold flex items-center gap-1.5 shadow-sm transition cursor-pointer"
                 >
                   <Check size={16} />
                   <span>{t.common.saveAndGoOn}</span>

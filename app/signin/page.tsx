@@ -27,7 +27,7 @@ import type { Lang, Persona, PersonaId, Provenance } from "@/lib/types";
 import { addDocumentToVault, type CitizenVaultUser } from "@/lib/vault/vault-store";
 import AuthPortal from "@/components/auth/auth-portal";
 import { PrototypeBanner } from "@/components/agentic/header-frame";
-import { LogoMark } from "@/components/brand/logo";
+import { BrandBox } from "@/components/agentic/header-frame";
 import OtpScreen from "@/components/otp-screen";
 import LanguageMenu from "@/components/ui/language-menu";
 
@@ -45,7 +45,7 @@ function SignIn() {
   const initialTab = params.get("tab");
 
   const [lang, setLang] = useState<Lang>("en");
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
   const t = dict(lang);
 
   /* --- preferences: same keys and effects as the other pages ------------- */
@@ -342,18 +342,18 @@ function SignIn() {
   return (
     <div className="min-h-dvh flex flex-col bg-paper text-ink">
       <PrototypeBanner t={t} />
-      <header className="h-[56px] shrink-0 px-4 flex items-center gap-3">
+      <header className="h-[64px] shrink-0 px-6 flex items-center gap-3.5">
         <a href="/" className="flex items-center shrink-0 hover:opacity-80" aria-label={t.shell.productName}>
-          <LogoMark t={t} size="sm" />
-        </a>
-        <a href="/" className="hidden sm:inline-flex items-center gap-1.5 text-sm text-ink-2 hover:text-ink">
-          <ArrowLeft size={14} aria-hidden="true" /> {localize("Back to home", lang)}
+          <BrandBox t={t} />
         </a>
         <div className="flex-1" />
         <LanguageMenu lang={lang} onChange={changeLang} label={t.shell.language} className="shrink-0" />
-        <button type="button" onClick={toggleTheme} className="size-[38px] rounded-full border border-line bg-paper-2 text-ink-2 hover:text-ink flex items-center justify-center cursor-pointer shrink-0" aria-label={theme === "dark" ? t.shell.light : t.shell.dark}>
+        <button type="button" onClick={toggleTheme} className="glass-flat size-[38px] rounded-full text-ink-2 hover:text-ink flex items-center justify-center cursor-pointer shrink-0" aria-label={theme === "dark" ? t.shell.light : t.shell.dark}>
           {theme === "dark" ? <Sun size={15} className="text-money" aria-hidden="true" /> : <Moon size={15} className="text-money" aria-hidden="true" />}
         </button>
+        <a href="/" className="hidden sm:inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-ink-2 hover:text-ink">
+          <ArrowLeft size={14} aria-hidden="true" /> {localize("Back to home", lang)}
+        </a>
       </header>
 
       <main id="main-content" className="flex-1 px-4 py-6 sm:py-10">

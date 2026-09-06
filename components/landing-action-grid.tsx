@@ -19,6 +19,7 @@ import {
   Lock,
 } from "lucide-react";
 import { getLandingCards, type LandingActionCard } from "@/lib/landingCards";
+import Card3D from "./ui/card-3d";
 import { getPortalStrings } from "@/lib/i18n/portalTranslations";
 import type { Lang, Notice, BankAccount, Persona, TaxAlreadyPaid } from "@/lib/types";
 import TaxOptimizerModal from "./modals/TaxOptimizerModal";
@@ -30,7 +31,6 @@ import PayTaxModal from "./modals/PayTaxModal";
 import NoticesModal from "./modals/NoticesModal";
 import StatusHistoryModal from "./modals/StatusHistoryModal";
 import type { IngestedDocument, SelfAssessmentPayment } from "@/context/TaxReturnContext";
-import Card3D from "./ui/card-3d";
 
 interface LandingActionGridProps {
   lang: Lang;
@@ -75,13 +75,13 @@ interface LandingActionGridProps {
 }
 
 const CARD_ICONS = {
-  file_return: { icon: FileText, color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300", glow: "rgba(16, 185, 129, 0.35)" },
-  match_records: { icon: FileCheck2, color: "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300", glow: "rgba(59, 130, 246, 0.35)" },
-  tax_optimizer: { icon: Calculator, color: "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300", glow: "rgba(245, 158, 11, 0.35)" },
-  pay_tax: { icon: CreditCard, color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300", glow: "rgba(99, 102, 241, 0.35)" },
-  notices: { icon: ShieldAlert, color: "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300", glow: "rgba(244, 63, 94, 0.35)" },
-  status_history: { icon: Clock, color: "bg-teal-100 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300", glow: "rgba(20, 184, 166, 0.35)" },
-  tax_calendar: { icon: Calendar, color: "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300", glow: "rgba(168, 85, 247, 0.35)" },
+  file_return: { icon: FileText, color: "bg-ok/15 text-ok", glow: "rgba(30, 158, 112, 0.35)" },
+  match_records: { icon: FileCheck2, color: "bg-tertiary/15 text-tertiary", glow: "rgba(139, 108, 240, 0.35)" },
+  tax_optimizer: { icon: Calculator, color: "bg-warn/15 text-warn", glow: "rgba(184, 122, 0, 0.3)" },
+  pay_tax: { icon: CreditCard, color: "bg-tertiary/15 text-tertiary", glow: "rgba(139, 108, 240, 0.35)" },
+  notices: { icon: ShieldAlert, color: "bg-bad/15 text-bad", glow: "rgba(217, 64, 58, 0.3)" },
+  status_history: { icon: Clock, color: "bg-ok/15 text-ok", glow: "rgba(30, 158, 112, 0.35)" },
+  tax_calendar: { icon: Calendar, color: "bg-tertiary/15 text-tertiary", glow: "rgba(139, 108, 240, 0.35)" },
 };
 
 export default function LandingActionGrid({
@@ -221,26 +221,26 @@ export default function LandingActionGrid({
       {card1 && (
         <Card3D
           key={card1.id}
-          glowColor="rgba(16, 185, 129, 0.35)"
+          glowColor="rgba(255, 122, 26, 0.35)"
           depth={26}
-          className="relative w-full flex flex-col justify-between rounded-2xl border-2 border-emerald-500/50 bg-paper-2 dark:bg-[#0c1424]/90 p-5 sm:p-6 text-start shadow-xl backdrop-blur-xl transition-all"
+          className="glass relative w-full flex flex-col justify-between rounded-3xl border-[1.5px] border-money p-6 sm:px-7 text-start"
         >
           <div>
             {/* Card Top: Number + Badges + Icon */}
             <div className="flex items-start justify-between">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono text-xs sm:text-sm font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 px-2.5 py-0.5 rounded-lg border border-emerald-400/40">
+                <span className="rounded-full bg-amber-bg px-2.5 py-1 text-xs font-bold text-amber-ink">
                   {card1.number}
                 </span>
-                <span className="rounded-lg border border-line dark:border-white/10 bg-paper-3 dark:bg-slate-800/80 px-2 py-0.5 text-[11px] font-mono font-medium text-ink-2 dark:text-slate-300">
+                <span className="glass-flat rounded-full px-2.5 py-1 text-xs font-mono font-medium tracking-[.04em] text-ink-3">
                   {card1.badge}
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-mono font-bold text-emerald-800 dark:text-emerald-300">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-ok-soft px-2.5 py-1 text-xs font-bold text-ok-ink">
+                  <span className="h-1.5 w-1.5 rounded-full bg-ok" aria-hidden="true" />
                   <span>{ps.primaryBadge}</span>
                 </span>
               </div>
-              <div className="flex size-9 sm:size-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 shrink-0 shadow-sm">
+              <div className="ink-surface flex size-11 items-center justify-center rounded-[14px] shrink-0">
                 <FileText size={18} aria-hidden="true" />
               </div>
             </div>
@@ -248,11 +248,11 @@ export default function LandingActionGrid({
             {/* Card Title & Description */}
             <div className="mt-3.5 space-y-1">
               <div className="flex items-center gap-1.5">
-                <h3 className="font-sans text-xl sm:text-2xl font-bold text-ink dark:text-white">
+                <h3 className="font-sans text-2xl font-extrabold tracking-[-0.02em] text-ink">
                   {card1.title}
                 </h3>
               </div>
-              <p className="text-xs sm:text-sm leading-relaxed text-ink-2 dark:text-slate-300 max-w-3xl">
+              <p className="text-sm leading-relaxed text-ink-2 max-w-3xl">
                 {card1.subtitle}
               </p>
             </div>
@@ -263,29 +263,29 @@ export default function LandingActionGrid({
               <button
                 type="button"
                 onClick={handleNormalFiling}
-                className="group/opt relative flex flex-col justify-between rounded-xl border border-line dark:border-white/10 hover:border-emerald-500/80 bg-paper dark:bg-[#10182b]/80 hover:bg-paper-3 dark:hover:bg-[#131d33] p-4 text-start transition-all hover:shadow-[0_10px_30px_-10px_rgba(16,185,129,0.3)] hover:-translate-y-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-money"
+                className="group/opt relative flex flex-col justify-between rounded-[18px] border border-glass-edge bg-white/70 dark:bg-white/[0.06] hover:border-ok/60 p-4 text-start transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-money"
               >
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-300/40">
+                    <span className="rounded-full bg-ok-soft px-2.5 py-1 text-xs font-bold text-ok-ink">
                       {ps.option1Badge}
                     </span>
-                    <div className="size-7 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 flex items-center justify-center group-hover/opt:scale-110 transition-transform">
+                    <div className="size-7 rounded-[9px] bg-ok/15 text-ok flex items-center justify-center">
                       <FileText size={14} />
                     </div>
                   </div>
 
                   <div className="mt-3 space-y-1">
-                    <h4 className="font-sans text-[15px] font-bold text-ink dark:text-white group-hover/opt:text-emerald-600 dark:group-hover/opt:text-emerald-400 transition-colors">
+                    <h4 className="font-sans text-[15px] font-bold text-ink">
                       {ps.option1Title}
                     </h4>
-                    <p className="text-xs leading-relaxed text-ink-2 dark:text-slate-300">
+                    <p className="text-[12.5px] leading-relaxed text-ink-2">
                       {ps.option1Desc}
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-4 flex items-center justify-between border-t border-line/50 dark:border-white/10 pt-2.5 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                <div className="mt-4 flex items-center justify-between pt-2 text-[13px] font-bold text-ok">
                   <span>
                     {activeCitizen && ((activeCitizen.salary ?? 0) > 0 || (activeCitizen.taxDue ?? 0) > 0)
                       ? ps.continueFiling
@@ -303,28 +303,24 @@ export default function LandingActionGrid({
                 onDragOver={handleOption2DragOver}
                 onDragLeave={handleOption2DragLeave}
                 onDrop={handleOption2Drop}
-                className={`group/opt relative flex flex-col justify-between rounded-xl border p-4 text-start transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                className={`group/opt relative flex flex-col justify-between rounded-[18px] border p-4 text-start transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-money ${
                   isOption2Dragging
-                    ? "border-blue-500 bg-blue-500/20 dark:bg-blue-950/80 shadow-[0_0_35px_rgba(59,130,246,0.6)] ring-2 ring-blue-400 scale-[1.02]"
-                    : "border-line dark:border-white/10 hover:border-blue-500/80 bg-paper dark:bg-[#10182b]/80 hover:bg-paper-3 dark:hover:bg-[#131d33] hover:shadow-[0_10px_30px_-10px_rgba(59,130,246,0.3)] hover:-translate-y-1"
+                    ? "border-money bg-amber-bg ring-[3px] ring-money/30 scale-[1.01]"
+                    : "border-dashed border-money/60 bg-white/70 dark:bg-white/[0.06] hover:border-money"
                 }`}
               >
                 <div className="pointer-events-none w-full">
                   <div className="flex items-center justify-between">
                     <span
-                      className={`font-mono text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border transition-colors ${
-                        isOption2Dragging
-                          ? "text-blue-200 bg-blue-600 border-blue-400 animate-pulse"
-                          : "text-blue-700 dark:text-blue-400 bg-blue-100/70 dark:bg-blue-950/60 border-blue-300/40"
+                      className={`rounded-full px-2.5 py-1 text-xs font-bold transition-colors ${
+                        isOption2Dragging ? "bg-money text-white animate-pulse" : "bg-amber-bg text-amber-ink"
                       }`}
                     >
                       {isOption2Dragging ? "Drop PDF Now" : ps.option2Badge}
                     </span>
                     <div
-                      className={`size-7 rounded-lg flex items-center justify-center transition-all ${
-                        isOption2Dragging
-                          ? "bg-blue-500 text-white scale-125 animate-bounce shadow-md"
-                          : "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 group-hover/opt:scale-110"
+                      className={`size-7 rounded-[9px] flex items-center justify-center transition-all ${
+                        isOption2Dragging ? "bg-money text-white scale-125" : "bg-money/15 text-money"
                       }`}
                     >
                       <Upload size={14} />
@@ -333,15 +329,11 @@ export default function LandingActionGrid({
 
                   <div className="mt-3 space-y-1">
                     <h4
-                      className={`font-sans text-[15px] font-bold transition-colors ${
-                        isOption2Dragging
-                          ? "text-blue-500 dark:text-blue-300"
-                          : "text-ink dark:text-white group-hover/opt:text-blue-600 dark:group-hover/opt:text-blue-400"
-                      }`}
+                      className={`font-sans text-[15px] font-bold transition-colors ${isOption2Dragging ? "text-money" : "text-ink"}`}
                     >
                       {isOption2Dragging ? "Drop your Form 16 / AIS PDF here" : ps.option2Title}
                     </h4>
-                    <p className="text-xs leading-relaxed text-ink-2 dark:text-slate-300">
+                    <p className="text-[12.5px] leading-relaxed text-ink-2">
                       {isOption2Dragging
                         ? "Release the mouse to auto-ingest Form 16 / AIS figures directly into your return draft."
                         : ps.option2Desc}
@@ -349,7 +341,7 @@ export default function LandingActionGrid({
                   </div>
                 </div>
 
-                <div className="pointer-events-none mt-4 flex items-center justify-between border-t border-line/50 dark:border-white/10 pt-2.5 text-xs font-bold text-blue-700 dark:text-blue-400">
+                <div className="pointer-events-none mt-4 flex items-center justify-between pt-2 text-[13px] font-bold text-money">
                   <span>{isOption2Dragging ? "Release to Ingest" : ps.option2Btn}</span>
                   <Upload
                     size={14}
@@ -361,11 +353,11 @@ export default function LandingActionGrid({
           </div>
 
           {/* Card Footer: Replaces tag + Security Note */}
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-line/50 dark:border-white/10 pt-3 text-[11px] sm:text-xs text-ink-3">
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-2 pt-2.5 text-xs text-ink-3">
             <span className="truncate">
-              <span className="font-semibold text-ink-2 dark:text-slate-300">{ps.consolidatesLabel}</span> {card1.replaces}
+              <span className="font-semibold text-ink-2">{ps.consolidatesLabel}</span> {card1.replaces}
             </span>
-            <span className="font-mono text-[10.5px] text-emerald-700 dark:text-emerald-400 flex items-center gap-1 font-semibold">
+            <span className="text-xs text-ok flex items-center gap-1.5 font-semibold">
               <Lock size={11} />
               <span>{ps.clientSideOnly}</span>
             </span>
@@ -376,16 +368,16 @@ export default function LandingActionGrid({
       {/* ========================================================================= */}
       {/* 2. THE REMAINING 6 ACTION CAPABILITIES (GRID)                             */}
       {/* ========================================================================= */}
-      <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 border-b border-line dark:border-white/10 pb-2.5 text-start pt-2">
+      <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 pb-1 text-start pt-2">
         <div>
-          <span className="font-mono text-[11px] font-bold tracking-widest text-money uppercase">
+          <span className="text-xs font-bold tracking-[.08em] text-money uppercase">
             {ps.coreCapabilities}
           </span>
-          <h2 className="font-sans text-xl font-bold text-ink dark:text-white">
+          <h2 className="font-sans text-xl font-extrabold tracking-[-0.02em] text-ink">
             {ps.sevenActionGrid}
           </h2>
         </div>
-        <span className="text-xs text-ink-3 dark:text-slate-300">
+        <span className="text-[12.5px] text-ink-3">
           {ps.clickToLaunch}
         </span>
       </div>
@@ -412,46 +404,40 @@ export default function LandingActionGrid({
               cardTitle = ps.paidCardTitle;
               cardSubtitle = ps.paidCardSub;
               cardBadge = ps.paidCardBadge;
-              cardColor = "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300";
+              cardColor = "bg-ok/15 text-ok";
               Icon = ShieldCheck;
             } else if (isNilDue) {
               cardTitle = ps.nilDueCardTitle;
               cardSubtitle = ps.nilDueCardSub;
               cardBadge = ps.nilDueCardBadge;
-              cardColor = "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300";
+              cardColor = "bg-ok/15 text-ok";
               Icon = ShieldCheck;
             } else {
               const dueAmt = activeCitizen.taxDue!;
               cardTitle = `${ps.payDueCardTitle}: ₹${dueAmt.toLocaleString("en-IN")}`;
               cardSubtitle = `${ps.payDueCardSub} (₹${dueAmt.toLocaleString("en-IN")})`;
               cardBadge = `₹${dueAmt.toLocaleString("en-IN")} ${ps.dueBadge}`;
-              cardColor = "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300";
+              cardColor = "bg-warn/15 text-warn";
             }
           }
 
           return (
-            <Card3D
-              key={c.id}
-              as="div"
-              glowColor={conf.glow}
-              depth={20}
-              className="rounded-xl"
-            >
+            <Card3D key={c.id} as="div" glowColor={conf.glow} depth={20} className="rounded-[20px]">
               <button
                 type="button"
                 onClick={() => handleCardClick(c.id)}
-                className="w-full h-full relative flex flex-col justify-between rounded-xl border border-line dark:border-white/10 bg-paper-2 dark:bg-[#0c1424]/90 p-4 text-start transition-all hover:border-money/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-money cursor-pointer backdrop-blur-xl"
+                className="glass w-full h-full relative flex flex-col justify-between rounded-[20px] p-5 text-start transition-colors hover:border-money/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-money cursor-pointer"
               >
                 <div>
                   {/* Card Top: Number + Badge + Icon */}
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-bold text-ink-3 dark:text-slate-300">{c.number}</span>
-                      <span className="rounded-md border border-line dark:border-white/10 bg-paper-3 dark:bg-slate-800/70 px-2 py-0.5 text-[11px] font-mono font-medium text-ink-2 dark:text-slate-300">
+                      <span className="font-mono text-[11px] text-ink-3">{c.number}</span>
+                      <span className="glass-flat rounded-full px-2.5 py-0.5 text-xs font-mono font-medium tracking-[.04em] text-ink-3">
                         {cardBadge}
                       </span>
                     </div>
-                    <div className={`flex size-8 items-center justify-center rounded-lg ${cardColor} transition-transform group-hover/3d:scale-110 shadow-sm`}>
+                    <div className={`flex size-[34px] items-center justify-center rounded-[11px] ${cardColor}`}>
                       <Icon size={16} aria-hidden="true" />
                     </div>
                   </div>
@@ -459,25 +445,25 @@ export default function LandingActionGrid({
                   {/* Card Title & Description */}
                   <div className="mt-3 space-y-1">
                     <div className="flex items-center gap-1.5">
-                      <h3 className="font-sans text-[15px] font-bold text-ink dark:text-white group-hover:text-money transition-colors">
+                      <h3 className="font-sans text-[15px] font-bold text-ink">
                         {cardTitle}
                       </h3>
                       {c.highlight && (
-                        <Sparkles size={13} className="text-amber-500 shrink-0" aria-hidden="true" />
+                        <Sparkles size={13} className="text-money shrink-0" aria-hidden="true" />
                       )}
                     </div>
-                    <p className="text-xs leading-relaxed text-ink-2 dark:text-slate-300">
+                    <p className="text-[12.5px] leading-relaxed text-ink-2">
                       {cardSubtitle}
                     </p>
                   </div>
                 </div>
 
                 {/* Card Footer: Replaces tag + Arrow */}
-                <div className="mt-4 flex items-center justify-between border-t border-line/50 dark:border-white/10 pt-2.5 text-[11px] text-ink-3">
+                <div className="mt-4 flex items-center justify-between pt-2 text-[11.5px] text-ink-3">
                   <span className="truncate">
-                    <span className="font-semibold text-ink-2 dark:text-slate-300">{ps.consolidatesLabel}</span> {c.replaces}
+                    <span className="font-semibold text-ink-2">{ps.consolidatesLabel}</span> {c.replaces}
                   </span>
-                  <span className="inline-flex items-center gap-0.5 font-semibold text-money opacity-75 transition-all group-hover/3d:opacity-100 group-hover/3d:translate-x-1">
+                  <span className="inline-flex items-center gap-0.5 font-semibold text-money">
                     <ChevronRight size={14} className="rtl:rotate-180" />
                   </span>
                 </div>

@@ -1,28 +1,23 @@
 "use client";
 
 /**
- * The public landing page — what a visitor sees at "/" before signing in
- * (user request 2026-09-06: "an awesome looking, well designed landing page").
+ * The public landing page — what a visitor sees at "/" before signing in.
  *
- * Design notes (docs/DESIGN.md Direction 13 + the HeyGov references):
- * - Palette and type are the site's own tokens: paper / ink / line / money /
- *   amber, the D13 serif for display, the grotesk for body, the mono for money.
- * - The signature is the thing Wapsi is actually about: a live "fact card" —
- *   one figure, who reported it, and the citizen's one decision — cycling
- *   through a demo return while the refund line stays put. No gradients, no
- *   stock illustration; the product's own material.
- * - Copy is the product's voice (docs/VOICE.md). One-off strings go through
- *   localize() with hi/ta, per the repo rule for component copy.
- * - Motion: one orchestrated element (the card), honouring reduced motion.
+ * Redesign 2026-09-06 (docs/redesign handoff, "Wapsi Landing Directions" turn 5,
+ * option 5a — Lilac & Tangerine): Munshi ji introduces himself, a demo composer
+ * types the way people actually write, three floating cards show one exchange
+ * each, and three plain promises follow. Everything a visitor can press leads
+ * to /signin. Copy goes through localize() (hi/ta) per the repo rule; the
+ * refund shown is Sunita's real engine figure (₹8,400), nothing invented.
  */
 
 import { useEffect, useState } from "react";
-import { ArrowRight, Check, Moon, ShieldCheck, Sun, X } from "lucide-react";
+import { ArrowRight, Moon, Sun } from "lucide-react";
 import type { Dict } from "@/lib/i18n";
-import { formatMoney } from "@/lib/money";
 import type { Lang } from "@/lib/types";
 import { PrototypeBanner } from "../agentic/header-frame";
-import { LogoMark } from "../brand/logo";
+import { LOGO_FALLBACK } from "../brand/logo";
+import { Munshi, MunshiAvatar, MunshiBubble } from "../brand/munshi";
 import { localize } from "../mock-i18n";
 import LanguageMenu from "../ui/language-menu";
 
@@ -36,173 +31,190 @@ export interface MarketingLandingProps {
   onDemo: () => void;
 }
 
-/** Sunita's demo return — the same figures the product itself computes (₹8,400 back). */
-const FACTS = [
-  { label: "Salary from Chettinad Textiles Pvt Ltd", amount: 420000, reporter: "Reported by your employer · Form 16" },
-  { label: "Interest your savings account earned", amount: 1240, reporter: "Reported by your bank · AIS" },
-  { label: "Tax already taken from your pay", amount: 8400, reporter: "Deducted by your employer · Form 26AS" },
-] as const;
+/** What the demo composer types, one sentence at a time — the register people really use, incl. Hindi. */
+const TYPED = [
+  "I got a job with a 12 LPA package and need to file my taxes",
+  "Do I have to file if my salary is 5 lakh?",
+  "मेरी सैलरी 5 लाख है, क्या मुझे रिटर्न भरना होगा?",
+];
 
 export default function MarketingLanding({ t, lang, changeLang, theme, toggleTheme, onSignIn, onDemo }: MarketingLandingProps) {
   const L = (s: string) => localize(s, lang);
-  const [i, setI] = useState(0);
-  const [confirmed, setConfirmed] = useState(false);
-
-  // One orchestrated moment: a fact is "confirmed", then the next one slides in. Off under reduced motion.
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const confirmAt = setTimeout(() => setConfirmed(true), 2600);
-    const next = setTimeout(() => {
-      setConfirmed(false);
-      setI((n) => (n + 1) % FACTS.length);
-    }, 4200);
-    return () => {
-      clearTimeout(confirmAt);
-      clearTimeout(next);
-    };
-  }, [i]);
-
-  const fact = FACTS[i];
+  const typed = useTypewriter(TYPED);
 
   return (
-    <div className="min-h-dvh flex flex-col bg-paper text-ink">
+    <div className="min-h-dvh flex flex-col text-ink">
       <PrototypeBanner t={t} />
-      <header className="h-[56px] shrink-0 px-4 sm:px-6 flex items-center gap-3">
-        <a href="/" className="flex items-center shrink-0 hover:opacity-80" aria-label={t.shell.productName}>
-          <LogoMark t={t} size="sm" />
+      <header className="relative h-[76px] shrink-0 px-6 sm:px-12 flex items-center gap-7">
+        <a href="/" className="flex items-center gap-2.5 hover:opacity-80" aria-label={t.shell.productName}>
+          <MunshiAvatar size={40} />
+          <span className="font-extrabold text-[26px] tracking-[-0.03em] text-ink-2">{t.shell.productName ?? LOGO_FALLBACK.name}</span>
+          <span className="text-sm font-medium text-ink-3">{t.shell.productNativeName ?? LOGO_FALLBACK.native}</span>
         </a>
         <div className="flex-1" />
+        <nav className="hidden md:flex gap-6 text-[15px] font-medium text-ink-2" aria-label={t.shell.productName}>
+          <a href="#meet" className="hover:text-ink">{L("Meet Munshi ji")}</a>
+          <a href="#how" className="hover:text-ink">{L("How it works")}</a>
+          <a href="#languages" className="hover:text-ink">{L("Languages")}</a>
+        </nav>
         <LanguageMenu lang={lang} onChange={changeLang} label={t.shell.language} className="shrink-0" />
-        <button type="button" onClick={toggleTheme} className="size-[38px] rounded-full border border-line bg-paper-2 text-ink-2 hover:text-ink flex items-center justify-center cursor-pointer shrink-0" aria-label={theme === "dark" ? t.shell.light : t.shell.dark}>
+        <button type="button" onClick={toggleTheme} className="glass-flat size-[38px] rounded-full text-ink-2 hover:text-ink flex items-center justify-center cursor-pointer shrink-0" aria-label={theme === "dark" ? t.shell.light : t.shell.dark}>
           {theme === "dark" ? <Sun size={15} className="text-money" aria-hidden="true" /> : <Moon size={15} className="text-money" aria-hidden="true" />}
         </button>
-        <button type="button" onClick={onSignIn} className="h-[38px] rounded-full bg-ink text-paper px-5 text-sm font-bold hover:opacity-90 cursor-pointer shrink-0">
+        <button type="button" onClick={onSignIn} className="glass h-11 rounded-full px-5 text-[15px] font-semibold text-ink-2 hover:text-ink cursor-pointer shrink-0">
           {L("Sign in")}
         </button>
       </header>
 
-      <main id="main-content" className="flex-1">
+      <main id="main-content" className="relative flex-1 px-6 sm:px-12 pt-10 sm:pt-16 text-center">
         {/* ---------------------------------------------------------------- hero -- */}
-        <section className="px-4 sm:px-6 pt-10 sm:pt-16 pb-14">
-          <div className="mx-auto max-w-6xl grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-            <div className="space-y-6">
-              <p className="cap">{L("Income tax, in plain words")}</p>
-              <h1 className="font-serif text-5xl sm:text-6xl lg:text-7xl leading-[1.02] tracking-tight text-ink text-balance">
-                {L("Your money, coming back.")}
-              </h1>
-              <p className="text-lg sm:text-xl text-ink-2 leading-relaxed max-w-xl">
-                {L("Tell Wapsi what's going on — a new job, a form you don't recognise, a refund you're waiting on. It checks what's already on record about you, asks only what it can't find, shows every figure with its source, and never files without your say-so.")}
-              </p>
-              <div className="flex flex-wrap items-center gap-3 pt-1">
-                <button type="button" onClick={onSignIn} className="inline-flex items-center gap-2 h-12 rounded-full bg-ink text-paper px-6 text-base font-bold hover:opacity-90 cursor-pointer">
-                  {L("Sign in")} <ArrowRight size={16} aria-hidden="true" />
+        <section id="meet" className="mx-auto max-w-5xl">
+          <span className="glass inline-flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold text-ink-3">
+            <span className="size-2 rounded-full bg-money" aria-hidden="true" /> {L("Your friendly CA, for your first salary")}
+          </span>
+          <h1 className="mx-auto mt-6 max-w-[15ch] text-[44px] sm:text-[64px] lg:text-[84px] font-extrabold leading-[1] tracking-[-0.04em] text-ink text-balance">
+            {L("Namaste, I'm Munshi ji. Let's file your taxes.")}
+          </h1>
+          <p className="mx-auto mt-6 max-w-[46ch] text-lg sm:text-xl text-ink-2 leading-relaxed">
+            {L("Tell me what's going on. I'll read what your employer and bank already reported, ask only what I can't find, and show you exactly what comes back.")}
+          </p>
+
+          {/* The demo composer: Munshi ji peeks from behind it, a bubble above-left, the sentence types itself. */}
+          <div className="relative mx-auto mt-16 max-w-[720px]">
+            <div className="hidden lg:block absolute -left-[118px] -bottom-1.5 pointer-events-none" aria-hidden="true">
+              <Munshi size={150} />
+            </div>
+            <MunshiBubble className="absolute left-6 -top-[58px] !py-2.5 !px-4 text-sm font-semibold">
+              {L("Just type it the way you'd tell a friend")} 👇
+            </MunshiBubble>
+            <button
+              type="button"
+              onClick={onSignIn}
+              className="glass w-full rounded-3xl p-2.5 ps-6 flex items-center gap-3.5 text-start cursor-pointer hover:border-money/50"
+              style={{ boxShadow: "0 30px 80px -30px rgba(255,122,26,.6)" }}
+              aria-label={L("Ask Munshi ji")}
+            >
+              <span className="flex-1 min-w-0 truncate text-base sm:text-lg text-ink-3">
+                {typed}
+                <span className="inline-block w-0.5 h-5 align-[-3px] ms-0.5 bg-ink motion-safe:animate-[caret-blink_1s_steps(1)_infinite]" aria-hidden="true" />
+              </span>
+              <span className="btn-primary h-[54px] shrink-0 rounded-2xl px-6 text-base flex items-center gap-2.5">
+                {L("Ask Munshi ji")} <ArrowRight size={16} aria-hidden="true" />
+              </span>
+            </button>
+            <div className="mt-4 flex flex-wrap justify-center gap-2.5">
+              {["What is Form 16?", "New regime or old?", "I pay rent", "मेरी सैलरी 5 लाख है"].map((chip) => (
+                <button key={chip} type="button" onClick={onSignIn} className="glass-flat rounded-full px-4 py-2 text-[13px] font-semibold text-ink-2 hover:text-ink hover:border-money/50 cursor-pointer">
+                  {chip.startsWith("म") ? chip : L(chip)}
                 </button>
-                <button type="button" onClick={onDemo} className="inline-flex items-center gap-2 h-12 rounded-full border border-line bg-paper-2 px-6 text-base font-semibold text-ink hover:border-money/60 hover:shadow-sm cursor-pointer">
-                  {L("Try a demo citizen")}
-                </button>
-              </div>
-              <p className="text-xs text-ink-3 font-mono">{t.shell.independent} · {t.shell.taxYear}</p>
-            </div>
-
-            {/* The signature: one fact, its source, one decision. */}
-            <div className="relative">
-              <div className="absolute -inset-4 rounded-[28px] bg-amber-bg/40 dark:bg-amber-bg/20 -z-10" aria-hidden="true" />
-              <div className="rounded-2xl border border-line bg-paper-2 shadow-sm p-6 sm:p-7 space-y-5" aria-live="polite">
-                <p className="cap">{L("One of your facts, as Wapsi shows it")}</p>
-                <div key={i} className="space-y-4 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-500">
-                  <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
-                    <div className="min-w-0">
-                      <p className="text-base font-semibold text-ink">{L(fact.label)}</p>
-                      <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-amber-bg text-amber-ink px-2.5 py-0.5 text-[11px] font-mono whitespace-nowrap">
-                        <ShieldCheck size={11} aria-hidden="true" /> {L(fact.reporter)}
-                      </p>
-                    </div>
-                    <p className="font-mono tabular-nums text-3xl sm:text-4xl text-ink ms-auto">{formatMoney(fact.amount, lang)}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${confirmed ? "bg-money text-paper" : "bg-ink text-paper"}`}>
-                      <Check size={14} aria-hidden="true" /> {L("Yes, that's right")}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-paper px-4 py-2 text-sm font-semibold text-ink-2">
-                      <X size={14} aria-hidden="true" /> {L("No, this is wrong")}
-                    </span>
-                  </div>
-                </div>
-                <div className="border-t border-line pt-4 flex items-baseline justify-between gap-4">
-                  <p className="text-sm text-ink-2">{L("Coming back to you")}</p>
-                  <p className="font-mono tabular-nums text-2xl text-money">{formatMoney(8400, lang)}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* -------------------------------------------------- how a conversation goes -- */}
-        <section className="px-4 sm:px-6 py-14 border-t border-line/60">
-          <div className="mx-auto max-w-6xl grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
-            <div className="space-y-4">
-              <p className="cap">{L("How a conversation goes")}</p>
-              <h2 className="font-serif text-3xl sm:text-4xl leading-tight text-ink text-balance">{L("You explain. It asks the few things it can't find. Then you decide.")}</h2>
-              <p className="text-base text-ink-2 leading-relaxed">{L("No form to fill first. Documents are described in words you'd recognise, and a deduction only counts once there is a record behind it.")}</p>
-            </div>
-            <div className="space-y-3 max-w-2xl">
-              <div className="flex justify-end">
-                <div className="max-w-[85%] rounded-2xl rounded-br-md bg-amber-bg border border-amber-500/30 px-4 py-2.5 text-[15px] leading-relaxed text-ink">
-                  {L("I got a job with a 12 LPA package, and I need to file my taxes. What's the best play here?")}
-                </div>
-              </div>
-              <Bubble>{L("Got it — you're salaried, at about ₹12,00,000 a year. I'll check what your employer has already reported, ask you a few quick things, and only then show you the figures. Nothing is filed without your say-so.")}</Bubble>
-              <Bubble accent>
-                <p className="text-sm text-ink-2">{L("This one's about a piece of paper —")}</p>
-                <p className="mt-1">{L("Do you have a document called Form 16?")}</p>
-                <p className="mt-1 text-sm text-ink-2">{L("It's the certificate your employer gives you around June — one or two pages showing your salary for the year and the tax already deducted from it.")}</p>
-              </Bubble>
-            </div>
-          </div>
-        </section>
-
-        {/* ---------------------------------------------- what's real, what isn't -- */}
-        <section className="px-4 sm:px-6 py-14 border-t border-line/60">
-          <div className="mx-auto max-w-6xl space-y-8">
-            <div className="space-y-3 max-w-2xl">
-              <p className="cap">{L("What's real here, and what isn't")}</p>
-              <h2 className="font-serif text-3xl sm:text-4xl leading-tight text-ink text-balance">{L("Honest by construction.")}</h2>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                [L("The arithmetic is real"), L("Every figure comes from one engine, pinned to 72 shared test vectors. The agent never rounds or invents a number.")],
-                [L("Filing is simulated"), L("Nothing is sent to the Income Tax Department, UIDAI or any bank. You see exactly what would be filed, and it says so.")],
-                [L("Your documents stay yours"), L("Uploads are encrypted in your vault and read only for the figures you ask about.")],
-                [L("23 languages"), L("Hindi, Tamil, Bengali, Telugu and nineteen more — the same care in each.")],
-              ].map(([title, body]) => (
-                <div key={title} className="rounded-2xl border border-line bg-paper-2 p-5 space-y-2">
-                  <p className="font-sans text-base font-bold text-ink">{title}</p>
-                  <p className="text-sm text-ink-2 leading-relaxed">{body}</p>
-                </div>
               ))}
             </div>
           </div>
         </section>
-      </main>
 
-      <footer className="px-4 sm:px-6 py-8 border-t border-line/60">
-        <div className="mx-auto max-w-6xl flex flex-wrap items-center justify-between gap-4 text-sm text-ink-2">
-          <LogoMark t={t} size="sm" />
-          <p className="font-mono text-xs text-ink-3">{L("Independent prototype — nothing is filed or paid with any authority.")}</p>
-          <button type="button" onClick={onSignIn} className="text-money font-semibold hover:underline cursor-pointer">
-            {L("Prefer to do it yourself? Sign in and switch to Manual.")}
+        {/* ---------------------------------------------- how a conversation goes -- */}
+        <section id="how" className="mx-auto mt-24 max-w-[1080px] grid gap-5 lg:grid-cols-3 lg:items-start text-start">
+          <div className="glass rounded-[28px] p-6 motion-safe:animate-[floaty_8s_ease-in-out_infinite] lg:mt-8">
+            <div className="flex items-center gap-2.5">
+              <MunshiAvatar size={36} />
+              <span className="font-semibold text-[15px]">Munshi ji</span>
+            </div>
+            <MunshiBubble className="mt-3.5 !px-4 !py-3.5">
+              {L("Your employer says you earned")} <b>₹4,20,000</b> {L("this year. Sounds right?")}
+            </MunshiBubble>
+            <div className="mt-3 flex gap-2">
+              <span className="btn-primary rounded-full px-3.5 py-2 text-[13px]">{L("Yes, that's right")}</span>
+              <span className="glass-flat rounded-full px-3.5 py-2 text-[13px] font-semibold text-ink-2">{L("Not quite")}</span>
+            </div>
+          </div>
+          <div className="ink-surface rounded-[28px] p-6 motion-safe:animate-[floaty_9s_ease-in-out_infinite_1s]">
+            <div className="text-xs font-semibold uppercase tracking-[.06em] text-soft">{L("Munshi ji found")}</div>
+            <div className="mt-2.5 font-extrabold text-[56px] leading-none tracking-[-0.04em] tabular-nums">₹8,400</div>
+            <div className="mt-2 text-sm text-soft">{L("coming back to you. Below the rebate limit you owe nothing, so the tax they took comes home.")}</div>
+          </div>
+          <div className="glass rounded-[28px] p-6 motion-safe:animate-[floaty_7.5s_ease-in-out_infinite_.5s] lg:mt-10">
+            <div className="flex items-center gap-2.5">
+              <MunshiAvatar size={36} />
+              <span className="font-semibold text-[15px]">Munshi ji</span>
+            </div>
+            <MunshiBubble className="mt-3.5 !px-4 !py-3.5">
+              {L("Beta, do you have a")} <b>Form 16</b>? {L("It's the one or two pages HR sends around June.")}
+            </MunshiBubble>
+            <div className="mt-3 flex gap-2">
+              <span className="btn-primary rounded-full px-3.5 py-2 text-[13px]">{L("Yes, I have it")}</span>
+              <span className="glass-flat rounded-full px-3.5 py-2 text-[13px] font-semibold text-ink-2">{L("What's that?")}</span>
+            </div>
+          </div>
+        </section>
+
+        {/* ------------------------------------------------------ three promises -- */}
+        <section id="languages" className="mx-auto mt-10 mb-18 max-w-[1080px] grid gap-5 sm:grid-cols-3 text-start">
+          {[
+            [L("Talks your language"), L("Type or talk, in any of 23 languages. Munshi ji never hands you a form first."), "rounded-[14px] bg-gradient-to-br from-soft to-money"],
+            [L("Shows his working"), L("Every figure names who reported it. You confirm or correct, one tap each."), "rounded-full bg-gradient-to-br from-ink-2 to-money"],
+            [L("Waits for your nod"), L("He never files or pays until you say so. Here, filing is simulated."), "rounded-[14px_50%_14px_50%] bg-gradient-to-br from-soft to-money-deep"],
+          ].map(([title, body, shape]) => (
+            <div key={title} className="glass-flat rounded-[28px] p-7">
+              <div className={`size-11 ${shape}`} aria-hidden="true" />
+              <h3 className="mt-4 mb-1.5 text-xl font-bold tracking-[-0.01em]">{title}</h3>
+              <p className="text-[15px] text-ink-2 leading-relaxed">{body}</p>
+            </div>
+          ))}
+        </section>
+        <div className="mx-auto mb-14 flex justify-center">
+          <button type="button" onClick={onDemo} className="glass-flat rounded-full px-5 py-2.5 text-sm font-semibold text-ink-2 hover:text-ink cursor-pointer">
+            {L("Try a demo citizen")}
           </button>
         </div>
+      </main>
+
+      <footer className="relative px-6 sm:px-12 py-5 flex flex-wrap items-center justify-between gap-3 text-[13px] text-ink-3 border-t border-line">
+        <span className="font-extrabold text-lg text-ink-2">
+          {t.shell.productName ?? LOGO_FALLBACK.name} <span className="font-medium text-xs">{t.shell.productNativeName ?? LOGO_FALLBACK.native}</span>
+        </span>
+        <span>{L("Independent prototype · nothing is filed with any authority")}</span>
+        <span>English · हिन्दी · தமிழ் · +20</span>
       </footer>
     </div>
   );
 }
 
-function Bubble({ children, accent = false }: { children: React.ReactNode; accent?: boolean }) {
-  return (
-    <div className="flex items-start gap-3">
-      <span className="mt-0.5 size-8 shrink-0 rounded-full bg-ink text-paper font-serif font-bold text-sm flex items-center justify-center" aria-hidden="true">W</span>
-      <div className={`min-w-0 max-w-[85%] rounded-2xl rounded-tl-md border ${accent ? "border-amber-500/40" : "border-line"} bg-paper-2 px-4 py-3 text-[15px] leading-relaxed text-ink`}>{children}</div>
-    </div>
-  );
+/** Types each sentence, holds it, clears it, moves to the next. Off (first sentence, static) under reduced motion. */
+function useTypewriter(lines: readonly string[]): string {
+  const [text, setText] = useState(lines[0]);
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let line = 0;
+    let i = 0;
+    let deleting = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      const full = lines[line];
+      if (!deleting) {
+        i += 1;
+        setText(full.slice(0, i));
+        if (i >= full.length) {
+          deleting = true;
+          timer = setTimeout(tick, 2200);
+          return;
+        }
+        timer = setTimeout(tick, 38);
+      } else {
+        i -= 3;
+        if (i <= 0) {
+          i = 0;
+          deleting = false;
+          line = (line + 1) % lines.length;
+          setText("");
+          timer = setTimeout(tick, 350);
+          return;
+        }
+        setText(full.slice(0, i));
+        timer = setTimeout(tick, 18);
+      }
+    };
+    timer = setTimeout(tick, 900);
+    return () => clearTimeout(timer);
+  }, [lines]);
+  return text;
 }

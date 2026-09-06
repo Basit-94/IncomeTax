@@ -8,6 +8,7 @@ import type { OnboardingProfile } from "../../lib/onboarding";
 import { getPersonalization } from "../../lib/onboarding";
 import { formatMoney } from "../../lib/money";
 import { compareForPersona } from "../../lib/return/compute";
+import { MunshiAvatar } from "../brand/munshi";
 
 interface RegimeStepProps {
   persona: Persona;
@@ -47,18 +48,18 @@ export default function RegimeStep({ persona, t, lang, regime, onboardingProfile
         key={which}
         onClick={() => onChoose(which)}
         aria-pressed={isSelected}
-        className={`text-left w-full rounded-2xl border-2 p-5 space-y-3 transition-colors ${
+        className={`text-left w-full rounded-[22px] border-2 p-[22px] space-y-3 transition-colors cursor-pointer ${
           isSelected
-            ? "border-money bg-money-soft"
-            : "border-line bg-paper-2 hover:border-money/50"
+            ? "border-money bg-amber-bg"
+            : "border-glass-edge bg-glass hover:border-money/50"
         }`}
       >
         <div className="flex items-center justify-between gap-2">
-          <span className="font-bold text-ink">
+          <span className="font-extrabold text-base text-ink">
             {which === "new" ? t.regime.newRegimeName : t.regime.oldRegimeName}
           </span>
           {isBest && (
-            <span className="flex items-center gap-1 text-[0.65rem] font-mono font-bold uppercase bg-money-soft text-money px-2 py-0.5 rounded border border-money/20">
+            <span className="flex items-center gap-1 text-xs font-bold bg-ok-soft text-ok-ink px-2.5 py-1 rounded-full">
               <BadgeCheck size={12} />
               {t.regime.recommendedBadge}
             </span>
@@ -66,19 +67,19 @@ export default function RegimeStep({ persona, t, lang, regime, onboardingProfile
         </div>
 
         <div className="space-y-0.5">
-          <span className="block text-xs text-ink-2">{t.check.taxableIncome}</span>
-          <span className="block text-sm font-semibold text-ink tabular">
+          <span className="block text-xs font-bold text-ink-3">{t.check.taxableIncome}</span>
+          <span className="block text-lg font-extrabold text-ink tabular tracking-[-0.02em]">
             {formatMoney(b.taxableIncome, lang)}
           </span>
         </div>
 
         <div className="space-y-0.5">
-          <span className="block text-xs text-ink-2">
+          <span className="block text-xs font-bold text-ink-3">
             {b.refundOrDue >= 0 ? t.regime.refundLabel : t.regime.dueLabel}
           </span>
           <span
-            className={`block text-2xl font-extrabold tabular tracking-tight ${
-              b.refundOrDue >= 0 ? "text-money" : "text-alarm"
+            className={`block text-[30px] leading-none font-extrabold tabular tracking-[-0.03em] ${
+              b.refundOrDue >= 0 ? "text-ok" : "text-bad"
             }`}
           >
             {b.refundOrDue >= 0 ? "" : "−"}
@@ -92,20 +93,21 @@ export default function RegimeStep({ persona, t, lang, regime, onboardingProfile
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h2 className="text-3xl font-extrabold leading-tight tracking-tight text-ink sm:text-4xl">
+        <h2 className="text-[30px] font-extrabold leading-[1.05] tracking-[-0.03em] text-ink">
           {t.regime.heading}
         </h2>
       </div>
 
       {savings > 0 && (
-        <p className="recovery-callout p-4 text-sm font-medium leading-relaxed text-ink">
-          {reasoning}
+        <p className="recovery-callout flex items-start gap-2.5 px-[18px] py-3.5 text-sm font-medium leading-relaxed text-amber-ink">
+          <MunshiAvatar size={28} />
+          <span>{reasoning}</span>
         </p>
       )}
 
       {personalization && (
         <div className="surface-panel space-y-1 p-4">
-          <p className="text-xs font-mono font-semibold uppercase tracking-wider text-money">
+          <p className="text-xs font-bold text-money">
             {t.onboarding.tailoredBadge}
           </p>
           <p className="text-sm leading-relaxed text-ink-2">
@@ -124,7 +126,7 @@ export default function RegimeStep({ persona, t, lang, regime, onboardingProfile
       <div className="space-y-3">
         <button
           onClick={() => onChoose(recommended)}
-          className="w-full rounded-xl bg-navy px-6 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:opacity-90"
+          className="btn-primary w-full rounded-[14px] h-[50px] px-6 text-[14.5px] transition-colors cursor-pointer"
         >
           {t.regime.acceptRecommendation}
         </button>

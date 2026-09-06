@@ -285,16 +285,16 @@ PAN: ${selectedPan}`;
       aria-labelledby="pay-tax-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-3 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
     >
-      <div className="surface-panel relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl bg-paper shadow-2xl border border-line overflow-hidden">
+      <div className="surface-panel relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl bg-paper shadow-glass border border-line overflow-hidden">
         {/* ========================================================================= */}
         {/* MODAL HEADER                                                              */}
         {/* ========================================================================= */}
         <div className="shrink-0 flex items-start justify-between border-b border-line p-5 sm:px-6 sm:py-4 bg-paper-2">
           <div className="flex items-center gap-3">
             <div className={`flex size-11 items-center justify-center rounded-2xl ${
-              isCleared
-                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
-                : "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300"
+ isCleared
+ ? "bg-ok-soft text-ok-ink  "
+                : "bg-tertiary/15 text-tertiary  "
             } shadow-xs`}>
               {isCleared ? <ShieldCheck size={22} /> : <CreditCard size={22} />}
             </div>
@@ -307,12 +307,12 @@ PAN: ${selectedPan}`;
                   AY {ASSESSMENT_YEAR}
                 </span>
                 {isCleared ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-950/80 px-2.5 py-0.5 text-[10px] font-mono font-bold text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-ok-soft px-2.5 py-0.5 text-[10px] font-mono font-bold text-ok-ink border border-ok/40">
                     <Check size={11} />
                     <span>{isHindi ? "कर चुकता u/s 140A" : "Tax Cleared u/s 140A"}</span>
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-950/80 px-2.5 py-0.5 text-[10px] font-mono font-bold text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-bg px-2.5 py-0.5 text-[10px] font-mono font-bold text-amber-ink border border-money/40">
                     <Lock size={10} />
                     <span>{formatMoney(assessedTaxDue, lang)} {isHindi ? "देय" : "Due"}</span>
                   </span>
@@ -344,8 +344,8 @@ PAN: ${selectedPan}`;
             type="button"
             onClick={() => setActiveTab("gateway")}
             className={`pb-2.5 px-3 text-xs font-bold transition flex items-center gap-2 border-b-2 cursor-pointer ${
-              activeTab === "gateway"
-                ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+ activeTab === "gateway"
+                ? "border-tertiary/40 text-tertiary "
                 : "border-transparent text-ink-2 hover:text-ink"
             }`}
           >
@@ -357,8 +357,8 @@ PAN: ${selectedPan}`;
             type="button"
             onClick={() => setActiveTab("receipt")}
             className={`pb-2.5 px-3 text-xs font-bold transition flex items-center gap-2 border-b-2 cursor-pointer ${
-              activeTab === "receipt"
-                ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+ activeTab === "receipt"
+                ? "border-tertiary/40 text-tertiary "
                 : "border-transparent text-ink-2 hover:text-ink"
             }`}
           >
@@ -369,7 +369,7 @@ PAN: ${selectedPan}`;
                 : (isHindi ? "2. वैधानिक चालान रसीद (BSR कोड)" : "2. Challan 280 Counterfoil")}
             </span>
             {isCleared && (
-              <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="size-2 rounded-full bg-ok animate-pulse" />
             )}
           </button>
 
@@ -377,8 +377,8 @@ PAN: ${selectedPan}`;
             type="button"
             onClick={() => setActiveTab("radar")}
             className={`pb-2.5 px-3 text-xs font-bold transition flex items-center gap-2 border-b-2 cursor-pointer ${
-              activeTab === "radar"
-                ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+ activeTab === "radar"
+                ? "border-tertiary/40 text-tertiary "
                 : "border-transparent text-ink-2 hover:text-ink"
             }`}
           >
@@ -398,18 +398,18 @@ PAN: ${selectedPan}`;
             <div className="space-y-6 animate-in fade-in duration-200">
               {/* If user is already cleared (has paid or nil due), show clearance banner instead of prompt to pay */}
               {isCleared ? (
-                <div className="rounded-3xl border-2 border-emerald-300 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/30 p-6 space-y-4">
+                <div className="rounded-3xl border-2 border-ok/40 bg-ok-soft p-6 space-y-4">
                   <div className="flex items-start gap-3">
-                    <div className="size-10 rounded-2xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
+                    <div className="size-10 rounded-2xl bg-ok-soft text-ok-ink flex items-center justify-center shrink-0">
                       <ShieldCheck size={22} />
                     </div>
                     <div className="space-y-1">
-                      <h3 className="font-sans text-base sm:text-lg font-bold text-emerald-900 dark:text-emerald-200">
+                      <h3 className="font-sans text-base sm:text-lg font-bold text-ok-ink">
                         {isHindi
                           ? "धारा 140A के तहत आपकी कर देयता पूर्ण रूप से चुकता है"
                           : "Statutory Tax Obligation Fully Cleared u/s 140A"}
                       </h3>
-                      <p className="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed">
+                      <p className="text-xs text-ok-ink leading-relaxed">
                         {hasPaidChallan
                           ? (isHindi
                               ? `आपने पूर्व में ही ${formatMoney(existingReceipt?.amount || 0, lang)} का चालान 280 (BSR कोड: ${existingReceipt?.bsrCode || "0002148"}) जमा कर दिया है। अतिरिक्त भुगतान की कोई आवश्यकता नहीं है।`
@@ -423,26 +423,26 @@ PAN: ${selectedPan}`;
 
                   {/* Summary Metric Pills */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                    <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800/80">
-                      <span className="text-[10px] font-mono text-slate-500 uppercase block">Balance Due u/s 140A</span>
-                      <span className="font-mono text-xl font-bold text-emerald-600 dark:text-emerald-400">₹0.00</span>
+                    <div className="p-3 rounded-xl bg-paper-3 border border-ok/40">
+                      <span className="text-[10px] font-mono text-ink-3 uppercase block">Balance Due u/s 140A</span>
+                      <span className="font-mono text-xl font-bold text-ok-ink">₹0.00</span>
                     </div>
-                    <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800/80">
-                      <span className="text-[10px] font-mono text-slate-500 uppercase block">Total Taxes Credited</span>
+                    <div className="p-3 rounded-xl bg-paper-3 border border-ok/40">
+                      <span className="text-[10px] font-mono text-ink-3 uppercase block">Total Taxes Credited</span>
                       <span className="font-mono text-xl font-bold text-ink">
                         {formatMoney(activeCitizen?.totalTaxesPaid || activeCitizen?.tds || existingReceipt?.amount || 0, lang)}
                       </span>
                     </div>
-                    <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800/80">
-                      <span className="text-[10px] font-mono text-slate-500 uppercase block">Return Defect Status</span>
-                      <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-1 block">
+                    <div className="p-3 rounded-xl bg-paper-3 border border-ok/40">
+                      <span className="text-[10px] font-mono text-ink-3 uppercase block">Return Defect Status</span>
+                      <span className="font-mono text-xs font-bold text-ok-ink mt-1 block">
                         ✓ SEC 139(9) CLEAR
                       </span>
                     </div>
                   </div>
 
                   <div className="pt-2 flex items-center justify-between">
-                    <span className="text-xs text-emerald-800 dark:text-emerald-300 font-medium">
+                    <span className="text-xs text-ok-ink font-medium">
                       {isHindi
                         ? "चालान 280 काउंटरफ़ॉइल या कर समाधान प्रमाणपत्र देखने के लिए अगला टैब खोलें।"
                         : "View official counterfoil or compliance clearance certificate in Tab 2."}
@@ -450,7 +450,7 @@ PAN: ${selectedPan}`;
                     <button
                       type="button"
                       onClick={() => setActiveTab("receipt")}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-ok hover:opacity-90 text-white text-xs font-bold transition shadow-xs cursor-pointer"
                     >
                       <Receipt size={14} />
                       <span>{isHindi ? "काउंटरफ़ॉइल / रसीद देखें" : "View Counterfoil / Receipt"}</span>
@@ -475,23 +475,23 @@ PAN: ${selectedPan}`;
                     </div>
 
                     <div className="flex items-center gap-2 text-xs">
-                      <span className="rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 px-2.5 py-0.5 text-[11px] font-mono font-semibold">
+                      <span className="rounded-full bg-tertiary/15 text-tertiary px-2.5 py-0.5 text-[11px] font-mono font-semibold">
                         Major Head {CHALLAN_MAJOR_HEAD} · Minor Head {taxHead}
                       </span>
                     </div>
                   </div>
 
                   {/* EXTRACTED STATUTORY TAX DUE CARD (LOCKED TO EXACT AMOUNT) */}
-                  <div className="rounded-3xl border-2 border-indigo-300 dark:border-indigo-800 bg-indigo-50/40 dark:bg-indigo-950/20 p-5 sm:p-6 space-y-4">
-                    <div className="flex items-center justify-between border-b border-indigo-200/80 dark:border-indigo-800/60 pb-3">
+                  <div className="rounded-3xl border-2 border-tertiary/40 bg-tertiary/15 p-5 sm:p-6 space-y-4">
+                    <div className="flex items-center justify-between border-b border-tertiary/40 pb-3">
                       <div className="flex items-center gap-2">
-                        <span className="size-2 rounded-full bg-indigo-600 animate-pulse" />
+                        <span className="size-2 rounded-full bg-tertiary animate-pulse" />
                         <span className="text-xs font-bold text-ink flex items-center gap-1.5">
-                          <Lock size={13} className="text-indigo-600" />
+                          <Lock size={13} className="text-tertiary" />
                           <span>{isHindi ? "सटीक निकाला गया कर देय (धारा 140A स्व-निर्धारण)" : "Extracted Tax Due u/s 140A (Statutory Exact Amount)"}</span>
                         </span>
                       </div>
-                      <span className="text-[11px] font-mono font-bold text-indigo-700 dark:text-indigo-400 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 rounded-md">
+                      <span className="text-[11px] font-mono font-bold text-tertiary bg-paper-3 border border-tertiary/40 px-2 py-0.5 rounded-md">
                         CBDT Rule 12 Precision
                       </span>
                     </div>
@@ -502,17 +502,17 @@ PAN: ${selectedPan}`;
                           {isHindi ? "रिटर्न गणना से निकाली गई बकाया राशि:" : "Exact Assessed Balance Payable:"}
                         </span>
                         <div className="flex items-baseline gap-2">
-                          <span className="font-mono text-3xl sm:text-4xl font-black text-indigo-600 dark:text-indigo-400">
+                          <span className="font-mono text-3xl sm:text-4xl font-black text-tertiary">
                             {formatMoney(assessedTaxDue, lang)}
                           </span>
-                          <span className="text-xs font-mono font-bold text-emerald-600 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded">
+                          <span className="text-xs font-mono font-bold text-ok-ink bg-ok-soft px-2 py-0.5 rounded">
                             Locked u/s 140A
                           </span>
                         </div>
                       </div>
 
                       {/* Statutory Cess Breakdown */}
-                      <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-line text-xs font-mono space-y-1 sm:min-w-[200px]">
+                      <div className="p-3 rounded-2xl bg-paper-3 border border-line text-xs font-mono space-y-1 sm:min-w-[200px]">
                         <div className="flex justify-between text-ink-2">
                           <span>Base Income Tax:</span>
                           <strong className="text-ink">{formatMoney(baseTax, lang)}</strong>
@@ -521,7 +521,7 @@ PAN: ${selectedPan}`;
                           <span>Health & Edu Cess (4%):</span>
                           <strong className="text-ink">{formatMoney(cess, lang)}</strong>
                         </div>
-                        <div className="flex justify-between pt-1 border-t border-line font-bold text-indigo-600 dark:text-indigo-400">
+                        <div className="flex justify-between pt-1 border-t border-line font-bold text-tertiary">
                           <span>Total to Settle:</span>
                           <span>{formatMoney(assessedTaxDue, lang)}</span>
                         </div>
@@ -552,9 +552,9 @@ PAN: ${selectedPan}`;
                           key={th.code}
                           onClick={() => setTaxHead(th.code)}
                           className={`p-3.5 rounded-2xl border-2 transition cursor-pointer space-y-1.5 ${
-                            taxHead === th.code
-                              ? "border-indigo-600 bg-indigo-50/20 dark:bg-indigo-950/20 shadow-xs ring-1 ring-indigo-600"
-                              : "border-line bg-paper hover:border-indigo-300"
+ taxHead === th.code
+ ? "border-tertiary/40 bg-tertiary/15  shadow-xs ring-1 ring-tertiary/40"
+                              : "border-line bg-paper hover:border-tertiary/40"
                           }`}
                         >
                           <div className="flex items-center justify-between">
@@ -562,7 +562,7 @@ PAN: ${selectedPan}`;
                               Head {th.code}
                             </span>
                             <div className="size-4 rounded-full border border-line flex items-center justify-center bg-paper">
-                              {taxHead === th.code && <div className="size-2.5 rounded-full bg-indigo-600" />}
+                              {taxHead === th.code && <div className="size-2.5 rounded-full bg-tertiary" />}
                             </div>
                           </div>
                           <p className="font-bold text-xs text-ink">{isHindi ? th.labelHi : th.labelEn}</p>
@@ -588,9 +588,9 @@ PAN: ${selectedPan}`;
                         type="button"
                         onClick={() => setMethod("UPI")}
                         className={`p-3 rounded-2xl border-2 transition flex items-center justify-center gap-2.5 cursor-pointer ${
-                          method === "UPI"
-                            ? "border-indigo-600 bg-indigo-50/20 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-600"
-                            : "border-line bg-paper text-ink-2 hover:border-indigo-300"
+ method === "UPI"
+                            ? "border-tertiary/40 bg-tertiary/15  text-tertiary  ring-1 ring-tertiary/40"
+                            : "border-line bg-paper text-ink-2 hover:border-tertiary/40"
                         }`}
                       >
                         <QrCode size={18} />
@@ -601,9 +601,9 @@ PAN: ${selectedPan}`;
                         type="button"
                         onClick={() => setMethod("NET_BANKING")}
                         className={`p-3 rounded-2xl border-2 transition flex items-center justify-center gap-2.5 cursor-pointer ${
-                          method === "NET_BANKING"
-                            ? "border-indigo-600 bg-indigo-50/20 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-600"
-                            : "border-line bg-paper text-ink-2 hover:border-indigo-300"
+ method === "NET_BANKING"
+                            ? "border-tertiary/40 bg-tertiary/15  text-tertiary  ring-1 ring-tertiary/40"
+                            : "border-line bg-paper text-ink-2 hover:border-tertiary/40"
                         }`}
                       >
                         <Building2 size={18} />
@@ -616,12 +616,12 @@ PAN: ${selectedPan}`;
                       <div className="rounded-2xl border border-line bg-paper p-5 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xs">
                         <div className="flex flex-col items-center sm:items-start text-center sm:text-start space-y-2">
                           <div className="flex items-center gap-2">
-                            <span className="rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 px-2.5 py-0.5 text-[10px] font-bold font-mono">
+                            <span className="rounded-full bg-ok-soft text-ok-ink px-2.5 py-0.5 text-[10px] font-bold font-mono">
                               Locked to {formatMoney(assessedTaxDue, lang)}
                             </span>
                             <span className="font-mono text-xs text-ink-3">
                               {isHindi ? "समय शेष:" : "Expires in:"}{" "}
-                              <strong className="text-indigo-600 font-bold">{mmss(secondsLeft)}</strong>
+                              <strong className="text-tertiary font-bold">{mmss(secondsLeft)}</strong>
                             </span>
                           </div>
 
@@ -655,14 +655,14 @@ PAN: ${selectedPan}`;
                         </div>
 
                         {/* QR Code Graphic */}
-                        <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center shrink-0">
+                        <div className="p-3.5 bg-paper-3 rounded-2xl border border-line shadow-sm flex flex-col items-center shrink-0">
                           <QRCodeSVG
                             value={deepLink}
                             size={140}
                             level="M"
                             includeMargin={false}
                           />
-                          <span className="mt-2 text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider">
+                          <span className="mt-2 text-[10px] font-mono font-bold text-ink-3 uppercase tracking-wider">
                             NPCI · BHIM UPI · ₹{assessedTaxDue}
                           </span>
                         </div>
@@ -678,7 +678,7 @@ PAN: ${selectedPan}`;
                         <select
                           value={selectedBank}
                           onChange={(e) => setSelectedBank(e.target.value)}
-                          className="w-full p-2.5 text-xs font-semibold rounded-xl border border-line bg-paper text-ink focus:border-indigo-600 focus:outline-none"
+                          className="w-full p-2.5 text-xs font-semibold rounded-xl border border-line bg-paper text-ink focus:border-tertiary/40 focus:outline-none"
                         >
                           {NET_BANKING_BANKS.map((b) => (
                             <option key={b.code} value={b.code}>
@@ -700,8 +700,8 @@ PAN: ${selectedPan}`;
 
                   {/* Processing banner */}
                   {stage === "processing" && (
-                    <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-paper-2 border border-indigo-200 dark:border-indigo-900/60 gap-2.5 text-center animate-in fade-in">
-                      <Loader2 size={26} className="animate-spin text-indigo-600" />
+                    <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-paper-2 border border-tertiary/40 gap-2.5 text-center animate-in fade-in">
+                      <Loader2 size={26} className="animate-spin text-tertiary" />
                       <p className="text-xs font-bold text-ink">
                         {isHindi
                           ? "आरबीआई / एकत्रित बैंक से डिजिटल पावती की प्रतीक्षा की जा रही है…"
@@ -725,16 +725,16 @@ PAN: ${selectedPan}`;
               {activeReceipt ? (
                 <div className="space-y-4">
                   {/* Status Banner */}
-                  <div className="flex items-center justify-between gap-3 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200">
+                  <div className="flex items-center justify-between gap-3 p-4 rounded-2xl bg-ok-soft border border-ok/40 text-ok-ink">
                     <div className="flex items-center gap-3">
-                      <CheckCircle2 size={22} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <CheckCircle2 size={22} className="text-ok-ink shrink-0" />
                       <div>
                         <h4 className="font-bold text-sm">
                           {isHindi
                             ? "चालान 280 का सफल भुगतान — आयकर रिटर्न हेतु प्रमाण तैयार"
                             : "Challan 280 Paid & Verified — Official Compliance Proof Ready"}
                         </h4>
-                        <p className="text-xs text-emerald-800 dark:text-emerald-300">
+                        <p className="text-xs text-ok-ink">
                           {isHindi
                             ? "नीचे दिए गए BSR कोड और सीरियल नंबर आपके रिटर्न में धारा 140A के तहत जुड़ चुके हैं।"
                             : "These statutory fields (BSR Code, Serial Number, Tender Date) satisfy Section 140A and clear all defective notice holds."}
@@ -746,7 +746,7 @@ PAN: ${selectedPan}`;
                       <button
                         type="button"
                         onClick={copyReceiptDetails}
-                        className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-800 text-xs font-mono font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 transition cursor-pointer flex items-center gap-1.5"
+                        className="px-3 py-1.5 rounded-xl bg-paper-3 border border-ok/40 text-xs font-mono font-bold text-ok-ink hover:bg-ok-soft transition cursor-pointer flex items-center gap-1.5"
                       >
                         <Copy size={13} />
                         <span>{copiedReceipt ? "Copied!" : "Copy BSR"}</span>
@@ -754,7 +754,7 @@ PAN: ${selectedPan}`;
                       <button
                         type="button"
                         onClick={() => window.print()}
-                        className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition cursor-pointer flex items-center gap-1.5"
+                        className="px-3 py-1.5 rounded-xl bg-ok text-white text-xs font-bold hover:opacity-90 transition cursor-pointer flex items-center gap-1.5"
                       >
                         <Printer size={13} />
                         <span>{isHindi ? "प्रिंट" : "Print"}</span>
@@ -763,11 +763,11 @@ PAN: ${selectedPan}`;
                   </div>
 
                   {/* Authentic CBDT ITNS 280 Counterfoil */}
-                  <div className="rounded-3xl border-2 border-indigo-200 dark:border-indigo-900/60 bg-paper p-6 space-y-5 shadow-md">
+                  <div className="rounded-3xl border-2 border-tertiary/40 bg-paper p-6 space-y-5 shadow-md">
                     {/* Header */}
                     <div className="flex items-start justify-between border-b border-line pb-4">
                       <div>
-                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400 block">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-tertiary block">
                           INCOME TAX DEPARTMENT · TAXPAYER&apos;S COUNTERFOIL
                         </span>
                         <h3 className="font-sans text-base font-black text-ink">
@@ -778,16 +778,16 @@ PAN: ${selectedPan}`;
                         <span className="rounded-md bg-paper-3 px-2 py-0.5 font-mono text-xs font-bold border border-line text-ink block">
                           AY {ASSESSMENT_YEAR}
                         </span>
-                        <span className="text-[10px] font-mono text-emerald-600 font-bold mt-1 block">
+                        <span className="text-[10px] font-mono text-ok-ink font-bold mt-1 block">
                           ✓ TIN-CBDT Verified
                         </span>
                       </div>
                     </div>
 
                     {/* Key Statutory Triplet: BSR, Serial, Date */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-2xl bg-indigo-50/40 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-2xl bg-tertiary/15 border border-tertiary/40">
                       <div>
-                        <span className="text-[10px] font-mono uppercase font-bold text-indigo-700 dark:text-indigo-400 block">
+                        <span className="text-[10px] font-mono uppercase font-bold text-tertiary block">
                           BSR Code (7 Digits)
                         </span>
                         <span className="font-mono text-lg font-black text-ink">
@@ -795,7 +795,7 @@ PAN: ${selectedPan}`;
                         </span>
                       </div>
                       <div>
-                        <span className="text-[10px] font-mono uppercase font-bold text-indigo-700 dark:text-indigo-400 block">
+                        <span className="text-[10px] font-mono uppercase font-bold text-tertiary block">
                           Challan Serial (5 Digits)
                         </span>
                         <span className="font-mono text-lg font-black text-ink">
@@ -803,7 +803,7 @@ PAN: ${selectedPan}`;
                         </span>
                       </div>
                       <div>
-                        <span className="text-[10px] font-mono uppercase font-bold text-indigo-700 dark:text-indigo-400 block">
+                        <span className="text-[10px] font-mono uppercase font-bold text-tertiary block">
                           Date of Tender
                         </span>
                         <span className="font-mono text-base font-bold text-ink">
@@ -850,7 +850,7 @@ PAN: ${selectedPan}`;
                       </div>
                       <div className="flex justify-between pt-2 border-t border-line font-bold text-sm">
                         <span className="text-ink">Total Tax Deposited u/s 140A:</span>
-                        <span className="font-mono text-emerald-600 dark:text-emerald-400 text-xl font-black">
+                        <span className="font-mono text-ok-ink text-xl font-black">
                           {formatMoney(activeReceipt.amount, lang)}
                         </span>
                       </div>
@@ -859,32 +859,32 @@ PAN: ${selectedPan}`;
                 </div>
               ) : isNilDue ? (
                 /* Pre-paid tax satisfaction certificate for taxpayers with 0 tax due */
-                <div className="rounded-3xl border-2 border-emerald-300 dark:border-emerald-800 bg-paper p-6 space-y-5 shadow-md">
+                <div className="rounded-3xl border-2 border-ok/40 bg-paper p-6 space-y-5 shadow-md">
                   <div className="flex items-start justify-between border-b border-line pb-4">
                     <div>
-                      <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 block">
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-ok-ink block">
                         INCOME TAX DEPARTMENT · TAX SATISFACTION CLEARANCE
                       </span>
                       <h3 className="font-sans text-base font-black text-ink">
                         Section 140A Statutory Tax Clearance Certificate
                       </h3>
                     </div>
-                    <span className="rounded-md bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 font-mono text-xs font-bold text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                    <span className="rounded-md bg-ok-soft px-2 py-0.5 font-mono text-xs font-bold text-ok-ink border border-ok/40">
                       AY {ASSESSMENT_YEAR}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-2xl bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-2xl bg-ok-soft border border-ok/40">
                     <div>
-                      <span className="text-[10px] font-mono uppercase font-bold text-emerald-700 dark:text-emerald-400 block">
+                      <span className="text-[10px] font-mono uppercase font-bold text-ok-ink block">
                         Assessed Balance Due
                       </span>
-                      <span className="font-mono text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                      <span className="font-mono text-2xl font-black text-ok-ink">
                         ₹0.00
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] font-mono uppercase font-bold text-emerald-700 dark:text-emerald-400 block">
+                      <span className="text-[10px] font-mono uppercase font-bold text-ok-ink block">
                         Pre-Paid Taxes (TDS Credited)
                       </span>
                       <span className="font-mono text-lg font-black text-ink">
@@ -892,10 +892,10 @@ PAN: ${selectedPan}`;
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] font-mono uppercase font-bold text-emerald-700 dark:text-emerald-400 block">
+                      <span className="text-[10px] font-mono uppercase font-bold text-ok-ink block">
                         Filing Eligibility
                       </span>
-                      <span className="font-mono text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950 px-2 py-1 rounded inline-block mt-1">
+                      <span className="font-mono text-xs font-bold text-ok-ink bg-ok-soft px-2 py-1 rounded inline-block mt-1">
                         ✓ 100% CLEARED TO FILE
                       </span>
                     </div>
@@ -916,7 +916,7 @@ PAN: ${selectedPan}`;
                     </div>
                     <div>
                       <dt className="text-ink-3">Defect Notice Risk u/s 139(9):</dt>
-                      <dd className="font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">0% · Nil Balance Verified</dd>
+                      <dd className="font-bold text-ok-ink mt-0.5">0% · Nil Balance Verified</dd>
                     </div>
                   </dl>
 
@@ -939,7 +939,7 @@ PAN: ${selectedPan}`;
                   <button
                     type="button"
                     onClick={() => setActiveTab("gateway")}
-                    className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold transition hover:bg-indigo-700 cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-tertiary text-white text-xs font-bold transition hover:opacity-90 cursor-pointer"
                   >
                     {isHindi ? "गेटवे पर जाएं" : "Go to Payment Gateway"}
                   </button>
@@ -954,7 +954,7 @@ PAN: ${selectedPan}`;
           {activeTab === "radar" && (
             <div className="space-y-5 animate-in fade-in duration-200">
               <div className="flex items-center gap-2 text-xs font-bold text-ink">
-                <Clock size={16} className="text-purple-600" />
+                <Clock size={16} className="text-tertiary" />
                 <span>
                   {isHindi ? "त्रैमासिक अग्रिम कर अनुसूची (FY 2025-26):" : "Statutory Advance Tax Schedule (FY 2025-26):"}
                 </span>
@@ -964,28 +964,28 @@ PAN: ${selectedPan}`;
                 <div className="p-3.5 rounded-2xl border border-line bg-paper-2 space-y-1">
                   <span className="font-mono text-[10px] text-ink-3 font-bold block">15 JUNE 2025</span>
                   <p className="font-bold text-ink">1st Installment</p>
-                  <p className="text-xs text-indigo-600 font-mono font-bold">15% of Net Tax</p>
+                  <p className="text-xs text-tertiary font-mono font-bold">15% of Net Tax</p>
                   <span className="text-[10px] text-ink-3 block">Sec 234C deferment applies if short</span>
                 </div>
 
                 <div className="p-3.5 rounded-2xl border border-line bg-paper-2 space-y-1">
                   <span className="font-mono text-[10px] text-ink-3 font-bold block">15 SEPTEMBER 2025</span>
                   <p className="font-bold text-ink">2nd Installment</p>
-                  <p className="text-xs text-indigo-600 font-mono font-bold">Cumulative 45%</p>
+                  <p className="text-xs text-tertiary font-mono font-bold">Cumulative 45%</p>
                   <span className="text-[10px] text-ink-3 block">Sec 234C deferment applies if short</span>
                 </div>
 
                 <div className="p-3.5 rounded-2xl border border-line bg-paper-2 space-y-1">
                   <span className="font-mono text-[10px] text-ink-3 font-bold block">15 DECEMBER 2025</span>
                   <p className="font-bold text-ink">3rd Installment</p>
-                  <p className="text-xs text-indigo-600 font-mono font-bold">Cumulative 75%</p>
+                  <p className="text-xs text-tertiary font-mono font-bold">Cumulative 75%</p>
                   <span className="text-[10px] text-ink-3 block">Sec 234C deferment applies if short</span>
                 </div>
 
                 <div className="p-3.5 rounded-2xl border border-line bg-paper-2 space-y-1">
                   <span className="font-mono text-[10px] text-ink-3 font-bold block">15 MARCH 2026</span>
                   <p className="font-bold text-ink">4th Installment</p>
-                  <p className="text-xs text-indigo-600 font-mono font-bold">100% of Net Tax</p>
+                  <p className="text-xs text-tertiary font-mono font-bold">100% of Net Tax</p>
                   <span className="text-[10px] text-ink-3 block">Final settlement cutoff for FY</span>
                 </div>
               </div>
@@ -993,7 +993,7 @@ PAN: ${selectedPan}`;
               {/* Section 234 Rules Explanation */}
               <div className="rounded-2xl border border-line bg-paper-2 p-4 text-xs space-y-3">
                 <div className="flex items-center gap-2 font-bold text-ink">
-                  <AlertTriangle size={15} className="text-amber-500" />
+                  <AlertTriangle size={15} className="text-money" />
                   <span>
                     {isHindi ? "आयकर अधिनियम की दंडात्मक ब्याज धाराएं:" : "Interest Penalties for Late / Short Payment:"}
                   </span>
@@ -1016,8 +1016,8 @@ PAN: ${selectedPan}`;
               </div>
 
               {/* Defective Return Warning u/s 139(9) */}
-              <div className="flex items-start gap-3 p-4 rounded-2xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/20 text-xs">
-                <ShieldAlert size={18} className="text-rose-600 shrink-0 mt-0.5" />
+              <div className="flex items-start gap-3 p-4 rounded-2xl border border-bad/40 bg-bad-soft text-xs">
+                <ShieldAlert size={18} className="text-bad shrink-0 mt-0.5" />
                 <div className="space-y-1">
                   <span className="font-bold text-ink">
                     {isHindi ? "धारा 139(9) त्रुटिपूर्ण रिटर्न नियम (Defective Return Rule):" : "Section 139(9) Defective Return Safeguard:"}
@@ -1040,8 +1040,8 @@ PAN: ${selectedPan}`;
           <div className="flex items-center gap-2 text-xs text-ink-3">
             {isCleared ? (
               <>
-                <ShieldCheck size={16} className="text-emerald-600" />
-                <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                <ShieldCheck size={16} className="text-ok-ink" />
+                <span className="font-semibold text-ok-ink">
                   {isHindi
                     ? "धारा 140A कर देयता मुक्त (₹0 देय)"
                     : "Tax Obligation Cleared u/s 140A (₹0 Due)"}
@@ -1049,7 +1049,7 @@ PAN: ${selectedPan}`;
               </>
             ) : (
               <>
-                <Lock size={15} className="text-indigo-600" />
+                <Lock size={15} className="text-tertiary" />
                 <span>
                   {isHindi
                     ? `निकाली गई सटीक चालान राशि: ${formatMoney(assessedTaxDue, lang)} · हेड ${taxHead}`
@@ -1072,7 +1072,7 @@ PAN: ${selectedPan}`;
               <button
                 type="button"
                 onClick={handleApplyToReturn}
-                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-600/25 transition cursor-pointer"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-ok hover:opacity-90 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-600/25 transition cursor-pointer"
               >
                 <Sparkles size={14} />
                 <span>
@@ -1086,7 +1086,7 @@ PAN: ${selectedPan}`;
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-600/25 transition cursor-pointer"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-ok hover:opacity-90 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-600/25 transition cursor-pointer"
               >
                 <Check size={14} />
                 <span>{isHindi ? "सत्यापित · आगे बढ़ें" : "Verified · Continue"}</span>
@@ -1096,7 +1096,7 @@ PAN: ${selectedPan}`;
                 type="button"
                 onClick={simulatePaymentSuccess}
                 disabled={stage === "processing" || assessedTaxDue <= 0}
-                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-indigo-600/25 transition cursor-pointer"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-tertiary hover:opacity-90 disabled:bg-line disabled:cursor-not-allowed px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-indigo-600/25 transition cursor-pointer"
               >
                 {stage === "processing" ? (
                   <>

@@ -10,10 +10,13 @@
  * height, so a longer label in one language or a different active state
  * cannot change the box. Both modes render exactly this component in exactly
  * one place — components/agentic/app-shell.tsx.
+ *
+ * Redesign 2026-09-06: a glass pill; the active segment is the ink surface and
+ * the Agentic segment carries a 20 px Munshi ji avatar.
  */
 
-import { Sparkles } from "lucide-react";
 import type { AgenticStrings } from "@/lib/i18n/agenticStrings";
+import { MunshiAvatar } from "../brand/munshi";
 
 export type WorkMode = "agentic" | "manual";
 
@@ -28,7 +31,7 @@ export interface ModeSwitchProps {
 export default function ModeSwitch({ mode, onChange, s, busy = false }: ModeSwitchProps) {
   return (
     <div
-      className="seg h-[38px] shrink-0"
+      className="glass-flat h-[38px] shrink-0 flex items-center p-1 rounded-full text-[13px] font-bold"
       role="group"
       aria-label={s.modeLabel}
       data-testid="mode-switch"
@@ -43,10 +46,10 @@ export default function ModeSwitch({ mode, onChange, s, busy = false }: ModeSwit
             aria-pressed={selected}
             disabled={busy}
             onClick={() => !selected && onChange(m)}
-            className="h-full min-w-[104px] px-3 text-xs flex items-center justify-center gap-1.5 disabled:cursor-wait"
+            className={`h-[30px] min-w-[104px] px-3.5 rounded-full flex items-center justify-center gap-1.5 transition-colors disabled:cursor-wait cursor-pointer ${selected ? "ink-surface" : "text-ink-3 hover:text-ink"}`}
             data-mode={m}
           >
-            {m === "agentic" && <Sparkles size={12} className="text-amber-500 shrink-0" aria-hidden="true" />}
+            {m === "agentic" && <MunshiAvatar size={20} />}
             <span className="truncate">{m === "agentic" ? s.modeAgentic : s.modeManual}</span>
           </button>
         );

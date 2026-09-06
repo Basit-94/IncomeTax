@@ -106,15 +106,15 @@ export default function CitizenVaultModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div
-        className="relative w-full max-w-3xl max-h-[92vh] flex flex-col rounded-2xl bg-paper border border-line shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-3xl max-h-[92vh] flex flex-col rounded-2xl bg-paper border border-line shadow-glass overflow-hidden animate-in zoom-in-95 duration-200"
         role="dialog"
         aria-modal="true"
         aria-labelledby="vault-modal-title"
       >
         {/* Header with Security Gradient */}
-        <div className="relative px-5 py-4 sm:px-6 sm:py-5 border-b border-line bg-gradient-to-r from-navy via-navy-dark to-slate-900 text-white flex items-center justify-between">
+        <div className="relative px-5 py-4 sm:px-6 sm:py-5 border-b border-line bg-gradient-to-r from-ink-surface to-[#3A2A6E] text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="size-10 rounded-xl bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300 shadow-inner">
+            <div className="size-10 rounded-xl bg-amber-bg border border-money/40 flex items-center justify-center text-money shadow-inner">
               <ShieldCheck size={22} className="animate-pulse" />
             </div>
             <div>
@@ -122,12 +122,12 @@ export default function CitizenVaultModal({
                 <h2 id="vault-modal-title" className="font-sans text-lg sm:text-xl font-bold tracking-tight">
                   {ps.taxVault}
                 </h2>
-                <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 px-2 py-0.5 text-[10px] font-mono font-semibold text-emerald-300">
+                <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-ok-soft border border-ok/40 px-2 py-0.5 text-[10px] font-mono font-semibold text-ok">
                   <Lock size={10} />
                   <span>AY 2026-27 SECURED</span>
                 </span>
               </div>
-              <p className="text-xs text-paper/70 dark:text-white/70 font-mono">
+              <p className="text-xs text-paper/70 font-mono">
                 {vaultUser.fullName} · PAN: {vaultUser.pan}
               </p>
             </div>
@@ -137,12 +137,12 @@ export default function CitizenVaultModal({
             {/* Status Pill */}
             <div
               className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border ${
-                vaultUser.syncedToPostgres
-                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
-                  : "bg-blue-500/10 border-blue-500/30 text-blue-300"
+ vaultUser.syncedToPostgres
+ ? "bg-ok-soft border-ok/40 text-ok"
+                  : "bg-tertiary/15 border-tertiary/40 text-tertiary"
               }`}
             >
-              <span className="size-2 rounded-full bg-emerald-400 animate-ping" />
+              <span className="size-2 rounded-full bg-ok animate-ping" />
               <span>
                 {vaultUser.syncedToPostgres ? "Sovereign Cloud Sync" : "Local Vault"}
               </span>
@@ -165,7 +165,7 @@ export default function CitizenVaultModal({
             type="button"
             onClick={() => setActiveTab("kyc")}
             className={`flex items-center gap-1.5 py-2.5 sm:py-3 px-2 sm:px-3 border-b-2 transition whitespace-nowrap cursor-pointer text-[11px] sm:text-xs ${
-              activeTab === "kyc"
+ activeTab === "kyc"
                 ? "border-money text-money font-bold"
                 : "border-transparent text-ink-2 hover:text-ink"
             }`}
@@ -178,7 +178,7 @@ export default function CitizenVaultModal({
             type="button"
             onClick={() => setActiveTab("tax_assets")}
             className={`flex items-center gap-1.5 py-2.5 sm:py-3 px-2 sm:px-3 border-b-2 transition whitespace-nowrap cursor-pointer text-[11px] sm:text-xs ${
-              activeTab === "tax_assets"
+ activeTab === "tax_assets"
                 ? "border-money text-money font-bold"
                 : "border-transparent text-ink-2 hover:text-ink"
             }`}
@@ -191,7 +191,7 @@ export default function CitizenVaultModal({
             type="button"
             onClick={() => setActiveTab("documents")}
             className={`flex items-center gap-1.5 py-2.5 sm:py-3 px-2 sm:px-3 border-b-2 transition whitespace-nowrap cursor-pointer text-[11px] sm:text-xs ${
-              activeTab === "documents"
+ activeTab === "documents"
                 ? "border-money text-money font-bold"
                 : "border-transparent text-ink-2 hover:text-ink"
             }`}
@@ -206,7 +206,7 @@ export default function CitizenVaultModal({
             type="button"
             onClick={() => setActiveTab("database")}
             className={`flex items-center gap-1.5 py-3 px-3 border-b-2 transition whitespace-nowrap cursor-pointer ${
-              activeTab === "database"
+ activeTab === "database"
                 ? "border-money text-money font-bold"
                 : "border-transparent text-ink-2 hover:text-ink"
             }`}
@@ -219,9 +219,9 @@ export default function CitizenVaultModal({
         {/* Tab Body */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
           {syncSuccess && (
-            <div className="rounded-xl border border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/30 p-3.5 text-xs text-emerald-800 dark:text-emerald-200 flex items-center justify-between gap-3 animate-in fade-in">
+            <div className="rounded-xl border border-ok/40 bg-ok-soft p-3.5 text-xs text-ok-ink flex items-center justify-between gap-3 animate-in fade-in">
               <div className="flex items-center gap-2">
-                <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                <CheckCircle2 size={16} className="text-ok-ink shrink-0" />
                 <span className="font-semibold">{syncSuccess}</span>
               </div>
             </div>
@@ -231,28 +231,28 @@ export default function CitizenVaultModal({
           {activeTab === "kyc" && (
             <div className="space-y-6">
               {/* Virtual PAN Card */}
-              <div className="relative rounded-2xl border-2 border-sky-400/30 bg-gradient-to-br from-slate-900 via-sky-950 to-navy-dark text-white p-5 sm:p-6 shadow-xl overflow-hidden">
+              <div className="relative rounded-2xl border-2 border-tertiary/40 bg-gradient-to-br to-ink-surface text-white p-5 sm:p-6 shadow-glass overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
                   <ShieldCheck size={160} />
                 </div>
 
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <span className="text-[10px] font-mono tracking-widest uppercase text-sky-300 block">
+                    <span className="text-[10px] font-mono tracking-widest uppercase text-tertiary block">
                       INCOME TAX DEPARTMENT · GOVT OF INDIA
                     </span>
-                    <h3 className="font-sans text-sm font-bold text-slate-200 dark:text-ink">
+                    <h3 className="font-sans text-sm font-bold text-on-ink dark:text-ink">
                       PERMANENT ACCOUNT NUMBER CARD
                     </h3>
                   </div>
-                  <div className="size-8 rounded-lg bg-amber-400/30 border border-amber-300/40 flex items-center justify-center">
-                    <span className="size-4 rounded-sm bg-gradient-to-br from-amber-300 to-amber-500 shadow-sm" />
+                  <div className="size-8 rounded-lg bg-amber-bg border border-money/40 flex items-center justify-center">
+                    <span className="size-4 rounded-sm bg-gradient-to-br shadow-sm" />
                   </div>
                 </div>
 
                 <div className="space-y-3 relative z-10">
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-mono">
+                    <span className="text-[10px] text-ink-3 uppercase tracking-wider block font-mono">
                       Name / नाम
                     </span>
                     <p className="font-sans text-lg font-bold text-white tracking-wide">
@@ -262,47 +262,47 @@ export default function CitizenVaultModal({
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-mono">
+                      <span className="text-[10px] text-ink-3 uppercase tracking-wider block font-mono">
                         Date of Birth / जन्म तिथि
                       </span>
-                      <p className="font-mono text-sm font-semibold text-slate-200 dark:text-ink">
+                      <p className="font-mono text-sm font-semibold text-on-ink dark:text-ink">
                         {vaultUser.dateOfBirth || "12/04/1988"}
                       </p>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-mono">
+                      <span className="text-[10px] text-ink-3 uppercase tracking-wider block font-mono">
                         PAN / पैन
                       </span>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-base font-bold text-amber-300 tracking-wider">
+                        <span className="font-mono text-base font-bold text-money tracking-wider">
                           {vaultUser.pan}
                         </span>
                         <button
                           type="button"
                           onClick={() => handleCopy(vaultUser.pan, "pan")}
-                          className="text-slate-400 hover:text-white transition"
+                          className="text-ink-3 hover:text-white transition"
                           title="Copy PAN"
                         >
-                          {copiedField === "pan" ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                          {copiedField === "pan" ? <Check size={14} className="text-ok" /> : <Copy size={14} />}
                         </button>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-sky-800/40 flex items-center justify-between text-[11px] font-mono text-sky-300/80">
+                <div className="mt-4 pt-3 border-t border-tertiary/40 flex items-center justify-between text-[11px] font-mono text-tertiary/80">
                   <span>STATUS: CBDT VERIFIED</span>
                   <span>AY 2026-27 COMPLIANT</span>
                 </div>
               </div>
 
               {/* Virtual Aadhaar Card */}
-              <div className="relative rounded-2xl border-2 border-orange-500/30 bg-gradient-to-br from-orange-50/90 via-paper to-emerald-50/90 dark:from-slate-900 dark:via-paper-2 dark:to-emerald-950/40 p-5 sm:p-6 shadow-md">
+              <div className="relative rounded-2xl border-2 border-money/40 bg-gradient-to-br via-paper dark:via-paper-2 p-5 sm:p-6 shadow-md">
                 <div className="flex items-center justify-between pb-3 mb-3 border-b border-line">
                   <div className="flex items-center gap-2">
-                    <span className="size-3 rounded-full bg-orange-500" />
-                    <span className="size-3 rounded-full bg-white border border-slate-300" />
-                    <span className="size-3 rounded-full bg-emerald-600" />
+                    <span className="size-3 rounded-full bg-money" />
+                    <span className="size-3 rounded-full bg-paper-3 border border-line" />
+                    <span className="size-3 rounded-full bg-ok" />
                     <span className="font-mono text-xs font-bold text-ink">
                       UNIQUE IDENTIFICATION AUTHORITY OF INDIA (UIDAI)
                     </span>
@@ -341,7 +341,7 @@ export default function CitizenVaultModal({
                             className="p-1 rounded text-ink-2 hover:text-ink transition cursor-pointer"
                             title="Copy Aadhaar"
                           >
-                            {copiedField === "aadhaar" ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
+                            {copiedField === "aadhaar" ? <Check size={16} className="text-ok-ink" /> : <Copy size={16} />}
                           </button>
                         )}
                       </div>
@@ -354,7 +354,7 @@ export default function CitizenVaultModal({
                   </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-line/60 flex items-center justify-between text-xs text-emerald-700 dark:text-emerald-400 font-semibold">
+                <div className="mt-4 pt-3 border-t border-line/60 flex items-center justify-between text-xs text-ok-ink font-semibold">
                   <span className="flex items-center gap-1.5">
                     <CheckCircle2 size={14} />
                     <span>Aadhaar-PAN Linkage Confirmed</span>
@@ -368,7 +368,7 @@ export default function CitizenVaultModal({
                 <div className="surface-panel p-4 rounded-xl border border-line text-start space-y-1">
                   <span className="text-[11px] font-mono text-ink-3 uppercase">Registered Mobile (+91)</span>
                   <p className="font-mono text-sm font-bold text-ink">{vaultUser.mobile || "+91 98765 43210"}</p>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-ok-ink">
                     <CheckCircle2 size={12} /> OTP Verified
                   </span>
                 </div>
@@ -376,7 +376,7 @@ export default function CitizenVaultModal({
                 <div className="surface-panel p-4 rounded-xl border border-line text-start space-y-1">
                   <span className="text-[11px] font-mono text-ink-3 uppercase">E-Filing Email Address</span>
                   <p className="font-mono text-sm font-bold text-ink truncate">{vaultUser.email || "citizen@taxpayer.gov.in"}</p>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-ok-ink">
                     <CheckCircle2 size={12} /> Primary Notice Channel
                   </span>
                 </div>
@@ -402,7 +402,7 @@ export default function CitizenVaultModal({
                           <div className="flex items-center gap-2">
                             <span className="font-sans font-bold text-sm text-ink">{b.bank}</span>
                             {b.nominatedForRefund && (
-                              <span className="rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold px-2 py-0.5 border border-emerald-300">
+                              <span className="rounded bg-ok-soft text-ok-ink text-[10px] font-bold px-2 py-0.5 border border-ok/40">
                                 PRIMARY REFUND ACCOUNT
                               </span>
                             )}
@@ -412,7 +412,7 @@ export default function CitizenVaultModal({
                             <strong className="text-ink">{b.ifsc}</strong>
                           </p>
                         </div>
-                        <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
+                        <span className="text-xs text-ok-ink font-semibold flex items-center gap-1">
                           <CheckCircle2 size={14} /> Pre-validated
                         </span>
                       </div>
@@ -470,7 +470,7 @@ export default function CitizenVaultModal({
                       className="surface-panel p-3.5 rounded-xl border border-line flex items-center justify-between gap-3 hover:border-money/40 transition"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="size-9 rounded-lg bg-navy/10 dark:bg-navy/30 text-navy dark:text-sky-300 flex items-center justify-center shrink-0">
+                        <div className="size-9 rounded-lg ink-surface text-ink flex items-center justify-center shrink-0">
                           <FileText size={18} />
                         </div>
                         <div>
@@ -482,7 +482,7 @@ export default function CitizenVaultModal({
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded border border-emerald-300">
+                        <span className="text-[10px] font-mono font-bold text-ok-ink bg-ok-soft px-2 py-0.5 rounded border border-ok/40">
                           {doc.status.toUpperCase()}
                         </span>
                         <button
@@ -514,9 +514,9 @@ export default function CitizenVaultModal({
                   </div>
                   <span
                     className={`text-xs font-mono font-bold px-2 py-0.5 rounded ${
-                      vaultUser.syncedToPostgres
-                        ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300"
-                        : "bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
+ vaultUser.syncedToPostgres
+ ? "bg-ok-soft  text-ok-ink "
+                        : "bg-tertiary/15  text-tertiary "
                     }`}
                   >
                     {vaultUser.syncedToPostgres ? "Active (Sovereign Cloud)" : "Local Storage Secured"}
@@ -539,7 +539,7 @@ export default function CitizenVaultModal({
                     type="button"
                     onClick={handleForceSync}
                     disabled={syncing}
-                    className="flex items-center gap-2 rounded-xl bg-navy px-4 py-2 text-xs font-bold text-white shadow-sm hover:opacity-90 transition cursor-pointer"
+                    className="flex items-center gap-2 rounded-xl ink-surface px-4 py-2 text-xs font-bold text-white shadow-sm hover:opacity-90 transition cursor-pointer"
                   >
                     <RefreshCw size={14} className={syncing ? "animate-spin" : ""} />
                     <span>{syncing ? "Connecting to Encrypted Vault..." : "Sync to Cloud Vault"}</span>
@@ -562,7 +562,7 @@ export default function CitizenVaultModal({
         {/* Footer */}
         <div className="px-5 py-3 border-t border-line bg-paper-2 flex items-center justify-between text-xs text-ink-3">
           <span className="flex items-center gap-1.5">
-            <Sparkles size={13} className="text-amber-500" />
+            <Sparkles size={13} className="text-money" />
             <span>Encrypted with bank-grade security standards</span>
           </span>
           <button

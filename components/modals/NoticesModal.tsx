@@ -245,13 +245,13 @@ export default function NoticesModal({
       aria-labelledby="notices-modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-3 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
     >
-      <div className="surface-panel relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl bg-paper shadow-2xl border border-line overflow-hidden">
+      <div className="surface-panel relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl bg-paper shadow-glass border border-line overflow-hidden">
         {/* ========================================================================= */}
         {/* MODAL HEADER                                                              */}
         {/* ========================================================================= */}
         <div className="shrink-0 flex items-start justify-between border-b border-line p-5 sm:px-6 sm:py-4 bg-paper-2">
           <div className="flex items-center gap-3">
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 shadow-xs">
+            <div className="flex size-11 items-center justify-center rounded-2xl bg-bad-soft text-bad shadow-xs">
               <ShieldAlert size={22} aria-hidden="true" />
             </div>
             <div>
@@ -259,7 +259,7 @@ export default function NoticesModal({
                 <h2 id="notices-modal-title" className="font-sans text-lg sm:text-xl font-black text-ink">
                   {isHindi ? "नोटिस और त्रुटि निवारण केंद्र" : "Notices & Defect Resolver"}
                 </h2>
-                <span className="hidden sm:inline-flex rounded-full bg-rose-100 dark:bg-rose-950/80 px-2.5 py-0.5 text-[10px] font-mono font-bold text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                <span className="hidden sm:inline-flex rounded-full bg-bad-soft px-2.5 py-0.5 text-[10px] font-mono font-bold text-bad border border-bad/40">
                   Sec 143(1)(a) & 139(9)
                 </span>
               </div>
@@ -289,15 +289,15 @@ export default function NoticesModal({
             type="button"
             onClick={() => setActiveTab("active_notices")}
             className={`pb-2.5 px-3 text-xs font-bold transition flex items-center gap-2 border-b-2 cursor-pointer ${
-              activeTab === "active_notices"
-                ? "border-rose-600 text-rose-600 dark:text-rose-400"
+ activeTab === "active_notices"
+                ? "border-bad/40 text-bad "
                 : "border-transparent text-ink-2 hover:text-ink"
             }`}
           >
             <FileText size={15} />
             <span>{isHindi ? "1. सक्रिय नोटिस स्थिति" : "1. Notice Status & DIN"}</span>
             {!isCleanRecord && (
-              <span className="rounded-full bg-rose-100 dark:bg-rose-950 px-1.5 py-0.2 text-[10px] font-mono font-bold text-rose-700 dark:text-rose-300">
+              <span className="rounded-full bg-bad-soft px-1.5 py-0.2 text-[10px] font-mono font-bold text-bad">
                 {filteredNotices.length}
               </span>
             )}
@@ -308,8 +308,8 @@ export default function NoticesModal({
             onClick={() => setActiveTab("defense_drafter")}
             disabled={isCleanRecord}
             className={`pb-2.5 px-3 text-xs font-bold transition flex items-center gap-2 border-b-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-              activeTab === "defense_drafter"
-                ? "border-rose-600 text-rose-600 dark:text-rose-400"
+ activeTab === "defense_drafter"
+                ? "border-bad/40 text-bad "
                 : "border-transparent text-ink-2 hover:text-ink"
             }`}
           >
@@ -321,8 +321,8 @@ export default function NoticesModal({
             type="button"
             onClick={() => setActiveTab("timeline_radar")}
             className={`pb-2.5 px-3 text-xs font-bold transition flex items-center gap-2 border-b-2 cursor-pointer ${
-              activeTab === "timeline_radar"
-                ? "border-rose-600 text-rose-600 dark:text-rose-400"
+ activeTab === "timeline_radar"
+                ? "border-bad/40 text-bad "
                 : "border-transparent text-ink-2 hover:text-ink"
             }`}
           >
@@ -343,14 +343,14 @@ export default function NoticesModal({
               {/* CASE 1: LOGGED IN CITIZEN HAS A CLEAN RECORD (NO NOTICES) */}
               {isCleanRecord ? (
                 <div className="space-y-6">
-                  <div className="flex flex-col items-center justify-center p-8 sm:p-10 rounded-3xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/40 dark:bg-emerald-950/20 text-center space-y-4 shadow-sm">
-                    <div className="flex size-16 items-center justify-center rounded-3xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-300 shadow-sm">
+                  <div className="flex flex-col items-center justify-center p-8 sm:p-10 rounded-3xl border border-ok/40 bg-ok-soft text-center space-y-4 shadow-sm">
+                    <div className="flex size-16 items-center justify-center rounded-3xl bg-ok-soft text-ok-ink shadow-sm">
                       <ShieldCheck size={36} />
                     </div>
 
                     <div className="space-y-1.5 max-w-lg">
                       <div className="flex items-center justify-center gap-2">
-                        <span className="rounded-full bg-emerald-600 text-white font-mono text-[10px] font-bold px-2.5 py-0.5 uppercase tracking-wider">
+                        <span className="rounded-full bg-ok text-white font-mono text-[10px] font-bold px-2.5 py-0.5 uppercase tracking-wider">
                           Zero Pending Notices
                         </span>
                         <span className="font-mono text-xs font-bold text-ink-2">
@@ -376,7 +376,7 @@ export default function NoticesModal({
                           onClose();
                           onNavigateToDashboard?.();
                         }}
-                        className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/25 transition cursor-pointer flex items-center gap-2"
+                        className="px-5 py-2.5 rounded-xl bg-ok hover:opacity-90 text-white text-xs font-bold shadow-md shadow-emerald-600/25 transition cursor-pointer flex items-center gap-2"
                       >
                         <span>{isHindi ? "डैशबोर्ड पर रिटर्न देखें" : "View My Return in Dashboard"}</span>
                         <ArrowRight size={14} />
@@ -387,7 +387,7 @@ export default function NoticesModal({
                         onClick={() => setShowDemoCases(true)}
                         className="px-4 py-2.5 rounded-xl border border-line bg-paper hover:bg-paper-2 text-ink text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
                       >
-                        <Sparkles size={14} className="text-amber-500" />
+                        <Sparkles size={14} className="text-money" />
                         <span>{isHindi ? "डेमो बेंचमार्क नोटिस केस देखें" : "Explore Benchmark Notice Cases"}</span>
                       </button>
                     </div>
@@ -396,7 +396,7 @@ export default function NoticesModal({
                   {/* Verification Banner */}
                   <div className="p-4 rounded-2xl bg-paper-2 border border-line text-xs space-y-1 text-ink-2">
                     <span className="font-bold text-ink flex items-center gap-1.5">
-                      <CheckCircle2 size={14} className="text-emerald-600" />
+                      <CheckCircle2 size={14} className="text-ok-ink" />
                       <span>{isHindi ? "सत्यापित सीबीडीटी स्थिति:" : "CBDT Central Processing Verification:"}</span>
                     </span>
                     <p>
@@ -411,9 +411,9 @@ export default function NoticesModal({
                 <div className="space-y-6">
                   {/* Demo Indicator if exploring demo cases */}
                   {showDemoCases && activeCitizen && (
-                    <div className="flex items-center justify-between p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs">
+                    <div className="flex items-center justify-between p-3.5 rounded-2xl bg-amber-bg border border-money/40 text-amber-ink text-xs">
                       <div className="flex items-center gap-2">
-                        <Sparkles size={16} className="text-amber-600 shrink-0" />
+                        <Sparkles size={16} className="text-amber-ink shrink-0" />
                         <span>
                           <strong>{isHindi ? "डेमो मोड सक्रिय:" : "Demonstration Mode Active:"}</strong>{" "}
                           {isHindi
@@ -432,8 +432,8 @@ export default function NoticesModal({
                   )}
 
                   {/* CBDT DIN Rule Disclosure Banner */}
-                  <div className="flex items-start gap-3 rounded-2xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/20 p-4 text-xs">
-                    <AlertOctagon size={18} className="text-rose-600 shrink-0 mt-0.5" />
+                  <div className="flex items-start gap-3 rounded-2xl border border-bad/40 bg-bad-soft p-4 text-xs">
+                    <AlertOctagon size={18} className="text-bad shrink-0 mt-0.5" />
                     <div className="space-y-1">
                       <span className="font-bold text-ink">
                         {isHindi ? "सीबीडीटी परिपत्र 19/2019 — अनिवार्य DIN अधिदेश" : "CBDT Circular No. 19/2019 — Mandatory DIN Requirement"}
@@ -459,7 +459,7 @@ export default function NoticesModal({
                           ? "DIN संख्या, पैन (PAN) या धारा (Section 139/143) खोजें..."
                           : "Search by DIN (e.g. ITBA/AST/S/143), PAN, or Section..."
                       }
-                      className="w-full pl-9 pr-4 py-2.5 text-xs font-mono rounded-xl border border-line bg-paper text-ink placeholder:text-ink-3 focus:border-rose-600 focus:outline-none"
+                      className="w-full pl-9 pr-4 py-2.5 text-xs font-mono rounded-xl border border-line bg-paper text-ink placeholder:text-ink-3 focus:border-bad/40 focus:outline-none"
                     />
                   </div>
 
@@ -484,20 +484,20 @@ export default function NoticesModal({
                             key={n.id}
                             onClick={() => setSelectedNoticeId(n.id)}
                             className={`p-4 rounded-2xl border-2 transition cursor-pointer space-y-3 ${
-                              isSelected
-                                ? "border-rose-600 bg-rose-50/20 dark:bg-rose-950/20 shadow-xs ring-1 ring-rose-600"
-                                : "border-line bg-paper hover:border-rose-300"
+ isSelected
+ ? "border-bad/40 bg-bad-soft  shadow-xs ring-1 ring-bad/40"
+                                : "border-line bg-paper hover:border-bad/40"
                             }`}
                           >
                             {/* Notice Header */}
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div className="flex items-center gap-2">
-                                <span className="rounded-md bg-rose-600 text-white font-mono text-[10px] font-bold px-2 py-0.5">
+                                <span className="rounded-md bg-bad text-white font-mono text-[10px] font-bold px-2 py-0.5">
                                   Section {n.section}
                                 </span>
                                 <span className="font-mono text-xs font-bold text-ink truncate max-w-xs">{n.din}</span>
                                 {n.isDemoCase && (
-                                  <span className="rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[10px] font-bold px-1.5 py-0.2">
+                                  <span className="rounded bg-amber-bg text-amber-ink text-[10px] font-bold px-1.5 py-0.2">
                                     Demo Case
                                   </span>
                                 )}
@@ -507,9 +507,9 @@ export default function NoticesModal({
                                 <span className="text-xs text-ink-3">Issued: {n.issuedOn}</span>
                                 <span
                                   className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                                    isUrgent
-                                      ? "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 animate-pulse"
-                                      : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+ isUrgent
+ ? "bg-bad-soft text-bad   animate-pulse"
+                                      : "bg-amber-bg text-amber-ink  "
                                   }`}
                                 >
                                   {n.daysRemaining} days left of {n.deadlineDays}
@@ -532,7 +532,7 @@ export default function NoticesModal({
                               </div>
                               <div className="flex items-center gap-1.5">
                                 <span className="text-ink-2">Amount at Stake:</span>
-                                <span className="font-mono font-bold text-rose-600 dark:text-rose-400">
+                                <span className="font-mono font-bold text-bad">
                                   {formatMoney(n.taxDemand, lang)}
                                 </span>
                               </div>
@@ -561,7 +561,7 @@ export default function NoticesModal({
                 </div>
                 <div className="text-end">
                   <span className="text-[10px] font-mono text-ink-3 block">Time Remaining:</span>
-                  <span className="font-bold text-rose-600 font-mono text-sm">{currentNotice.daysRemaining} Days</span>
+                  <span className="font-bold text-bad font-mono text-sm">{currentNotice.daysRemaining} Days</span>
                 </div>
               </div>
 
@@ -579,18 +579,18 @@ export default function NoticesModal({
                       setStatementText(isHindi ? currentNotice.recommendedDraftHi : currentNotice.recommendedDraftEn);
                     }}
                     className={`p-4 rounded-2xl border-2 text-start transition cursor-pointer space-y-1.5 ${
-                      stance === "agree"
-                        ? "border-emerald-600 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-xs ring-1 ring-emerald-600"
-                        : "border-line bg-paper hover:border-emerald-300"
+ stance === "agree"
+                        ? "border-ok/40 bg-ok-soft  shadow-xs ring-1 ring-ok/40"
+                        : "border-line bg-paper hover:border-ok/40"
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                      <span className="font-bold text-xs text-ok-ink flex items-center gap-1.5">
                         <Check size={14} />
                         <span>{isHindi ? "विभाग के तथ्यों से सहमत — सुधार स्वीकारें" : "Agree & Reconcile (Revised Return)"}</span>
                       </span>
                       <div className="size-4 rounded-full border border-line flex items-center justify-center bg-paper">
-                        {stance === "agree" && <div className="size-2.5 rounded-full bg-emerald-600" />}
+                        {stance === "agree" && <div className="size-2.5 rounded-full bg-ok" />}
                       </div>
                     </div>
                     <p className="text-[11px] text-ink-2 leading-relaxed">
@@ -611,18 +611,18 @@ export default function NoticesModal({
                       );
                     }}
                     className={`p-4 rounded-2xl border-2 text-start transition cursor-pointer space-y-1.5 ${
-                      stance === "disagree"
-                        ? "border-rose-600 bg-rose-50/20 dark:bg-rose-950/20 shadow-xs ring-1 ring-rose-600"
-                        : "border-line bg-paper hover:border-rose-300"
+ stance === "disagree"
+                        ? "border-bad/40 bg-bad-soft  shadow-xs ring-1 ring-bad/40"
+                        : "border-line bg-paper hover:border-bad/40"
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs text-rose-800 dark:text-rose-300 flex items-center gap-1.5">
+                      <span className="font-bold text-xs text-bad flex items-center gap-1.5">
                         <AlertOctagon size={14} />
                         <span>{isHindi ? "असहमत — कानूनी साक्ष्य व आपत्ति दर्ज करें" : "Object & Submit Evidence (Dispute)"}</span>
                       </span>
                       <div className="size-4 rounded-full border border-line flex items-center justify-center bg-paper">
-                        {stance === "disagree" && <div className="size-2.5 rounded-full bg-rose-600" />}
+                        {stance === "disagree" && <div className="size-2.5 rounded-full bg-bad" />}
                       </div>
                     </div>
                     <p className="text-[11px] text-ink-2 leading-relaxed">
@@ -645,8 +645,8 @@ export default function NoticesModal({
                     type="button"
                     onClick={handleVoiceToggle}
                     className={`flex items-center gap-1.5 font-mono text-[11px] font-bold px-2.5 py-1 rounded-lg border transition cursor-pointer ${
-                      isListening
-                        ? "bg-rose-600 text-white border-rose-600 animate-pulse"
+ isListening
+ ? "bg-bad text-white border-bad/40 animate-pulse"
                         : "bg-paper border-line text-ink-2 hover:text-ink"
                     }`}
                   >
@@ -659,14 +659,14 @@ export default function NoticesModal({
                   rows={5}
                   value={statementText}
                   onChange={(e) => setStatementText(e.target.value)}
-                  className="w-full p-3.5 text-xs font-mono leading-relaxed rounded-2xl border border-line bg-paper text-ink focus:border-rose-600 focus:outline-none focus:ring-1 focus:ring-rose-600"
+                  className="w-full p-3.5 text-xs font-mono leading-relaxed rounded-2xl border border-line bg-paper text-ink focus:border-bad/40 focus:outline-none focus:ring-1 focus:ring-bad/40"
                 />
               </div>
 
               {/* Staging Summary */}
               {isResolved && (
-                <div className="flex items-center gap-3 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 text-xs">
-                  <CheckCircle2 size={20} className="text-emerald-600 shrink-0" />
+                <div className="flex items-center gap-3 p-4 rounded-2xl bg-ok-soft border border-ok/40 text-ok-ink text-xs">
+                  <CheckCircle2 size={20} className="text-ok-ink shrink-0" />
                   <div>
                     <strong className="font-bold block">
                       {isHindi ? "संशोधित रिटर्न सफलतापूर्वक तैयार (Revised Return Staged u/s 139(5))" : "Notice Resolved & Revised Return Staged u/s 139(5)"}
@@ -693,15 +693,15 @@ export default function NoticesModal({
                   <span className="font-bold text-ink">
                     {isHindi ? "धारा 139(9) अनिवार्य 15-दिवसीय प्रतिक्रिया विंडो:" : "Section 139(9) 15-Day Statutory Response Window:"}
                   </span>
-                  <span className="font-mono font-bold text-rose-600">
+                  <span className="font-mono font-bold text-bad">
                     {currentNotice.daysRemaining} Days Left
                   </span>
                 </div>
 
                 {/* Progress Bar */}
-                <div className="w-full bg-slate-200 dark:bg-slate-800 h-3 rounded-full overflow-hidden">
+                <div className="w-full bg-line h-3 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-rose-600 rounded-full transition-all duration-500"
+                    className="h-full bg-bad rounded-full transition-all duration-500"
                     style={{ width: `${((currentNotice.deadlineDays - currentNotice.daysRemaining) / currentNotice.deadlineDays) * 100}%` }}
                   />
                 </div>
@@ -715,7 +715,7 @@ export default function NoticesModal({
               {/* Statutory Consequences Grid */}
               <div className="rounded-2xl border border-line bg-paper-2 p-4 text-xs space-y-3">
                 <div className="flex items-center gap-2 font-bold text-ink">
-                  <AlertOctagon size={15} className="text-rose-600" />
+                  <AlertOctagon size={15} className="text-bad" />
                   <span>
                     {isHindi
                       ? "15 दिनों में उत्तर न देने पर कानूनी परिणाम:"
@@ -751,7 +751,7 @@ export default function NoticesModal({
         {/* ========================================================================= */}
         <div className="shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-line p-4 sm:p-5 bg-paper">
           <div className="flex items-center gap-2 text-xs text-ink-3">
-            <Building size={15} className="text-rose-600" />
+            <Building size={15} className="text-bad" />
             <span>
               {isCleanRecord
                 ? `${activeCitizen?.name} · Clean Compliance Record`
@@ -775,7 +775,7 @@ export default function NoticesModal({
                   onClose();
                   onNavigateToDashboard?.();
                 }}
-                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-600/25 transition cursor-pointer"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-ok hover:opacity-90 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-600/25 transition cursor-pointer"
               >
                 <span>{isHindi ? "डैशबोर्ड पर रिटर्न देखें" : "View Return in Dashboard"}</span>
                 <ArrowRight size={14} />
@@ -784,7 +784,7 @@ export default function NoticesModal({
               <button
                 type="button"
                 onClick={handleResolve}
-                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-600/25 transition cursor-pointer"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-ok hover:opacity-90 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-600/25 transition cursor-pointer"
               >
                 <Sparkles size={14} />
                 <span>
@@ -796,7 +796,7 @@ export default function NoticesModal({
               <button
                 type="button"
                 onClick={handleResolve}
-                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-rose-600/25 transition cursor-pointer"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-bad hover:opacity-90 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-rose-600/25 transition cursor-pointer"
               >
                 <Send size={14} />
                 <span>

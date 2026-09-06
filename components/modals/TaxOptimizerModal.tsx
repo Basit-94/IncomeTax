@@ -209,11 +209,11 @@ export default function TaxOptimizerModal({
       aria-labelledby="tax-optimizer-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-2 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
     >
-      <div className="surface-panel relative w-full max-w-4xl h-[88vh] flex flex-col rounded-3xl bg-paper shadow-2xl border border-amber-500/40 text-start overflow-hidden">
+      <div className="surface-panel relative w-full max-w-4xl h-[88vh] flex flex-col rounded-3xl bg-paper shadow-glass border border-money/40 text-start overflow-hidden">
         {/* Fixed Header */}
         <div className="shrink-0 flex items-start justify-between border-b border-line p-5 sm:p-6 bg-paper">
           <div className="flex items-center gap-3.5">
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-600 text-white shadow-md shadow-amber-500/30 shrink-0">
+            <div className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-tr text-white shadow-md shadow-amber-500/30 shrink-0">
               <Calculator size={24} />
             </div>
             <div>
@@ -221,7 +221,7 @@ export default function TaxOptimizerModal({
                 <h2 id="tax-optimizer-title" className="font-sans text-xl md:text-2xl font-bold text-ink">
                   {isHindi ? "टैक्स और रिजीम ऑप्टिमाइज़र (AY 2026-27)" : "Tax & Regime Optimizer (AY 2026-27)"}
                 </h2>
-                <span className="rounded-full bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                <span className="rounded-full bg-amber-bg border border-money/40 px-2.5 py-0.5 text-[11px] font-mono font-bold text-amber-ink uppercase tracking-wider">
                   Card 03
                 </span>
               </div>
@@ -232,7 +232,7 @@ export default function TaxOptimizerModal({
                     <span className="font-bold text-ink">{activeCitizen.name}</span> (PAN:{" "}
                     <span className="font-mono font-bold text-ink">{activeCitizen.pan}</span>) ·{" "}
                     {isHindi ? "वर्तमान ड्राफ्ट:" : "Current Draft:"}{" "}
-                    <strong className="text-amber-600 uppercase">{currentRegime} Regime</strong>
+                    <strong className="text-amber-ink uppercase">{currentRegime} Regime</strong>
                   </span>
                 ) : (
                   <span>
@@ -260,8 +260,8 @@ export default function TaxOptimizerModal({
             type="button"
             onClick={() => setActiveTab("battle")}
             className={`rounded-xl px-4 py-2 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "battle"
-                ? "bg-amber-600 text-white shadow-sm"
+ activeTab === "battle"
+                ? "bg-money text-white shadow-sm"
                 : "bg-paper-2 text-ink-2 hover:bg-paper-3 hover:text-ink"
             }`}
           >
@@ -272,15 +272,15 @@ export default function TaxOptimizerModal({
             type="button"
             onClick={() => setActiveTab("deductions")}
             className={`rounded-xl px-4 py-2 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "deductions"
-                ? "bg-amber-600 text-white shadow-sm"
+ activeTab === "deductions"
+                ? "bg-money text-white shadow-sm"
                 : "bg-paper-2 text-ink-2 hover:bg-paper-3 hover:text-ink"
             }`}
           >
             <PiggyBank size={13} />
             <span>{isHindi ? "2. छूट खोज व HRA कैलकुलेटर" : "2. Deduction Discovery & HRA"}</span>
             {totalDeductions > 0 && (
-              <span className="font-mono text-[10px] bg-amber-500/20 px-1.5 py-0.5 rounded text-amber-800 dark:text-amber-200">
+              <span className="font-mono text-[10px] bg-amber-bg px-1.5 py-0.5 rounded text-amber-ink">
                 ₹{(totalDeductions / 1000).toFixed(0)}k
               </span>
             )}
@@ -289,8 +289,8 @@ export default function TaxOptimizerModal({
             type="button"
             onClick={() => setActiveTab("marginal")}
             className={`rounded-xl px-4 py-2 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "marginal"
-                ? "bg-amber-600 text-white shadow-sm"
+ activeTab === "marginal"
+                ? "bg-money text-white shadow-sm"
                 : "bg-paper-2 text-ink-2 hover:bg-paper-3 hover:text-ink"
             }`}
           >
@@ -319,7 +319,7 @@ export default function TaxOptimizerModal({
                       step={25000}
                       min={0}
                       onChange={(e) => setGrossSalary(Math.max(0, Number(e.target.value) || 0))}
-                      className="w-36 rounded-xl border border-amber-500/50 bg-paper px-3 py-1 text-sm font-mono font-bold text-ink focus:border-amber-500 focus:outline-none text-end shadow-sm"
+                      className="w-36 rounded-xl border border-money/40 bg-paper px-3 py-1 text-sm font-mono font-bold text-ink focus:border-money/40 focus:outline-none text-end shadow-sm"
                     />
                   </div>
                 </div>
@@ -335,9 +335,9 @@ export default function TaxOptimizerModal({
                       type="button"
                       onClick={() => setGrossSalary(p.salary)}
                       className={`rounded-lg px-2.5 py-1 text-xs font-mono font-medium transition cursor-pointer ${
-                        grossSalary === p.salary
-                          ? "bg-amber-600 text-white shadow-sm"
-                          : "bg-paper border border-line text-ink-2 hover:text-ink hover:border-amber-400"
+ grossSalary === p.salary
+ ? "bg-money text-white shadow-sm"
+                          : "bg-paper border border-line text-ink-2 hover:text-ink hover:border-money/40"
                       }`}
                     >
                       {p.label}
@@ -349,15 +349,15 @@ export default function TaxOptimizerModal({
               {/* Recommendation Winner Callout */}
               <div
                 className={`rounded-2xl p-4 border-2 flex items-center justify-between gap-4 flex-wrap transition shadow-sm ${
-                  isNewBetter
-                    ? "border-emerald-500/40 bg-emerald-50/40 dark:bg-emerald-950/20"
-                    : "border-blue-500/40 bg-blue-50/40 dark:bg-blue-950/20"
+ isNewBetter
+ ? "border-ok/40 bg-ok-soft "
+                    : "border-tertiary/40 bg-tertiary/15 "
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <div
                     className={`flex size-10 items-center justify-center rounded-xl text-white font-bold shrink-0 ${
-                      isNewBetter ? "bg-emerald-600" : "bg-blue-600"
+ isNewBetter ? "bg-ok" : "bg-tertiary"
                     }`}
                   >
                     <TrendingDown size={20} />
@@ -402,8 +402,8 @@ export default function TaxOptimizerModal({
                     type="button"
                     onClick={() => setManualRegimeChoice(recommendedRegime)}
                     className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                      selectedRegimeChoice === recommendedRegime
-                        ? "bg-ink text-paper shadow-md"
+ selectedRegimeChoice === recommendedRegime
+ ? "bg-ink text-paper shadow-md"
                         : "bg-paper border border-line text-ink-2 hover:text-ink"
                     }`}
                   >
@@ -427,9 +427,9 @@ export default function TaxOptimizerModal({
                 <div
                   onClick={() => setManualRegimeChoice("new")}
                   className={`rounded-2xl p-5 border-2 transition cursor-pointer space-y-4 ${
-                    selectedRegimeChoice === "new"
-                      ? "border-amber-500 bg-amber-50/20 dark:bg-amber-950/20 shadow-md ring-1 ring-amber-500"
-                      : "border-line bg-paper hover:border-amber-300"
+ selectedRegimeChoice === "new"
+                      ? "border-money/40 bg-amber-bg  shadow-md ring-1 ring-money/40"
+                      : "border-line bg-paper hover:border-money/40"
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -439,7 +439,7 @@ export default function TaxOptimizerModal({
                           {isHindi ? "नई कर व्यवस्था (Section 115BAC)" : "New Regime (Sec 115BAC)"}
                         </span>
                         {isNewBetter && (
-                          <span className="rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 text-[10px] font-bold">
+                          <span className="rounded-full bg-ok-soft text-ok-ink px-2 py-0.5 text-[10px] font-bold">
                             {isHindi ? "सर्वोत्तम" : "Winner"}
                           </span>
                         )}
@@ -451,7 +451,7 @@ export default function TaxOptimizerModal({
 
                     <div className="size-5 rounded-full border border-line flex items-center justify-center bg-paper">
                       {selectedRegimeChoice === "new" && (
-                        <div className="size-3 rounded-full bg-amber-500" />
+                        <div className="size-3 rounded-full bg-money" />
                       )}
                     </div>
                   </div>
@@ -475,7 +475,7 @@ export default function TaxOptimizerModal({
                     </div>
                     <div className="flex justify-between">
                       <span className="text-ink-2">{isHindi ? "धारा 87A छूट / मार्जिनल रिलीफ:" : "Sec 87A Rebate / Relief:"}</span>
-                      <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                      <span className="font-mono text-ok-ink font-bold">
                         {result.newRegime.rebate87A > 0 ? `-${formatMoney(result.newRegime.rebate87A, lang)}` : "₹0"}
                       </span>
                     </div>
@@ -490,10 +490,10 @@ export default function TaxOptimizerModal({
                     </div>
                     {taxesAlreadyPaid > 0 && (
                       <div className="flex justify-between items-center text-xs">
-                        <span className="text-emerald-700 dark:text-emerald-400 font-medium">
+                        <span className="text-ok-ink font-medium">
                           {isHindi ? "जमा टैक्स (TDS / चालान 280):" : "Taxes Paid (TDS / Challan):"}
                         </span>
-                        <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                        <span className="font-mono font-bold text-ok-ink">
                           −{formatMoney(taxesAlreadyPaid, lang)}
                         </span>
                       </div>
@@ -507,7 +507,7 @@ export default function TaxOptimizerModal({
                           : (isHindi ? "शुद्ध स्थिति:" : "Net Tax Position:")}
                       </span>
                       <span className={`font-mono text-2xl font-black ${
-                        newNet < 0 ? "text-emerald-600 dark:text-emerald-400" : newNet > 0 ? "text-amber-600 dark:text-amber-400" : "text-ink"
+ newNet < 0 ? "text-ok-ink " : newNet > 0 ? "text-amber-ink " : "text-ink"
                       }`}>
                         {newNet < 0 ? `+${formatMoney(Math.abs(newNet), lang)}` : newNet > 0 ? formatMoney(newNet, lang) : "₹0"}
                       </span>
@@ -519,9 +519,9 @@ export default function TaxOptimizerModal({
                 <div
                   onClick={() => setManualRegimeChoice("old")}
                   className={`rounded-2xl p-5 border-2 transition cursor-pointer space-y-4 ${
-                    selectedRegimeChoice === "old"
-                      ? "border-amber-500 bg-amber-50/20 dark:bg-amber-950/20 shadow-md ring-1 ring-amber-500"
-                      : "border-line bg-paper hover:border-amber-300"
+ selectedRegimeChoice === "old"
+                      ? "border-money/40 bg-amber-bg  shadow-md ring-1 ring-money/40"
+                      : "border-line bg-paper hover:border-money/40"
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -531,7 +531,7 @@ export default function TaxOptimizerModal({
                           {isHindi ? "पुरानी कर व्यवस्था (Old Regime)" : "Old Regime (Deductions)"}
                         </span>
                         {!isNewBetter && (
-                          <span className="rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2 py-0.5 text-[10px] font-bold">
+                          <span className="rounded-full bg-tertiary/15 text-tertiary px-2 py-0.5 text-[10px] font-bold">
                             {isHindi ? "सर्वोत्तम" : "Winner"}
                           </span>
                         )}
@@ -543,7 +543,7 @@ export default function TaxOptimizerModal({
 
                     <div className="size-5 rounded-full border border-line flex items-center justify-center bg-paper">
                       {selectedRegimeChoice === "old" && (
-                        <div className="size-3 rounded-full bg-amber-500" />
+                        <div className="size-3 rounded-full bg-money" />
                       )}
                     </div>
                   </div>
@@ -555,7 +555,7 @@ export default function TaxOptimizerModal({
                     </div>
                     <div className="flex justify-between">
                       <span className="text-ink-2">{isHindi ? "कुल अनुमत कटौतियां:" : "Total Deductions Claimed:"}</span>
-                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      <span className="font-mono font-bold text-ok-ink">
                         {formatMoney(totalDeductions, lang)}
                       </span>
                     </div>
@@ -582,10 +582,10 @@ export default function TaxOptimizerModal({
                     </div>
                     {taxesAlreadyPaid > 0 && (
                       <div className="flex justify-between items-center text-xs">
-                        <span className="text-emerald-700 dark:text-emerald-400 font-medium">
+                        <span className="text-ok-ink font-medium">
                           {isHindi ? "जमा टैक्स (TDS / चालान 280):" : "Taxes Paid (TDS / Challan):"}
                         </span>
-                        <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                        <span className="font-mono font-bold text-ok-ink">
                           −{formatMoney(taxesAlreadyPaid, lang)}
                         </span>
                       </div>
@@ -599,7 +599,7 @@ export default function TaxOptimizerModal({
                           : (isHindi ? "शुद्ध स्थिति:" : "Net Tax Position:")}
                       </span>
                       <span className={`font-mono text-2xl font-black ${
-                        oldNet < 0 ? "text-emerald-600 dark:text-emerald-400" : oldNet > 0 ? "text-blue-600 dark:text-blue-400" : "text-ink"
+ oldNet < 0 ? "text-ok-ink " : oldNet > 0 ? "text-tertiary " : "text-ink"
                       }`}>
                         {oldNet < 0 ? `+${formatMoney(Math.abs(oldNet), lang)}` : oldNet > 0 ? formatMoney(oldNet, lang) : "₹0"}
                       </span>
@@ -611,7 +611,7 @@ export default function TaxOptimizerModal({
               {/* Breakeven Threshold Analyzer */}
               <div className="rounded-2xl border border-line bg-paper-2 p-4 text-xs space-y-2">
                 <div className="flex items-center gap-2">
-                  <Sparkles size={15} className="text-amber-500" />
+                  <Sparkles size={15} className="text-money" />
                   <span className="font-bold text-ink">
                     {isHindi ? "ब्रेकईवन कटौती विश्लेषण (Breakeven Point):" : "Breakeven Threshold Analysis:"}
                   </span>
@@ -621,7 +621,7 @@ export default function TaxOptimizerModal({
                     isHindi ? (
                       <>
                         इस वेतन पर पुरानी व्यवस्था को नई व्यवस्था से बेहतर होने के लिए आपको कम से कम{" "}
-                        <strong className="text-amber-600 font-mono font-bold">
+                        <strong className="text-amber-ink font-mono font-bold">
                           {formatMoney(breakevenDeductions, lang)}
                         </strong>{" "}
                         की कुल कटौतियों (80C + 80D + HRA + होम लोन) की आवश्यकता है। आपकी वर्तमान कटौतियां{" "}
@@ -630,7 +630,7 @@ export default function TaxOptimizerModal({
                     ) : (
                       <>
                         For your salary of <span className="font-mono font-bold text-ink">{formatMoney(grossSalary, lang)}</span>, you need at least{" "}
-                        <strong className="text-amber-600 font-mono font-bold">
+                        <strong className="text-amber-ink font-mono font-bold">
                           {formatMoney(breakevenDeductions, lang)}
                         </strong>{" "}
                         in total deductions (80C, 80D, HRA, Home Loan) for the Old Regime to save more tax. You currently have{" "}
@@ -650,13 +650,13 @@ export default function TaxOptimizerModal({
           {/* TAB 2: DEDUCTION DISCOVERY & HRA CALCULATOR */}
           {activeTab === "deductions" && (
             <div className="space-y-4 animate-in fade-in duration-150">
-              <div className="flex items-center justify-between rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 p-3 text-xs">
-                <span className="text-amber-900 dark:text-amber-200">
+              <div className="flex items-center justify-between rounded-xl bg-amber-bg border border-money/40 p-3 text-xs">
+                <span className="text-amber-ink">
                   {isHindi
                     ? "यहाँ अपनी कटौतियों को जोड़ें। ये आंकड़े पुरानी कर व्यवस्था की गणना में स्वतः जुड़ जाएंगे।"
                     : "Configure eligible Chapter VI-A investments & HRA. They automatically feed into your Old Regime tax calculation."}
                 </span>
-                <span className="font-mono font-bold text-amber-700 dark:text-amber-300">
+                <span className="font-mono font-bold text-amber-ink">
                   {isHindi ? "कुल:" : "Total:"} {formatMoney(totalDeductions, lang)}
                 </span>
               </div>
@@ -665,7 +665,7 @@ export default function TaxOptimizerModal({
               <div className="rounded-2xl border border-line bg-paper-2 p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <PiggyBank size={18} className="text-blue-600" />
+                    <PiggyBank size={18} className="text-tertiary" />
                     <div>
                       <span className="font-bold text-sm text-ink block">
                         {isHindi ? "धारा 80C (PPF, EPF, ELSS, जीवन बीमा, ट्यूशन फीस)" : "Section 80C (EPF, PPF, ELSS, LIC, Tuition Fees)"}
@@ -694,7 +694,7 @@ export default function TaxOptimizerModal({
               <div className="rounded-2xl border border-line bg-paper-2 p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <HeartPulse size={18} className="text-rose-600" />
+                    <HeartPulse size={18} className="text-bad" />
                     <div>
                       <span className="font-bold text-sm text-ink block">
                         {isHindi ? "धारा 80D (स्वास्थ्य बीमा प्रीमियम)" : "Section 80D (Health Insurance Premium)"}
@@ -795,7 +795,7 @@ export default function TaxOptimizerModal({
               <div className="rounded-2xl border border-line bg-paper-2 p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Home size={18} className="text-emerald-600" />
+                    <Home size={18} className="text-ok-ink" />
                     <div>
                       <span className="font-bold text-sm text-ink block">
                         {isHindi ? "मकान किराया भत्ता छूट (HRA u/s 10(13A))" : "House Rent Allowance (HRA Exemption u/s 10(13A))"}
@@ -861,7 +861,7 @@ export default function TaxOptimizerModal({
                       <span className="text-ink-2 font-medium">
                         {isHindi ? "गणना की गई HRA छूट:" : "Calculated HRA Exemption:"}
                       </span>
-                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      <span className="font-mono font-bold text-ok-ink">
                         {formatMoney(calculatedHraExemption, lang)}
                       </span>
                     </div>
@@ -875,12 +875,12 @@ export default function TaxOptimizerModal({
           {activeTab === "marginal" && (
             <div className="space-y-4 animate-in fade-in duration-150">
               <div className="rounded-2xl border border-line bg-paper-2 p-5 space-y-3">
-                <div className="flex items-center gap-2 text-amber-600 font-bold text-sm">
+                <div className="flex items-center gap-2 text-amber-ink font-bold text-sm">
                   <ShieldCheck size={18} />
                   <span>
                     {isHindi
-                      ? "धारा 87A मार्जिनल रिलीफ क्या है और यह आपको कैसे बचाती है?"
-                      : "What is Section 87A Marginal Relief & How Does it Protect You?"}
+                      ? "धारा 87A मार्जिनल रिलीफ क्या है और यह आपको कैसे बचाती है? "
+                      : "What is Section 87A Marginal Relief & How Does it Protect You? "}
                   </span>
                 </div>
                 <p className="text-xs text-ink-2 leading-relaxed">
@@ -923,7 +923,7 @@ export default function TaxOptimizerModal({
                     <span className="text-[10px] font-mono text-ink-3 uppercase block">
                       {isHindi ? "धारा 87A राहत / छूट" : "87A Relief Credited"}
                     </span>
-                    <span className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                    <span className="font-mono font-bold text-sm text-ok-ink">
                       -{formatMoney(marginalResult.newRegime.rebate87A, lang)}
                     </span>
                   </div>
@@ -931,7 +931,7 @@ export default function TaxOptimizerModal({
                     <span className="text-[10px] font-mono text-ink-3 uppercase block">
                       {isHindi ? "वास्तविक देय टैक्स (सुरक्षित)" : "Protected Tax Liability"}
                     </span>
-                    <span className="font-mono font-black text-sm text-amber-600 dark:text-amber-400">
+                    <span className="font-mono font-black text-sm text-amber-ink">
                       {formatMoney(marginalResult.newRegime.totalTaxLiability, lang)}
                     </span>
                   </div>
@@ -952,8 +952,8 @@ export default function TaxOptimizerModal({
                 type="button"
                 onClick={() => setManualRegimeChoice("new")}
                 className={`px-3 py-1 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
-                  selectedRegimeChoice === "new"
-                    ? "bg-emerald-600 text-white shadow-xs"
+ selectedRegimeChoice === "new"
+                    ? "bg-ok text-white shadow-xs"
                     : "text-ink-2 hover:text-ink"
                 }`}
               >
@@ -966,8 +966,8 @@ export default function TaxOptimizerModal({
                 type="button"
                 onClick={() => setManualRegimeChoice("old")}
                 className={`px-3 py-1 text-xs font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
-                  selectedRegimeChoice === "old"
-                    ? "bg-blue-600 text-white shadow-xs"
+ selectedRegimeChoice === "old"
+                    ? "bg-tertiary text-white shadow-xs"
                     : "text-ink-2 hover:text-ink"
                 }`}
               >
@@ -991,9 +991,9 @@ export default function TaxOptimizerModal({
               type="button"
               onClick={handleApply}
               className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl px-5 py-2 text-xs font-bold text-white shadow-md transition cursor-pointer ${
-                selectedRegimeChoice === "old"
-                  ? "bg-blue-600 hover:bg-blue-700 shadow-blue-600/25"
-                  : "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/25"
+ selectedRegimeChoice === "old"
+                  ? "bg-tertiary hover:opacity-90 shadow-blue-600/25"
+                  : "bg-ok hover:opacity-90 shadow-emerald-600/25"
               }`}
             >
               <Sparkles size={14} />

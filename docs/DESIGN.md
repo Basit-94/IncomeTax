@@ -9,6 +9,80 @@ Companion docs: `docs/COPY.md` (language), `docs/ISSUES.md` (U1–U10), `docs/PL
 
 ---
 
+## 0. Redesign 2026-09-06 — "Sunrise/Lilac" + "Navy & Coral", Munshi ji (supersedes the D13 palette below)
+
+Source: `docs/redesign/README.md` (the design handoff: `Wapsi App Redesign.dc.html` is the screen-by-screen
+reference, `Wapsi Landing Directions.dc.html` turn 5 option **5a** is the landing). Direction 13's *rules*
+below (one task one control, read-then-confirm, honest empty states, the ITR-V stays paper-white) still hold;
+its *look* — graph paper, index cards, hard offset shadows, Space Grotesk + Source Serif — is replaced.
+
+**How it was applied (so the next person can extend it):** the Tailwind token names in `app/globals.css`
+were kept and remapped, so every component recoloured at once; `app/d13.css` is untouched and its variables
+are remapped unlayered at the top of `globals.css`; the few surfaces the handoff redraws structurally were
+edited by hand: `header-frame.tsx` (64 px bar, 150 px brand box with the avatar), `mode-switch.tsx` (glass
+pill, ink active segment with a 20 px Munshi ji), `workspace.tsx` (Munshi ji on every turn, ink bubbles,
+glass question card with the 1.5 px soft border, accent-bordered review card, glass composer with the
+primary "Ask/Send"), `app-shell.tsx` + `inspector.tsx` (glass sidebar and controls), `landing.tsx`,
+`auth-portal.tsx` + `app/signin/page.tsx` (glass card, ink story column, segmented tabs, mono PAN input,
+primary button), `components/marketing/landing-page.tsx` (5a). **Hub + dashboard (second pass, same day):**
+D13's verbatim classes (`.ch .split .bar .card .pin .badge .amt .margin .sheet .rail .ro .finish .file .seg
+.divider .thread`) are reshaped unlayered in `globals.css` — glass 22–24 px, pill badges, Outfit 800 money,
+accent-soft callouts, the Simple/Full `.seg` as a pill with an ink active segment — so the headline channels,
+fact cards, working sheet, rail and finish panel follow the handoff without touching their markup;
+`landing.tsx` (hero with Munshi ji 120 px, accent-soft starting-path callout, ink active-session strip with
+the mint dot, glass guest strip; the ticker marquee and the 3D-tilt card wrapper are gone — the handoff has
+neither), `landing-action-grid.tsx` (Card 01 glass with the 1.5 px accent border, ok/accent option tiles,
+dashed accent drop tile, six glass capability cards with tinted icon squares), `personalized-dashboard.tsx`
+(Munshi ji 72 px, primary CTA), `tab-bar.tsx` (glass pill, ink active, red count), `fact-row.tsx` (Munshi ji
+24 px on the "what this means" note, ink/glass buttons), `statement-tab.tsx` (ink sign-off card with Munshi
+ji 56 px), `overview-tab.tsx` (ink refund card with the mint figure, glass bank rows, accent timeline),
+`actions-tab.tsx`, `portal-header.tsx` (glass Hub/My-return switcher with ink active), `portal-footer.tsx`
+(banner ink). **Third pass (same day):** wizard `components/flow/*` (glass stepper with accent bars, question cards with Munshi ji 30 px and ink "Yes, claim it", regime cards accent-soft/ok with the primary Accept, check sheet with ok/bad figures, filing step with Munshi ji and the accent-soft final figure, Munshi ji 96 px on "Filed"), onboarding (accent-soft selected rows, accent progress, primary Continue). The CA portal, reconcile page, vault modal, hub modals, PDF dropzone and ITR-V buttons were moved onto the tokens by a palette map (`scratchpad retoken_palette.py`, recorded in the log): navy → ink surface, emerald/green → ok, teal → accent, slate/gray → ink shades and glass, tailwind amber → accent pair, rose/red → bad, blue family → tertiary, dark-mode palette overrides dropped, `bg-white` → input fill. Their layouts are unchanged; the handoff's worksheet grid for the CA review and the row grid for reconcile are not rebuilt.
+
+**Fourth pass (2026-09-07) — CA worksheet and reconcile rows to artboards 7b / 8a; dark is the default.**
+`app/ca/page.tsx`: the six fact-sheet tabs are gone; the review is a sticky client strip (initials, PAN pill,
+"Client PIN verified", before → after position, Exit / Send review), step pills (Income ✓ · Deductions ✓ ·
+Regime · Notes & send, derived: Notes becomes current once typed), three glass worksheets with the
+`Line · Section · Client filed · CA revised · Δ` grid (Income s.17/56/111A-112A/22, Deductions 80C/80D/80CCD(1B)/
+10(13A)/24(b), Taxes already paid s.192; the revised input turns ok-soft when it differs from what the client
+filed, Δ is an ok pill going up and a warn pill going down, Munshi ji's Caveat note under Deductions names the
+rows the CA added), a Notes-to-the-client card (stamp line, insert chips), and a sticky 340 px rail: ink
+"Recommend a regime" (segmented New/Old, two tax tiles with the Saves pill on the cheaper one, taxable/tax/TDS
+rows, mint balance), glass Client vs CA, glass Audit trail (derived from the diff, section in the mono column),
+read-only note. `components/InteractiveTaxDashboard.tsx`: one row per AIS/26AS line on a
+`minmax(0,1.6fr) 1fr 1fr auto` grid (glass pending, ok-soft confirmed, warn-soft modified; Reported / You say
+columns; ink Confirm + ghost Flag, or a ✓/✎ status pill), the dispute drawer attached below the row (amount ·
+CBDT code · reason · Save & recalculate in one line), and the bottom dock replaced by the sticky rail: ink
+"Live · both regimes" (tiles double as the regime switch, mint net figure, the file/pay CTA with the same
+payable rule), Progress bar, Munshi ji note. The header carries Munshi ji 44 px and the 30 px title. **Theme:**
+every page now starts dark (`dark dark-mode` on `<html>`, state defaults, `/reconcile` reads the key as
+"not light"); a saved `wapsi_theme` of `light` still wins. **Bare `<nav>`:** d13.css styles the element
+(sticky bar, 2 px rule, blue links), which boxed and word-wrapped the marketing header links; `header > nav`
+is reset unlayered right after the d13 import in `globals.css`.
+
+| Token | Light (5a) | Dark (P5) |
+|---|---|---|
+| bg / paper | `#F3EEFF` | `#0B1424` |
+| glass · edge | `rgba(255,255,255,.62)` · `rgba(255,255,255,.95)` | `rgba(255,255,255,.07)` · `rgba(255,255,255,.14)` |
+| ink / ink-2 / ink-3 | `#2A1B4A` / `#4A3580` / `#7562A8` | `#EEF4FF` / `#B6C6E6` / `#7A8DB3` |
+| ink-surface / on-ink (dark cards, bubbles, ink buttons) | `#2A1B4A` / `#F3EEFF` | `#14213A` / `#EEF4FF` |
+| accent (`money`) / accent-soft (`amber-bg`, text `amber-ink`) | `#FF7A1A` / `#FFE3C9` (`#9A3C00`) | `#FF6B5B` (text on it = bg) / `#3A1C17` (`#FFB3A8`) |
+| soft (eyebrows on ink, question-card border) | `#FFC08A` | `#FFB3A8` |
+| ok / ok-soft / ok-ink | `#1E9E70` / `#DDF5EA` / `#0F6B48` | `#2ECF9A` / `#0F3329` / `#7FEBC6` |
+| bad / bad-soft (`alarm`) | `#D9403A` / `#FBE3E1` | `#FF7A7A` / `#3A1B1B` |
+| warn / warn-soft | `#B87A00` / `#FFF1D6` | `#E6B03A` / `#382A0C` |
+| tertiary (earned/stayed bar) | `#8B6CF0` | `#4F8DFF` |
+| line | `rgba(74,53,128,.16)` | `rgba(255,255,255,.12)` |
+| banner | `#1B1140` / `#CDBDFF` | `#060C18` / `#B6C6E6` |
+| shadows | glass `0 24px 50px -28px rgba(42,27,74,.35)`; glow `0 12px 30px -8px rgba(255,122,26,.55)` | glass on black; glow coral |
+
+Type: Outfit 400–800 everywhere (h1 84/60/50/40 at 800, −.03 to −.04em), JetBrains Mono for PAN, DIN,
+hashes and 11–12 px eyebrows, Caveat for Munshi ji's handwritten notes. Shape: cards 24 px, tiles 20–22,
+controls 14, chips 999. Buttons 46 px (50 full-width primary, 38 compact). Munshi ji: 38 px in the brand
+box, 34 on every assistant turn and card, 20 in the mode switch, 96 on empty states, 150 peeking behind
+the composers; loop nod 5 s / blink 4.5 s / wave 2.6 s, off under reduced motion. Voice stays as
+`docs/VOICE.md` — the mascot is the face; the sentences are still the model's, checked.
+
 ## 1. What this is and where it came from
 
 Direction 13 is not a fourteenth idea. It is the synthesis of the three directions the user

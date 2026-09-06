@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { Trash2, HelpCircle } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import type { Persona, Lang } from "../../lib/types";
 import type { Dict } from "../../lib/i18n";
 import { formatMoney } from "../../lib/money";
 import { fireMiniBurst } from "../ambient/mini-burst";
 import { claimWorth, capFor } from "../../lib/return/compute";
 import { localize } from "../mock-i18n";
+import { MunshiAvatar } from "../brand/munshi";
 
 interface DeductionsStepProps {
   persona: Persona;
@@ -79,7 +80,7 @@ export default function DeductionsStep({
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h2 className="text-xl font-bold text-navy dark:text-ink tracking-tight">{t.deductions.heading}</h2>
+        <h2 className="text-[30px] font-extrabold text-ink tracking-[-0.03em] leading-[1.05]">{t.deductions.heading}</h2>
         <p className="text-sm text-ink-2 leading-relaxed">{t.deductions.sub}</p>
       </div>
 
@@ -88,20 +89,20 @@ export default function DeductionsStep({
         {questions.map((question) => (
           <div
             key={question.section}
-            className="fact-card space-y-3 p-4 sm:p-5"
+            className="glass fact-card rounded-3xl p-5 space-y-3"
           >
-            <div className="flex items-start gap-2">
-              <HelpCircle size={16} className="text-money mt-0.5 shrink-0" />
+            <div className="flex items-start gap-3">
+              <MunshiAvatar size={30} />
               <div className="space-y-1 flex-1">
-                <p className="text-sm font-semibold text-ink">{question.q}</p>
-                <p className="text-xs text-ink-2 leading-relaxed">{question.why}</p>
+                <p className="text-[15px] font-bold text-ink">{question.q}</p>
+                <p className="text-[13px] text-ink-2 leading-relaxed">{question.why}</p>
                 {question.cap !== undefined && (
-                  <p className="text-xs font-mono text-money font-semibold">
+                  <p className="text-[11.5px] font-mono text-money font-semibold">
                     {t.deductions.worthUpTo(formatMoney(question.cap, lang))}
                   </p>
                 )}
                 {question.cap === undefined && (
-                  <p className="text-xs font-mono text-ink-3">{t.deductions.worthWhatYouPaid}</p>
+                  <p className="text-[11.5px] font-mono text-money font-semibold">{t.deductions.worthWhatYouPaid}</p>
                 )}
               </div>
             </div>
@@ -113,7 +114,7 @@ export default function DeductionsStep({
                   fireMiniBurst(r.x + r.width / 2, r.y + r.height / 2);
                   onAddClaim(question.section, question.defaultAmount);
                 }}
-                className="bg-navy hover:opacity-90 text-paper dark:text-white text-xs font-semibold py-2 px-3 rounded-lg transition-colors"
+                className="ink-surface hover:opacity-90 text-[13px] font-bold h-[38px] px-4 rounded-[14px] transition-opacity cursor-pointer"
               >
                 {t.deductions.claimIt}
               </button>
@@ -129,7 +130,7 @@ export default function DeductionsStep({
       {/* ALREADY-CLAIMED LIST */}
       {persona.claims.length > 0 && (
         <div className="surface-panel space-y-4 p-5">
-          <h3 className="text-xs font-mono uppercase tracking-wider text-ink-2 border-b border-line pb-2 font-bold">
+          <h3 className="text-xs font-bold text-ink-3">
             {t.deductions.claimedHeading}
           </h3>
 
@@ -138,20 +139,20 @@ export default function DeductionsStep({
               const worth = claimWorth(persona, regime, claim.id);
               const doesNothing = worth === 0;
               return (
-                <div key={claim.id} className="fact-card space-y-2 p-4">
+                <div key={claim.id} className="glass-flat fact-card rounded-[16px] space-y-2 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1 min-w-0">
                       <span className="text-sm font-semibold text-ink block leading-tight">
                         {localize(claim.label, lang)}
                       </span>
                       <div className="flex items-center gap-2 pt-0.5 flex-wrap">
-                        <span className="text-[0.65rem] font-mono bg-white border border-line text-ink-3 px-1.5 py-0.5 rounded">
+                        <span className="glass-flat text-xs font-mono text-ink-3 px-2.5 py-0.5 rounded-full">
                           {claim.section}
                         </span>
                         <span
-                          className={`text-[0.65rem] font-mono px-1.5 py-0.5 rounded ${
+                          className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
                             claim.evidenceAttached
-                              ? "bg-money-soft text-money"
+                              ? "bg-ok-soft text-ok-ink"
                               : "bg-warn-soft text-warn"
                           }`}
                         >
@@ -169,7 +170,7 @@ export default function DeductionsStep({
                     <button
                       onClick={() => onRemoveClaim(claim.id)}
                       aria-label={t.deductions.skipIt}
-                      className="text-ink-3 hover:text-alarm transition-colors shrink-0 p-1"
+                      className="text-ink-3 hover:text-bad transition-colors shrink-0 p-1 cursor-pointer"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -187,13 +188,13 @@ export default function DeductionsStep({
                           setEditingId(null);
                         }}
                         onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-                        className="w-32 text-sm font-mono font-bold text-ink border border-money rounded px-2 py-1 focus:outline-none tabular"
+                        className="w-36 h-[38px] text-sm font-mono font-bold text-ink bg-paper-3 border-[1.5px] border-money rounded-[12px] px-3 focus:outline-none focus:ring-[3px] focus:ring-money/20 tabular"
                         aria-label={t.deductions.amountLabel}
                       />
                     ) : (
                       <button
                         onClick={() => setEditingId(claim.id)}
-                        className="text-base font-bold text-ink tabular text-left"
+                        className="text-base font-extrabold text-ink tabular text-left cursor-pointer"
                       >
                         {formatMoney(claim.amount, lang)}
                         <span className="sr-only">{t.deductions.amountLabel}</span>
@@ -205,7 +206,7 @@ export default function DeductionsStep({
                         {t.deductions.newRegimeNoEffect}
                       </span>
                     ) : (
-                      <span className="text-[0.7rem] text-money font-semibold leading-snug text-right max-w-[60%]">
+                      <span className="text-[0.7rem] text-ok font-semibold leading-snug text-right max-w-[60%]">
                         {t.deductions.oldRegimeSaves(formatMoney(worth, lang))}
                       </span>
                     )}

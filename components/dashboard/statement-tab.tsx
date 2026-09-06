@@ -8,6 +8,7 @@ import type { Correction } from "../../lib/return/state";
 import { localize } from "../mock-i18n";
 import { TODAY } from "../../lib/personas";
 import FactRow from "../fact-row";
+import { Munshi } from "../brand/munshi";
 import { NEW_REGIME_ALLOWED_SECTIONS } from "../../lib/engine/constants";
 
 interface StatementTabProps {
@@ -71,14 +72,14 @@ export default function StatementTab({
   return (
     <div className="space-y-7">
       <div className="space-y-2">
-        <p className="text-sm font-semibold text-money">{t.flow.facts}</p>
-        <h2 className="max-w-2xl text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">{t.file.checkThis}</h2>
-        <p className="max-w-2xl text-base leading-relaxed text-ink-2">{t.file.subheading}</p>
+        <p className="text-xs font-bold uppercase tracking-[.08em] text-money">{t.flow.facts}</p>
+        <h2 className="max-w-2xl text-[30px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink sm:text-[34px]">{t.file.checkThis}</h2>
+        <p className="max-w-2xl text-[15px] leading-relaxed text-ink-2">{t.file.subheading}</p>
       </div>
 
-      <div className="recovery-callout flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <span className="text-sm font-semibold text-ink">{t.flow.confirmedCount(done, totalFacts)}</span>
-        <span className="text-sm text-ink-2">{done === totalFacts ? t.flow.allConfirmed : t.file.onlyTheyCanFix(t.groups.fromWhere)}</span>
+      <div className="recovery-callout flex flex-col gap-2 px-[18px] py-3.5 sm:flex-row sm:items-center sm:justify-between">
+        <span className="text-sm font-bold text-amber-ink">{t.flow.confirmedCount(done, totalFacts)}</span>
+        <span className="text-sm text-amber-ink/80">{done === totalFacts ? t.flow.allConfirmed : t.file.onlyTheyCanFix(t.groups.fromWhere)}</span>
       </div>
 
       <section aria-labelledby="money-in-heading" className="space-y-3">
@@ -91,7 +92,7 @@ export default function StatementTab({
         <div className="flex items-center justify-between gap-3">
           <h3 id="money-in-heading" className="sr-only">{t.groups.moneyIn}</h3>
           {isCustomPersona && (
-            <button onClick={handleAddCustomIncome} className="inline-flex min-h-9 items-center gap-2 rounded-full border border-line px-3 text-sm font-semibold text-money hover:border-money">
+            <button onClick={handleAddCustomIncome} className="glass-flat inline-flex min-h-9 items-center gap-2 rounded-full px-3 text-sm font-semibold text-money hover:border-money">
               <Plus size={14} aria-hidden="true" />
               {t.groups.addIncome}
             </button>
@@ -205,21 +206,22 @@ export default function StatementTab({
         </div>
       </section>
       {full && onSignOffAll && (
-        <section aria-labelledby="signoff-heading" className="surface-panel p-5 space-y-3">
-          <h3 id="signoff-heading" className="text-base font-bold text-ink">{t.signoff.title}</h3>
+        <section aria-labelledby="signoff-heading" className="ink-surface rounded-3xl p-6 space-y-3 relative overflow-hidden">
+          <div className="absolute right-6 top-4 hidden sm:block" aria-hidden="true"><Munshi size={56} /></div>
+          <h3 id="signoff-heading" className="text-lg font-extrabold tracking-[-0.02em] text-on-ink">{t.signoff.title}</h3>
           {done === totalFacts ? (
             /* Signed, not crossed off: full ink, no strike-through (DESIGN SS6). */
-            <p className="flex items-center gap-2 text-sm font-semibold text-money">
+            <p className="flex items-center gap-2 text-sm font-semibold text-[#5EE6B0]">
               <span aria-hidden="true">{"✓"}</span> {t.signoff.signed}
             </p>
           ) : (
             <>
-              <p className="max-w-2xl text-sm leading-relaxed text-ink">{t.signoff.declaration}</p>
-              <p className="max-w-2xl text-xs leading-relaxed text-ink-3">{t.signoff.hint}</p>
+              <p className="max-w-2xl text-sm leading-relaxed text-on-ink">{t.signoff.declaration}</p>
+              <p className="max-w-2xl text-xs leading-relaxed text-on-ink/70">{t.signoff.hint}</p>
               <button
                 type="button"
                 onClick={onSignOffAll}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-navy px-5 py-2.5 text-sm font-bold text-white transition-colors hover:opacity-90"
+                className="btn-primary inline-flex h-[46px] items-center justify-center gap-2 rounded-[14px] px-5 text-[14.5px] transition-colors"
               >
                 {t.signoff.action}
               </button>

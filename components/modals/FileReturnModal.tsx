@@ -179,11 +179,11 @@ export default function FileReturnModal({
       aria-labelledby="file-return-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
     >
-      <div className="surface-panel relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl bg-paper p-4 sm:p-6 shadow-2xl border border-line text-start">
+      <div className="surface-panel relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl bg-paper p-4 sm:p-6 shadow-glass border border-line text-start">
         {/* Header */}
         <div className="flex items-start justify-between border-b border-line pb-4">
           <div className="flex items-center gap-2.5 sm:gap-3">
-            <div className="flex size-9 sm:size-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 shrink-0">
+            <div className="flex size-9 sm:size-10 items-center justify-center rounded-xl bg-ok-soft text-ok-ink shrink-0">
               <FileText size={20} aria-hidden="true" />
             </div>
             <div>
@@ -191,7 +191,7 @@ export default function FileReturnModal({
                 <h2 id="file-return-title" className="font-sans text-lg sm:text-xl font-bold text-ink">
                   {ps.fileReturnModalTitle}
                 </h2>
-                <span className="rounded-md border border-line bg-paper-3 px-1.5 py-0.5 text-[10px] sm:text-[11px] font-mono font-semibold text-emerald-700 dark:text-emerald-300">
+                <span className="rounded-md border border-line bg-paper-3 px-1.5 py-0.5 text-[10px] sm:text-[11px] font-mono font-semibold text-ok-ink">
                   ITR-1 / Form 16
                 </span>
               </div>
@@ -216,8 +216,8 @@ export default function FileReturnModal({
             type="button"
             onClick={() => setActiveTab("custom_pan")}
             className={`flex items-center gap-1.5 border-b-2 px-2.5 sm:px-3 py-2 text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
-              activeTab === "custom_pan"
-                ? "border-emerald-600 text-emerald-700 dark:text-emerald-400"
+ activeTab === "custom_pan"
+                ? "border-ok/40 text-ok-ink "
                 : "border-transparent text-ink-2 hover:text-ink"
             }`}
           >
@@ -229,8 +229,8 @@ export default function FileReturnModal({
             type="button"
             onClick={() => setActiveTab("form16")}
             className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
-              activeTab === "form16"
-                ? "border-emerald-600 text-emerald-700 dark:text-emerald-400"
+ activeTab === "form16"
+                ? "border-ok/40 text-ok-ink "
                 : "border-transparent text-ink-2 hover:text-ink"
             }`}
           >
@@ -242,8 +242,8 @@ export default function FileReturnModal({
             type="button"
             onClick={() => setActiveTab("demo_personas")}
             className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
-              activeTab === "demo_personas"
-                ? "border-emerald-600 text-emerald-700 dark:text-emerald-400"
+ activeTab === "demo_personas"
+                ? "border-ok/40 text-ok-ink "
                 : "border-transparent text-ink-2 hover:text-ink"
             }`}
           >
@@ -290,14 +290,14 @@ export default function FileReturnModal({
                         autoComplete="off"
                         spellCheck={false}
                         className={`w-full rounded-lg border bg-paper-3 px-3.5 py-2.5 text-base font-mono tracking-widest uppercase text-ink transition focus:outline-none ${
-                          panError ? "border-alarm" : "border-line focus:border-money"
+ panError ? "border-alarm" : "border-line focus:border-money"
                         }`}
                       />
                       {panError && <p className="mt-1 text-xs text-alarm font-medium">{panError}</p>}
                     </div>
                     <button
                       type="submit"
-                      className="flex items-center justify-center gap-2 rounded-lg bg-navy px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:opacity-90 cursor-pointer whitespace-nowrap"
+                      className="flex items-center justify-center gap-2 rounded-lg ink-surface px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:opacity-90 cursor-pointer whitespace-nowrap"
                     >
                       <span>{ps.beginFilingBtn}</span>
                       <ArrowRight size={15} />
@@ -377,8 +377,8 @@ export default function FileReturnModal({
         {activeTab === "form16" && (
           <div className="mt-4 space-y-4 animate-in fade-in duration-150">
             {/* Extraction Honest Capability Note */}
-            <div className="rounded-lg border border-blue-200 bg-blue-50/70 dark:border-blue-900/60 dark:bg-blue-950/30 p-2.5 text-xs text-ink-2 flex items-start gap-2">
-              <ShieldCheck size={16} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+            <div className="rounded-lg border border-tertiary/40 bg-tertiary/15 p-2.5 text-xs text-ink-2 flex items-start gap-2">
+              <ShieldCheck size={16} className="text-tertiary shrink-0 mt-0.5" />
               <p className="m-0 leading-relaxed text-[11px]">
                 {ps.dropzoneSub}
               </p>
@@ -417,9 +417,9 @@ export default function FileReturnModal({
               }}
               onClick={() => fileInputRef.current?.click()}
               className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 text-center transition cursor-pointer ${
-                isDragging
-                  ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 ring-4 ring-emerald-500/20 scale-[1.01]"
-                  : "border-line bg-paper-2 hover:border-emerald-500/60 hover:bg-paper-3"
+ isDragging
+ ? "border-ok/40 bg-ok-soft  ring-4 ring-ok/40 scale-[1.01]"
+                  : "border-line bg-paper-2 hover:border-ok/40 hover:bg-paper-3"
               }`}
             >
               <input
@@ -436,7 +436,7 @@ export default function FileReturnModal({
 
               {isReadingPdf ? (
                 <div className="pointer-events-none flex flex-col items-center gap-2 py-3">
-                  <Loader2 size={26} className="animate-spin text-emerald-600" />
+                  <Loader2 size={26} className="animate-spin text-ok-ink" />
                   <p className="text-xs font-bold text-ink">
                     {ps.readingDoc}
                   </p>
@@ -444,9 +444,9 @@ export default function FileReturnModal({
               ) : (
                 <div className="pointer-events-none flex flex-col items-center">
                   <div className={`flex size-11 items-center justify-center rounded-xl transition-transform mb-2 ${
-                    isDragging
-                      ? "bg-emerald-600 text-white scale-110"
-                      : "bg-paper-3 text-emerald-700 dark:text-emerald-300"
+ isDragging
+ ? "bg-ok text-white scale-110"
+                      : "bg-paper-3 text-ok-ink "
                   }`}>
                     <Upload size={20} />
                   </div>
@@ -522,11 +522,11 @@ export default function FileReturnModal({
 
             {/* Ingested Result Card */}
             {pdfResult && (
-              <div className="rounded-xl border border-emerald-300 bg-emerald-50/80 dark:border-emerald-800 dark:bg-emerald-950/40 p-4 animate-in fade-in">
+              <div className="rounded-xl border border-ok/40 bg-ok-soft p-4 animate-in fade-in">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 size={18} className="text-emerald-600" />
-                    <span className="font-sans text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                    <CheckCircle2 size={18} className="text-ok-ink" />
+                    <span className="font-sans text-xs font-bold text-ok-ink">
                       {pdfResult.kind === "AIS" ? "AIS Document Parsed" : "Form 16 Data Ingested"}
                     </span>
                   </div>
@@ -564,7 +564,7 @@ export default function FileReturnModal({
                   {pdfResult.extracted.tds !== undefined && (
                     <div className="rounded-lg bg-paper p-2 border border-line">
                       <span className="text-[10px] text-ink-3 block">TDS Deducted</span>
-                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      <span className="font-mono font-bold text-ok-ink">
                         {formatMoney(pdfResult.extracted.tds, lang)}
                       </span>
                     </div>
@@ -575,7 +575,7 @@ export default function FileReturnModal({
                   <button
                     type="button"
                     onClick={() => onLaunchWithForm16(pdfResult)}
-                    className="flex items-center gap-1.5 rounded-xl bg-navy px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:opacity-90 cursor-pointer"
+                    className="flex items-center gap-1.5 rounded-xl ink-surface px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:opacity-90 cursor-pointer"
                   >
                     <span>{ps.launchWithDocBtn}</span>
                     <ArrowRight size={14} />
@@ -589,10 +589,10 @@ export default function FileReturnModal({
         {/* TAB 3: 1-CLICK SALARIED DEMO (SUNITA DEVI) */}
         {activeTab === "demo_personas" && (
           <div className="mt-4 space-y-4 animate-in fade-in duration-150">
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+            <div className="rounded-xl border border-ok/40 bg-ok-soft p-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <span className="inline-block rounded-md bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-800 dark:text-emerald-200 uppercase">
+                  <span className="inline-block rounded-md bg-ok-soft px-2 py-0.5 font-mono text-[10px] font-bold text-ok-ink uppercase">
                     {ps.demoFlowHeader}
                   </span>
                   <h3 className="mt-1.5 font-sans text-base font-bold text-ink">
@@ -606,7 +606,7 @@ export default function FileReturnModal({
                   <span className="text-[11px] font-medium text-ink-3 block">
                     {ps.expectedRefundLabel}
                   </span>
-                  <span className="font-mono text-base font-bold text-emerald-600 dark:text-emerald-400">
+                  <span className="font-mono text-base font-bold text-ok-ink">
                     {formatMoney(8400, lang)}
                   </span>
                 </div>
@@ -615,36 +615,36 @@ export default function FileReturnModal({
               {/* 5-Step Pipeline Blueprint */}
               <div className="mt-4 grid grid-cols-5 gap-1.5 text-center text-[10px] font-medium text-ink-2">
                 <div className="rounded-lg bg-paper-2 p-1.5 border border-line">
-                  <span className="font-bold text-emerald-700 dark:text-emerald-300 block">1. {ps.stepFacts}</span>
+                  <span className="font-bold text-ok-ink block">1. {ps.stepFacts}</span>
                   <span className="text-[9px] text-ink-3 block truncate">₹4.2L Salary</span>
                 </div>
                 <div className="rounded-lg bg-paper-2 p-1.5 border border-line">
-                  <span className="font-bold text-emerald-700 dark:text-emerald-300 block">2. {ps.stepClaims}</span>
+                  <span className="font-bold text-ok-ink block">2. {ps.stepClaims}</span>
                   <span className="text-[9px] text-ink-3 block truncate">80C, 80D</span>
                 </div>
                 <div className="rounded-lg bg-paper-2 p-1.5 border border-line">
-                  <span className="font-bold text-emerald-700 dark:text-emerald-300 block">3. {ps.stepRegime}</span>
+                  <span className="font-bold text-ok-ink block">3. {ps.stepRegime}</span>
                   <span className="text-[9px] text-ink-3 block truncate">₹75k Std Ded</span>
                 </div>
                 <div className="rounded-lg bg-paper-2 p-1.5 border border-line">
-                  <span className="font-bold text-emerald-700 dark:text-emerald-300 block">4. {ps.stepCheck}</span>
+                  <span className="font-bold text-ok-ink block">4. {ps.stepCheck}</span>
                   <span className="text-[9px] text-ink-3 block truncate">CASS Radar</span>
                 </div>
                 <div className="rounded-lg bg-paper-2 p-1.5 border border-line">
-                  <span className="font-bold text-emerald-700 dark:text-emerald-300 block">5. {ps.stepFile}</span>
+                  <span className="font-bold text-ok-ink block">5. {ps.stepFile}</span>
                   <span className="text-[9px] text-ink-3 block truncate">ITR-V Receipt</span>
                 </div>
               </div>
 
               <div className="mt-4 flex items-center justify-between border-t border-line/60 pt-3 text-xs text-ink-2">
-                <div className="flex items-center gap-1 text-emerald-800 dark:text-emerald-300">
+                <div className="flex items-center gap-1 text-ok-ink">
                   <CheckCircle2 size={14} />
                   <span>{ps.primaryBadge}</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => onLaunchPersona("sunita", true)}
-                  className="flex items-center gap-1.5 rounded-xl bg-navy px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:opacity-90 cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-xl ink-surface px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:opacity-90 cursor-pointer"
                 >
                   <span>{ps.launch5StepBtn}</span>
                   <ArrowRight size={14} />

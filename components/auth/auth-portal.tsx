@@ -362,77 +362,75 @@ export default function AuthPortal({
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto rounded-3xl border border-line ring-1 ring-black/5 dark:ring-white/10 bg-paper shadow-2xl overflow-hidden transition-all duration-300">
+    <div className="glass w-full max-w-5xl mx-auto rounded-[28px] overflow-hidden transition-all duration-300">
       <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[600px]">
         {/* =================================================================== */}
         {/* LEFT COLUMN: Wapsi Philosophy & Tax Discrepancy Storytelling       */}
         {/* =================================================================== */}
-        <div className="lg:col-span-6 bg-gradient-to-br from-[#0c1322] via-[#162238] to-[#0f172a] text-[#f8fafc] p-6 sm:p-8 lg:p-10 flex flex-col justify-between relative overflow-hidden border-t lg:border-t-0 lg:border-r border-line/40">
-          {/* Subtle watermark background */}
-          <div className="absolute top-0 right-0 p-6 opacity-[0.03] pointer-events-none select-none">
-            <ShieldCheck size={320} />
-          </div>
+        <div className="ink-surface lg:col-span-6 p-6 sm:p-8 lg:p-9 flex flex-col justify-between relative overflow-hidden border-t lg:border-t-0 lg:border-r border-white/10">
+          {/* The tangerine blob behind the story (redesign 1a) */}
+          <div className="absolute -top-[200px] -right-[180px] size-[420px] rounded-full opacity-55 blur-[2px] pointer-events-none" style={{ background: "radial-gradient(circle at 35% 30%, #FFE3C9, var(--primary-accent) 60%, transparent 72%)" }} aria-hidden="true" />
 
           <div className="space-y-6 relative z-10">
             {/* Stamp Badge */}
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/15 border border-amber-400/30 px-3.5 py-1 text-xs font-mono font-bold text-amber-300 tracking-wider shadow-xs backdrop-blur-xs">
-                <Sparkles size={13} className="text-amber-400 animate-pulse" />
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-bg px-3 py-1 text-xs font-bold text-amber-ink">
+                <Sparkles size={13} className="animate-pulse" />
                 <span>{ps.sovereignPortal}</span>
               </span>
             </div>
 
             {/* Brand Headline */}
             <div className="space-y-2 text-start">
-              <h1 className="font-sans text-3xl sm:text-4xl font-bold tracking-tight leading-tight text-white dark:text-white">
+              <h1 className="font-sans text-[30px] font-extrabold tracking-[-0.03em] leading-[1.05] text-on-ink">
                 Wapsi (वापसी)
               </h1>
-              <p className="text-amber-300 dark:text-amber-300 font-sans text-lg sm:text-xl font-semibold leading-snug">
+              <p className="text-soft font-sans text-[17px] font-semibold leading-snug">
                 {ps.tagline}
               </p>
             </div>
 
             {/* Tax Discrepancy Questions & Core Value Propositions */}
             <div className="space-y-3.5 pt-1 text-start">
-              <h2 className="font-mono text-[11px] uppercase tracking-widest text-slate-300 dark:text-slate-300 font-semibold">
+              <h2 className="text-[12px] uppercase tracking-[.08em] text-soft font-bold">
                 {ps.discrepanciesTitle}
               </h2>
 
               <div className="space-y-3">
                 {/* 1. Excess TDS */}
-                <div className="flex items-start gap-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/15 border-l-4 border-l-amber-400 p-3.5 transition duration-200">
-                  <TrendingDown size={20} className="text-amber-400 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 rounded-[16px] bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.14] p-3.5 transition duration-200">
+                  <TrendingDown size={20} className="text-money shrink-0 mt-0.5" />
                   <div className="space-y-0.5 text-xs">
-                    <strong className="text-white dark:text-white font-sans text-sm block font-bold">
+                    <strong className="text-on-ink font-sans text-sm block font-bold">
                       {ps.disc1Title}
                     </strong>
-                    <p className="text-[#cbd5e1] leading-relaxed text-[12px]">
+                    <p className="text-on-ink/75 leading-relaxed text-[12.5px]">
                       {ps.disc1Desc}
                     </p>
                   </div>
                 </div>
 
                 {/* 2. AIS / 26AS Mismatch */}
-                <div className="flex items-start gap-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/15 border-l-4 border-l-sky-400 p-3.5 transition duration-200">
-                  <Building2 size={20} className="text-sky-400 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 rounded-[16px] bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.14] p-3.5 transition duration-200">
+                  <Building2 size={20} className="text-tertiary shrink-0 mt-0.5" />
                   <div className="space-y-0.5 text-xs">
-                    <strong className="text-white dark:text-white font-sans text-sm block font-bold">
+                    <strong className="text-on-ink font-sans text-sm block font-bold">
                       {ps.disc2Title}
                     </strong>
-                    <p className="text-[#cbd5e1] leading-relaxed text-[12px]">
+                    <p className="text-on-ink/75 leading-relaxed text-[12.5px]">
                       {ps.disc2Desc}
                     </p>
                   </div>
                 </div>
 
                 {/* 3. Old vs New Regime */}
-                <div className="flex items-start gap-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/15 border-l-4 border-l-emerald-400 p-3.5 transition duration-200">
-                  <FileCheck size={20} className="text-emerald-400 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 rounded-[16px] bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.14] p-3.5 transition duration-200">
+                  <FileCheck size={20} className="text-ok shrink-0 mt-0.5" />
                   <div className="space-y-0.5 text-xs">
-                    <strong className="text-white dark:text-white font-sans text-sm block font-bold">
+                    <strong className="text-on-ink font-sans text-sm block font-bold">
                       {ps.disc3Title}
                     </strong>
-                    <p className="text-[#cbd5e1] leading-relaxed text-[12px]">
+                    <p className="text-on-ink/75 leading-relaxed text-[12.5px]">
                       {ps.disc3Desc}
                     </p>
                   </div>
@@ -442,12 +440,12 @@ export default function AuthPortal({
           </div>
 
           {/* Bottom Trust Badge - Cleaned: Removed raw port number */}
-          <div className="pt-6 border-t border-white/10 mt-6 flex items-center justify-between text-xs text-slate-300 font-mono">
-            <span className="flex items-center gap-2 font-sans font-semibold text-slate-200 dark:text-ink">
-              <ShieldCheck size={16} className="text-emerald-400 shrink-0" />
+          <div className="pt-4 border-t border-white/[0.14] mt-6 flex items-center justify-between text-xs text-on-ink/75 font-mono">
+            <span className="flex items-center gap-2 font-sans font-semibold text-on-ink">
+              <ShieldCheck size={16} className="text-ok shrink-0" />
               <span>{ps.vaultBadge}</span>
             </span>
-            <span className="inline-flex items-center gap-1 rounded-md bg-white/10 px-2 py-0.5 text-[11px] font-bold text-amber-300 border border-amber-400/30">
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-bg px-2.5 py-0.5 text-[12px] font-bold text-amber-ink">
               AY 2026-27
             </span>
           </div>
@@ -456,17 +454,17 @@ export default function AuthPortal({
         {/* =================================================================== */}
         {/* RIGHT COLUMN: Interactive Sign In, Sign Up, Document, Personas     */}
         {/* =================================================================== */}
-        <div className="order-first lg:order-none lg:col-span-6 p-6 sm:p-8 lg:p-10 flex flex-col justify-between bg-paper">
+        <div className="order-first lg:order-none lg:col-span-6 p-6 sm:p-7 flex flex-col justify-between">
           <div>
             {/* Segmented Tabs Bar */}
-            <div className="flex rounded-2xl border border-line bg-paper-2 p-1 gap-1 text-xs font-bold mb-6">
+            <div className="flex rounded-[16px] border border-glass-edge bg-white/50 dark:bg-white/[0.06] p-1 gap-1 text-xs font-bold mb-6">
               <button
                 type="button"
                 onClick={() => setActiveTab("signin")}
                 className={`flex-1 flex items-center justify-center gap-1 py-2.5 rounded-xl transition-all cursor-pointer text-[11px] sm:text-xs ${
                   activeTab === "signin"
-                    ? "bg-paper text-navy dark:text-ink shadow-xs border border-line font-bold"
-                    : "text-ink-2 hover:text-ink font-semibold"
+                    ? "ink-surface font-bold"
+                    : "text-ink-3 hover:text-ink font-bold"
                 }`}
               >
                 <LogIn size={14} />
@@ -479,7 +477,7 @@ export default function AuthPortal({
                 className={`flex-1 flex items-center justify-center gap-1 py-2.5 rounded-xl transition-all cursor-pointer text-[11px] sm:text-xs ${
                   activeTab === "signup"
                     ? "bg-paper text-money shadow-xs border border-line font-bold"
-                    : "text-ink-2 hover:text-ink font-semibold"
+                    : "text-ink-3 hover:text-ink font-bold"
                 }`}
               >
                 <UserPlus size={14} />
@@ -492,7 +490,7 @@ export default function AuthPortal({
                 className={`flex-1 flex items-center justify-center gap-1 py-2.5 rounded-xl transition-all cursor-pointer text-[11px] sm:text-xs ${
                   activeTab === "document"
                     ? "bg-paper text-indigo-600 dark:text-indigo-400 shadow-xs border border-line font-bold"
-                    : "text-ink-2 hover:text-ink font-semibold"
+                    : "text-ink-3 hover:text-ink font-bold"
                 }`}
               >
                 <FileUp size={14} />
@@ -505,7 +503,7 @@ export default function AuthPortal({
                 className={`flex-1 flex items-center justify-center gap-1 py-2.5 rounded-xl transition-all cursor-pointer text-[11px] sm:text-xs ${
                   activeTab === "personas"
                     ? "bg-paper text-amber-600 shadow-xs border border-line font-bold"
-                    : "text-ink-2 hover:text-ink font-semibold"
+                    : "text-ink-3 hover:text-ink font-bold"
                 }`}
               >
                 <Users size={14} />
@@ -539,7 +537,7 @@ export default function AuthPortal({
                     autoCapitalize="characters"
                     autoComplete="off"
                     spellCheck={false}
-                    className={`min-h-12 w-full rounded-xl border bg-paper-3 px-4 py-3 text-center font-mono text-xl uppercase tracking-widest text-ink transition-colors ${
+                    className={`h-[54px] w-full rounded-[14px] border-[1.5px] bg-paper-3 px-4 text-center font-mono text-xl font-semibold uppercase tracking-[.14em] text-ink transition-colors focus:outline-none focus:border-money focus:ring-[3px] focus:ring-money/20 ${
                       panInputError ? "border-alarm ring-1 ring-alarm" : "border-line focus:border-money focus:ring-2 focus:ring-money/20"
                     }`}
                   />
@@ -556,7 +554,7 @@ export default function AuthPortal({
 
                 <button
                   type="submit"
-                  className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-navy px-4 py-3 font-sans text-sm font-bold text-white shadow-md hover:opacity-90 transition cursor-pointer"
+                  className="btn-primary flex h-[50px] w-full items-center justify-center gap-2 rounded-[14px] px-4 font-sans text-[14.5px] transition cursor-pointer"
                 >
                   <KeyRound size={16} />
                   <span>{ps.signInBtn} →</span>
@@ -571,21 +569,21 @@ export default function AuthPortal({
                     <button
                       type="button"
                       onClick={() => onPanChange(PERSONAS.sunita.pan)}
-                      className="px-2.5 py-1 text-xs rounded-lg border border-line bg-paper-2 hover:bg-paper-3 font-mono text-ink transition cursor-pointer"
+                      className="glass-flat px-2.5 py-1 text-xs rounded-full hover:border-money/60 font-mono text-ink-3 hover:text-ink transition cursor-pointer"
                     >
                       Sunita ({PERSONAS.sunita.pan})
                     </button>
                     <button
                       type="button"
                       onClick={() => onPanChange(PERSONAS.rakesh.pan)}
-                      className="px-2.5 py-1 text-xs rounded-lg border border-line bg-paper-2 hover:bg-paper-3 font-mono text-ink transition cursor-pointer"
+                      className="glass-flat px-2.5 py-1 text-xs rounded-full hover:border-money/60 font-mono text-ink-3 hover:text-ink transition cursor-pointer"
                     >
                       Rakesh ({PERSONAS.rakesh.pan})
                     </button>
                     <button
                       type="button"
                       onClick={() => onPanChange(PERSONAS.priya.pan)}
-                      className="px-2.5 py-1 text-xs rounded-lg border border-line bg-paper-2 hover:bg-paper-3 font-mono text-ink transition cursor-pointer"
+                      className="glass-flat px-2.5 py-1 text-xs rounded-full hover:border-money/60 font-mono text-ink-3 hover:text-ink transition cursor-pointer"
                     >
                       Priya ({PERSONAS.priya.pan})
                     </button>
@@ -631,7 +629,7 @@ export default function AuthPortal({
                     autoCapitalize="characters"
                     autoComplete="off"
                     spellCheck={false}
-                    className="min-h-12 w-full rounded-xl border border-line focus:border-money focus:ring-2 focus:ring-money/20 bg-paper-3 px-4 py-3 text-center font-mono text-xl uppercase tracking-widest text-ink transition-colors"
+                    className="h-[54px] w-full rounded-[14px] border-[1.5px] border-glass-edge focus:outline-none focus:border-money focus:ring-[3px] focus:ring-money/20 bg-paper-3 px-4 text-center font-mono text-xl font-semibold uppercase tracking-[.14em] text-ink transition-colors"
                   />
                   <div className="rounded-xl border border-line/60 bg-paper-2 p-3.5 text-[11px] text-ink-2 space-y-1 text-start">
                     <div className="flex items-center gap-1.5 font-bold text-ink">

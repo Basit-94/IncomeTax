@@ -40,7 +40,7 @@ export function EditIncomeModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md bg-paper rounded-2xl p-6 shadow-xl border border-line space-y-5 animate-in fade-in zoom-in-95 duration-150 text-ink">
+      <div className="w-full max-w-md bg-paper rounded-2xl p-6 shadow-glass border border-line space-y-5 animate-in fade-in zoom-in-95 duration-150 text-ink">
         {/* Header */}
         <div className="flex items-center gap-2">
           <span className="text-money font-bold text-lg">✦</span>
@@ -97,7 +97,7 @@ export function EditIncomeModal({
             type="button"
             disabled={amountStr.trim() === '' || isSubmitting}
             onClick={handleUpdate}
-            className="flex-1 py-3 px-4 bg-navy hover:opacity-90 disabled:opacity-50 text-white font-semibold rounded-xl shadow-sm transition cursor-pointer"
+            className="flex-1 py-3 px-4 ink-surface hover:opacity-90 disabled:opacity-50 text-white font-semibold rounded-xl shadow-sm transition cursor-pointer"
           >
             Update & Recalculate
           </button>

@@ -56,7 +56,7 @@ function AgenticWorkspace() {
   const activeRunId = params.get("run");
 
   const [lang, setLang] = useState<Lang>("en");
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [client, setClient] = useState<SessionInfo | null>(null);
   const [server, setServer] = useState<ServerSessionInfo | null>(null);
   const [sessionState, setSessionState] = useState<"checking" | "none" | "ready" | "unverifiable">("checking");

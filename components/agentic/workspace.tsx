@@ -17,6 +17,7 @@ import type { AgenticStrings } from "@/lib/i18n/agenticStrings";
 import { isSpeechSupported, startDictation, type Dictation } from "@/lib/speech";
 import type { Lang } from "@/lib/types";
 import { renderAssistantText } from "../agent/format";
+import { Munshi, MunshiAvatar } from "../brand/munshi";
 
 import type { CAReviewRecord } from "@/lib/ca/ca-store";
 import { computeForPersona } from "@/lib/return/compute";
@@ -66,10 +67,12 @@ export default function Workspace(props: WorkspaceProps) {
       <div className="flex-1 flex flex-col">
         <div className="flex-1 flex items-center justify-center px-4 py-10">
           <div className="w-full max-w-2xl text-center space-y-5">
-            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-paper-2 px-3 py-1 text-xs text-ink-2">
-              <span className="size-1.5 rounded-full bg-money" aria-hidden="true" /> {s.simulatedBadge}
+            {/* Munshi ji greets the empty state (handoff: 96 px on empty states). */}
+            <Munshi size={96} className="mx-auto" />
+            <span className="glass-flat inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold text-ink-2">
+              <span className="size-1.5 rounded-full bg-ok" aria-hidden="true" /> {s.simulatedBadge}
             </span>
-            <h1 className="font-serif text-4xl sm:text-5xl leading-[1.08] tracking-tight text-ink text-balance">
+            <h1 className="text-[40px] sm:text-[50px] font-extrabold leading-[1.05] tracking-[-0.03em] text-ink text-balance">
               {s.welcomeTitle}
             </h1>
             <p className="text-base sm:text-lg text-ink-2 leading-relaxed max-w-xl mx-auto">{s.welcomeBody}</p>
@@ -81,8 +84,8 @@ export default function Workspace(props: WorkspaceProps) {
                   ["reconcile_facts", s.taskReconcile],
                 ] as const
               ).map(([task, label]) => (
-                <button key={task} type="button" onClick={() => props.onStart({ task })} className="inline-flex items-center gap-1.5 rounded-full border border-line bg-paper-2 px-4 py-2 text-sm text-ink hover:border-money/60 hover:shadow-sm transition cursor-pointer">
-                  <Sparkles size={13} className="text-amber-500" aria-hidden="true" /> {label} <ArrowRight size={13} className="text-ink-3" aria-hidden="true" />
+                <button key={task} type="button" onClick={() => props.onStart({ task })} className="glass-flat inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold text-ink-2 hover:border-money/60 transition cursor-pointer">
+                  <Sparkles size={13} className="text-money" aria-hidden="true" /> {label} <ArrowRight size={13} className="text-ink-3" aria-hidden="true" />
                 </button>
               ))}
             </div>
@@ -97,7 +100,7 @@ export default function Workspace(props: WorkspaceProps) {
     <div className="flex-1 min-h-0 flex flex-col">
       {/* Status strip */}
       <div className="px-4 sm:px-6 pt-3 flex items-center gap-2 text-xs">
-        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono ${run.status === "waiting_for_input" || run.status === "waiting_for_review" ? "border-amber-500/50 bg-amber-bg text-amber-800 dark:text-amber-200" : run.status === "failed" ? "border-alarm/40 bg-alarm-soft text-alarm" : "border-line bg-paper-2 text-ink-2"}`}>
+        <span className={`inline-flex items-center gap-1.5 rounded-full border border-glass-edge px-2.5 py-1 font-mono font-semibold ${run.status === "waiting_for_input" || run.status === "waiting_for_review" ? "bg-amber-bg text-amber-ink" : run.status === "failed" ? "bg-alarm-soft text-alarm" : "bg-glass text-ink-2"}`}>
           <CircleDot size={11} aria-hidden="true" /> {s[STATUS_KEY[run.status]] as string}
         </span>
         {!props.durable && <span className="text-ink-3 truncate">{s.notDurable}</span>}
@@ -221,17 +224,17 @@ function EventRow({ event, s, answered, confirmed, questions, runId, onOpenVault
     case "message":
       return p.role === "user" ? (
         <div className="flex justify-end">
-          <div className="max-w-[80%] rounded-2xl rounded-br-md bg-amber-bg border border-amber-500/30 px-4 py-2.5 text-[15px] leading-relaxed text-ink whitespace-pre-wrap">{p.text}</div>
+          <div className="max-w-[78%] rounded-[18px] rounded-br-[4px] bg-amber-bg px-4 py-3 text-[15px] leading-relaxed text-amber-ink font-medium whitespace-pre-wrap">{p.text}</div>
         </div>
       ) : (
         <div className="flex items-start gap-3">
           <Avatar />
-          <div className="min-w-0 max-w-[85%] rounded-2xl rounded-tl-md border border-line bg-paper-2 px-4 py-3 text-[15px] leading-relaxed text-ink">{renderAssistantText(p.text)}</div>
+          <div className="munshi-bubble min-w-0 max-w-[78%]">{renderAssistantText(p.text)}</div>
         </div>
       );
     case "activity":
       return (
-        <p className="flex items-center gap-2 px-11 text-xs font-mono text-ink-3">
+        <p className="flex items-center gap-2 ps-11 text-[11.5px] font-mono text-ink-3">
           <span className="size-1.5 rounded-full bg-money shrink-0" aria-hidden="true" /> {p.text}
         </p>
       );
@@ -244,8 +247,8 @@ function EventRow({ event, s, answered, confirmed, questions, runId, onOpenVault
       const label = answerLabel(p.value, q, s);
       return (
         <div className="flex justify-end">
-          <span className="inline-flex items-center gap-1.5 rounded-2xl rounded-br-md bg-paper-2 border border-line px-3.5 py-1.5 text-xs text-ink">
-            <Check size={12} className="text-money" aria-hidden="true" /> {label}
+          <span className="glass-flat inline-flex items-center gap-1.5 rounded-[14px] rounded-br-[4px] px-3 py-1.5 text-[12.5px] text-ink-2">
+            <Check size={12} className="text-ok" aria-hidden="true" /> {label}
           </span>
         </div>
       );
@@ -328,9 +331,7 @@ function EventRow({ event, s, answered, confirmed, questions, runId, onOpenVault
 
 function Avatar() {
   return (
-    <span className="mt-0.5 size-8 shrink-0 rounded-full bg-ink text-paper font-serif font-bold text-sm flex items-center justify-center" aria-hidden="true">
-      W
-    </span>
+    <MunshiAvatar size={34} className="mt-0.5" />
   );
 }
 
@@ -387,7 +388,7 @@ function QuestionCard({
   return (
     <div className="flex items-start gap-3">
       <Avatar />
-      <div className="w-full max-w-[85%] rounded-2xl rounded-tl-md border border-amber-500/40 bg-paper-2 px-4 py-3 space-y-3">
+      <div className="glass w-full max-w-[82%] rounded-[18px] rounded-tl-[4px] border-[1.5px] border-soft px-[18px] py-4 space-y-2.5">
         {q.lead && <p className="text-sm text-ink-2 leading-relaxed">{q.lead}</p>}
         <p className="text-[15px] text-ink leading-relaxed">{q.text}</p>
         {q.docHint && <p className="text-sm text-ink-2 leading-relaxed">{q.docHint}</p>}
@@ -396,7 +397,7 @@ function QuestionCard({
             {q.items.map((item) => <li key={item}>{item}</li>)}
           </ul>
         )}
-        <p className="text-xs text-ink-3">{q.why}</p>
+        <p className="font-mono text-[11px] text-ink-3 tracking-[.02em]">{q.why}</p>
         {q.resolves === "challan_payment_mode" && (
           <div className="space-y-2.5 my-2">
             {/* Prominent CA Review Banner for Balance Tax Due */}
@@ -469,7 +470,7 @@ function QuestionCard({
           <div className="space-y-2">
             {q.sourceOptions.map((o) =>
               o.kind === "upload" ? (
-                <label key={o.value} className={`flex items-start gap-3 rounded-xl border border-line bg-paper px-4 py-3 ${disabled || uploading ? "opacity-50 cursor-wait" : "hover:border-money/60 cursor-pointer"}`}>
+                <label key={o.value} className={`glass-flat flex items-start gap-3 rounded-[14px] px-3.5 py-3 ${disabled || uploading ? "opacity-50 cursor-wait" : "hover:border-money/60 cursor-pointer"}`}>
                   <Upload size={16} className="mt-0.5 shrink-0 text-money" aria-hidden="true" />
                   <span className="min-w-0">
                     <span className="block text-sm font-semibold text-ink">{uploading ? s.uploading : o.label}</span>
@@ -478,7 +479,7 @@ function QuestionCard({
                   <input type="file" accept=".pdf,image/*" className="sr-only" disabled={disabled || uploading} onChange={(e) => void upload(e.target.files?.[0], (id) => onAnswer(`upload:${id}`))} />
                 </label>
               ) : (
-                <button key={o.value} type="button" disabled={disabled || uploading} onClick={() => onAnswer(o.value)} className="w-full text-start flex items-start gap-3 rounded-xl border border-line bg-paper px-4 py-3 hover:border-money/60 disabled:opacity-50 cursor-pointer">
+                <button key={o.value} type="button" disabled={disabled || uploading} onClick={() => onAnswer(o.value)} className="glass-flat w-full text-start flex items-start gap-3 rounded-[14px] px-3.5 py-3 hover:border-money/60 disabled:opacity-50 cursor-pointer">
                   <span className="min-w-0">
                     <span className="block text-sm font-semibold text-ink">{o.label}</span>
                     {o.detail && <span className="block text-xs text-ink-3">{o.detail}</span>}
@@ -493,11 +494,11 @@ function QuestionCard({
         ) : q.expects === "file" ? (
           <div className="space-y-2">
             <div className="flex flex-wrap gap-2">
-              <label className={`inline-flex items-center gap-2 rounded-lg bg-ink text-paper px-4 py-2 text-sm font-semibold ${disabled || uploading ? "opacity-50 cursor-wait" : "hover:opacity-90 cursor-pointer"}`}>
+              <label className={`ink-surface inline-flex items-center gap-2 rounded-[14px] h-[38px] px-4 text-[13px] font-bold ${disabled || uploading ? "opacity-50 cursor-wait" : "hover:opacity-90 cursor-pointer"}`}>
                 <Upload size={14} aria-hidden="true" /> {uploading ? s.uploading : s.uploadDocument}
                 <input type="file" accept=".pdf,image/*" className="sr-only" disabled={disabled || uploading} onChange={(e) => void upload(e.target.files?.[0])} />
               </label>
-              <button type="button" disabled={disabled || uploading} onClick={() => onAnswer("none")} className="rounded-lg border border-line bg-paper px-4 py-2 text-sm font-semibold text-ink hover:bg-paper-3 disabled:opacity-50 cursor-pointer">
+              <button type="button" disabled={disabled || uploading} onClick={() => onAnswer("none")} className="glass-flat rounded-[14px] h-[38px] px-4 text-[13px] font-semibold text-ink-2 hover:text-ink disabled:opacity-50 cursor-pointer">
                 {q.skipLabel ?? s.dontHaveIt}
               </button>
             </div>
@@ -505,8 +506,8 @@ function QuestionCard({
           </div>
         ) : q.expects === "yes_no" ? (
           <div className="flex gap-2">
-            <button type="button" disabled={disabled} onClick={() => onAnswer(true)} className="rounded-lg bg-ink text-paper px-4 py-2 text-sm font-semibold hover:opacity-90 disabled:opacity-50 cursor-pointer">{s.yes}</button>
-            <button type="button" disabled={disabled} onClick={() => onAnswer(false)} className="rounded-lg border border-line bg-paper px-4 py-2 text-sm font-semibold text-ink hover:bg-paper-3 disabled:opacity-50 cursor-pointer">{s.no}</button>
+            <button type="button" disabled={disabled} onClick={() => onAnswer(true)} className="btn-primary rounded-[14px] h-[38px] px-4 text-[13px] hover:opacity-90 disabled:opacity-50 cursor-pointer">{s.yes}</button>
+            <button type="button" disabled={disabled} onClick={() => onAnswer(false)} className="glass-flat rounded-[14px] h-[38px] px-4 text-[13px] font-semibold text-ink-2 hover:text-ink disabled:opacity-50 cursor-pointer">{s.no}</button>
           </div>
         ) : q.expects === "choice" && q.choices ? (
           <div className="flex flex-wrap gap-2">
@@ -605,17 +606,17 @@ function FormFields({ q, s, disabled, onAnswer }: { q: Question; s: AgenticStrin
             <label className="block text-sm font-semibold text-ink" htmlFor={id}>{f.label}</label>
             {f.hint && <p className="text-xs text-ink-3">{f.hint}</p>}
             {f.type === "number" ? (
-              <input id={id} inputMode="numeric" placeholder="0" value={String(values[f.key] ?? "")} onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))} disabled={disabled} className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink font-mono tabular-nums focus:outline-none focus:ring-2 focus:ring-money/40" />
+              <input id={id} inputMode="numeric" placeholder="0" value={String(values[f.key] ?? "")} onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))} disabled={disabled} className="w-full h-[46px] rounded-[14px] border-[1.5px] border-glass-edge bg-paper-3 px-4 text-[15px] text-ink font-mono tabular-nums focus:outline-none focus:border-money focus:ring-[3px] focus:ring-money/20" />
             ) : f.type === "yes_no" ? (
               <div className="flex gap-2" role="group" aria-label={f.label}>
                 {[true, false].map((b) => (
-                  <button key={String(b)} type="button" disabled={disabled} onClick={() => setValues((v) => ({ ...v, [f.key]: b }))} className={`rounded-lg border px-4 py-1.5 text-sm font-semibold cursor-pointer disabled:opacity-50 ${values[f.key] === b ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-line hover:bg-paper-3"}`}>
+                  <button key={String(b)} type="button" disabled={disabled} onClick={() => setValues((v) => ({ ...v, [f.key]: b }))} className={`rounded-[14px] h-[38px] px-4 text-[13px] font-semibold cursor-pointer disabled:opacity-50 ${values[f.key] === b ? "ink-surface" : "glass-flat text-ink-2 hover:text-ink"}`}>
                     {b ? s.yes : s.no}
                   </button>
                 ))}
               </div>
             ) : (
-              <select id={id} value={String(values[f.key] ?? "")} onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))} disabled={disabled} className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink">
+              <select id={id} value={String(values[f.key] ?? "")} onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))} disabled={disabled} className="w-full h-[46px] rounded-[14px] border-[1.5px] border-glass-edge bg-paper-3 px-4 text-[15px] text-ink">
                 <option value="">—</option>
                 {f.choices?.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
@@ -623,7 +624,7 @@ function FormFields({ q, s, disabled, onAnswer }: { q: Question; s: AgenticStrin
           </div>
         );
       })}
-      <button type="submit" disabled={disabled || !complete} className="rounded-lg bg-ink text-paper px-4 py-2 text-sm font-semibold hover:opacity-90 disabled:opacity-50 cursor-pointer">{s.formSubmit}</button>
+      <button type="submit" disabled={disabled || !complete} className="btn-primary rounded-[14px] h-[46px] px-5 text-[14.5px] disabled:opacity-45 cursor-pointer">{s.formSubmit}</button>
     </form>
   );
 }
@@ -632,27 +633,27 @@ function ReviewCardView({ card, s, disabled, inert = false, onDecide, onReviewWi
   return (
     <div className="flex items-start gap-3">
       <Avatar />
-      <div className={`w-full max-w-[85%] rounded-2xl rounded-tl-md border ${inert ? "border-line" : "border-money/60"} bg-paper-2 p-4 space-y-3`}>
-        <p className="font-sans text-sm font-bold text-ink">{card.title}</p>
+      <div className={`glass w-full max-w-[82%] rounded-[18px] rounded-tl-[4px] p-[18px] space-y-3 ${inert ? "" : "border-[1.5px] border-money"}`}>
+        <p className="font-sans text-[15px] font-extrabold text-ink tracking-[-0.01em]">{card.title}</p>
         <dl className="space-y-1.5">
           {card.rows.map((r) => (
             <div key={r.label} className={`flex items-baseline justify-between gap-4 text-sm ${r.emphasis ? "border-t border-line pt-2 font-bold" : ""}`}>
               <dt className="text-ink-2">{r.label}</dt>
-              <dd className={`font-mono tabular-nums ${r.emphasis ? "text-money text-base" : "text-ink"}`}>{r.value}</dd>
+              <dd className={`font-mono tabular-nums ${r.emphasis ? "text-ok text-lg font-bold" : "text-ink"}`}>{r.value}</dd>
             </div>
           ))}
         </dl>
         <p className="font-mono text-[10px] text-ink-3">rev {card.boundTo.revision} · {card.boundTo.snapshotHash.slice(0, 10)} · {s.simulatedBadge}</p>
         {!inert && (
           <div className="flex flex-wrap gap-2 pt-1">
-            <button type="button" disabled={disabled} onClick={() => onDecide?.(true)} className="flex-1 rounded-lg bg-ink text-paper px-4 py-2.5 text-sm font-bold hover:opacity-90 disabled:opacity-50 cursor-pointer">{card.confirmLabel}</button>
+            <button type="button" disabled={disabled} onClick={() => onDecide?.(true)} className="btn-primary flex-1 rounded-[14px] h-[46px] px-5 text-[14.5px] disabled:opacity-45 cursor-pointer">{card.confirmLabel}</button>
             {card.kind === "filing" && onReviewWithCA && (
               <button type="button" onClick={onReviewWithCA} className="rounded-lg border border-teal-700/40 bg-teal-500/10 hover:bg-teal-500/20 text-teal-950 dark:text-teal-200 px-3 py-2.5 text-xs font-bold transition cursor-pointer flex items-center gap-1.5">
                 <Award size={14} className="text-teal-600" />
                 <span>Review with CA</span>
               </button>
             )}
-            <button type="button" disabled={disabled} onClick={() => onDecide?.(false)} className="rounded-lg border border-line bg-paper px-4 py-2.5 text-sm font-semibold text-ink-2 hover:bg-paper-3 disabled:opacity-50 cursor-pointer">{card.cancelLabel}</button>
+            <button type="button" disabled={disabled} onClick={() => onDecide?.(false)} className="glass-flat rounded-[14px] h-[46px] px-4 text-[14.5px] font-semibold text-ink-2 hover:text-ink disabled:opacity-50 cursor-pointer">{card.cancelLabel}</button>
           </div>
         )}
       </div>
@@ -697,7 +698,7 @@ export function Composer({ s, lang, disabled, onSubmit, variant = "chat", placeh
   return (
     <div className={ask ? "shrink-0 pt-2" : "shrink-0 px-4 sm:px-6 pb-4 pt-2"}>
       <form
-        className={`mx-auto w-full flex items-end gap-2 border border-line bg-paper-2 p-2 shadow-sm focus-within:border-money/60 ${ask ? "max-w-2xl rounded-full ps-4" : "max-w-3xl rounded-2xl"}`}
+        className={`glass mx-auto w-full flex items-end gap-2.5 p-2 ps-5 rounded-[20px] focus-within:border-money/60 ${ask ? "max-w-[720px]" : "max-w-3xl"}`}
         onSubmit={(e) => {
           e.preventDefault();
           submit();
@@ -716,20 +717,20 @@ export function Composer({ s, lang, disabled, onSubmit, variant = "chat", placeh
           placeholder={hint}
           aria-label={hint}
           disabled={disabled}
-          className="flex-1 resize-none bg-transparent px-2 py-2 text-[15px] text-ink placeholder:text-ink-3 placeholder-shown:overflow-hidden outline-none max-h-40 disabled:opacity-60"
-          style={{ height: `${Math.min(160, 40 + (text.split("\n").length - 1) * 22)}px` }}
+          className={`flex-1 resize-none bg-transparent px-1 py-[11px] text-[16px] leading-[22px] text-ink placeholder:text-ink-3 outline-none max-h-40 disabled:opacity-60 ${text.includes("\n") ? "" : "overflow-hidden"}`}
+          style={{ height: `${Math.min(166, 44 + (text.split("\n").length - 1) * 22)}px` }}
         />
         {speech && (
-          <button type="button" onClick={toggleMic} disabled={disabled} className={`size-10 shrink-0 rounded-xl flex items-center justify-center cursor-pointer disabled:opacity-50 ${listening ? "bg-alarm-soft text-alarm" : "text-ink-2 hover:bg-paper-3"}`} aria-pressed={listening} aria-label="Dictate">
+          <button type="button" onClick={toggleMic} disabled={disabled} className={`size-10 mb-[3px] shrink-0 rounded-[12px] flex items-center justify-center cursor-pointer disabled:opacity-50 ${listening ? "bg-alarm-soft text-alarm" : "text-ink-3 hover:text-ink"}`} aria-pressed={listening} aria-label="Dictate">
             {listening ? <MicOff size={17} aria-hidden="true" /> : <Mic size={17} aria-hidden="true" />}
           </button>
         )}
         {ask ? (
-          <button type="submit" disabled={disabled || !text.trim()} className="h-10 shrink-0 rounded-full bg-ink text-paper px-5 flex items-center gap-2 text-sm font-bold hover:opacity-90 disabled:opacity-40 cursor-pointer">
+          <button type="submit" disabled={disabled || !text.trim()} className="btn-primary h-[46px] shrink-0 rounded-[14px] px-5 flex items-center gap-2 text-[14.5px] disabled:opacity-45 cursor-pointer">
             {s.ask} <ArrowRight size={15} aria-hidden="true" />
           </button>
         ) : (
-          <button type="submit" disabled={disabled || !text.trim()} className="h-10 shrink-0 rounded-xl bg-ink text-paper px-4 flex items-center gap-2 text-sm font-bold hover:opacity-90 disabled:opacity-40 cursor-pointer">
+          <button type="submit" disabled={disabled || !text.trim()} className="btn-primary h-[46px] shrink-0 rounded-[14px] px-5 flex items-center gap-2 text-[14.5px] disabled:opacity-45 cursor-pointer">
             <Send size={15} aria-hidden="true" /> <span className="hidden sm:inline">{s.send}</span>
           </button>
         )}

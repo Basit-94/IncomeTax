@@ -89,7 +89,7 @@ export function JudgeSandboxBar({
   onToggleAntigravityUi,
 }: JudgeSandboxBarProps) {
   return (
-    <div className="bg-navy border-b border-money/20 text-white px-4 py-3 shadow-md z-30 print:hidden">
+    <div className="ink-surface border-b border-money/20 text-white px-4 py-3 shadow-md z-30 print:hidden">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <ShieldCheck size={18} className="text-money shrink-0" />
@@ -97,7 +97,7 @@ export function JudgeSandboxBar({
             <span className="text-xs font-mono font-bold uppercase tracking-wider text-money block">
               Judge Evaluation Sandbox
             </span>
-            <span className="text-xs text-slate-300">
+            <span className="text-xs text-ink-3">
               Verify calculations, slabs, and Section 87A marginal relief on the fly.
             </span>
           </div>
@@ -107,9 +107,9 @@ export function JudgeSandboxBar({
           <button
             onClick={onToggleAntigravityUi}
             className={`text-xs px-3 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1.5 ${
-              antigravityUi
-                ? "bg-emerald-500 text-slate-950 border border-emerald-400 shadow-md"
-                : "bg-teal-900 text-emerald-300 border border-teal-800 hover:border-teal-705"
+ antigravityUi
+ ? "bg-ok text-ink-2 border border-ok/40 shadow-md"
+                : "ink-surface text-ok border border-money/40 hover:border-money/40"
             }`}
           >
             <span>✦ Redesigned Dashboard</span>

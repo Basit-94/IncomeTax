@@ -180,7 +180,7 @@ export default function RealUserTaxWizard({
           <Volume2 size={13} className="shrink-0" />
         </button>
         {isShowing && (
-          <div className="absolute right-0 top-6 z-40 bg-navy text-white text-xs p-3 rounded-xl shadow-xl w-64 max-w-[78vw] leading-relaxed font-sans border border-money/25">
+          <div className="absolute right-0 top-6 z-40 ink-surface text-white text-xs p-3 rounded-xl shadow-glass w-64 max-w-[78vw] leading-relaxed font-sans border border-money/25">
           {/* right-anchored: the speaker sits at the end of its label, so a left-anchored
               64-wide panel ran off the viewport edge and read as "the button does nothing"
               (SS4B round 1, finding P2 - the handler was never dead, the panel was invisible). */}
@@ -412,7 +412,7 @@ export default function RealUserTaxWizard({
       {/* Stepper Header */}
       <div className="mb-6 flex justify-between items-center border-b border-line pb-4">
         <div>
-          <h2 className="text-base font-extrabold text-navy dark:text-ink">Interactive Tax Assistant</h2>
+          <h2 className="text-base font-extrabold text-ink dark:text-ink">Interactive Tax Assistant</h2>
           <p className="text-xs text-ink-3">Simple language tax filing for citizens</p>
         </div>
         <button
@@ -424,9 +424,9 @@ export default function RealUserTaxWizard({
       </div>
 
       <div className="mb-6">
-        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden border border-line">
+        <div className="w-full bg-paper-3 h-1.5 rounded-full overflow-hidden border border-line">
           <div
-            className="bg-navy h-full transition-all duration-300"
+            className="ink-surface h-full transition-all duration-300"
             style={{ width: `${(wizardStep / 4) * 100}%` }}
           />
         </div>
@@ -436,7 +436,7 @@ export default function RealUserTaxWizard({
       {wizardStep === 1 && (
         <div className="space-y-5">
           <div>
-            <h3 className="text-base font-bold text-navy dark:text-ink">Let's start with your identity</h3>
+            <h3 className="text-base font-bold text-ink dark:text-ink">Let's start with your identity</h3>
             <p className="text-xs text-ink-2">Enter your basic credentials to verify tax eligibility.</p>
           </div>
 
@@ -502,7 +502,7 @@ export default function RealUserTaxWizard({
             <button
               disabled={!formData.fullName.trim() || formData.pan.length !== 10}
               onClick={() => setWizardStep(2)}
-              className="px-5 py-2.5 bg-navy hover:opacity-90 text-white text-sm font-bold rounded-xl disabled:bg-slate-200 disabled:text-ink-3 transition flex items-center gap-1 cursor-pointer"
+              className="px-5 py-2.5 ink-surface hover:opacity-90 text-white text-sm font-bold rounded-xl disabled:bg-line disabled:text-ink-3 transition flex items-center gap-1 cursor-pointer"
             >
               <span>Next: How you earn</span>
               <ChevronRight size={16} />
@@ -515,7 +515,7 @@ export default function RealUserTaxWizard({
       {wizardStep === 2 && (
         <div className="space-y-5">
           <div>
-            <h3 className="text-base font-bold text-navy dark:text-ink">How do you earn your living?</h3>
+            <h3 className="text-base font-bold text-ink dark:text-ink">How do you earn your living?</h3>
             <p className="text-xs text-ink-2">
               {initialEmploymentType
                 ? t.wizard.employmentConfirmHint
@@ -538,9 +538,9 @@ export default function RealUserTaxWizard({
                   updateField("employmentType", opt.id as UserTaxProfile["employmentType"])
                 }
                 className={`p-4 rounded-xl border text-left transition cursor-pointer ${
-                  formData.employmentType === opt.id
-                    ? "border-money bg-money-soft/10 text-navy dark:text-ink"
-                    : "border-line bg-paper-2 hover:border-slate-400"
+ formData.employmentType === opt.id
+ ? "border-money bg-money-soft/10 text-ink dark:text-ink"
+                    : "border-line bg-paper-2 hover:border-line"
                 }`}
               >
                 <span className="block text-sm font-bold">{opt.label}</span>
@@ -568,9 +568,9 @@ export default function RealUserTaxWizard({
                       type="button"
                       onClick={() => updateField("hasForm16", true)}
                       className={`px-4 py-2 text-xs font-semibold rounded-lg border transition cursor-pointer ${
-                        formData.hasForm16 === true
-                          ? "border-money bg-white text-money font-bold"
-                          : "border-line bg-paper text-ink-2 hover:border-slate-400"
+ formData.hasForm16 === true
+ ? "border-money bg-paper-3 text-money font-bold"
+                          : "border-line bg-paper text-ink-2 hover:border-line"
                       }`}
                     >
                       Yes, I have one
@@ -579,9 +579,9 @@ export default function RealUserTaxWizard({
                       type="button"
                       onClick={() => updateField("hasForm16", false)}
                       className={`px-4 py-2 text-xs font-semibold rounded-lg border transition cursor-pointer ${
-                        formData.hasForm16 === false
-                          ? "border-money bg-white text-money font-bold"
-                          : "border-line bg-paper text-ink-2 hover:border-slate-400"
+ formData.hasForm16 === false
+ ? "border-money bg-paper-3 text-money font-bold"
+                          : "border-line bg-paper text-ink-2 hover:border-line"
                       }`}
                     >
                       No, I don't get one
@@ -689,7 +689,7 @@ export default function RealUserTaxWizard({
           {/* Bank interest details */}
           <div className="space-y-1 bg-paper-2 border border-line rounded-2xl p-5">
             <label className="block text-xs font-bold text-ink-2 uppercase tracking-wider">
-              Do you have savings bank interest or FD interest? (₹) <span className="text-red-500 font-semibold">(Mandatory. Enter 0 if none)</span>
+              Do you have savings bank interest or FD interest? (₹) <span className="text-bad font-semibold">(Mandatory. Enter 0 if none)</span>
             </label>
             <MockField>
               <input
@@ -706,7 +706,7 @@ export default function RealUserTaxWizard({
           <div className="pt-4 flex justify-between">
             <button
               onClick={() => setWizardStep(1)}
-              className="px-4 py-2 border border-line text-ink-2 rounded-xl hover:bg-slate-50 text-sm font-semibold flex items-center gap-1 cursor-pointer"
+              className="px-4 py-2 border border-line text-ink-2 rounded-xl hover:bg-paper-3 text-sm font-semibold flex items-center gap-1 cursor-pointer"
             >
               <ArrowLeft size={16} />
               <span>Back</span>
@@ -714,7 +714,7 @@ export default function RealUserTaxWizard({
             <button
               disabled={!isStep2Valid}
               onClick={() => setWizardStep(3)}
-              className="px-5 py-2.5 bg-navy hover:opacity-90 text-white text-sm font-bold rounded-xl transition flex items-center gap-1 cursor-pointer disabled:bg-slate-200 disabled:text-ink-3"
+              className="px-5 py-2.5 ink-surface hover:opacity-90 text-white text-sm font-bold rounded-xl transition flex items-center gap-1 cursor-pointer disabled:bg-line disabled:text-ink-3"
             >
               <span>Next: Taxes & Investments</span>
               <ChevronRight size={16} />
@@ -727,14 +727,14 @@ export default function RealUserTaxWizard({
       {wizardStep === 3 && (
         <div className="space-y-5">
           <div>
-            <h3 className="text-base font-bold text-navy dark:text-ink">Taxes Already Deducted & Savings</h3>
+            <h3 className="text-base font-bold text-ink dark:text-ink">Taxes Already Deducted & Savings</h3>
             <p className="text-xs text-ink-2">Enter what has already been paid and investments you made.</p>
           </div>
 
           <div className="space-y-4">
             <div className="space-y-1">
               <label className="block text-xs font-bold uppercase tracking-wider text-ink-2">
-                TDS: Taxes already deducted from your payments (₹) <span className="text-red-500 font-semibold">(Mandatory. Enter 0 if none)</span>
+                TDS: Taxes already deducted from your payments (₹) <span className="text-bad font-semibold">(Mandatory. Enter 0 if none)</span>
                 {renderTooltip(
                   "tds",
                   "TDS (Tax Deducted at Source) is money withheld by companies or banks before they paid you. It counts as credit.",
@@ -761,7 +761,7 @@ export default function RealUserTaxWizard({
 
             <div className="space-y-1">
               <label className="block text-xs font-bold uppercase tracking-wider text-ink-2">
-                Tax-saving investments (Section 80C) (₹) <span className="text-red-500 font-semibold">(Mandatory. Enter 0 if none)</span>
+                Tax-saving investments (Section 80C) (₹) <span className="text-bad font-semibold">(Mandatory. Enter 0 if none)</span>
                 {renderTooltip(
                   "80c",
                   "Under Section 80C, you can reduce taxable income up to ₹1,50,000 by investing in PPF, ELSS, or EPF.",
@@ -783,7 +783,7 @@ export default function RealUserTaxWizard({
 
             <div className="space-y-1">
               <label className="block text-xs font-bold uppercase tracking-wider text-ink-2">
-                Health insurance premium (Section 80D) (₹) <span className="text-red-500 font-semibold">(Mandatory. Enter 0 if none)</span>
+                Health insurance premium (Section 80D) (₹) <span className="text-bad font-semibold">(Mandatory. Enter 0 if none)</span>
                 {renderTooltip(
                   "80d",
                   "Section 80D is a tax exemption on money spent to buy health insurance policies for yourself or parents.",
@@ -807,7 +807,7 @@ export default function RealUserTaxWizard({
           <div className="pt-4 flex justify-between">
             <button
               onClick={() => setWizardStep(2)}
-              className="px-4 py-2 border border-line text-ink-2 rounded-xl hover:bg-slate-50 text-sm font-semibold flex items-center gap-1 cursor-pointer"
+              className="px-4 py-2 border border-line text-ink-2 rounded-xl hover:bg-paper-3 text-sm font-semibold flex items-center gap-1 cursor-pointer"
             >
               <ArrowLeft size={16} />
               <span>Back</span>
@@ -815,7 +815,7 @@ export default function RealUserTaxWizard({
             <button
               disabled={!isStep3Valid}
               onClick={() => setWizardStep(4)}
-              className="px-5 py-2.5 bg-navy hover:opacity-90 text-white text-sm font-bold rounded-xl transition flex items-center gap-1 cursor-pointer disabled:bg-slate-200 disabled:text-ink-3"
+              className="px-5 py-2.5 ink-surface hover:opacity-90 text-white text-sm font-bold rounded-xl transition flex items-center gap-1 cursor-pointer disabled:bg-line disabled:text-ink-3"
             >
               <span>Next: Optimize my tax</span>
               <ChevronRight size={16} />
@@ -828,7 +828,7 @@ export default function RealUserTaxWizard({
       {wizardStep === 4 && (
         <div className="space-y-6">
           <div>
-            <h3 className="text-base font-bold text-navy dark:text-ink">Live Tax Optimization</h3>
+            <h3 className="text-base font-bold text-ink dark:text-ink">Live Tax Optimization</h3>
             <p className="text-xs text-ink-2">We computed the results under both regimes. Choose what is best for you.</p>
           </div>
 
@@ -836,7 +836,7 @@ export default function RealUserTaxWizard({
           <div className="bg-money-soft border border-money/20 rounded-xl p-4 flex justify-between items-center text-xs">
             <div>
               <p className="font-mono text-money font-bold uppercase tracking-wider text-[10px]">Verified Filer Details</p>
-              <h4 className="font-bold text-navy dark:text-ink mt-0.5">{formData.fullName} ({formData.pan})</h4>
+              <h4 className="font-bold text-ink dark:text-ink mt-0.5">{formData.fullName} ({formData.pan})</h4>
             </div>
             <button
               onClick={() => setWizardStep(1)}
@@ -852,18 +852,18 @@ export default function RealUserTaxWizard({
             <div
               onClick={() => setSelectedRegime("new")}
               className={`border-2 rounded-2xl p-5 cursor-pointer text-left transition flex flex-col justify-between ${
-                selectedRegime === "new"
+ selectedRegime === "new"
                   ? "border-money bg-paper shadow-md"
-                  : "border-line bg-paper-2 hover:border-slate-400"
+                  : "border-line bg-paper-2 hover:border-line"
               }`}
             >
               <div>
                 <div className="flex justify-between items-center mb-3">
-                  <span className="text-[10px] font-mono uppercase tracking-wider font-extrabold text-navy dark:text-ink">
+                  <span className="text-[10px] font-mono uppercase tracking-wider font-extrabold text-ink dark:text-ink">
                     New Regime (AY 2026-27)
                   </span>
                   {newBreakdown.refundOrDue >= oldBreakdown.refundOrDue && (
-                    <span className="bg-navy text-white text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded flex items-center gap-0.5 shrink-0">
+                    <span className="ink-surface text-white text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded flex items-center gap-0.5 shrink-0">
                       <Sparkles size={8} />
                       <span>Best Choice</span>
                     </span>
@@ -904,18 +904,18 @@ export default function RealUserTaxWizard({
             <div
               onClick={() => setSelectedRegime("old")}
               className={`border-2 rounded-2xl p-5 cursor-pointer text-left transition flex flex-col justify-between ${
-                selectedRegime === "old"
+ selectedRegime === "old"
                   ? "border-money bg-paper shadow-md"
-                  : "border-line bg-paper-2 hover:border-slate-400"
+                  : "border-line bg-paper-2 hover:border-line"
               }`}
             >
               <div>
                 <div className="flex justify-between items-center mb-3">
-                  <span className="text-[10px] font-mono uppercase tracking-wider font-extrabold text-navy dark:text-ink">
+                  <span className="text-[10px] font-mono uppercase tracking-wider font-extrabold text-ink dark:text-ink">
                     Old Regime
                   </span>
                   {oldBreakdown.refundOrDue > newBreakdown.refundOrDue && (
-                    <span className="bg-navy text-white text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded flex items-center gap-0.5 shrink-0">
+                    <span className="ink-surface text-white text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded flex items-center gap-0.5 shrink-0">
                       <Sparkles size={8} />
                       <span>Best Choice</span>
                     </span>
@@ -957,7 +957,7 @@ export default function RealUserTaxWizard({
           <div className="border border-line rounded-xl overflow-hidden bg-paper text-xs text-ink-2 text-left mt-4">
             {/* Header: Show source and calculation trail */}
             <div className="p-4 bg-paper-2 border-b border-line">
-              <span className="font-bold text-navy dark:text-ink">Tax Calculation Trail</span>
+              <span className="font-bold text-ink dark:text-ink">Tax Calculation Trail</span>
             </div>
 
             <div className="p-4 space-y-3">
@@ -983,7 +983,7 @@ export default function RealUserTaxWizard({
                   </span>
                 </div>
               )}
-              <div className="flex justify-between border-b border-line pb-1 font-bold text-navy dark:text-ink">
+              <div className="flex justify-between border-b border-line pb-1 font-bold text-ink dark:text-ink">
                 <span>Taxable Income:</span>
                 <span className="font-mono">{formatMoney(activeBreakdown.taxableIncome, lang)}</span>
               </div>
@@ -1003,7 +1003,7 @@ export default function RealUserTaxWizard({
 
             {/* Net Result - bottom padded row with color matching outer box */}
             <div className="flex justify-between items-center p-4 bg-money-soft border-t border-line">
-              <span className="font-bold text-navy dark:text-ink">Net Refund / Due</span>
+              <span className="font-bold text-ink dark:text-ink">Net Refund / Due</span>
               <span className={`font-mono text-sm font-bold ${activeBreakdown.refundOrDue >= 0 ? "text-money" : "text-alarm"}`}>
                 {activeBreakdown.refundOrDue >= 0 ? "+" : "-"}
                 {formatMoney(Math.abs(activeBreakdown.refundOrDue), lang)}
@@ -1015,14 +1015,14 @@ export default function RealUserTaxWizard({
           <div className="pt-4 border-t border-line flex justify-between items-center">
             <button
               onClick={() => setWizardStep(3)}
-              className="px-4 py-2 border border-line text-ink-2 rounded-xl hover:bg-slate-50 text-sm font-semibold flex items-center gap-1 cursor-pointer"
+              className="px-4 py-2 border border-line text-ink-2 rounded-xl hover:bg-paper-3 text-sm font-semibold flex items-center gap-1 cursor-pointer"
             >
               <ArrowLeft size={16} />
               <span>Back</span>
             </button>
             <button
               onClick={handleFinish}
-              className="px-6 py-3 bg-navy hover:opacity-90 text-white text-sm font-extrabold rounded-xl transition flex items-center gap-1.5 shadow-md cursor-pointer"
+              className="px-6 py-3 ink-surface hover:opacity-90 text-white text-sm font-extrabold rounded-xl transition flex items-center gap-1.5 shadow-md cursor-pointer"
             >
               <Check size={18} />
               <span>Confirm & Lock Selected Regime</span>

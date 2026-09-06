@@ -63,9 +63,9 @@ export default function CheckScreen({ persona, t, lang, regime }: CheckScreenPro
             <span
               className={`text-sm ${
                 tone === "money"
-                  ? "font-bold text-navy dark:text-ink"
+                  ? "font-extrabold text-ink"
                   : tone === "muted"
-                  ? "text-ink-2"
+                  ? "text-ink-3"
                   : "font-medium text-ink"
               }`}
             >
@@ -73,10 +73,10 @@ export default function CheckScreen({ persona, t, lang, regime }: CheckScreenPro
             </span>
           </span>
           <span
-            className={`tabular whitespace-nowrap ${
+            className={`tabular whitespace-nowrap font-extrabold ${
               big
-                ? `text-lg font-extrabold ${tone === "money" ? "text-money" : tone === "alarm" ? "text-alarm" : "text-navy dark:text-ink"}`
-                : `text-sm font-semibold ${tone === "money" ? "text-money" : tone === "alarm" ? "text-alarm" : "text-ink"}`
+                ? `text-[26px] leading-none ${tone === "money" ? "text-ok" : tone === "alarm" ? "text-bad" : "text-ink"}`
+                : `text-sm ${tone === "money" ? "text-ok" : tone === "alarm" ? "text-bad" : "text-ink"}`
             }`}
           >
             {value}
@@ -86,7 +86,7 @@ export default function CheckScreen({ persona, t, lang, regime }: CheckScreenPro
           <div className="pb-4 pl-5 pr-1 space-y-3 animate-fade">
             {explain && (
               <p className="flex items-start gap-1.5 text-xs text-ink-2 leading-relaxed">
-                <Info size={12} className="text-money mt-0.5 shrink-0" />
+                <Info size={12} className="text-money mt-0.5 shrink-0" aria-hidden="true" />
                 <span>{explain}</span>
               </p>
             )}
@@ -102,7 +102,7 @@ export default function CheckScreen({ persona, t, lang, regime }: CheckScreenPro
     if (rows.length === 0) return null;
     return (
       <div className="space-y-2">
-              <span className="block text-[0.65rem] font-mono uppercase tracking-wider text-ink-3 font-bold">
+        <span className="block text-[10.5px] font-mono uppercase tracking-[.08em] text-ink-3 font-bold">
           {t.check.fromFacts}
         </span>
         {rows.map((f) => (
@@ -126,11 +126,11 @@ export default function CheckScreen({ persona, t, lang, regime }: CheckScreenPro
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h2 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">{t.check.heading}</h2>
+        <h2 className="text-[30px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink">{t.check.heading}</h2>
         <p className="text-sm text-ink-2 leading-relaxed">{t.check.sub}</p>
       </div>
 
-      <div className="surface-panel divide-y divide-line px-4">
+      <div className="surface-panel divide-y divide-line px-[22px] py-1.5">
         <Row
           id="gross"
           label={t.check.grossIncome}
@@ -202,7 +202,7 @@ export default function CheckScreen({ persona, t, lang, regime }: CheckScreenPro
                     {" to "}
                     {Number.isFinite(slice.to) ? formatMoney(slice.to, lang) : "∞"}
                   </span>
-                  <span className="font-mono text-[0.65rem] bg-paper-2 border border-line rounded px-1">
+                  <span className="glass-flat font-mono text-[0.65rem] rounded-full px-1.5">
                     {t.check.ratePct(slice.rate)}
                   </span>
                 </span>

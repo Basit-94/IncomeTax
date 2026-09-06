@@ -1,23 +1,20 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Caveat, JetBrains_Mono, Source_Serif_4, Space_Grotesk } from "next/font/google";
+import { Caveat, JetBrains_Mono, Outfit } from "next/font/google";
 import "./globals.css";
 import Disclaimer from "../components/disclaimer";
 import { TaxProvider } from "../context/TaxReturnContext";
 
-/* Direction 13 typography (DESIGN.md §4): Space Grotesk carries headings,
-   badges, buttons and nav; Source Serif 4 is what makes the body read as a
-   document; JetBrains Mono carries every number; Caveat is the pencil voice. */
-const grotesk = Space_Grotesk({
+/* Redesign 2026-09-06 (docs/redesign handoff): Outfit carries everything —
+   display, body, buttons — replacing Space Grotesk + Source Serif 4; JetBrains
+   Mono keeps every number, PAN and eyebrow label; Caveat is Munshi ji's
+   handwritten note. The old --font-grotesk / --font-serif-d13 variables are
+   kept as aliases of Outfit so no component has to change its font class. */
+const outfit = Outfit({
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  variable: "--font-grotesk",
-});
-const serif = Source_Serif_4({
-  subsets: ["latin"],
-  weight: ["400", "600"],
-  variable: "--font-serif-d13",
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-outfit",
 });
 const jbMono = JetBrains_Mono({
   subsets: ["latin"],
@@ -40,7 +37,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#f3f7f8",
+  themeColor: "#0B1424",
 };
 
 export default function RootLayout({
@@ -50,11 +47,10 @@ export default function RootLayout({
     <html
       lang="en"
       data-scroll-behavior="smooth"
-      className={`${grotesk.variable} ${serif.variable} ${jbMono.variable} ${caveat.variable}`}
+      className={`dark dark-mode ${outfit.variable} ${jbMono.variable} ${caveat.variable}`}
     >
       <body className="min-h-dvh flex flex-col">
-        {/* D13 layer stack (verbatim d13.css): graph paper at -2, motes canvas
-            at -1 (mounted in the page), veil above the motes so they recede. */}
+        {/* The ambient ground: lilac page with two drifting blobs (globals.css .paper), under everything. */}
         <div className="paper" aria-hidden="true" />
         <TaxProvider>
           <div className="flex-1">{children}</div>

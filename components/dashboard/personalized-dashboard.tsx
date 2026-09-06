@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
+import { Munshi } from "../brand/munshi";
 import type { Dict } from "../../lib/i18n";
 import {
   getPersonalization,
@@ -51,13 +52,15 @@ export default function PersonalizedDashboard({
       className="surface-panel overflow-hidden p-5 sm:p-6 print:hidden"
     >
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-        <div className="max-w-2xl space-y-2">
-          <p className="text-xs font-mono font-semibold uppercase tracking-wider text-money">
+        <div className="flex items-start gap-4 max-w-2xl">
+        <div className="hidden sm:block shrink-0" aria-hidden="true"><Munshi size={72} /></div>
+        <div className="space-y-2">
+          <p className="text-xs font-bold uppercase tracking-[.08em] text-money">
             {t.dashboard.personalized.eyebrow}
           </p>
           <h2
             id="personalized-dashboard-heading"
-            className="text-2xl font-extrabold tracking-tight text-ink sm:text-3xl"
+            className="text-[26px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink sm:text-[30px]"
           >
             {/* A man with two notices must not be greeted with "let us get your
                 return ready" — the filed state owns the headline. */}
@@ -76,12 +79,13 @@ export default function PersonalizedDashboard({
               : t.dashboard.personalized.quickBody}
           </p>
         </div>
+        </div>
 
         <div className="flex shrink-0 flex-col items-stretch gap-2 sm:flex-row lg:flex-col lg:items-stretch">
           <button
             type="button"
             onClick={onPrimaryAction}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-navy px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:opacity-90"
+            className="btn-primary inline-flex h-[46px] items-center justify-center gap-2 rounded-[14px] px-5 text-[14.5px] transition-colors"
           >
             {isRealMode ? "Start Step-by-Step Return" : t.dashboard.personalized.primaryAction[destination]}
             <ArrowRight size={16} aria-hidden="true" />
@@ -98,7 +102,7 @@ export default function PersonalizedDashboard({
 
       <div className="mt-5 grid gap-3 border-t border-line pt-4 sm:grid-cols-3">
         <div className="space-y-1">
-          <span className="block text-[0.68rem] font-mono font-semibold uppercase tracking-wider text-ink-3">
+          <span className="block text-xs font-bold text-ink-3">
             {t.dashboard.personalized.profileLabels.work}
           </span>
           <strong className="block text-sm text-ink">
@@ -106,7 +110,7 @@ export default function PersonalizedDashboard({
           </strong>
         </div>
         <div className="space-y-1">
-          <span className="block text-[0.68rem] font-mono font-semibold uppercase tracking-wider text-ink-3">
+          <span className="block text-xs font-bold text-ink-3">
             {t.onboarding.modeQuestion}
           </span>
           {onModeChange ? (
@@ -131,7 +135,7 @@ export default function PersonalizedDashboard({
           )}
         </div>
         <div className="space-y-1">
-          <span className="block text-[0.68rem] font-mono font-semibold uppercase tracking-wider text-ink-3">
+          <span className="block text-xs font-bold text-ink-3">
             {t.dashboard.personalized.profileLabels.history}
           </span>
           <strong className="block text-sm text-ink">
@@ -149,7 +153,7 @@ export default function PersonalizedDashboard({
             {focusLabels.map((label) => (
               <span
                 key={label}
-                className="rounded-full border border-line bg-paper-2 px-2.5 py-1 text-xs font-medium text-ink-2"
+                className="glass-flat rounded-full px-2.5 py-1 text-xs font-semibold text-ink-2"
               >
                 {label}
               </span>

@@ -27,7 +27,7 @@ import {
   Moon,
 } from "lucide-react";
 import type { Persona, Lang, IncomeFact, Claim, TaxAlreadyPaid } from "@/lib/types";
-import { formatMoney } from "@/lib/money";
+import { formatAmount, formatMoney } from "@/lib/money";
 import { computeForPersona } from "@/lib/return/compute";
 import {
   fetchReviewRecord,
@@ -39,6 +39,112 @@ import {
 } from "@/lib/ca/ca-store";
 import { PERSONAS } from "@/lib/personas";
 import LanguageMenu from "@/components/ui/language-menu";
+import { MunshiAvatar } from "@/components/brand/munshi";
+
+const REVIEW_STEPS = ["Income", "Deductions", "Regime", "Notes & send"] as const;
+const SHEET_COLS = "grid grid-cols-[minmax(0,1fr)_92px_112px_136px_96px] gap-3";
+
+type WorksheetRow = {
+  key: string;
+  line: string;
+  section: string;
+  filed: number;
+  revised: number;
+  onChange: (value: number) => void;
+};
+
+/** One handoff worksheet: Line · Section · Client filed · CA revised · Δ, with a totals row. */
+function Worksheet({
+  title,
+  meta,
+  rows,
+  totalLabel,
+  total,
+  totalTone = "text-ink",
+  note,
+  lang,
+  onInput,
+}: {
+  title: string;
+  meta: string;
+  rows: WorksheetRow[];
+  totalLabel: string;
+  total: number;
+  totalTone?: string;
+  note?: React.ReactNode;
+  lang: Lang;
+  onInput: (raw: string, setter: (value: number) => void) => void;
+}) {
+  return (
+    <section className="glass rounded-[24px] px-[22px] py-[18px]">
+      <header className="flex items-baseline justify-between gap-3 flex-wrap">
+        <h4 className="text-[15px] font-extrabold text-ink">{title}</h4>
+        <span className="text-[11px] text-ink-3">{meta}</span>
+      </header>
+      <div className="mt-3 overflow-x-auto">
+        <div className="min-w-[560px]">
+          <div className={`${SHEET_COLS} pb-2 text-[10.5px] font-bold uppercase tracking-wider text-ink-3`}>
+            <span>Line</span>
+            <span>Section</span>
+            <span>Client filed</span>
+            <span>CA revised</span>
+            <span>Δ</span>
+          </div>
+          {rows.map((row) => {
+            const delta = row.revised - row.filed;
+            const blank = row.filed === 0 && row.revised === 0;
+            return (
+              <div
+                key={row.key}
+                className={`${SHEET_COLS} items-center py-2.5 border-b border-dashed border-glass-edge last:border-b-0`}
+              >
+                <span className={`text-[13.5px] font-semibold ${blank ? "text-ink-3" : "text-ink"}`}>{row.line}</span>
+                <span>
+                  <span className="inline-flex px-2 py-0.5 rounded-full bg-white/55 dark:bg-white/10 border border-glass-edge text-[11px] font-bold text-ink-2">
+                    {row.section}
+                  </span>
+                </span>
+                <span className="font-mono text-[13px] tabular-nums text-ink-3">{formatAmount(row.filed, lang)}</span>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  aria-label={`${row.line} — CA revised`}
+                  value={row.revised ? row.revised : ""}
+                  onChange={(e) => onInput(e.target.value, row.onChange)}
+                  className={`h-9 w-full rounded-[14px] border-[1.5px] px-3 font-mono text-[13px] font-bold tabular-nums focus:outline-none focus:ring-2 focus:ring-money/40 ${
+                    delta !== 0 ? "bg-ok-soft border-ok text-ok-ink" : "bg-white/80 dark:bg-white/10 border-glass-edge text-ink"
+                  }`}
+                />
+                <span>
+                  {delta === 0 ? (
+                    <span className="text-ink-3">—</span>
+                  ) : (
+                    <span
+                      className={`inline-flex px-2 py-0.5 rounded-full text-[11.5px] font-bold tabular-nums ${
+                        delta > 0 ? "bg-ok-soft text-ok-ink" : "bg-warn-soft text-warn"
+                      }`}
+                    >
+                      {delta > 0 ? "+" : "−"}
+                      {formatAmount(Math.abs(delta), lang)}
+                    </span>
+                  )}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <footer className="mt-3 pt-3 border-t border-glass-edge flex items-center justify-between gap-4 flex-wrap">
+        <div className="min-w-0">{note}</div>
+        <div className="flex items-baseline gap-3 ms-auto">
+          <span className="text-[13px] font-extrabold text-ink">{totalLabel}</span>
+          <span className={`font-mono text-[16px] font-extrabold tabular-nums ${totalTone}`}>{formatMoney(total, lang)}</span>
+        </div>
+      </footer>
+    </section>
+  );
+}
 
 function CAPortalContent() {
   const searchParams = useSearchParams();
@@ -58,17 +164,32 @@ function CAPortalContent() {
   const [caPersona, setCaPersona] = useState<Persona | null>(null);
   const [recommendedRegime, setRecommendedRegime] = useState<"new" | "old">("old");
   const [caNotes, setCaNotes] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"salary" | "house" | "capital" | "other" | "deductions" | "tds">("deductions");
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // UI preferences
   const [lang, setLang] = useState<Lang>("en");
-  const [theme, setTheme] = useState<"dark" | "light">("light");
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   useEffect(() => {
     if (urlCode && !code) setCode(urlCode);
   }, [urlCode, code]);
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("wapsi_theme");
+    if (savedTheme === "dark" || savedTheme === "light") setTheme(savedTheme);
+  }, []);
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    document.documentElement.classList.toggle("dark-mode", theme === "dark");
+    document.body?.classList.toggle("dark", theme === "dark");
+    document.body?.classList.toggle("dark-mode", theme === "dark");
+  }, [theme]);
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    localStorage.setItem("wapsi_theme", next);
+  };
 
   // Handle Login / Verification
   const handleVerify = async (e?: React.FormEvent) => {
@@ -157,6 +278,11 @@ function CAPortalContent() {
     if (!originalBreakdown || !caBreakdown) return 0;
     return caBreakdown.refundOrDue - originalBreakdown.refundOrDue;
   }, [originalBreakdown, caBreakdown]);
+
+  const regimeBreakdowns = useMemo(() => {
+    if (!caPersona) return null;
+    return { new: computeForPersona(caPersona, "new"), old: computeForPersona(caPersona, "old") };
+  }, [caPersona]);
 
   // Clean numeric input parser: strips leading zeros and non-digits (e.g. "01000" -> 1000, "" -> 0)
   const handleNumberChange = (raw: string, setter: (val: number) => void) => {
@@ -359,26 +485,80 @@ function CAPortalContent() {
   const claim24B = caPersona?.claims.find((c) => isClaimMatch(c, "24B"));
   const tdsTotal = caPersona?.taxPaid.reduce((sum, t) => sum + t.amount, 0) || 0;
 
+  // What the client filed, for the "Client filed" column and the Δ pills.
+  const original = record?.originalPersona;
+  const filedFact = (kind: string) => original?.facts.find((f) => f.kind === kind);
+  const filedAmount = (kind: string) => filedFact(kind)?.amount ?? 0;
+  const filedClaim = (key: ClaimKey) => original?.claims.find((c) => isClaimMatch(c, key))?.amount ?? 0;
+  const filedTds = original?.taxPaid.reduce((sum, t) => sum + t.amount, 0) ?? 0;
+  const withReporter = (line: string, kind: string) => {
+    const reporter = filedFact(kind)?.provenance?.reporter;
+    return reporter ? `${line} — ${reporter}` : line;
+  };
+
+  const incomeRows: WorksheetRow[] = [
+    { key: "salary", line: withReporter("Salary", "salary"), section: "s.17", filed: filedAmount("salary"), revised: salaryFact?.amount ?? 0, onChange: (v) => updateIncomeAmount("salary", v) },
+    { key: "interest", line: withReporter("Interest", "interest"), section: "s.56", filed: filedAmount("interest"), revised: interestFact?.amount ?? 0, onChange: (v) => updateIncomeAmount("interest", v) },
+    { key: "dividend", line: withReporter("Dividends", "dividend"), section: "s.56", filed: filedAmount("dividend"), revised: dividendFact?.amount ?? 0, onChange: (v) => updateIncomeAmount("dividend", v) },
+    { key: "capital_gains", line: withReporter("Sale of listed shares & assets", "capital_gains"), section: "s.111A / 112A", filed: filedAmount("capital_gains"), revised: capitalGainsFact?.amount ?? 0, onChange: updateCapitalGains },
+    { key: "rent", line: "House property — rent received", section: "s.22", filed: filedAmount("rent"), revised: houseFact?.amount ?? 0, onChange: (v) => updateIncomeAmount("rent", v) },
+    { key: "other", line: "Other taxable receipts", section: "s.56", filed: filedAmount("other"), revised: otherFact?.amount ?? 0, onChange: (v) => updateIncomeAmount("other", v) },
+  ];
+  const deductionRows: WorksheetRow[] = [
+    { key: "80C", line: "Provident fund, LIC, ELSS, tuition", section: "80C", filed: filedClaim("80C"), revised: claim80C?.amount ?? 0, onChange: (v) => updateClaimByKey("80C", v) },
+    { key: "80D_SELF", line: "Health cover — self & family", section: "80D", filed: filedClaim("80D_SELF"), revised: claim80DSelf?.amount ?? 0, onChange: (v) => updateClaimByKey("80D_SELF", v) },
+    { key: "80D_PARENTS", line: "Health cover — parents", section: "80D", filed: filedClaim("80D_PARENTS"), revised: claim80DParents?.amount ?? 0, onChange: (v) => updateClaimByKey("80D_PARENTS", v) },
+    { key: "80CCD", line: "NPS Tier-I additional", section: "80CCD(1B)", filed: filedClaim("80CCD"), revised: claim80CCD?.amount ?? 0, onChange: (v) => updateClaimByKey("80CCD", v) },
+    { key: "HRA", line: "HRA exemption", section: "10(13A)", filed: filedClaim("HRA"), revised: claimHRA?.amount ?? 0, onChange: (v) => updateClaimByKey("HRA", v) },
+    { key: "24B", line: "Home loan interest", section: "24(b)", filed: filedClaim("24B"), revised: claim24B?.amount ?? 0, onChange: (v) => updateClaimByKey("24B", v) },
+  ];
+  const taxPaidRows: WorksheetRow[] = [
+    { key: "tds", line: "TDS / advance tax — Form 26AS", section: "s.192", filed: filedTds, revised: tdsTotal, onChange: updateTdsAmount },
+  ];
+
+  const firstName = record?.citizenName.split(" ")[0] ?? "the client";
+  const initials = (record?.citizenName ?? "").split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+  const addedDeductions = deductionRows.filter((r) => r.revised > r.filed).map((r) => r.line);
+  const munshiNote =
+    addedDeductions.length === 0
+      ? `Munshi ji: nothing added yet — the claims stand as ${firstName} filed them.`
+      : `Munshi ji: ${addedDeductions.length === 1 ? addedDeductions[0] : `${addedDeductions.slice(0, -1).join(", ")} and ${addedDeductions[addedDeductions.length - 1]}`} ${addedDeductions.length === 1 ? "was the one" : "were the ones"} ${firstName} missed.`;
+  const currentStep = caNotes.trim() ? 3 : 2;
+  const positionText = (n: number) =>
+    n < 0 ? `−${formatMoney(-n, lang)} due` : n > 0 ? `${formatMoney(n, lang)} refund` : `${formatMoney(0, lang)} due`;
+  const positionTone = (n: number) => (n < 0 ? "text-bad" : n > 0 ? "text-ok-ink" : "text-ink");
+  const regimeName = (r: "new" | "old") => (r === "new" ? "New" : "Old");
+  const cheaperRegime: "new" | "old" =
+    regimeBreakdowns && regimeBreakdowns.new.totalTax <= regimeBreakdowns.old.totalTax ? "new" : "old";
+  const regimeSavings = regimeBreakdowns ? Math.abs(regimeBreakdowns.new.totalTax - regimeBreakdowns.old.totalTax) : 0;
+  const auditTrail = [
+    { at: "PIN", text: "Opened review · PIN verified" },
+    ...[...incomeRows, ...deductionRows, ...taxPaidRows]
+      .filter((r) => r.revised !== r.filed)
+      .map((r) => ({ at: r.section, text: `${r.line} ${formatAmount(r.filed, lang)} → ${formatAmount(r.revised, lang)}` })),
+    ...(record && recommendedRegime !== record.originalRegime ? [{ at: "Regime", text: `Regime → ${regimeName(recommendedRegime)}` }] : []),
+  ];
+
   return (
-    <div className={`min-h-screen ${theme === "dark" ? "dark bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900"} flex flex-col font-sans selection:bg-teal-500 selection:text-white`}>
+    <div className="min-h-screen text-ink flex flex-col font-sans selection:bg-money selection:text-white">
       {/* Top Professional Header Bar */}
-      <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-40 shadow-xs">
+      <header className="border-b border-glass-edge bg-paper/90 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="size-9 rounded-xl bg-gradient-to-br from-teal-700 to-indigo-900 flex items-center justify-center text-white font-serif font-black text-lg shadow-sm">
+              <div className="size-9 rounded-xl bg-gradient-to-br flex items-center justify-center text-white font-serif font-black text-lg shadow-sm">
                 W
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white">
+                  <span className="font-extrabold text-base tracking-tight text-ink-2">
                     Wapsi Professional
                   </span>
-                  <span className="px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-800 dark:text-teal-300 text-[10px] font-mono font-bold uppercase tracking-wider border border-teal-500/30">
+                  <span className="px-2 py-0.5 rounded-full bg-amber-bg text-money text-[10px] font-mono font-bold uppercase tracking-wider border border-money/40">
                     CA Audit Portal
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                <p className="text-[11px] text-ink-3">
                   Assessment Year 2026-27 (FY 2025-26) · ICAI Standards
                 </p>
               </div>
@@ -388,15 +568,15 @@ function CAPortalContent() {
           <div className="flex items-center gap-3">
             <LanguageMenu lang={lang} onChange={setLang} label="Language" />
             <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition cursor-pointer"
+              onClick={toggleTheme}
+              className="p-2 rounded-xl bg-paper-3 border border-line text-ink-2 hover:text-ink-2 transition cursor-pointer"
               aria-label="Toggle theme"
             >
               {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
             </button>
             <Link
               href="/"
-              className="hidden sm:inline-flex text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-teal-700 dark:hover:text-teal-400 transition"
+              className="hidden sm:inline-flex text-xs font-bold text-ink-2 hover:text-money transition"
             >
               Return to Citizen Portal →
             </Link>
@@ -410,21 +590,21 @@ function CAPortalContent() {
           /* Login Screen */
           <div className="max-w-xl mx-auto py-8 sm:py-12 space-y-6 animate-in fade-in zoom-in-95 duration-200">
             <div className="text-center space-y-2">
-              <div className="inline-flex p-3 rounded-2xl bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-500/20 mb-2">
+              <div className="inline-flex p-3 rounded-2xl bg-amber-bg text-money border border-money/40 mb-2">
                 <Award size={32} />
               </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink-2">
                 Taxpayer Audit & Review Access
               </h2>
-              <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto">
+              <p className="text-sm text-ink-2 max-w-md mx-auto">
                 Enter the shareable Access Code and secret Security PIN provided by your client to inspect and optimize their draft return.
               </p>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
+            <div className="bg-paper-3 border border-line rounded-3xl p-6 sm:p-8 shadow-glass space-y-6">
               <form onSubmit={handleVerify} className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-ink-2">
                     Client Review Code
                   </label>
                   <input
@@ -432,13 +612,13 @@ function CAPortalContent() {
                     placeholder="e.g. CA-7842-91"
                     value={code}
                     onChange={(e) => setCode(e.target.value.toUpperCase())}
-                    className="w-full text-center tracking-widest text-xl font-mono font-bold p-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-none"
+                    className="w-full text-center tracking-widest text-xl font-mono font-bold p-3.5 bg-paper-3 border border-line rounded-xl focus:ring-2 focus:ring-money/40 focus:outline-none"
                     autoFocus
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-ink-2">
                     Taxpayer Security PIN
                   </label>
                   <input
@@ -447,12 +627,12 @@ function CAPortalContent() {
                     placeholder="4 to 6 digit secret PIN"
                     value={pin}
                     onChange={(e) => setPin(e.target.value)}
-                    className="w-full text-center tracking-widest text-xl font-mono font-bold p-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-none"
+                    className="w-full text-center tracking-widest text-xl font-mono font-bold p-3.5 bg-paper-3 border border-line rounded-xl focus:ring-2 focus:ring-money/40 focus:outline-none"
                   />
                 </div>
 
-                <div className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-3">
-                  <span className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <div className="border-t border-line pt-4 space-y-3">
+                  <span className="block text-xs font-bold uppercase tracking-wider text-ink-3">
                     Reviewing Professional Stamp (Optional)
                   </span>
                   <div className="grid grid-cols-2 gap-3">
@@ -461,20 +641,20 @@ function CAPortalContent() {
                       placeholder="CA Full Name"
                       value={caName}
                       onChange={(e) => setCaName(e.target.value)}
-                      className="text-xs p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500"
+                      className="text-xs p-2.5 bg-paper-3 border border-line rounded-lg focus:outline-none focus:ring-1 focus:ring-money/40"
                     />
                     <input
                       type="text"
                       placeholder="ICAI Membership No."
                       value={membershipNo}
                       onChange={(e) => setMembershipNo(e.target.value)}
-                      className="text-xs p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500"
+                      className="text-xs p-2.5 bg-paper-3 border border-line rounded-lg focus:outline-none focus:ring-1 focus:ring-money/40"
                     />
                   </div>
                 </div>
 
                 {authError && (
-                  <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-400 flex items-center gap-2">
+                  <div className="p-3 bg-bad-soft border border-bad/40 rounded-xl text-xs font-semibold text-bad flex items-center gap-2">
                     <AlertCircle size={15} className="shrink-0" />
                     <span>{authError}</span>
                   </div>
@@ -483,7 +663,7 @@ function CAPortalContent() {
                 <button
                   type="submit"
                   disabled={isVerifying || !code.trim() || !pin.trim()}
-                  className="w-full py-3.5 px-4 bg-teal-800 hover:bg-teal-900 disabled:opacity-50 text-white font-bold text-sm rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-3.5 px-4 ink-surface hover:ink-surface disabled:opacity-50 text-white font-bold text-sm rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Lock size={16} />
                   <span>{isVerifying ? "Verifying Access..." : "Access Client Return Draft"}</span>
@@ -492,18 +672,18 @@ function CAPortalContent() {
               </form>
 
               {/* Demo Section for Evaluators/Judges */}
-              <div className="p-4 bg-teal-500/5 border border-teal-500/20 rounded-2xl text-center space-y-2">
-                <span className="text-xs font-bold text-teal-800 dark:text-teal-300 block">
+              <div className="p-4 bg-amber-bg border border-money/40 rounded-2xl text-center space-y-2">
+                <span className="text-xs font-bold text-money block">
                   Testing Without a Citizen Draft?
                 </span>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-ink-3">
                   Instantly load a pre-configured sample client (Sunita Rao - Salaried IT Professional) to test the CA audit & reconciliation interface.
                 </p>
                 <button
                   type="button"
                   onClick={handleLaunchDemo}
                   disabled={isVerifying}
-                  className="px-4 py-2 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-teal-500/30 text-teal-800 dark:text-teal-300 text-xs font-bold rounded-xl shadow-xs transition inline-flex items-center gap-2 cursor-pointer"
+                  className="px-4 py-2 bg-paper-3 hover:bg-paper-3 border border-money/40 text-money text-xs font-bold rounded-xl shadow-xs transition inline-flex items-center gap-2 cursor-pointer"
                 >
                   <Sparkles size={14} />
                   <span>Launch Demo Client Audit</span>
@@ -514,669 +694,280 @@ function CAPortalContent() {
         ) : (
           /* CA Audit Workspace */
           <div className="space-y-6 animate-in fade-in duration-300">
-            {/* Taxpayer Information Bar */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="size-11 rounded-2xl bg-teal-700 text-white flex items-center justify-center font-bold text-base shadow-xs shrink-0">
-                  {record.citizenName.slice(0, 1)}
+            {/* Sticky client strip: who, PIN state, before → after, save. */}
+            <div className="sticky top-[64px] z-30 rounded-[20px] bg-paper/90 backdrop-blur-xl border border-glass-edge shadow-glass px-5 py-3.5 flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="size-11 rounded-[14px] ink-surface text-white grid place-items-center font-extrabold text-sm shrink-0">
+                  {initials}
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-                      {record.citizenName}
-                    </h3>
-                    <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono text-xs font-bold">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-[15px] font-extrabold text-ink">{record.citizenName}</h3>
+                    <span className="px-2 py-0.5 rounded-full bg-white/55 dark:bg-white/10 border border-glass-edge font-mono text-[11px] font-bold text-ink-2 tracking-wider">
                       {record.citizenPan}
                     </span>
-                    <span className="px-2 py-0.5 rounded-md bg-teal-500/10 text-teal-800 dark:text-teal-300 text-[10px] font-bold uppercase tracking-wider">
-                      AY {record.assessmentYear}
+                    <span className="px-2 py-0.5 rounded-full bg-ok-soft text-ok-ink text-[10.5px] font-bold">
+                      Client PIN verified
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Original Citizen Selection: <strong>{record.originalRegime.toUpperCase()} Regime</strong> (
-                    {originalBreakdown?.refundOrDue && originalBreakdown.refundOrDue >= 0
-                      ? `Refund: ${formatMoney(originalBreakdown.refundOrDue, lang)}`
-                      : `Due: ${formatMoney(Math.abs(originalBreakdown?.refundOrDue || 0), lang)}`}
-                    )
+                  <p className="text-[11.5px] text-ink-3 mt-0.5">
+                    AY {record.assessmentYear} · review code {record.code} · client chose the{" "}
+                    {regimeName(record.originalRegime)} regime
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 ms-auto">
+              <div className="ms-auto flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-3 rounded-[14px] bg-white/55 dark:bg-white/10 border border-glass-edge px-3.5 py-2">
+                  <div>
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-ink-3">Client filed</span>
+                    <span className={`font-mono text-[14px] font-extrabold tabular-nums ${positionTone(originalBreakdown?.refundOrDue ?? 0)}`}>
+                      {positionText(originalBreakdown?.refundOrDue ?? 0)}
+                    </span>
+                  </div>
+                  <ArrowRight size={14} className="text-ink-3 shrink-0" />
+                  <div>
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-ink-3">After review</span>
+                    <span className={`font-mono text-[14px] font-extrabold tabular-nums ${positionTone(caBreakdown?.refundOrDue ?? 0)}`}>
+                      {positionText(caBreakdown?.refundOrDue ?? 0)}
+                    </span>
+                  </div>
+                  {caDelta > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-ok-soft text-ok-ink text-[10.5px] font-bold tabular-nums">
+                      +{formatMoney(caDelta, lang)} for {firstName}
+                    </span>
+                  )}
+                </div>
                 <button
+                  type="button"
                   onClick={() => {
                     setRecord(null);
                     setPin("");
                   }}
-                  className="px-3 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 transition cursor-pointer"
+                  className="h-10 px-4 rounded-[14px] border border-glass-edge bg-white/55 dark:bg-white/10 text-[13px] font-bold text-ink hover:border-money/50 transition cursor-pointer"
                 >
-                  Exit Review
+                  Exit review
                 </button>
                 <button
+                  type="button"
                   onClick={handleSaveReview}
                   disabled={isSaving}
-                  className="px-5 py-2 bg-teal-800 hover:bg-teal-900 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-2 cursor-pointer"
+                  className="btn-primary h-10 px-4 rounded-[14px] text-[13px] flex items-center gap-2 cursor-pointer disabled:opacity-60"
                 >
                   {saveSuccess ? (
                     <>
-                      <Check size={14} className="text-emerald-300" />
-                      <span>Transmitted to Taxpayer!</span>
+                      <Check size={14} />
+                      <span>Sent to {firstName}</span>
                     </>
                   ) : (
                     <>
                       <Save size={14} />
-                      <span>{isSaving ? "Saving..." : "Save & Return to Taxpayer"}</span>
+                      <span>{isSaving ? "Sending…" : "Send review to client"}</span>
                     </>
                   )}
                 </button>
               </div>
             </div>
 
-            {/* Split Screen Audit Interface */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              {/* Left Column: Manual Form Fact Sheets (7 cols) */}
-              <div className="lg:col-span-7 space-y-4">
-                {/* Navigation Tabs */}
-                <div className="flex items-center gap-1.5 p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-x-auto text-xs font-bold">
-                  {(
-                    [
-                      ["deductions", "Chapter VI-A Claims"],
-                      ["salary", "Salary & Allowances"],
-                      ["house", "House Property"],
-                      ["capital", "Capital Gains"],
-                      ["other", "Other Sources"],
-                      ["tds", "TDS & Tax Paid"],
-                    ] as const
-                  ).map(([tabKey, label]) => (
-                    <button
-                      key={tabKey}
-                      type="button"
-                      onClick={() => setActiveTab(tabKey)}
-                      className={`px-3.5 py-2 rounded-xl transition cursor-pointer shrink-0 ${
-                        activeTab === tabKey
-                          ? "bg-teal-800 text-white shadow-xs"
-                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-[22px] items-start">
+              {/* Worksheets */}
+              <div className="space-y-4 min-w-0">
+                <div className="inline-flex flex-wrap gap-1 p-1 rounded-[14px] glass-flat">
+                  {REVIEW_STEPS.map((label, i) => {
+                    const state = i < currentStep ? "done" : i === currentStep ? "current" : "pending";
+                    return (
+                      <span
+                        key={label}
+                        className={`inline-flex items-center gap-2 h-8 px-3 rounded-[10px] text-[12.5px] font-bold ${
+                          state === "done" ? "ink-surface text-white" : state === "current" ? "bg-amber-bg text-amber-ink" : "text-ink-3"
+                        }`}
+                      >
+                        <span
+                          className={`size-[18px] rounded-full grid place-items-center text-[10px] font-extrabold ${
+                            state === "done" ? "bg-ok text-white" : state === "current" ? "bg-money text-white" : "border border-current"
+                          }`}
+                        >
+                          {state === "done" ? "✓" : i + 1}
+                        </span>
+                        {label}
+                      </span>
+                    );
+                  })}
                 </div>
 
-                {/* Tab 1: Chapter VI-A Deductions */}
-                {activeTab === "deductions" && (
-                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-5">
-                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-                      <div>
-                        <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-                          Chapter VI-A Deductions Audit
-                        </h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          Verify eligible exemptions under the Old Tax Regime.
-                        </p>
-                      </div>
-                      <span className="px-2.5 py-1 rounded-lg bg-teal-500/10 text-teal-800 dark:text-teal-300 font-mono text-xs font-bold">
-                        Total: {formatMoney(caBreakdown?.totalDeductions || 0, lang)}
-                      </span>
-                    </div>
+                <Worksheet
+                  title="Income"
+                  meta="from AIS / Form 16 · editable"
+                  rows={incomeRows}
+                  totalLabel="Gross total income"
+                  total={caBreakdown?.grossIncome || 0}
+                  lang={lang}
+                  onInput={handleNumberChange}
+                />
 
-                    <div className="space-y-4">
-                      {/* 80C */}
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs font-bold">
-                          <label className="text-slate-700 dark:text-slate-300">
-                            Section 80C (PPF, EPF, ELSS, Life Insurance)
-                          </label>
-                          <span className="text-slate-400 font-mono">Max: ₹1,50,000</span>
-                        </div>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="0"
-                          value={claim80C?.amount ? claim80C.amount : ""}
-                          onChange={(e) =>
-                            handleNumberChange(e.target.value, (val) =>
-                              updateClaimByKey("80C", val)
-                            )
-                          }
-                          className="w-full p-3 font-mono font-bold text-sm bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-none"
-                        />
-                      </div>
-
-                      {/* 80CCD(1B) NPS */}
-                      <div className="space-y-1.5 p-3.5 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl">
-                        <div className="flex items-center justify-between text-xs font-bold text-emerald-800 dark:text-emerald-300">
-                          <label className="flex items-center gap-1.5">
-                            <Sparkles size={14} />
-                            <span>Section 80CCD(1B) - National Pension System (NPS)</span>
-                          </label>
-                          <span className="font-mono">Max: ₹50,000</span>
-                        </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                          Additional deduction over and above the ₹1.5 Lakh 80C limit.
-                        </p>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="0"
-                          value={claim80CCD?.amount ? claim80CCD.amount : ""}
-                          onChange={(e) =>
-                            handleNumberChange(e.target.value, (val) =>
-                              updateClaimByKey("80CCD", val)
-                            )
-                          }
-                          className="w-full p-3 font-mono font-bold text-sm bg-white dark:bg-slate-900 border border-emerald-500/40 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:outline-none"
-                        />
-                      </div>
-
-                      {/* 80D Mediclaim Self */}
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs font-bold">
-                          <label className="text-slate-700 dark:text-slate-300">
-                            Section 80D - Health Insurance (Self & Family)
-                          </label>
-                          <span className="text-slate-400 font-mono">Max: ₹25,000 / ₹50,000</span>
-                        </div>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="0"
-                          value={claim80DSelf?.amount ? claim80DSelf.amount : ""}
-                          onChange={(e) =>
-                            handleNumberChange(e.target.value, (val) =>
-                              updateClaimByKey("80D_SELF", val)
-                            )
-                          }
-                          className="w-full p-3 font-mono font-bold text-sm bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-none"
-                        />
-                      </div>
-
-                      {/* 80D Mediclaim Parents */}
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs font-bold">
-                          <label className="text-slate-700 dark:text-slate-300">
-                            Section 80D - Health Insurance (Parents)
-                          </label>
-                          <span className="text-slate-400 font-mono">Max: ₹25,000 / ₹50,000</span>
-                        </div>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="0"
-                          value={claim80DParents?.amount ? claim80DParents.amount : ""}
-                          onChange={(e) =>
-                            handleNumberChange(e.target.value, (val) =>
-                              updateClaimByKey("80D_PARENTS", val)
-                            )
-                          }
-                          className="w-full p-3 font-mono font-bold text-sm bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-none"
-                        />
-                      </div>
-
-                      {/* Section 10 HRA Exemption */}
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs font-bold">
-                          <label className="text-slate-700 dark:text-slate-300">
-                            Section 10(13A) - House Rent Allowance (HRA) Exemption
-                          </label>
-                          <span className="text-slate-400 font-mono">Rent Receipts Required</span>
-                        </div>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="0"
-                          value={claimHRA?.amount ? claimHRA.amount : ""}
-                          onChange={(e) =>
-                            handleNumberChange(e.target.value, (val) =>
-                              updateClaimByKey("HRA", val)
-                            )
-                          }
-                          className="w-full p-3 font-mono font-bold text-sm bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-none"
-                        />
-                      </div>
-
-                      {/* Section 24b Housing Loan Interest */}
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs font-bold">
-                          <label className="text-slate-700 dark:text-slate-300">
-                            Section 24(b) - Interest on Housing Loan
-                          </label>
-                          <span className="text-slate-400 font-mono">Max: ₹2,00,000</span>
-                        </div>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="0"
-                          value={claim24B?.amount ? claim24B.amount : ""}
-                          onChange={(e) =>
-                            handleNumberChange(e.target.value, (val) =>
-                              updateClaimByKey("24B", val)
-                            )
-                          }
-                          className="w-full p-3 font-mono font-bold text-sm bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Tab 2: Salary */}
-                {activeTab === "salary" && (
-                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-5">
-                    <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
-                      <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-                        Income from Salary (Section 17)
-                      </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Gross salary as per Form 16 Part B / Section 17(1).
-                      </p>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                          Gross Salary
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="0"
-                          value={salaryFact?.amount ? salaryFact.amount : ""}
-                          onChange={(e) =>
-                            handleNumberChange(e.target.value, (val) =>
-                              updateIncomeAmount("salary", val)
-                            )
-                          }
-                          className="w-full p-3 font-mono font-bold text-sm bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-none"
-                        />
-                      </div>
-
-                      <div className="p-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1">
-                        <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
-                          <span>Standard Deduction (Automatic u/s 16ia)</span>
-                          <span className="font-mono text-teal-700 dark:text-teal-400">
-                            {recommendedRegime === "new" ? "₹75,000 (New)" : "₹50,000 (Old)"}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                          Budget 2024 increased New Regime standard deduction to ₹75,000.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Tab 3: House Property */}
-                {activeTab === "house" && (
-                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-5">
-                    <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
-                      <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-                        Income / Loss from House Property
-                      </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Rental receipts or interest on borrowed housing loan (Section 24b).
-                      </p>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                          Rental Income Received
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="0"
-                          value={houseFact?.amount ? houseFact.amount : ""}
-                          onChange={(e) =>
-                            handleNumberChange(e.target.value, (val) =>
-                              updateIncomeAmount("rent", val)
-                            )
-                          }
-                          className="w-full p-3 font-mono font-bold text-sm bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-none"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs font-bold">
-                          <label className="text-slate-700 dark:text-slate-300">
-                            Interest on Housing Loan (Section 24b)
-                          </label>
-                          <span className="text-slate-400 font-mono">Max: ₹2,00,000</span>
-                        </div>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="0"
-                          value={claim24B?.amount ? claim24B.amount : ""}
-                          onChange={(e) =>
-                            handleNumberChange(e.target.value, (val) =>
-                              updateClaimByKey("24B", val)
-                            )
-                          }
-                          className="w-full p-3 font-mono font-bold text-sm bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Tab 4: Capital Gains */}
-                {activeTab === "capital" && (
-                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-5">
-                    <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
-                      <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-                        Capital Gains (Securities & Assets)
-                      </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Short & Long Term Capital Gains as reported by brokers or AIS.
-                      </p>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                          Capital Gains Amount (₹)
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="0"
-                          value={capitalGainsFact?.amount ? capitalGainsFact.amount : ""}
-                          onChange={(e) =>
-                            handleNumberChange(e.target.value, (val) =>
-                              updateCapitalGains(val)
-                            )
-                          }
-                          className="w-full p-3 font-mono font-bold text-sm bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-none"
-                        />
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                          Special rates apply u/s 111A (STCG 20%) or s.112A (LTCG 12.5% above ₹1.25 Lakh).
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Tab 5: Other Sources */}
-                {activeTab === "other" && (
-                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-5">
-                    <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
-                      <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-                        Income from Other Sources (Section 56)
-                      </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Savings interest, fixed deposits, and dividends as per AIS.
-                      </p>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                          Interest from Bank Accounts & Deposits
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="0"
-                          value={interestFact?.amount ? interestFact.amount : ""}
-                          onChange={(e) =>
-                            handleNumberChange(e.target.value, (val) =>
-                              updateIncomeAmount("interest", val)
-                            )
-                          }
-                          className="w-full p-3 font-mono font-bold text-sm bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-none"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                          Dividend Income
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="0"
-                          value={dividendFact?.amount ? dividendFact.amount : ""}
-                          onChange={(e) =>
-                            handleNumberChange(e.target.value, (val) =>
-                              updateIncomeAmount("dividend", val)
-                            )
-                          }
-                          className="w-full p-3 font-mono font-bold text-sm bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-none"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                          Other Taxable Receipts
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="0"
-                          value={otherFact?.amount ? otherFact.amount : ""}
-                          onChange={(e) =>
-                            handleNumberChange(e.target.value, (val) =>
-                              updateIncomeAmount("other", val)
-                            )
-                          }
-                          className="w-full p-3 font-mono font-bold text-sm bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Tab 6: TDS */}
-                {activeTab === "tds" && (
-                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-5">
-                    <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
-                      <h4 className="font-bold text-sm text-slate-900 dark:text-white">
-                        Tax Deducted at Source (TDS) / Advance Tax
-                      </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Total taxes already paid according to Form 26AS.
-                      </p>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="space-y-1.5">
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                          Total TDS Credits Claimed
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          placeholder="0"
-                          value={tdsTotal ? tdsTotal : ""}
-                          onChange={(e) =>
-                            handleNumberChange(e.target.value, (val) =>
-                              updateTdsAmount(val)
-                            )
-                          }
-                          className="w-full p-3 font-mono font-bold text-sm bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Right Column: Sticky Real-Time Computation & Remarks (5 cols) */}
-              <div className="lg:col-span-5 space-y-5 lg:sticky lg:top-20">
-                {/* Live Regime Comparison Card */}
-                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-5">
-                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-                    <h4 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                      <TrendingUp size={16} className="text-teal-600" />
-                      <span>Live Tax Impact Analysis</span>
-                    </h4>
-                    <span className="text-[10px] font-mono uppercase bg-teal-500/10 text-teal-800 dark:text-teal-300 px-2 py-0.5 rounded-md font-bold">
-                      Real-Time
+                <Worksheet
+                  title="Deductions"
+                  meta={`Chapter VI-A · ${recommendedRegime === "old" ? "CA-added rows highlighted" : "no effect under the new regime"}`}
+                  rows={deductionRows}
+                  totalLabel="Total deductions"
+                  total={caBreakdown?.totalDeductions || 0}
+                  totalTone="text-ok-ink"
+                  lang={lang}
+                  onInput={handleNumberChange}
+                  note={
+                    <span className="flex items-center gap-2 text-[15px] text-ink-2 pencil">
+                      <MunshiAvatar size={24} />
+                      <span>{munshiNote}</span>
                     </span>
-                  </div>
+                  }
+                />
 
-                  {/* Tax Delta Gain Callout */}
-                  {caDelta > 0 && (
-                    <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl space-y-1 animate-in fade-in duration-200">
-                      <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider block">
-                        CA Value Optimization
-                      </span>
-                      <p className="text-xs text-slate-700 dark:text-slate-300 font-medium">
-                        Your adjustments unlock{" "}
-                        <strong className="text-emerald-600 dark:text-emerald-400 font-mono text-sm font-extrabold">
-                          +{formatMoney(caDelta, lang)}
-                        </strong>{" "}
-                        in extra refund for this taxpayer!
-                      </p>
-                    </div>
-                  )}
+                <Worksheet
+                  title="Taxes already paid"
+                  meta="Form 26AS · TDS and advance tax"
+                  rows={taxPaidRows}
+                  totalLabel="Credit against tax"
+                  total={caBreakdown?.tdsCredits || 0}
+                  lang={lang}
+                  onInput={handleNumberChange}
+                />
 
-                  {/* Regime Toggle */}
-                  <div className="space-y-2">
-                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                      CA Recommended Regime
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setRecommendedRegime("old")}
-                        className={`p-3 rounded-2xl border text-center transition cursor-pointer ${
-                          recommendedRegime === "old"
-                            ? "bg-teal-900 text-white border-teal-700 shadow-sm"
-                            : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
-                        }`}
-                      >
-                        <span className="block text-xs font-bold">Old Regime</span>
-                        <span className="text-[10px] opacity-80">With Exemptions</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setRecommendedRegime("new")}
-                        className={`p-3 rounded-2xl border text-center transition cursor-pointer ${
-                          recommendedRegime === "new"
-                            ? "bg-teal-900 text-white border-teal-700 shadow-sm"
-                            : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
-                        }`}
-                      >
-                        <span className="block text-xs font-bold">New Regime</span>
-                        <span className="text-[10px] opacity-80">Default Slabs</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Computation Breakdown Table */}
-                  <div className="space-y-2 font-mono text-xs border border-slate-100 dark:border-slate-800 rounded-2xl p-4 bg-slate-50/60 dark:bg-slate-950/60">
-                    <div className="flex justify-between text-slate-600 dark:text-slate-400">
-                      <span>Gross Total Income:</span>
-                      <span className="font-bold text-slate-900 dark:text-white">
-                        {formatMoney(caBreakdown?.grossIncome || 0, lang)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-slate-600 dark:text-slate-400">
-                      <span>Standard Deduction:</span>
-                      <span className="text-slate-900 dark:text-white">
-                        -{formatMoney(caBreakdown?.standardDeduction || 0, lang)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-slate-600 dark:text-slate-400">
-                      <span>Chapter VI-A Claims:</span>
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                        -{formatMoney(caBreakdown?.totalDeductions || 0, lang)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-slate-600 dark:text-slate-400 border-t border-slate-200 dark:border-slate-800 pt-1.5 font-bold">
-                      <span>Taxable Income:</span>
-                      <span className="text-slate-900 dark:text-white">
-                        {formatMoney(caBreakdown?.taxableIncome || 0, lang)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-slate-600 dark:text-slate-400">
-                      <span>Gross Tax Liability:</span>
-                      <span className="text-slate-900 dark:text-white">
-                        {formatMoney(caBreakdown?.totalTax || 0, lang)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-slate-600 dark:text-slate-400">
-                      <span>TDS / Advance Tax:</span>
-                      <span className="text-teal-700 dark:text-teal-400 font-bold">
-                        {formatMoney(caBreakdown?.tdsCredits || 0, lang)}
-                      </span>
-                    </div>
-
-                    <div className="border-t-2 border-slate-300 dark:border-slate-700 pt-2 flex justify-between items-baseline text-sm font-bold">
-                      <span className="font-sans">
-                        {caBreakdown?.refundOrDue && caBreakdown.refundOrDue >= 0
-                          ? "Net Refund Due:"
-                          : "Net Tax Payable:"}
-                      </span>
-                      <span
-                        className={`text-base font-extrabold ${
-                          caBreakdown?.refundOrDue && caBreakdown.refundOrDue >= 0
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-rose-600 dark:text-rose-400"
-                        }`}
-                      >
-                        {formatMoney(Math.abs(caBreakdown?.refundOrDue || 0), lang)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* CA Remarks & Advisory Input */}
-                  <div className="space-y-2">
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                      CA Advisory Remarks & Explanations
-                    </label>
-                    <textarea
-                      rows={3}
-                      placeholder="Explain adjustments made (e.g. Added ₹50k NPS 80CCD claim, recommended Old Regime to maximize refund)..."
-                      value={caNotes}
-                      onChange={(e) => setCaNotes(e.target.value)}
-                      className="w-full p-3 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-600 focus:outline-none"
-                    />
-
-                    {/* Quick remark insertion chips */}
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {[
-                        "+ Claimed 80CCD(1B) NPS ₹50k",
-                        "+ Applied Section 10 HRA",
-                        "+ Reconciled with 26AS",
-                        "+ Recommended Old Regime",
-                      ].map((chip) => (
+                {/* Notes to the client */}
+                <section className="glass rounded-[24px] px-[22px] py-[18px] space-y-3">
+                  <header className="flex items-baseline justify-between gap-3 flex-wrap">
+                    <h4 className="text-[15px] font-extrabold text-ink">Notes to the client</h4>
+                    <span className="text-[11px] text-ink-3">
+                      visible to {firstName} · logged against membership {membershipNo}
+                    </span>
+                  </header>
+                  <textarea
+                    value={caNotes}
+                    onChange={(e) => setCaNotes(e.target.value)}
+                    placeholder={`What you changed and why — ${firstName} reads this word for word.`}
+                    className="w-full min-h-[84px] rounded-[14px] bg-white/80 dark:bg-white/10 border-[1.5px] border-glass-edge p-3 text-[13px] text-ink focus:ring-2 focus:ring-money/40 focus:outline-none"
+                  />
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <span className="text-[11.5px] text-ink-3">
+                      Stamp: {caName} · {firmName}
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {["Receipts checked", "No new income found", "Reconciled with 26AS", `Recommend the ${regimeName(recommendedRegime).toLowerCase()} regime`].map((chip) => (
                         <button
                           key={chip}
                           type="button"
-                          onClick={() => setCaNotes((prev) => (prev ? `${prev} ${chip}` : chip))}
-                          className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[11px] font-semibold text-slate-600 dark:text-slate-300 transition cursor-pointer"
+                          onClick={() => setCaNotes((prev) => (prev ? `${prev} ${chip}.` : `${chip}.`))}
+                          className="px-2.5 py-1 rounded-full bg-white/55 dark:bg-white/10 border border-glass-edge hover:border-money/50 text-[11px] font-bold text-ink-2 transition cursor-pointer"
                         >
                           {chip}
                         </button>
                       ))}
                     </div>
                   </div>
-
-                  {/* Save Button */}
-                  <button
-                    type="button"
-                    onClick={handleSaveReview}
-                    disabled={isSaving}
-                    className="w-full py-3.5 px-4 bg-teal-800 hover:bg-teal-900 text-white font-bold text-sm rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    {saveSuccess ? (
-                      <>
-                        <CheckCircle2 size={16} className="text-emerald-300" />
-                        <span>Saved & Transmitted to Client!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Save size={16} />
-                        <span>{isSaving ? "Saving..." : "Save & Return to Taxpayer"}</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+                </section>
               </div>
+
+              {/* Sticky rail */}
+              <aside className="space-y-4 lg:sticky lg:top-[148px]">
+                <div className="ink-surface rounded-[24px] p-5 text-white">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-soft">Recommend a regime</span>
+                  <div className="mt-3 grid grid-cols-2 gap-1 p-1 rounded-[12px] bg-white/10">
+                    {(["new", "old"] as const).map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setRecommendedRegime(r)}
+                        className={`h-8 rounded-[9px] text-[12.5px] font-bold transition cursor-pointer ${
+                          recommendedRegime === r ? "bg-money text-white" : "text-white/75 hover:text-white"
+                        }`}
+                      >
+                        {regimeName(r)}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2.5">
+                    {(["new", "old"] as const).map((r) => (
+                      <div
+                        key={r}
+                        className={`rounded-[14px] p-3 border ${
+                          cheaperRegime === r ? "border-money bg-white/[0.16]" : "border-white/10 bg-white/[0.08]"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1 min-h-5">
+                          <span className="text-[11.5px] font-bold">{regimeName(r)}</span>
+                          {cheaperRegime === r && regimeSavings > 0 && (
+                            <span className="px-1.5 py-0.5 rounded-full bg-amber-bg text-amber-ink text-[10px] font-extrabold tabular-nums whitespace-nowrap">
+                              Saves {formatMoney(regimeSavings, lang)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-1 font-mono text-[18px] font-extrabold tabular-nums">
+                          {formatMoney(regimeBreakdowns?.[r].totalTax || 0, lang)}
+                        </div>
+                        <div className="text-[10.5px] text-white/60">tax</div>
+                      </div>
+                    ))}
+                  </div>
+                  <dl className="mt-4 space-y-1.5 text-[12.5px]">
+                    {[
+                      [`Taxable income (${regimeName(recommendedRegime).toLowerCase()})`, caBreakdown?.taxableIncome || 0],
+                      ["Total tax", caBreakdown?.totalTax || 0],
+                      ["TDS already paid", caBreakdown?.tdsCredits || 0],
+                    ].map(([label, value]) => (
+                      <div key={String(label)} className="flex justify-between gap-3 text-white/80">
+                        <dt>{label}</dt>
+                        <dd className="font-mono font-bold tabular-nums text-white">{formatMoney(Number(value), lang)}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <div className="mt-3 pt-3 border-t border-white/10 flex items-baseline justify-between gap-3">
+                    <span className="text-[12.5px] font-bold text-white/80">
+                      {(caBreakdown?.refundOrDue ?? 0) < 0 ? "Balance due" : "Refund due"}
+                    </span>
+                    <span className="font-mono text-[22px] font-extrabold tabular-nums text-[#5EE6B0]">
+                      {formatMoney(Math.abs(caBreakdown?.refundOrDue || 0), lang)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="glass rounded-[24px] p-5">
+                  <h4 className="text-[15px] font-extrabold text-ink">Client vs CA</h4>
+                  <div className="mt-3 grid grid-cols-[minmax(0,1fr)_96px_96px] gap-y-2 gap-x-2 text-[12.5px]">
+                    <span />
+                    <span className="text-[10.5px] font-bold uppercase tracking-wider text-ink-3 text-end">Client</span>
+                    <span className="text-[10.5px] font-bold uppercase tracking-wider text-ink-3 text-end">CA</span>
+                    {(
+                      [
+                        ["Regime", regimeName(record.originalRegime), regimeName(recommendedRegime)],
+                        ["Deductions", formatMoney(originalBreakdown?.totalDeductions || 0, lang), formatMoney(caBreakdown?.totalDeductions || 0, lang)],
+                        ["Tax", formatMoney(originalBreakdown?.totalTax || 0, lang), formatMoney(caBreakdown?.totalTax || 0, lang)],
+                        ["Due / refund", positionText(originalBreakdown?.refundOrDue ?? 0), positionText(caBreakdown?.refundOrDue ?? 0)],
+                      ] as const
+                    ).map(([label, client, ca]) => (
+                      <React.Fragment key={label}>
+                        <span className="text-ink-2">{label}</span>
+                        <span className="font-mono tabular-nums text-ink-3 text-end">{client}</span>
+                        <span className="font-mono tabular-nums font-bold text-ok-ink text-end">{ca}</span>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="glass rounded-[24px] p-5">
+                  <h4 className="text-[15px] font-extrabold text-ink">Audit trail</h4>
+                  <ul className="mt-3 space-y-1.5">
+                    {auditTrail.map((entry, i) => (
+                      <li key={`${entry.at}-${i}`} className="grid grid-cols-[72px_minmax(0,1fr)] gap-2 text-[12.5px] text-ink-2">
+                        <span className="font-mono text-[11px] text-ink-3 truncate">{entry.at}</span>
+                        <span>{entry.text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <p className="glass rounded-[24px] p-5 text-[12px] text-ink-2">
+                  Client documents are read-only here. Every change is logged against your membership number.
+                </p>
+              </aside>
             </div>
           </div>
         )}

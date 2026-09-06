@@ -34,16 +34,12 @@
 import React, { useState } from "react";
 import { m, AnimatePresence } from "motion/react";
 import {
-  Coins,
   FileText,
   RefreshCw,
   RotateCcw,
   Sliders,
-  Sparkles,
-  TrendingUp,
   ArrowRight,
   Banknote,
-  CheckCheck,
   ShieldCheck,
 } from "lucide-react";
 import {
@@ -65,6 +61,7 @@ import { Rupees } from "./Rupees";
 import { AnimatedAmount } from "./ui/animated-amount";
 import { MockField, MockFill, MOCK } from "@/components/dev/mock-fill";
 import { LogoLink } from "./brand/logo";
+import { MunshiAvatar } from "./brand/munshi";
 
 interface InteractiveTaxDashboardProps {
   onLogOut?: () => void;
@@ -137,7 +134,7 @@ const TRANSLATIONS: Record<Lang, Dictionary> = {
     netPayable: "Net tax payable",
     netSettled: "Nothing further to pay",
     disputeInputLabel: "The correct amount (₹)",
-    disputeCodeLabel: "What is wrong with this entry?",
+    disputeCodeLabel: "What is wrong with this entry? ",
     disputeReasonLabel: "Anything you want on the record",
     disputeReasonPlaceholder: "e.g. final invoice was revised down in March",
     officialProofBtn: "Acknowledgement preview (ITR-V)",
@@ -168,7 +165,7 @@ const TRANSLATIONS: Record<Lang, Dictionary> = {
     netPayable: "शुद्ध कर देय",
     netSettled: "अब कुछ भी देय नहीं",
     disputeInputLabel: "सही राशि (₹)",
-    disputeCodeLabel: "इस प्रविष्टि में क्या गलत है?",
+    disputeCodeLabel: "इस प्रविष्टि में क्या गलत है? ",
     disputeReasonLabel: "रिकॉर्ड के लिए कोई टिप्पणी",
     disputeReasonPlaceholder: "उदा. मार्च में अंतिम चालान संशोधित हुआ",
     officialProofBtn: "पावती पूर्वावलोकन (ITR-V)",
@@ -213,7 +210,7 @@ const TRANSLATIONS: Record<Lang, Dictionary> = {
     netPayable: "நிகர வரி செலுத்த வேண்டியது",
     netSettled: "இனி செலுத்த வேண்டியது இல்லை",
     disputeInputLabel: "சரியான தொகை (₹)",
-    disputeCodeLabel: "இந்தப் பதிவில் என்ன தவறு?",
+    disputeCodeLabel: "இந்தப் பதிவில் என்ன தவறு? ",
     disputeReasonLabel: "பதிவுக்காக ஏதேனும் குறிப்பு",
     disputeReasonPlaceholder: "எ.கா. மார்ச்சில் இறுதி விலைப்பட்டியல் திருத்தப்பட்டது",
     officialProofBtn: "ஒப்புகைச் சான்று முன்னோட்டம் (ITR-V)",
@@ -341,20 +338,20 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
   const answered = progress.confirmed + progress.disputed;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0D0F14] pb-32 text-slate-800 dark:text-ink font-sans selection:bg-teal-500/20 antialiased">
+    <div className="min-h-screen pb-16 text-ink font-sans selection:bg-amber-bg antialiased">
       {/* Sticky top header */}
-      <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-6 py-4 shadow-sm print:hidden">
+      <header className="sticky top-0 z-40 bg-paper/80 backdrop-blur-md border-b border-glass-edge px-6 py-4 print:hidden">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <LogoLink size="sm" className="mb-1" />
-            <span className="text-[10px] font-bold tracking-widest text-teal-800 dark:text-teal-400 uppercase block">
-              {t.eyebrow}
-            </span>
-            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-              <span>{t.title}</span>
-              <Sparkles size={18} className="text-teal-700 dark:text-teal-400" />
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl">{t.sub}</p>
+          <div className="flex items-start gap-3">
+            <MunshiAvatar size={44} className="shrink-0 mt-1" />
+            <div className="space-y-1">
+              <LogoLink size="sm" className="mb-1" />
+              <span className="text-[10px] font-bold tracking-widest text-money uppercase block">
+                {t.eyebrow}
+              </span>
+              <h1 className="text-[30px] leading-tight font-extrabold tracking-tight text-ink">{t.title}</h1>
+              <p className="text-sm text-ink-2 max-w-xl">{t.sub}</p>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -364,29 +361,27 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
               aria-label="Language"
               value={lang}
               onChange={(e) => setLang(e.target.value as Lang)}
-              className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-700 dark:text-ink-2 cursor-pointer"
+              className="glass-flat rounded-[12px] px-2.5 py-1.5 text-xs font-bold text-ink cursor-pointer"
             >
               <option value="EN">English</option>
               <option value="HI">{"हिन्दी"}</option>
               <option value="TA">{"தமிழ்"}</option>
             </select>
 
-            <div className="bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg flex border border-slate-200 dark:border-slate-800">
+            <div className="glass-flat p-0.5 rounded-[12px] flex">
               {(["NEW", "OLD"] as const).map((regime) => (
                 <button
                   key={regime}
                   onClick={() => dispatch({ type: "SET_REGIME", regime })}
-                  className={`px-3.5 py-1 text-xs font-bold rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
-                    activeRegime === regime
-                      ? "bg-teal-800 text-white shadow-xs"
-                      : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                  className={`px-3.5 py-1 text-xs font-bold rounded-[10px] transition-colors cursor-pointer flex items-center gap-1.5 ${
+                    activeRegime === regime ? "ink-surface text-white" : "text-ink-3 hover:text-ink"
                   }`}
                 >
                   <span>{regime === "NEW" ? t.newRegime : t.oldRegime}</span>
                   {recommendedRegime === regime && (
                     <span
                       title={t.recommended}
-                      className="bg-emerald-500 text-[9px] text-white font-extrabold px-1 rounded uppercase tracking-wider"
+                      className="bg-ok text-[9px] text-white font-extrabold px-1 rounded uppercase tracking-wider"
                     >
                       ★
                     </span>
@@ -401,24 +396,24 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
             <button
               onClick={() => dispatch({ type: "UNDO_LAST_ACTION" })}
               disabled={!canUndo}
-              className="px-3 py-1.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-lg transition cursor-pointer inline-flex items-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-40"
+              className="px-3 py-1.5 border border-glass-edge bg-white/55 dark:bg-white/10 text-ink hover:border-money/50 text-xs font-bold rounded-[12px] transition cursor-pointer inline-flex items-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <RotateCcw size={12} /> {t.undo}
             </button>
 
             <button
               onClick={() => setIsVaultOpen(true)}
-              className="px-3 py-1.5 border border-amber-300 bg-gradient-to-r from-amber-50 to-emerald-50 text-amber-900 hover:border-amber-500 text-xs font-bold rounded-lg transition cursor-pointer inline-flex items-center gap-1.5 shadow-xs"
+              className="px-3 py-1.5 border border-glass-edge bg-white/55 dark:bg-white/10 text-ink hover:border-money/50 text-xs font-bold rounded-[12px] transition cursor-pointer inline-flex items-center gap-1.5"
               title="Encrypted Tax Vault"
             >
-              <ShieldCheck size={14} className="text-amber-600" />
+              <ShieldCheck size={14} className="text-amber-ink" />
               <span>Tax Vault</span>
             </button>
 
             {onLogOut && (
               <button
                 onClick={onLogOut}
-                className="px-3.5 py-1.5 bg-rose-50 border border-rose-200 text-rose-800 hover:bg-rose-100 text-xs font-bold rounded-lg transition cursor-pointer"
+                className="px-3.5 py-1.5 bg-bad-soft border border-bad/40 text-bad hover:opacity-90 text-xs font-bold rounded-[12px] transition cursor-pointer"
               >
                 Log Out
               </button>
@@ -435,10 +430,10 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
           data-testid="net-position"
           data-position={positionKey}
           transition={springTransition}
-          className="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6 print:hidden"
+          className="glass rounded-[24px] p-6 md:p-7 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 print:hidden"
         >
           <div className="space-y-2">
-            <span className="text-[11px] font-bold tracking-wider text-slate-400 uppercase font-mono">
+            <span className="text-[11px] font-bold tracking-wider text-ink-3 uppercase font-mono">
               AY 2026-27 · net position
             </span>
             <div className="flex items-baseline gap-2 flex-wrap">
@@ -452,20 +447,20 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                 <AnimatedAmount
                   value={isPayable ? netPayable : netRefund}
                   className={`text-4xl font-extrabold ${
-                    isPayable
-                      ? "text-amber-700"
+ isPayable
+ ? "text-amber-ink"
                       : isSettled
-                        ? "text-slate-700"
-                        : "text-emerald-700"
+                        ? "text-ink-2"
+                        : "text-ok-ink"
                   }`}
                 />
               </m.div>
-              <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">{positionLabel}</span>
+              <span className="text-sm font-semibold text-ink-3">{positionLabel}</span>
             </div>
-            <p className="text-xs text-slate-400 font-mono">
-              PAN: <span className="font-bold text-slate-700">{state.pan}</span> · Assessee:{" "}
-              <span className="font-bold text-slate-700">{state.name}</span> ·{" "}
-              <span className="font-bold text-slate-700 tabular-nums">
+            <p className="text-xs text-ink-3 font-mono">
+              PAN: <span className="font-bold text-ink-2">{state.pan}</span> · Assessee:{" "}
+              <span className="font-bold text-ink-2">{state.name}</span> ·{" "}
+              <span className="font-bold text-ink-2 tabular-nums">
                 {answered}/{progress.total}
               </span>{" "}
               {t.progress}
@@ -475,7 +470,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
             <button
               onClick={() => setShowItrV((v) => !v)}
-              className="flex-1 px-5 py-3.5 bg-teal-800 hover:bg-teal-900 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+              className="flex-1 px-5 py-3.5 ink-surface hover:opacity-90 text-white rounded-[14px] text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer"
             >
               <FileText size={15} />
               <span>{t.officialProofBtn}</span>
@@ -500,7 +495,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
             <div className="flex justify-end print:hidden">
               <button
                 onClick={() => setShowItrV(false)}
-                className="px-4 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-lg transition cursor-pointer"
+                className="px-4 py-2 border border-glass-edge bg-white/55 dark:bg-white/10 text-ink hover:border-money/50 text-xs font-bold rounded-[12px] transition cursor-pointer"
               >
                 ← Back to the reconciliation matrix
               </button>
@@ -514,397 +509,337 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
             transition={springTransition}
             className="space-y-6"
           >
-            {/* The s.139(9) notice renders only when declared income is short of
-                what the reporters filed; otherwise it returns null. */}
-            <DefectiveNoticeCard />
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-5 items-start">
+              <div className="space-y-5 min-w-0">
+                {/* The s.139(9) notice renders only when declared income is short of
+                    what the reporters filed; otherwise it returns null. */}
+                <DefectiveNoticeCard />
 
-            <AuditRiskRadar />
+                <AuditRiskRadar />
 
-            <PdfIngestionDropzone />
+                <PdfIngestionDropzone />
 
-            <div className="flex items-center justify-between px-2 pt-2">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">
-                Fact confirmation matrix
-              </h3>
-              <span className="text-xs text-slate-400 font-mono tabular-nums">
-                {progress.confirmed} confirmed · {progress.disputed} disputed ·{" "}
-                {progress.pending} pending
-              </span>
-            </div>
+                <div className="flex items-center justify-between px-1">
+                  <h3 className="text-xs font-bold text-ink-3 uppercase tracking-wider">Fact confirmation matrix</h3>
+                  <span className="text-xs text-ink-3 font-mono tabular-nums">
+                    {progress.confirmed} confirmed · {progress.disputed} disputed · {progress.pending} pending
+                  </span>
+                </div>
 
-            <div className="grid gap-4">
-              {facts.map((fact) => {
-                const isEditing = editingFactId === fact.id;
-                const localizedLabel = t.labels[fact.id] ?? fact.label;
-                const isConfirmed = fact.status === "CONFIRMED";
-                const isDisputed = fact.status === "DISPUTED";
+                <div className="grid gap-3">
+                  {facts.map((fact) => {
+                    const isEditing = editingFactId === fact.id;
+                    const localizedLabel = t.labels[fact.id] ?? fact.label;
+                    const isConfirmed = fact.status === "CONFIRMED";
+                    const isDisputed = fact.status === "DISPUTED";
+                    const source =
+                      [fact.statement, fact.reportedBy && fact.reportedBy !== "—" ? fact.reportedBy : null]
+                        .filter(Boolean)
+                        .join(" · ") || CATEGORY_BLURB[fact.category];
 
-                return (
-                  <m.div
-                    layout
-                    key={fact.id}
-                    data-fact-id={fact.id}
-                    data-fact-status={fact.status}
-                    transition={springTransition}
-                    className={`bg-white dark:bg-slate-900 rounded-2xl border transition-colors duration-200 overflow-hidden shadow-xs ${
-                      isConfirmed
-                        ? "border-emerald-500/60"
-                        : isDisputed
-                          ? "border-amber-500/60"
-                          : "border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
-                    }`}
-                  >
-                    <m.div
-                      layout
-                      className="p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4"
-                    >
-                      <div className="space-y-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span
-                            className={`h-2.5 w-2.5 rounded-full shrink-0 ${
-                              fact.category === "income"
-                                ? "bg-teal-700"
-                                : fact.category === "tax_paid"
-                                  ? "bg-indigo-600"
-                                  : "bg-emerald-600"
-                            }`}
-                          />
-                          <h4 className="font-extrabold text-slate-900 dark:text-white text-sm">
-                            {localizedLabel}
-                          </h4>
-                          <span
-                            className={`text-[9px] font-mono px-2 py-0.5 rounded uppercase font-semibold border ${
-                              isConfirmed
-                                ? "bg-emerald-100 text-emerald-800 border-emerald-200"
-                                : isDisputed
-                                  ? "bg-amber-100 text-amber-800 border-amber-200"
-                                  : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800"
-                            }`}
-                          >
-                            {isConfirmed ? t.confirmed : isDisputed ? t.modified : t.pending}
-                          </span>
-                          {fact.statement && (
-                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 uppercase">
-                              {fact.statement}
-                            </span>
-                          )}
-                        </div>
-
-                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-normal max-w-xl">
-                          {CATEGORY_BLURB[fact.category]}
-                          {fact.reportedBy && fact.reportedBy !== "—" && (
-                            <>
-                              {" "}
-                              Reported by{" "}
-                              <span className="font-semibold text-slate-700">
-                                {fact.reportedBy}
-                              </span>
-                              .
-                            </>
-                          )}
-                        </p>
-
-                        {isDisputed && fact.feedbackCode && (
-                          <p className="text-[11px] text-amber-800 dark:text-amber-400">
-                            <span className="font-bold">{fact.feedbackCode}</span> —{" "}
-                            {AIS_FEEDBACK_LABELS[fact.feedbackCode]}
-                            {fact.disputeReason ? ` · ${fact.disputeReason}` : ""}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-4 shrink-0">
-                        <div className="text-left md:text-right">
-                          <span className="text-[10px] font-mono text-slate-400 block uppercase">
-                            {t.reportedByDept} / {t.yourFigure}
-                          </span>
-                          <div className="flex items-center gap-1.5 flex-wrap md:justify-end">
-                            {fact.declaredAmount !== fact.reportedAmount && (
-                              <Rupees
-                                value={fact.reportedAmount}
-                                strike
-                                className="text-xs font-semibold text-slate-400"
-                              />
+                    return (
+                      <m.div
+                        layout
+                        key={fact.id}
+                        data-fact-id={fact.id}
+                        data-fact-status={fact.status}
+                        transition={springTransition}
+                        className={`rounded-[18px] border transition-colors duration-200 overflow-hidden ${
+                          isConfirmed ? "bg-ok-soft border-ok/30" : isDisputed ? "bg-warn-soft border-warn/30" : "glass"
+                        }`}
+                      >
+                        <m.div
+                          layout
+                          className="grid grid-cols-1 md:grid-cols-[minmax(0,1.6fr)_1fr_1fr_auto] gap-3.5 md:items-center px-[18px] py-[14px]"
+                        >
+                          <div className="min-w-0">
+                            <h4 className="text-[14px] font-bold text-ink">{localizedLabel}</h4>
+                            <p className="text-[10.5px] text-ink-3 mt-0.5">{source}</p>
+                            {isDisputed && fact.feedbackCode && (
+                              <p className="text-[11px] text-warn mt-1">
+                                <span className="font-bold">{fact.feedbackCode}</span> —{" "}
+                                {AIS_FEEDBACK_LABELS[fact.feedbackCode]}
+                                {fact.disputeReason ? ` · ${fact.disputeReason}` : ""}
+                              </p>
                             )}
+                          </div>
+
+                          <div>
+                            <span className="block text-[12px] font-bold text-ink-3">{t.reportedByDept}</span>
+                            <Rupees value={fact.reportedAmount} className="text-[15px] font-extrabold text-ink" />
+                          </div>
+
+                          <div>
+                            <span className="block text-[12px] font-bold text-ink-3">{t.yourFigure}</span>
                             <Rupees
                               value={fact.declaredAmount}
-                              className={`text-lg font-extrabold tracking-tight ${
-                                isDisputed ? "text-amber-700 dark:text-amber-400" : "text-slate-950 dark:text-white"
-                              }`}
+                              className={`text-[15px] font-extrabold ${isDisputed ? "text-warn" : "text-ink"}`}
                             />
                           </div>
-                        </div>
 
-                        <div className="flex gap-2">
-                          {!isConfirmed && (
-                            <button
-                              data-action="confirm"
-                              onClick={() =>
-                                dispatch({ type: "CONFIRM_FACT", factId: fact.id })
-                              }
-                              className="px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-xs font-bold rounded-lg transition-colors cursor-pointer"
-                            >
-                              {t.confirm}
-                            </button>
-                          )}
-
-                          <button
-                            data-action="dispute"
-                            onClick={() => (isEditing ? closeDrawer() : openDispute(fact))}
-                            className="px-3 py-1.5 bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
-                          >
-                            <Sliders size={12} />
-                            <span>{t.flag}</span>
-                          </button>
-
-                          {(isDisputed || isConfirmed) && (
-                            <button
-                              onClick={() => handleReset(fact.id)}
-                              className="px-2.5 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 text-xs font-bold rounded-lg transition-colors cursor-pointer"
-                              title={t.reset}
-                              aria-label={t.reset}
-                            >
-                              <RefreshCw size={12} />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </m.div>
-
-                    {/* Dispute drawer. `layout` on the card above means the rows
-                        below slide rather than jump when this opens. */}
-                    <AnimatePresence initial={false}>
-                      {isEditing && (
-                        <m.div
-                          key="drawer"
-                          layout
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={springTransition}
-                          className="border-t border-slate-200/80 bg-slate-50/60 overflow-hidden"
-                        >
-                          <div className="p-5 md:p-6 space-y-4 max-w-3xl">
-                            <div className="grid sm:grid-cols-2 gap-4">
-                              <div className="space-y-1.5">
-                                <label
-                                  htmlFor={`amount-${fact.id}`}
-                                  className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block"
-                                >
-                                  {t.disputeInputLabel}
-                                </label>
-                                <input
-                                  id={`amount-${fact.id}`}
-                                  type="number"
-                                  min="0"
-                                  inputMode="numeric"
-                                  value={draft.amount}
-                                  onChange={(e) =>
-                                    setDraft((d) => ({ ...d, amount: e.target.value }))
-                                  }
-                                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-mono tabular-nums font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-700 focus:outline-none transition-all"
-                                />
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                                  Nothing is committed until you save. The department
-                                  keeps <Rupees value={fact.reportedAmount} /> on its side
-                                  of the row either way.
-                                </p>
-                              </div>
-
-                              <div className="space-y-1.5">
-                                <label
-                                  htmlFor={`code-${fact.id}`}
-                                  className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block"
-                                >
-                                  {t.disputeCodeLabel}
-                                </label>
-                                <select
-                                  id={`code-${fact.id}`}
-                                  value={draft.feedbackCode}
-                                  onChange={(e) =>
-                                    setDraft((d) => ({
-                                      ...d,
-                                      feedbackCode: e.target.value as AISFeedbackCode,
-                                    }))
-                                  }
-                                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-700 focus:outline-none transition-all cursor-pointer"
-                                >
-                                  {DISPUTE_FEEDBACK_CODES.map((code) => (
-                                    <option key={code} value={code}>
-                                      {code} — {AIS_FEEDBACK_LABELS[code]}
-                                    </option>
-                                  ))}
-                                </select>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                                  {AIS_FEEDBACK_HELP[draft.feedbackCode]}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="space-y-1.5">
-                              <label
-                                htmlFor={`reason-${fact.id}`}
-                                className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block"
+                          <div className="flex items-center gap-2 md:justify-end flex-wrap">
+                            {isConfirmed || isDisputed ? (
+                              <span
+                                className={`inline-flex items-center h-[30px] px-3 rounded-full text-[12px] font-bold text-white ${
+                                  isConfirmed ? "bg-ok" : "bg-warn"
+                                }`}
                               >
-                                {t.disputeReasonLabel}
-                              </label>
-                              <MockField>
-                                <input
-                                  id={`reason-${fact.id}`}
-                                  type="text"
-                                  value={draft.reason}
-                                  onChange={(e) =>
-                                    setDraft((d) => ({ ...d, reason: e.target.value }))
-                                  }
-                                  placeholder={t.disputeReasonPlaceholder}
-                                  className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-700 focus:ring-2 focus:ring-teal-700 focus:outline-none transition-all"
-                                />
-                                <MockFill
-                                  onFill={() =>
-                                    setDraft((d) => ({ ...d, reason: MOCK.disputeReason }))
-                                  }
-                                />
-                              </MockField>
-                            </div>
-
-                            <div className="flex gap-2 justify-end pt-1">
+                                {isConfirmed ? `✓ ${t.confirmed}` : `✎ ${t.modified}`}
+                              </span>
+                            ) : (
                               <button
-                                onClick={closeDrawer}
-                                className="px-3.5 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition cursor-pointer"
+                                data-action="confirm"
+                                onClick={() => dispatch({ type: "CONFIRM_FACT", factId: fact.id })}
+                                className="h-[34px] px-3.5 ink-surface hover:opacity-90 text-white text-[12.5px] font-bold rounded-[12px] transition cursor-pointer"
                               >
-                                Cancel
+                                {t.confirm}
                               </button>
+                            )}
+
+                            <button
+                              data-action="dispute"
+                              onClick={() => (isEditing ? closeDrawer() : openDispute(fact))}
+                              className="h-[34px] px-3 rounded-[12px] border border-glass-edge bg-white/55 dark:bg-white/10 text-ink hover:border-money/50 text-[12.5px] font-bold transition cursor-pointer inline-flex items-center gap-1"
+                            >
+                              <Sliders size={12} />
+                              <span>{t.flag}</span>
+                            </button>
+
+                            {(isDisputed || isConfirmed) && (
                               <button
                                 onClick={() => handleReset(fact.id)}
-                                className="px-3.5 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition cursor-pointer"
+                                className="h-[34px] w-[34px] grid place-items-center rounded-[12px] border border-glass-edge bg-white/55 dark:bg-white/10 text-ink-2 hover:text-ink transition cursor-pointer"
+                                title={t.reset}
+                                aria-label={t.reset}
                               >
-                                {t.reset}
+                                <RefreshCw size={12} />
                               </button>
-                              <button
-                                data-action="save-dispute"
-                                onClick={() => commitDispute(fact.id)}
-                                className="px-4 py-2 bg-teal-800 hover:bg-teal-900 text-white text-xs font-bold rounded-lg transition cursor-pointer"
-                              >
-                                {t.recalc}
-                              </button>
-                            </div>
+                            )}
                           </div>
                         </m.div>
-                      )}
-                    </AnimatePresence>
-                  </m.div>
-                );
-              })}
+
+                        {/* Dispute drawer, attached to the row. `layout` on the card above means
+                            the rows below slide rather than jump when this opens. */}
+                        <AnimatePresence initial={false}>
+                          {isEditing && (
+                            <m.div
+                              key="drawer"
+                              layout
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={springTransition}
+                              className="border-t border-glass-edge bg-white/70 dark:bg-white/[0.06] overflow-hidden"
+                            >
+                              <div className="px-[18px] py-4 space-y-3">
+                                <div className="grid gap-3 md:grid-cols-[1fr_1.2fr_1.2fr_auto] md:items-end">
+                                  <div className="space-y-1">
+                                    <label
+                                      htmlFor={`amount-${fact.id}`}
+                                      className="text-[11px] font-bold text-ink-3 block"
+                                    >
+                                      {t.disputeInputLabel}
+                                    </label>
+                                    <input
+                                      id={`amount-${fact.id}`}
+                                      type="number"
+                                      min="0"
+                                      inputMode="numeric"
+                                      value={draft.amount}
+                                      onChange={(e) =>
+                                        setDraft((d) => ({ ...d, amount: e.target.value }))
+                                      }
+                                      className="w-full h-10 px-3.5 bg-white/80 dark:bg-white/10 border-[1.5px] border-glass-edge rounded-[14px] text-sm font-mono tabular-nums font-bold text-ink focus:ring-2 focus:ring-money/40 focus:outline-none"
+                                    />
+                                  </div>
+
+                                  <div className="space-y-1">
+                                    <label
+                                      htmlFor={`code-${fact.id}`}
+                                      className="text-[11px] font-bold text-ink-3 block"
+                                    >
+                                      {t.disputeCodeLabel}
+                                    </label>
+                                    <select
+                                      id={`code-${fact.id}`}
+                                      value={draft.feedbackCode}
+                                      onChange={(e) =>
+                                        setDraft((d) => ({
+                                          ...d,
+                                          feedbackCode: e.target.value as AISFeedbackCode,
+                                        }))
+                                      }
+                                      className="w-full h-10 px-3.5 bg-white/80 dark:bg-white/10 border-[1.5px] border-glass-edge rounded-[14px] text-sm font-semibold text-ink focus:ring-2 focus:ring-money/40 focus:outline-none cursor-pointer"
+                                    >
+                                      {DISPUTE_FEEDBACK_CODES.map((code) => (
+                                        <option key={code} value={code}>
+                                          {code} — {AIS_FEEDBACK_LABELS[code]}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+
+                                  <div className="space-y-1">
+                                    <label
+                                      htmlFor={`reason-${fact.id}`}
+                                      className="text-[11px] font-bold text-ink-3 block"
+                                    >
+                                      {t.disputeReasonLabel}
+                                    </label>
+                                    <MockField>
+                                      <input
+                                        id={`reason-${fact.id}`}
+                                        type="text"
+                                        value={draft.reason}
+                                        onChange={(e) =>
+                                          setDraft((d) => ({ ...d, reason: e.target.value }))
+                                        }
+                                        placeholder={t.disputeReasonPlaceholder}
+                                        className="w-full h-10 px-3.5 bg-white/80 dark:bg-white/10 border-[1.5px] border-glass-edge rounded-[14px] text-sm text-ink focus:ring-2 focus:ring-money/40 focus:outline-none"
+                                      />
+                                      <MockFill
+                                        onFill={() =>
+                                          setDraft((d) => ({ ...d, reason: MOCK.disputeReason }))
+                                        }
+                                      />
+                                    </MockField>
+                                  </div>
+
+                                  <button
+                                    data-action="save-dispute"
+                                    onClick={() => commitDispute(fact.id)}
+                                    className="h-10 px-4 ink-surface hover:opacity-90 text-white text-[12.5px] font-bold rounded-[14px] transition cursor-pointer whitespace-nowrap"
+                                  >
+                                    {t.recalc}
+                                  </button>
+                                </div>
+
+                                <div className="flex items-start justify-between gap-3 flex-wrap">
+                                  <p className="text-[11px] text-ink-3 max-w-xl">
+                                    {AIS_FEEDBACK_HELP[draft.feedbackCode]} Nothing is committed until you save;
+                                    the department keeps <Rupees value={fact.reportedAmount} /> on its side either way.
+                                  </p>
+                                  <div className="flex gap-1">
+                                    <button
+                                      onClick={closeDrawer}
+                                      className="px-3 py-1.5 text-xs font-semibold text-ink-3 hover:text-ink transition cursor-pointer"
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button
+                                      onClick={() => handleReset(fact.id)}
+                                      className="px-3 py-1.5 text-xs font-semibold text-ink-3 hover:text-ink transition cursor-pointer"
+                                    >
+                                      {t.reset}
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </m.div>
+                          )}
+                        </AnimatePresence>
+                      </m.div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Live rail */}
+              <aside className="space-y-4 lg:sticky lg:top-[140px]">
+                <div className="ink-surface rounded-[24px] p-5 text-white">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-soft">Live · both regimes</span>
+                  <div className="mt-3 grid grid-cols-2 gap-2.5">
+                    {(["NEW", "OLD"] as const).map((regime) => {
+                      const tile = regime === "NEW" ? computation.newRegime : computation.oldRegime;
+                      const best = recommendedRegime === regime;
+                      return (
+                        <button
+                          key={regime}
+                          type="button"
+                          onClick={() => dispatch({ type: "SET_REGIME", regime })}
+                          aria-pressed={activeRegime === regime}
+                          className={`text-start rounded-[14px] p-3 border transition cursor-pointer ${
+                            best ? "border-money bg-white/[0.16]" : "border-white/10 bg-white/[0.08] hover:bg-white/[0.12]"
+                          } ${activeRegime === regime ? "ring-2 ring-money/60" : ""}`}
+                        >
+                          <div className="flex items-center justify-between gap-1 min-h-5">
+                            <span className="text-[11.5px] font-bold">{regime === "NEW" ? t.newRegime : t.oldRegime}</span>
+                            {best && savings > 0 && (
+                              <span className="px-1.5 py-0.5 rounded-full bg-amber-bg text-amber-ink text-[10px] font-extrabold whitespace-nowrap">
+                                {t.saves} <Rupees value={savings} />
+                              </span>
+                            )}
+                          </div>
+                          <Rupees value={tile.totalTaxLiability} className="mt-1 block text-[20px] font-extrabold" />
+                          <span className="text-[10.5px] text-white/60">total tax</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-white/10 flex items-baseline justify-between gap-3">
+                    <span className="text-[12.5px] font-bold text-white/80">
+                      {positionLabel} ({activeRegime === "NEW" ? t.newRegime : t.oldRegime})
+                    </span>
+                    <m.div layout transition={springTransition}>
+                      <AnimatedAmount
+                        value={isPayable ? netPayable : netRefund}
+                        className="text-[24px] font-extrabold text-[#5EE6B0]"
+                      />
+                    </m.div>
+                  </div>
+
+                  {/*
+                    The CTA is the rule, not a label. A return filed with tax outstanding is
+                    defective u/s 139(9), so while the net position is payable the only route
+                    forward is the challan. A plain conditional, never AnimatePresence: which
+                    action is offered is a statutory question and must not wait on an exit
+                    animation that a background tab or reduced-motion client may never run.
+                  */}
+                  {isPayable ? (
+                    <button
+                      key="pay"
+                      onClick={() => setChallanOpen(true)}
+                      className="btn-primary mt-4 w-full h-11 rounded-[14px] text-[14px] flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Banknote size={14} />
+                      {t.payNow}
+                    </button>
+                  ) : (
+                    <button
+                      key="file"
+                      onClick={() => setShowItrV(true)}
+                      className="btn-primary mt-4 w-full h-11 rounded-[14px] text-[14px] flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      {t.continueToFile}
+                      <ArrowRight size={14} />
+                    </button>
+                  )}
+                </div>
+
+                <div className="glass rounded-[24px] p-5">
+                  <h4 className="text-[15px] font-extrabold text-ink">Progress</h4>
+                  <div className="mt-3 flex h-2 rounded-full overflow-hidden bg-ink-2/15">
+                    <div className="bg-ok" style={{ width: `${(progress.confirmed / Math.max(progress.total, 1)) * 100}%` }} />
+                    <div className="bg-warn" style={{ width: `${(progress.disputed / Math.max(progress.total, 1)) * 100}%` }} />
+                  </div>
+                  <p className="mt-2 text-[12.5px] text-ink-2">
+                    {progress.confirmed} confirmed · {progress.disputed} disputed · {progress.pending} pending. Every row
+                    must be answered before filing.
+                  </p>
+                </div>
+
+                <div className="glass rounded-[24px] p-5 flex gap-3">
+                  <MunshiAvatar size={36} className="shrink-0" />
+                  <p className="text-[13px] text-ink-2">
+                    <span className="font-bold text-ink">Munshi ji:</span> “{t.flag}” doesn&apos;t fight the department — it
+                    tells them which of four things is wrong, so the right party fixes it.
+                  </p>
+                </div>
+              </aside>
             </div>
           </m.div>
         )}
       </main>
-
-      {/* Calculation dock */}
-      <footer className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900 text-white border-t border-slate-800 shadow-2xl p-4 md:p-5 print:hidden">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-teal-800 rounded-xl text-teal-300">
-              <Coins size={20} />
-            </div>
-            <div>
-              <span className="text-[10px] font-mono tracking-wider text-slate-400 uppercase block">
-                {positionLabel}
-              </span>
-              <div className="flex items-baseline gap-1.5 flex-wrap">
-                <m.div layout transition={springTransition}>
-                  <AnimatedAmount
-                    value={isPayable ? netPayable : netRefund}
-                    className="text-xl font-bold"
-                  />
-                </m.div>
-                <span className="text-xs text-slate-400 font-mono">
-                  {isPayable
-                    ? "outstanding u/s 140A"
-                    : isSettled
-                      ? selfAssessmentPaid > 0
-                        ? "cleared by challan u/s 140A"
-                        : "nothing due either way"
-                      : "credit against taxes already paid"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
-            <div className="flex items-center gap-2 text-xs font-mono">
-              <div className="px-3 py-1.5 bg-slate-800 rounded-lg flex items-center gap-2 border border-slate-700">
-                <span className="text-slate-400">{t.newRegime}:</span>
-                <Rupees
-                  value={computation.newRegime.totalTaxLiability}
-                  className="font-bold text-white"
-                />
-              </div>
-              <div className="px-3 py-1.5 bg-slate-800 rounded-lg flex items-center gap-2 border border-slate-700">
-                <span className="text-slate-400">{t.oldRegime}:</span>
-                <Rupees
-                  value={computation.oldRegime.totalTaxLiability}
-                  className="font-bold text-white"
-                />
-              </div>
-            </div>
-
-            {savings > 0 && (
-              <div className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold rounded-lg flex items-center gap-1">
-                <TrendingUp size={12} />
-                <span>
-                  {recommendedRegime === "NEW" ? t.newRegime : t.oldRegime} {t.saves}{" "}
-                  <Rupees value={savings} />
-                </span>
-              </div>
-            )}
-
-            {/*
-              The CTA is the rule, not a label. A return filed with tax
-              outstanding is defective u/s 139(9), so while the net position is
-              payable the only route forward is the challan.
-
-              NOT wrapped in AnimatePresence, deliberately. `mode="wait"` holds
-              the outgoing button mounted until its exit animation finishes, so
-              anything that stalls the frame loop — a background tab, a throttled
-              or reduced-motion client, a slow feature bundle — leaves the WRONG
-              primary action on screen: "Pay outstanding tax" while the citizen
-              is actually owed a refund, opening a challan for tax that is not
-              due. Which action is offered is a statutory question and must not
-              depend on an animation completing. `layout` still eases the swap
-              when frames are running; when they are not, the button is simply
-              correct and unanimated.
-            */}
-            {isPayable ? (
-              <m.button
-                key="pay"
-                layout
-                transition={springTransition}
-                onClick={() => setChallanOpen(true)}
-                className="px-5 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold rounded-xl transition cursor-pointer inline-flex items-center gap-2"
-              >
-                <Banknote size={14} />
-                {t.payNow}
-              </m.button>
-            ) : (
-              <m.button
-                key="file"
-                layout
-                transition={springTransition}
-                onClick={() => setShowItrV(true)}
-                className="px-5 py-3 bg-teal-600 hover:bg-teal-500 text-white text-xs font-extrabold rounded-xl transition cursor-pointer inline-flex items-center gap-2"
-              >
-                {answered === progress.total ? (
-                  <CheckCheck size={14} />
-                ) : (
-                  <ArrowRight size={14} />
-                )}
-                {t.continueToFile}
-              </m.button>
-            )}
-          </div>
-        </div>
-      </footer>
 
       <Challan280Modal open={challanOpen} onClose={() => setChallanOpen(false)} />
       <CitizenVaultModal

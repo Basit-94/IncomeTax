@@ -115,9 +115,9 @@ export default function DisputeModal({
             initial={{ scale: 0.95, y: 15 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, y: 15 }}
-            className="bg-paper border border-line max-w-lg w-full rounded-2xl p-6 shadow-2xl space-y-5 text-left overflow-y-auto max-h-[90vh]"
+            className="bg-paper border border-line max-w-lg w-full rounded-2xl p-6 shadow-glass space-y-5 text-left overflow-y-auto max-h-[90vh]"
           >
-            <h3 className="text-lg font-bold text-navy dark:text-ink border-b border-line pb-2 flex items-center gap-2">
+            <h3 className="text-lg font-bold text-ink dark:text-ink border-b border-line pb-2 flex items-center gap-2">
               <Sparkles size={18} className="text-money" />
               <span>
                 {isPreFilled 
@@ -199,9 +199,9 @@ export default function DisputeModal({
                               )
                             }
                             className={`px-3 py-2 text-xs font-semibold rounded-lg border text-left transition cursor-pointer ${
-                              correctionChoice === opt.id
-                                ? "border-money bg-money-soft/10 text-navy dark:text-ink font-bold"
-                                : "border-line bg-paper text-ink-2 hover:border-slate-400"
+ correctionChoice === opt.id
+ ? "border-money bg-money-soft/10 text-ink dark:text-ink font-bold"
+                                : "border-line bg-paper text-ink-2 hover:border-line"
                             }`}
                           >
                             {opt.label}
@@ -244,7 +244,7 @@ export default function DisputeModal({
                         <button
                           onClick={toggleSpeechMock}
                           className={`text-xs flex items-center gap-1 font-semibold ${
-                            isSpeechListening ? "text-alarm animate-pulse" : "text-money hover:text-money-deep"
+ isSpeechListening ? "text-alarm animate-pulse" : "text-money hover:text-money-deep"
                           }`}
                         >
                           {isSpeechListening ? <Volume2 size={12} /> : <VolumeX size={12} />}
@@ -329,7 +329,7 @@ export default function DisputeModal({
                 type="button"
                 onClick={saveDispute}
                 disabled={disputeAmount.trim() === ""}
-                className="flex-1 bg-navy hover:opacity-90 text-paper dark:text-white py-2 rounded-xl text-sm font-semibold transition-colors cursor-pointer disabled:bg-slate-200 disabled:text-ink-3 disabled:cursor-not-allowed"
+                className="flex-1 ink-surface hover:opacity-90 text-paper py-2 rounded-xl text-sm font-semibold transition-colors cursor-pointer disabled:bg-line disabled:text-ink-3 disabled:cursor-not-allowed"
               >
                 {!isPreFilled || disputeTarget === "tax" ? "Update & Recalculate" : t.file.disputeSave}
               </button>

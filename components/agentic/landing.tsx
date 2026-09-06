@@ -13,6 +13,8 @@ import type { Dict } from "@/lib/i18n";
 import type { AgenticStrings } from "@/lib/i18n/agenticStrings";
 import type { RunTask } from "@/lib/agentic/types";
 import type { Lang } from "@/lib/types";
+import { Munshi, MunshiBubble } from "../brand/munshi";
+import { localize } from "../mock-i18n";
 import LanguageMenu from "../ui/language-menu";
 import type { ShellCitizen } from "./app-shell";
 import { HeaderBar, PrototypeBanner } from "./header-frame";
@@ -54,21 +56,21 @@ export default function AgenticLanding(props: AgenticLandingProps) {
       <header className="shrink-0" data-testid="landing-header">
       <HeaderBar t={t} s={s} mode="agentic" onModeChange={props.onModeChange} busy={props.busy}>
         <nav className="hidden lg:flex items-center gap-1.5 shrink-0" aria-label={t.shell.productName}>
-          <button type="button" onClick={props.onMyReturn} className="h-[38px] whitespace-nowrap rounded-full border border-line bg-paper-2 px-4 text-sm text-ink hover:border-money/60 hover:shadow-sm cursor-pointer">
+          <button type="button" onClick={props.onMyReturn} className="glass-flat h-[38px] whitespace-nowrap rounded-[14px] px-4 text-[13px] font-semibold text-ink-2 hover:text-ink hover:border-money/60 cursor-pointer">
             {s.myReturn}
           </button>
-          <button type="button" onClick={props.onOpenVault} className="h-[38px] whitespace-nowrap rounded-full border border-line bg-paper-2 px-4 text-sm text-ink hover:border-money/60 hover:shadow-sm cursor-pointer">
+          <button type="button" onClick={props.onOpenVault} className="glass-flat h-[38px] whitespace-nowrap rounded-[14px] px-4 text-[13px] font-semibold text-ink-2 hover:text-ink hover:border-money/60 cursor-pointer">
             {s.taxVault}
           </button>
           <span className="w-px h-6 bg-line mx-1" aria-hidden="true" />
         </nav>
         <LanguageMenu lang={props.lang} onChange={props.changeLang} label={t.shell.language} className="shrink-0" />
-        <button type="button" onClick={props.toggleTheme} className="size-[38px] rounded-full border border-line bg-paper-2 text-ink-2 hover:text-ink flex items-center justify-center cursor-pointer shrink-0" aria-label={props.theme === "dark" ? t.shell.light : t.shell.dark}>
+        <button type="button" onClick={props.toggleTheme} className="glass-flat size-[38px] rounded-full text-ink-2 hover:text-ink flex items-center justify-center cursor-pointer shrink-0" aria-label={props.theme === "dark" ? t.shell.light : t.shell.dark}>
           {props.theme === "dark" ? <Sun size={15} className="text-money" aria-hidden="true" /> : <Moon size={15} className="text-money" aria-hidden="true" />}
         </button>
         {citizen && (
-          <div className="hidden sm:flex items-center gap-2 h-[38px] rounded-full border border-line bg-paper-2 ps-1 pe-2 min-w-0">
-            <span className="size-7 shrink-0 rounded-full bg-amber-bg border border-amber-500/40 text-amber-700 dark:text-amber-300 font-sans font-bold text-[11px] flex items-center justify-center" aria-hidden="true">
+          <div className="glass-flat hidden sm:flex items-center gap-2 h-[38px] rounded-full ps-1 pe-3 min-w-0">
+            <span className="size-[30px] shrink-0 rounded-full bg-amber-bg text-amber-ink font-sans font-extrabold text-[11px] flex items-center justify-center" aria-hidden="true">
               {citizen.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
             </span>
             <span className="text-sm font-semibold text-ink truncate max-w-[10rem]">{citizen.name}</span>
@@ -83,27 +85,36 @@ export default function AgenticLanding(props: AgenticLandingProps) {
       </header>
 
       <main id="main-content" className="flex-1 flex flex-col items-center justify-center px-4 py-10">
-        <div className="w-full max-w-3xl text-center space-y-6">
-          <span className="inline-flex items-center gap-2 rounded-full border border-line bg-paper-2 px-3 py-1 text-xs text-ink-2">
-            <span className="size-1.5 rounded-full bg-money" aria-hidden="true" /> {s.simulatedBadge}
+        <div className="w-full max-w-3xl text-center space-y-[22px]">
+          <span className="glass-flat inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold text-ink-2">
+            <span className="size-1.5 rounded-full bg-ok" aria-hidden="true" /> {s.simulatedBadge}
           </span>
-          <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl leading-[1.05] tracking-tight text-ink text-balance">
+          <h1 className="text-[40px] sm:text-[50px] lg:text-[60px] font-extrabold leading-[1.05] tracking-[-0.03em] text-ink text-balance">
             {s.welcomeTitle}
           </h1>
-          <p className="text-base sm:text-lg lg:text-xl text-ink-2 leading-relaxed max-w-2xl mx-auto">{s.welcomeBody}</p>
+          <p className="text-base sm:text-lg text-ink-2 leading-relaxed max-w-[720px] mx-auto">{s.welcomeBody}</p>
 
           {props.signIn ?? (
             <>
-              <Composer s={s} lang={props.lang} disabled={!!props.busy} onSubmit={(message) => props.onStart({ message })} variant="ask" placeholder={s.landingPlaceholder} />
-              <div className="flex flex-wrap justify-center gap-6 sm:gap-10 pt-2">
+              {/* Munshi ji peeks from behind the composer with one line of encouragement (handoff §3 landing). */}
+              <div className="relative mx-auto w-full max-w-[720px] mt-16">
+                <div className="hidden lg:block absolute -left-[118px] -bottom-1 pointer-events-none" aria-hidden="true">
+                  <Munshi size={150} />
+                </div>
+                <MunshiBubble className="absolute left-[30px] -top-[52px] !py-2 !px-3.5 text-[13.5px] font-semibold rounded-[16px_16px_16px_4px]">
+                  {localize("Type it the way you'd tell a friend", props.lang)} 👇
+                </MunshiBubble>
+                <Composer s={s} lang={props.lang} disabled={!!props.busy} onSubmit={(message) => props.onStart({ message })} variant="ask" placeholder={s.landingPlaceholder} />
+              </div>
+              <div className="flex flex-wrap justify-center gap-7 pt-1">
                 {shortcuts.map((sc) => (
                   <button
                     key={sc.task}
                     type="button"
                     onClick={() => (sc.task === "vault" ? props.onOpenVault() : props.onStart({ task: sc.task }))}
-                    className="group flex flex-col items-center gap-2.5 w-28 text-sm text-ink leading-tight cursor-pointer"
+                    className="group flex flex-col items-center gap-2.5 w-[120px] text-[13.5px] font-semibold text-ink-2 leading-tight cursor-pointer"
                   >
-                    <span className="size-16 rounded-full border border-line bg-paper-2 shadow-sm flex items-center justify-center text-ink group-hover:border-money/60 group-hover:shadow transition">
+                    <span className="glass size-16 rounded-full flex items-center justify-center text-ink group-hover:border-money/60 transition">
                       {sc.icon}
                     </span>
                     <span>{sc.label}</span>

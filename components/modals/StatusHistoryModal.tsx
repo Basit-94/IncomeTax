@@ -195,13 +195,13 @@ export default function StatusHistoryModal({
       aria-labelledby="status-history-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-3 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
     >
-      <div className="surface-panel relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl bg-paper shadow-2xl border border-line overflow-hidden">
+      <div className="surface-panel relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl bg-paper shadow-glass border border-line overflow-hidden">
         {/* ========================================================================= */}
         {/* MODAL HEADER                                                              */}
         {/* ========================================================================= */}
         <div className="shrink-0 flex items-start justify-between border-b border-line p-5 sm:px-6 sm:py-4 bg-paper-2">
           <div className="flex items-center gap-3">
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-teal-100 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 shadow-xs">
+            <div className="flex size-11 items-center justify-center rounded-2xl bg-amber-bg text-money shadow-xs">
               <Clock size={22} aria-hidden="true" />
             </div>
             <div>
@@ -209,7 +209,7 @@ export default function StatusHistoryModal({
                 <h2 id="status-history-title" className="font-sans text-lg sm:text-xl font-black text-ink">
                   {isHindi ? "रिटर्न स्थिति और इतिहास केंद्र" : "Return Status & History Hub"}
                 </h2>
-                <span className="hidden sm:inline-flex rounded-full bg-teal-100 dark:bg-teal-950/80 px-2.5 py-0.5 text-[10px] font-mono font-bold text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+                <span className="hidden sm:inline-flex rounded-full bg-amber-bg px-2.5 py-0.5 text-[10px] font-mono font-bold text-money border border-money/40">
                   AY 2026-27 & Archive
                 </span>
               </div>
@@ -239,8 +239,8 @@ export default function StatusHistoryModal({
             type="button"
             onClick={() => setActiveTab("lifecycle")}
             className={`pb-2.5 px-3 text-xs font-bold transition flex items-center gap-2 border-b-2 cursor-pointer ${
-              activeTab === "lifecycle"
-                ? "border-teal-600 text-teal-600 dark:text-teal-400"
+ activeTab === "lifecycle"
+                ? "border-money/40 text-money "
                 : "border-transparent text-ink-2 hover:text-ink"
             }`}
           >
@@ -252,8 +252,8 @@ export default function StatusHistoryModal({
             type="button"
             onClick={() => setActiveTab("archive")}
             className={`pb-2.5 px-3 text-xs font-bold transition flex items-center gap-2 border-b-2 cursor-pointer ${
-              activeTab === "archive"
-                ? "border-teal-600 text-teal-600 dark:text-teal-400"
+ activeTab === "archive"
+                ? "border-money/40 text-money "
                 : "border-transparent text-ink-2 hover:text-ink"
             }`}
           >
@@ -265,8 +265,8 @@ export default function StatusHistoryModal({
             type="button"
             onClick={() => setActiveTab("itrv")}
             className={`pb-2.5 px-3 text-xs font-bold transition flex items-center gap-2 border-b-2 cursor-pointer ${
-              activeTab === "itrv"
-                ? "border-teal-600 text-teal-600 dark:text-teal-400"
+ activeTab === "itrv"
+                ? "border-money/40 text-money "
                 : "border-transparent text-ink-2 hover:text-ink"
             }`}
           >
@@ -291,7 +291,7 @@ export default function StatusHistoryModal({
                   {selectedPan}
                 </span>
                 {currentRefundAmount > 0 && (
-                  <span className="rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-mono text-xs font-bold px-2 py-0.5">
+                  <span className="rounded bg-ok-soft text-ok-ink font-mono text-xs font-bold px-2 py-0.5">
                     Refund: {formatMoney(currentRefundAmount, lang)}
                   </span>
                 )}
@@ -310,8 +310,8 @@ export default function StatusHistoryModal({
                     setCurrentStage(4);
                   }}
                   className={`px-2.5 py-1 rounded-lg border text-xs font-semibold transition cursor-pointer ${
-                    selectedPan === PERSONAS.sunita.pan
-                      ? "bg-teal-600 text-white border-teal-600"
+ selectedPan === PERSONAS.sunita.pan
+ ? "bg-money text-white border-money/40"
                       : "bg-paper border-line text-ink-2 hover:text-ink"
                   }`}
                 >
@@ -325,8 +325,8 @@ export default function StatusHistoryModal({
                     setCurrentStage(6);
                   }}
                   className={`px-2.5 py-1 rounded-lg border text-xs font-semibold transition cursor-pointer ${
-                    selectedPan === PERSONAS.rakesh.pan
-                      ? "bg-teal-600 text-white border-teal-600"
+ selectedPan === PERSONAS.rakesh.pan
+ ? "bg-money text-white border-money/40"
                       : "bg-paper border-line text-ink-2 hover:text-ink"
                   }`}
                 >
@@ -352,7 +352,7 @@ export default function StatusHistoryModal({
                       Assessment Year 2026-27 · Mode: Direct Credit via NACH/ECS
                     </p>
                   </div>
-                  <span className="rounded-full bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 font-mono text-xs font-bold px-3 py-1 border border-teal-200 dark:border-teal-800">
+                  <span className="rounded-full bg-amber-bg text-money font-mono text-xs font-bold px-3 py-1 border border-money/40">
                     Stage {currentStage} of 7 Active
                   </span>
                 </div>
@@ -368,19 +368,19 @@ export default function StatusHistoryModal({
                         key={s.id}
                         onClick={() => setCurrentStage(s.id)}
                         className={`flex items-start gap-3.5 p-3 rounded-2xl border transition cursor-pointer ${
-                          isCurrent
-                            ? "border-teal-500 bg-teal-50/25 dark:bg-teal-950/20 shadow-xs ring-1 ring-teal-500"
+ isCurrent
+ ? "border-money/40 bg-amber-bg  shadow-xs ring-1 ring-money/40"
                             : isDone
-                            ? "border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/15"
+                            ? "border-ok/40  bg-ok-soft"
                             : "border-line bg-paper opacity-60 hover:opacity-100"
                         }`}
                       >
                         <div
                           className={`size-7 rounded-full flex items-center justify-center font-mono text-xs font-bold shrink-0 mt-0.5 ${
-                            isDone
-                              ? "bg-emerald-600 text-white"
+ isDone
+ ? "bg-ok text-white"
                               : isCurrent
-                              ? "bg-teal-600 text-white animate-pulse"
+                              ? "bg-money text-white animate-pulse"
                               : "bg-paper-3 text-ink-3 border border-line"
                           }`}
                         >
@@ -389,11 +389,11 @@ export default function StatusHistoryModal({
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <span className={`text-xs font-bold ${isCurrent ? "text-teal-700 dark:text-teal-300" : "text-ink"}`}>
+                            <span className={`text-xs font-bold ${isCurrent ? "text-money " : "text-ink"}`}>
                               {isHindi ? s.labelHi : s.labelEn}
                             </span>
                             {isCurrent && (
-                              <span className="rounded-full bg-teal-600 text-white text-[10px] font-bold px-2 py-0.5">
+                              <span className="rounded-full bg-money text-white text-[10px] font-bold px-2 py-0.5">
                                 Current
                               </span>
                             )}
@@ -418,10 +418,10 @@ export default function StatusHistoryModal({
               <div className="rounded-2xl border border-line bg-paper-2 p-5 space-y-3">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-ink flex items-center gap-1.5">
-                    <Landmark size={16} className="text-teal-600" />
+                    <Landmark size={16} className="text-money" />
                     <span>{isHindi ? "सत्यापित बैंक खाता (Pre-Validated Refund Account):" : "Pre-Validated Bank Account Details:"}</span>
                   </span>
-                  <span className="rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold px-2.5 py-0.5 flex items-center gap-1">
+                  <span className="rounded-full bg-ok-soft text-ok-ink text-[10px] font-bold px-2.5 py-0.5 flex items-center gap-1">
                     <ShieldCheck size={12} /> {activeBank.status === "validated" ? "ECS Pre-Validated" : "Account Verified"}
                   </span>
                 </div>
@@ -486,7 +486,7 @@ export default function StatusHistoryModal({
                           </td>
                           <td className="py-3 text-end font-mono font-bold">
                             {row.outcome === "refund" ? (
-                              <span className="text-emerald-600 dark:text-emerald-400">
+                              <span className="text-ok-ink">
                                 +{formatMoney(row.outcomeAmount, lang)}
                               </span>
                             ) : (
@@ -533,11 +533,11 @@ export default function StatusHistoryModal({
           {/* ======================================================================= */}
           {activeTab === "itrv" && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="rounded-3xl border-2 border-teal-200 dark:border-teal-900/60 bg-paper p-6 space-y-5 shadow-md">
+              <div className="rounded-3xl border-2 border-money/40 bg-paper p-6 space-y-5 shadow-md">
                 {/* Gov Header */}
                 <div className="flex items-start justify-between border-b border-line pb-4">
                   <div>
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-teal-600 dark:text-teal-400 block">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-money block">
                       INDIAN INCOME TAX RETURN VERIFICATION FORM
                     </span>
                     <h3 className="font-sans text-base font-black text-ink">
@@ -550,9 +550,9 @@ export default function StatusHistoryModal({
                 </div>
 
                 {/* Acknowledgment Number Hero Bar */}
-                <div className="p-4 rounded-2xl bg-teal-50/40 dark:bg-teal-950/20 border border-teal-100 dark:border-teal-900/40 flex flex-wrap items-center justify-between gap-3">
+                <div className="p-4 rounded-2xl bg-amber-bg/40 border border-money/40 flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <span className="text-[10px] font-mono uppercase font-bold text-teal-700 dark:text-teal-300 block">
+                    <span className="text-[10px] font-mono uppercase font-bold text-money block">
                       15-Digit Statutory Acknowledgment Number:
                     </span>
                     <span className="font-mono text-xl font-black text-ink tracking-wider">
@@ -560,7 +560,7 @@ export default function StatusHistoryModal({
                     </span>
                   </div>
                   <div className="text-end">
-                    <span className="text-[10px] font-mono uppercase font-bold text-teal-700 dark:text-teal-300 block">
+                    <span className="text-[10px] font-mono uppercase font-bold text-money block">
                       Filing Timestamp:
                     </span>
                     <span className="font-mono text-xs font-bold text-ink">
@@ -614,7 +614,7 @@ export default function StatusHistoryModal({
         {/* ========================================================================= */}
         <div className="shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-line p-4 sm:p-5 bg-paper">
           <div className="flex items-center gap-2 text-xs text-ink-3">
-            <ShieldCheck size={16} className="text-teal-600" />
+            <ShieldCheck size={16} className="text-money" />
             <span>
               {isHindi
                 ? `करदाता: ${selectedName} (${selectedPan})`
@@ -637,7 +637,7 @@ export default function StatusHistoryModal({
                 onClose();
                 onViewReturnDetails?.();
               }}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-teal-600/25 transition cursor-pointer"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-money hover:opacity-90 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-teal-600/25 transition cursor-pointer"
             >
               <span>{isHindi ? "डैशबोर्ड पर पूर्ण विवरण देखें" : "View Return in Dashboard"}</span>
               <ArrowRight size={14} />

@@ -143,9 +143,9 @@ export function PdfIngestionDropzone({ onIngested }: PdfIngestionDropzoneProps =
           if (e.key === "Enter" || e.key === " ") inputRef.current?.click();
         }}
         className={`cursor-pointer rounded-2xl border-2 border-dashed p-6 text-center transition-all ${
-          dragging
-            ? "border-teal-600 bg-teal-50 dark:bg-teal-950/60 ring-4 ring-teal-500/20 scale-[1.01]"
-            : "border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-400 dark:hover:border-slate-600"
+ dragging
+ ? "border-money/40 bg-amber-bg  ring-4 ring-money/40 scale-[1.01]"
+            : "border-line  bg-paper-3  hover:border-line "
         }`}
       >
         <input
@@ -168,22 +168,22 @@ export function PdfIngestionDropzone({ onIngested }: PdfIngestionDropzoneProps =
             className="pointer-events-none flex flex-col items-center gap-2 py-2"
             role="status"
           >
-            <Loader2 size={24} className="animate-spin text-teal-700" />
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Reading your document…</p>
+            <Loader2 size={24} className="animate-spin text-money" />
+            <p className="text-sm font-semibold text-ink-2">Reading your document…</p>
           </div>
         ) : (
           <div
             key="idle"
             className="pointer-events-none flex flex-col items-center gap-2 py-2"
           >
-            <FileUp size={24} className={dragging ? "text-teal-600 scale-110" : "text-slate-400"} />
-            <p className="text-sm font-bold text-slate-800 dark:text-white">
+            <FileUp size={24} className={dragging ? "text-money scale-110" : "text-ink-3"} />
+            <p className="text-sm font-bold text-ink-2">
               {dragging ? "Drop your Form 16 or AIS PDF now" : "Drop your Form 16 or AIS PDF here"}
             </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-ink-3">
               or click to choose a file — PAN, gross salary and TDS are read out of it
             </p>
-            <p className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+            <p className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-semibold text-ink-3">
               <Lock size={11} /> Read in your browser. The file is never uploaded.
             </p>
           </div>
@@ -199,16 +199,16 @@ export function PdfIngestionDropzone({ onIngested }: PdfIngestionDropzoneProps =
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={spring}
-            className="rounded-xl border border-emerald-300 bg-emerald-50 p-4"
+            className="rounded-xl border border-ok/40 bg-ok-soft p-4"
             role="status"
           >
-            <p className="flex items-center gap-2 text-sm font-extrabold text-emerald-900">
+            <p className="flex items-center gap-2 text-sm font-extrabold text-ok-ink">
               <CheckCircle2 size={15} />{" "}
               {result.kind === "AIS"
                 ? "AIS Data Successfully Ingested"
                 : "Form 16 Data Successfully Ingested"}
             </p>
-            <ul className="mt-2 space-y-1 text-xs text-emerald-900">
+            <ul className="mt-2 space-y-1 text-xs text-ok-ink">
               {result.extracted.pan && (
                 <li>
                   PAN <span className="font-mono font-bold">{result.extracted.pan}</span>
@@ -226,7 +226,7 @@ export function PdfIngestionDropzone({ onIngested }: PdfIngestionDropzoneProps =
                 </li>
               )}
             </ul>
-            <p className="mt-2 text-[11px] leading-relaxed text-emerald-800">
+            <p className="mt-2 text-[11px] leading-relaxed text-ok-ink">
               These update the <strong>reported</strong> side of each row. Any figure you
               have already confirmed or disputed is left exactly as you set it.
             </p>
@@ -241,13 +241,13 @@ export function PdfIngestionDropzone({ onIngested }: PdfIngestionDropzoneProps =
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={spring}
-            className="rounded-xl border border-amber-300 bg-amber-50 p-4"
+            className="rounded-xl border border-money/40 bg-amber-bg p-4"
             role="status"
           >
-            <p className="flex items-center gap-2 text-sm font-extrabold text-amber-900">
+            <p className="flex items-center gap-2 text-sm font-extrabold text-amber-ink">
               <XCircle size={15} /> No figures could be read from that file
             </p>
-            <p className="mt-1.5 text-xs leading-relaxed text-amber-900">
+            <p className="mt-1.5 text-xs leading-relaxed text-amber-ink">
               {errorText ||
                 "This reader only sees PDFs that store their text uncompressed. Most Form 16s are compressed and scanned copies have no text layer at all — in a production build this is where a real PDF text extractor belongs. Nothing was changed on your return."}
             </p>
