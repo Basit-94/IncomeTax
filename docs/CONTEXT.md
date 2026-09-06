@@ -169,7 +169,7 @@ card but not the summary" (log 2026-09-02 and 2026-09-03 00:50).
   Form 16 already in the vault, or type; DigiLocker and vault reads sit behind a **consent card**
   (`yes_no` with `items`) and nothing is fetched or read before "yes" — a readable Form 16 already stored
   is offered behind consent at the start of every working run; then **one form**
-  (`Question.expects: "form"`, `fields`; the answer is a JSON object — PF, health insurance, other income,
+  (`Question.expects: "form"`, `fields`; the answer is a JSON object — PF, health insurance, interest,
   residency for citizens; salary only when no document supplied it); then at most one proof upload
   (`proof`). Typed salary → `declare_income` (self); Form 16 → `import_document`; deductions count only
   with the proof attached. The guard receives `completeFacts` once the form is answered and `resident`

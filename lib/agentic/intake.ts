@@ -183,7 +183,7 @@ export function nextIntakeQuestion(ctx: IntakeContext): Question | null {
     if (!salaryKnown) fields.push({ key: "salary_amount", label: s.fieldSalary, type: "number", hint: s.fieldSalaryHint });
     if (!has80C) fields.push({ key: "pf_amount", label: s.fieldPf, type: "number", hint: s.fieldPfHint });
     if (!has80D) fields.push({ key: "health_amount", label: s.fieldHealth, type: "number", hint: s.fieldHealthHint });
-    fields.push({ key: "other_income_amount", label: s.fieldOtherIncome, type: "number", hint: s.fieldOtherIncomeHint });
+    fields.push({ key: "interest_amount", label: s.fieldInterest, type: "number", hint: s.fieldInterestHint });
     if (ctx.ownerKind === "citizen" && a.resident === undefined) fields.push({ key: "resident", label: s.fieldResident, type: "yes_no" });
     return { id: newId("q"), text: s.askDetails, why: s.askDetailsWhy, expects: "form", resolves: "details", fields };
   }

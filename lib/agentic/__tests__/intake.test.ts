@@ -77,9 +77,9 @@ describe("intake in the runtime — document-first, one form, few steps (user di
     q = r.state.pendingQuestion!;
     expect(q.resolves).toBe("details");
     expect(q.expects).toBe("form");
-    expect(q.fields?.map((f) => f.key)).toEqual(["pf_amount", "health_amount", "other_income_amount"]); // salary is on record; demo personas are residents
-    r = await answer(d, sunita, r, form({ pf_amount: 60000, health_amount: 0, other_income_amount: 0 }));
-    expect(r.state.answers).toMatchObject({ pf_amount: 60000, health_amount: 0, other_income_amount: 0, other_income: false });
+    expect(q.fields?.map((f) => f.key)).toEqual(["pf_amount", "health_amount", "interest_amount"]); // salary is on record; demo personas are residents
+    r = await answer(d, sunita, r, form({ pf_amount: 60000, health_amount: 0, interest_amount: 0 }));
+    expect(r.state.answers).toMatchObject({ pf_amount: 60000, health_amount: 0, interest_amount: 0, inventory_confirmed: true });
 
     // A deduction was entered, so one proof upload is offered — with an honest way out.
     q = r.state.pendingQuestion!;
@@ -123,9 +123,10 @@ describe("intake in the runtime — document-first, one form, few steps (user di
     // The form no longer asks for the salary; a citizen is asked about residency in the same card.
     q = r.state.pendingQuestion!;
     expect(q.resolves).toBe("details");
-    expect(q.fields?.map((f) => f.key)).toEqual(["pf_amount", "health_amount", "other_income_amount", "resident"]);
-    r = await answer(d, citizen, r, form({ pf_amount: 0, health_amount: 0, other_income_amount: 0, resident: true }));
+    expect(q.fields?.map((f) => f.key)).toEqual(["pf_amount", "health_amount", "interest_amount", "resident"]);
+    r = await answer(d, citizen, r, form({ pf_amount: 0, health_amount: 0, interest_amount: 1240, resident: true }));
 
+    // Interest is a head the engine computes, so a real figure here is declared, not refused.
     // Nothing else to ask. The only thing standing between this return and a recommendation is the reviewer.
     expect(r.status).toBe("completed");
     expect(r.state.advice?.issues.map((i) => i.code)).toEqual(["tax_review_required"]);
@@ -155,6 +156,20 @@ describe("intake in the runtime — document-first, one form, few steps (user di
     expect(q.fields?.some((f) => f.key === "salary_amount")).toBe(false);
   });
 
+  it("the 'Prepare my return' shortcut on a blank return with a Form 16 in the vault: consent, read, then straight to the form — never 'where did your money come from'", async () => {
+    const v = vault();
+    const d = deps({ vault: v });
+    const pdf = new TextEncoder().encode("%PDF-1.4\nFORM NO. 16 PAN of the Employee: ABCPX7788Q Gross Salary: 7,30,000 Total Tax Deducted: 16,500\n%%EOF");
+    expect((await v.upload({ owner: citizen, bytes: pdf, filename: "f16.pdf", assessmentYear: "2026-27", docType: "FORM_16" })).ok).toBe(true);
+    let r = (await advance(d, citizen, (await createRun(d, citizen, { task: "prepare_salaried_return", lang: "en" })).id))!;
+    expect(r.state.pendingQuestion?.resolves).toBe("vault_consent");
+    r = await answer(d, citizen, r, true);
+    expect(r.state.pendingCommands?.some((c) => c.type === "import_document")).toBe(true);
+    const q = r.state.pendingQuestion!;
+    expect(q.resolves).toBe("details"); // the staged Form 16 makes this a salaried return; no income-source question
+    expect(q.fields?.map((f) => f.key)).toEqual(["pf_amount", "health_amount", "interest_amount", "resident"]);
+  });
+
   it("DigiLocker declined falls back to typing: the form then carries the salary, and the typed figure is declared as the citizen's own", async () => {
     const d = deps({ vault: vault() });
     let r = (await advance(d, citizen, (await createRun(d, citizen, { message: "file my tax", lang: "en" })).id))!;
@@ -163,9 +178,9 @@ describe("intake in the runtime — document-first, one form, few steps (user di
     r = await answer(d, citizen, r, false);
     const q = r.state.pendingQuestion!;
     expect(q.resolves).toBe("details");
-    expect(q.fields?.map((f) => f.key)).toEqual(["salary_amount", "pf_amount", "health_amount", "other_income_amount", "resident"]);
+    expect(q.fields?.map((f) => f.key)).toEqual(["salary_amount", "pf_amount", "health_amount", "interest_amount", "resident"]);
     expect(r.state.documentTypes ?? []).not.toContain("FORM_16"); // nothing was fetched
-    r = await answer(d, citizen, r, form({ salary_amount: 900000, pf_amount: 0, health_amount: 0, other_income_amount: 0, resident: true }));
+    r = await answer(d, citizen, r, form({ salary_amount: 900000, pf_amount: 0, health_amount: 0, interest_amount: 0, resident: true }));
     expect(r.status).toBe("completed");
     expect(r.state.advice?.issues.map((i) => i.code)).toEqual(["tax_review_required"]); // income known, residency known, inventory confirmed
   });
@@ -179,7 +194,7 @@ describe("intake in the runtime — document-first, one form, few steps (user di
       seen.push(q.resolves);
       expect(q.expects).not.toBe("file");
       expect(q.expects).not.toBe("source");
-      r = await answer(d, sunita, r, q.resolves === "details" ? form({ pf_amount: 50000, health_amount: 0, other_income_amount: 0 }) : "unsure");
+      r = await answer(d, sunita, r, q.resolves === "details" ? form({ pf_amount: 50000, health_amount: 0, interest_amount: 0 }) : "unsure");
     }
     expect(seen).toEqual(["salary_figure", "details"]);
     expect(r.status).toBe("waiting_for_review");

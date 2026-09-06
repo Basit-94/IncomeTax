@@ -138,6 +138,6 @@ describe("small talk in the runtime — no return read, no figures, warm reply, 
     const d = deps();
     const r = (await advance(d, sunita, (await createRun(d, sunita, { task: "prepare_salaried_return", lang: "en" })).id))!;
     expect(r.state.pendingQuestion?.lead).toBeUndefined();
-    expect(r.state.pendingQuestion?.text).toBe(en.askOtherIncome);
+    expect(r.state.pendingQuestion?.text).toBe(en.askDetails);
   });
 });

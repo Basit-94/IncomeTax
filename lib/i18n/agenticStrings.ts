@@ -164,8 +164,8 @@ export interface AgenticStrings {
   fieldPfHint: string;
   fieldHealth: string;
   fieldHealthHint: string;
-  fieldOtherIncome: string;
-  fieldOtherIncomeHint: string;
+  fieldInterest: string;
+  fieldInterestHint: string;
   fieldResident: string;
   detailsEntered: string;
   formSubmit: string;
@@ -360,8 +360,8 @@ const en: AgenticStrings = {
   fieldPfHint: "The 'PF' or 'EPF' line on your salary slips, added up.",
   fieldHealth: "Health insurance premium paid",
   fieldHealthHint: "For yourself, your family or your parents.",
-  fieldOtherIncome: "Any other income",
-  fieldOtherIncomeHint: "Interest, freelance payments, anything not in your salary.",
+  fieldInterest: "Interest earned on savings or deposits",
+  fieldInterestHint: "From your bank statements or AIS. Rent, freelance or business income isn't handled in this release.",
   fieldResident: "In India for 182 days or more between April 2025 and March 2026?",
   detailsEntered: "Figures entered",
   formSubmit: "Save these",
@@ -555,8 +555,8 @@ const hi: AgenticStrings = {
   fieldPfHint: "सैलरी स्लिप की 'PF' या 'EPF' लाइन, जोड़कर।",
   fieldHealth: "स्वास्थ्य बीमा प्रीमियम",
   fieldHealthHint: "अपने, परिवार या माता-पिता के लिए।",
-  fieldOtherIncome: "कोई और आय",
-  fieldOtherIncomeHint: "ब्याज, फ्रीलांस भुगतान, जो वेतन में नहीं है।",
+  fieldInterest: "बचत या जमा पर मिला ब्याज",
+  fieldInterestHint: "बैंक स्टेटमेंट या AIS से। किराया, फ्रीलांस या व्यवसाय की आय इस रिलीज़ में नहीं है।",
   fieldResident: "अप्रैल 2025 से मार्च 2026 के बीच 182 दिन या ज़्यादा भारत में थे?",
   detailsEntered: "आंकड़े दर्ज",
   formSubmit: "सहेजें",
@@ -750,8 +750,8 @@ const ta: AgenticStrings = {
   fieldPfHint: "சம்பளச் சீட்டுகளின் 'PF' அல்லது 'EPF' வரி, கூட்டி.",
   fieldHealth: "செலுத்திய மருத்துவக் காப்பீட்டுப் பிரீமியம்",
   fieldHealthHint: "உங்களுக்கு, குடும்பத்திற்கு அல்லது பெற்றோருக்கு.",
-  fieldOtherIncome: "வேறு ஏதேனும் வருமானம்",
-  fieldOtherIncomeHint: "வட்டி, ஃப்ரீலான்ஸ் வருமானம், சம்பளத்தில் இல்லாத எதுவும்.",
+  fieldInterest: "சேமிப்பு அல்லது வைப்பில் கிடைத்த வட்டி",
+  fieldInterestHint: "வங்கி அறிக்கை அல்லது AIS-இலிருந்து. வாடகை, ஃப்ரீலான்ஸ் அல்லது வணிக வருமானம் இந்த வெளியீட்டில் இல்லை.",
   fieldResident: "ஏப்ரல் 2025 – மார்ச் 2026-க்குள் 182 நாட்கள் அல்லது மேல் இந்தியாவில் இருந்தீர்களா?",
   detailsEntered: "எண்கள் பதிவானது",
   formSubmit: "சேமி",

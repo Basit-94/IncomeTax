@@ -323,7 +323,7 @@ function adviceContext(deps: RuntimeDeps, owner: Owner, run: Run): AdviceContext
     resident: typeof a.resident === "boolean" ? a.resident : undefined,
     returnByDueDate: typeof a.return_by_due_date === "boolean" ? a.return_by_due_date : undefined,
     // The inventory counts as verified once the citizen has answered the other-income question in full.
-    completeFacts: a.other_income === false || (a.other_income === true && typeof a.other_income_amount === "number"),
+    completeFacts: a.inventory_confirmed === true || a.other_income === false || (a.other_income === true && typeof a.other_income_amount === "number"),
   };
 }
 
@@ -547,7 +547,7 @@ async function absorbAnswers(deps: RuntimeDeps, owner: Owner, run: Run, snapshot
   if (typeof a.details === "string" && a.details_parsed === undefined) {
     try {
       const obj = JSON.parse(a.details) as Record<string, unknown>;
-      for (const k of ["salary_amount", "pf_amount", "health_amount", "other_income_amount"]) {
+      for (const k of ["salary_amount", "pf_amount", "health_amount", "interest_amount"]) {
         const v = obj[k];
         if (typeof v === "number" && Number.isFinite(v)) a[k] = Math.max(0, Math.round(v));
       }
@@ -556,7 +556,8 @@ async function absorbAnswers(deps: RuntimeDeps, owner: Owner, run: Run, snapshot
       // Free text where the form was expected: nothing usable, the form's fields stay unanswered.
     }
     a.details_parsed = true;
-    if (typeof a.other_income_amount === "number") a.other_income = a.other_income_amount > 0;
+    // The form asked about every income nobody reports on the person's behalf: the inventory is theirs to confirm, and they did.
+    a.inventory_confirmed = true;
   }
   // A Form 16 uploaded from the source card.
   if (typeof a.source === "string" && a.source.startsWith("upload:")) {
@@ -605,33 +606,32 @@ function nextQuestion(run: Run, owner: Owner, snapshot: VersionedReturn, s: Retu
   if (working && run.state.vaultForm16?.length && a.vault_consent === undefined && !sourceChosen) {
     return { id: newId("q"), text: s.askVaultConsent, why: s.askVaultConsentWhy, expects: "yes_no", resolves: "vault_consent", items: run.state.vaultForm16.map((d) => d.title) };
   }
-  // The situation the citizen described drives the first questions; the generic ones follow.
-  if (run.state.situation && (run.task === "prepare_salaried_return" || run.task === "compare_regimes")) {
+  // Every prepare/compare run goes through the same intake — source card, one form — whether or not the
+  // opening sentence described the situation (2026-09-06: the legacy question chain dead-ended in the guard).
+  if (run.task === "prepare_salaried_return" || run.task === "compare_regimes") {
+    const sit = run.state.situation ?? parseSituation("");
     const cmds = run.state.pendingCommands ?? [];
+    const salaryStaged = cmds.some((c) => c.type === "import_document" || (c.type === "declare_income" && c.kind === "salary"));
+    // A return that carries a salary (on record or staged from a Form 16), or an answer that said "salary", is a salaried
+    // situation even when the sentence did not say so.
+    const situation = { ...sit, employment: sit.employment || salaryStaged || p.facts.some((f) => f.kind === "salary") || a.income_source === "salary" };
     const q = nextIntakeQuestion({
-      situation: run.state.situation, snapshot, answers: a, vaultAvailable, documentTypes: run.state.documentTypes ?? [], ownerKind: owner.kind,
+      situation, snapshot, answers: a, vaultAvailable, documentTypes: run.state.documentTypes ?? [], ownerKind: owner.kind,
       vaultForm16: run.state.vaultForm16 ?? [],
-      salaryStaged: cmds.some((c) => c.type === "import_document" || (c.type === "declare_income" && c.kind === "salary")),
+      salaryStaged,
       digilockerItems: consentItems(listIssuedDocuments(owner, AY)),
       s, lang: run.lang,
     });
     if (q) return q;
   }
-  // The one form covers what follows; these remain for runs without a described situation.
-  if (a.details === undefined && (run.task === "prepare_salaried_return" || run.task === "reconcile_facts")) {
+  // Reconciliation still asks its own pair; a declared "other" head is then judged by the guard.
+  if (run.task === "reconcile_facts") {
     if (a.other_income === undefined) {
       return { id: newId("q"), text: s.askOtherIncome, why: s.askOtherIncomeWhy, expects: "yes_no", resolves: "other_income", choices: [{ value: "yes", label: s.yes }, { value: "no", label: s.no }] };
     }
     if (a.other_income === true && a.other_income_amount === undefined) {
       return { id: newId("q"), text: `${s.askOtherIncome} — ${s.rowTaxableIncome}?`.replace(` — ${s.rowTaxableIncome}?`, ""), why: s.askOtherIncomeWhy, expects: "number", resolves: "other_income_amount" };
     }
-  }
-  if (a.details === undefined && (run.task === "prepare_salaried_return" || run.task === "compare_regimes")) {
-    const has80C = p.claims.some((c) => c.section === "80C");
-    const has80D = p.claims.some((c) => c.section.startsWith("80D"));
-    // The intake's PF / health-insurance questions cover the same ground in plain words; do not ask twice.
-    if (!has80C && a.claim_80C === undefined && a.pf === undefined) return { id: newId("q"), text: s.ask80C, why: s.ask80CWhy, expects: "number", resolves: "claim_80C" };
-    if (!has80D && a.claim_80D === undefined && a.health === undefined) return { id: newId("q"), text: s.ask80D, why: s.ask80DWhy, expects: "number", resolves: "claim_80D" };
   }
   return null;
 }
@@ -678,7 +678,10 @@ async function stepResolve(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
     && !hasKind("import_document", () => true) && !hasKind("declare_income", (c) => c.type === "declare_income" && c.kind === "salary")) {
     cmds.push({ type: "declare_income", kind: "salary", amount: statedSalary, label: "Salary (stated in conversation; to be checked against Form 16)", today: deps.today() });
   }
-  if (a.other_income === true && typeof a.other_income_amount === "number" && a.other_income_amount > 0 && !hasKind("declare_income", () => true)) {
+  if (typeof a.interest_amount === "number" && a.interest_amount > 0 && !hasKind("declare_income", (c) => c.type === "declare_income" && c.kind === "interest")) {
+    cmds.push({ type: "declare_income", kind: "interest", amount: a.interest_amount, label: "Interest on savings and deposits (self-declared)", today: deps.today() });
+  }
+  if (a.other_income === true && typeof a.other_income_amount === "number" && a.other_income_amount > 0 && !hasKind("declare_income", (c) => c.type === "declare_income" && c.kind === "other")) {
     cmds.push({ type: "declare_income", kind: "other", amount: a.other_income_amount, label: "Other income (self-declared)", today: deps.today() });
   }
   // Deductions from the intake count only with a record behind them; otherwise they are left out and said so.

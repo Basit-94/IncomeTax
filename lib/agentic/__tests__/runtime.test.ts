@@ -34,13 +34,14 @@ async function events(d: RuntimeDeps, owner: Owner, run: Run) {
   return (await d.store.eventsAfter(owner, run.id, 0)).map((e) => e.payload);
 }
 
-async function answerUntilReview(d: RuntimeDeps, owner: Owner, run: Run, answers: Record<string, string | number | boolean>) {
+async function answerUntilReview(d: RuntimeDeps, owner: Owner, run: Run, answers: Record<string, string | number | boolean | Record<string, number | boolean>>) {
   let r: Run | null = run;
   for (let i = 0; i < 10 && r && r.status === "waiting_for_input"; i += 1) {
     const q = r.state.pendingQuestion!;
-    const value = answers[q.resolves];
+    // The one form (2026-09-06) is answered with nothing to add unless the script says otherwise.
+    const value = q.expects === "form" ? JSON.stringify({ pf_amount: 0, health_amount: 0, interest_amount: 0, resident: true, ...(typeof answers.details === "object" ? answers.details : {}) }) : answers[q.resolves];
     expect(value, `no scripted answer for ${q.resolves}`).toBeDefined();
-    r = await advance(d, owner, r.id, { answer: { questionId: q.id, value } });
+    r = await advance(d, owner, r.id, { answer: { questionId: q.id, value: value as string | number | boolean } });
   }
   return r!;
 }
@@ -52,9 +53,9 @@ describe("runtime — the first end-to-end milestone (plan §7)", () => {
     let r = (await advance(d, sunita, run.id))!;
     expect(r.task).toBe("prepare_salaried_return");
     expect(r.status).toBe("waiting_for_input");
-    expect(r.state.pendingQuestion?.resolves).toBe("other_income");
+    expect(r.state.pendingQuestion?.resolves).toBe("details"); // one form, not a chain of questions (2026-09-06)
 
-    r = await answerUntilReview(d, sunita, r, { other_income: false, claim_80C: 0, claim_80D: 0 });
+    r = await answerUntilReview(d, sunita, r, {});
     expect(r.status).toBe("waiting_for_review");
     const card = r.state.pendingCard!;
     expect(card.kind).toBe("filing");
@@ -138,8 +139,11 @@ describe("runtime — the first end-to-end milestone (plan §7)", () => {
   it("compare_regimes: Rakesh's capital gains and 80D claim are outside this release — the run explains why, stages nothing, changes nothing", async () => {
     const d = deps();
     const run = await createRun(d, rakesh, { message: "which regime is better for me?", lang: "en" });
-    const r = (await advance(d, rakesh, run.id))!;
+    let r = (await advance(d, rakesh, run.id))!;
     expect(r.task).toBe("compare_regimes");
+    // The one form comes first (Rakesh has no 80C claim, so PF and interest are asked); the guard then speaks.
+    expect(r.state.pendingQuestion?.expects).toBe("form");
+    r = await answerUntilReview(d, rakesh, r, {});
     expect(r.status).toBe("completed");
     expect(r.state.pendingCard).toBeUndefined();
     expect(r.state.pendingCommands).toBeUndefined();
@@ -158,7 +162,8 @@ describe("runtime — the first end-to-end milestone (plan §7)", () => {
 
   it("an answer typed as a message is parsed against the pending question, in words or figures — and an unsupported income head then abstains", async () => {
     const d = deps();
-    const run = await createRun(d, sunita, { task: "prepare_salaried_return", lang: "en" });
+    // Reconciliation keeps its own other-income pair; prepare/compare go through the one form.
+    const run = await createRun(d, sunita, { task: "reconcile_facts", lang: "en" });
     let r = (await advance(d, sunita, run.id))!;
     expect(r.state.pendingQuestion?.expects).toBe("yes_no");
     r = (await advance(d, sunita, r.id, { message: "yes, some freelance work" }))!;
@@ -223,6 +228,8 @@ describe("runtime — the first end-to-end milestone (plan §7)", () => {
     const d = deps();
     const run = await createRun(d, sunita, { task: "prepare_salaried_return", lang: "hi" });
     const r = (await advance(d, sunita, run.id))!;
-    expect(r.state.pendingQuestion?.text).toMatch(/आय/);
+    expect(r.state.pendingQuestion?.expects).toBe("form");
+    expect(r.state.pendingQuestion?.text).toMatch(/आंकड़े/);
+    expect(r.state.pendingQuestion?.fields?.map((f) => f.label)).toContain("बचत या जमा पर मिला ब्याज");
   });
 });
