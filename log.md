@@ -5036,4 +5036,4 @@ things there are already true and will NOT be rewritten:
     6. Clicked `Save & Return to Taxpayer`: successfully transmitted review to server.
     7. Returned to `/app`: verified the green "🎖️ CA Review Complete from CA Rajesh Sharma, FCA!" banner appeared with `[ View Diff → ]`.
     8. Clicked `[ View Diff → ]`: verified comparison matrix opened cleanly with "Adopt CA Recommendations & Proceed to File" button.
-- **Git Policy:** All changes on branch `dev-2`. No commits or pushes made without user instruction.
+- **Git Policy:** Explicitly instructed by user to push to `dev-2`. Committed as `1923fee` and pushed cleanly to `origin dev-2` (never touched `main`).
