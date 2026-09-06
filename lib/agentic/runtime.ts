@@ -66,7 +66,7 @@ export interface RunInput {
 }
 
 const AY = "2026-27";
-const MAX_STEPS_PER_CALL = 8;
+const MAX_STEPS_PER_CALL = 25;
 
 /* ----------------------------------------------------------------- create -- */
 
@@ -149,6 +149,12 @@ export async function advance(deps: RuntimeDeps, owner: Owner, runId: string, in
           if (run.state.pendingQuestion.resolves === "other_income" && /\b(freelance|business|consulting|gig|profession)\b/i.test(clean)) {
             run.state.answers.other_income_type = "freelance";
           }
+        } else if (isCapabilityInquiry(clean)) {
+          run.state.pendingQuestion = undefined;
+          delete run.state.answers.chosen_task;
+          run.task = "explain";
+          run.state.steps = buildPlan(planningFacts("explain", null, null), s);
+          run.status = "running";
         }
       } else if (run.status === "waiting_for_review" && run.state.pendingCard) {
         const affirm = /\b(confirm|yes|proceed|file|file it|apply|apply this regime|ok|okay|sure|go ahead|yep|yeah|accept|agree|haan|theek hai|kardo|kar do)\b/i.test(clean);
@@ -177,11 +183,19 @@ export async function advance(deps: RuntimeDeps, owner: Owner, runId: string, in
       }
     }
     if (input.answer && run.state.pendingQuestion && input.answer.questionId === run.state.pendingQuestion.id) {
-      run.state.answers[run.state.pendingQuestion.resolves] = input.answer.value;
+      const resolves = run.state.pendingQuestion.resolves;
+      run.state.answers[resolves] = input.answer.value;
       await emit({ type: "answer", questionId: input.answer.questionId, value: input.answer.value });
       run.state.sources.push({ kind: "answer", id: input.answer.questionId, label: run.state.pendingQuestion.text, detail: String(input.answer.value), verified: false });
       run.state.pendingQuestion = undefined;
       run.status = "running";
+
+      if (resolves === "chosen_task" && typeof input.answer.value === "string" && input.answer.value.startsWith("task:")) {
+        const snapshot = await deps.returns.get(owner, AY);
+        await handleChosenTask(deps, owner, run, snapshot, s, emit);
+        await persist();
+        if (run.status !== "running" || mode === "input_only") return run;
+      }
     }
     if (input.confirm && run.status === "waiting_for_review") {
       await handleConfirmation(deps, owner, run, input.confirm, emit);
@@ -278,19 +292,73 @@ export async function cancelRun(deps: RuntimeDeps, owner: Owner, runId: string):
 
 /* ------------------------------------------------------------------ steps -- */
 
+async function emitGreetingCapabilities(
+  deps: RuntimeDeps,
+  owner: Owner,
+  run: Run,
+  s: ReturnType<typeof strings>,
+  emit: (p: RunEventPayload) => Promise<unknown>,
+) {
+  const name = firstName(owner.displayName);
+  const greeting = name ? `Hello ${name}!` : "Hello!";
+  const intro = [
+    `${greeting} Here is what I can do for your FY 2025-26 / AY 2026-27 return:`,
+    "",
+    "1. **Prepare & File Return**: Read Form 16, deductions (80C, 80D), regime selection, simulated filing & download signed Form ITR-V PDF.",
+    "2. **Compare Tax Regimes**: Side-by-side calculation under Section 115BAC (New) vs Old Regime with custom deductions breakdown.",
+    "3. **Reconcile AIS & 26AS**: Match employer salary and TDS deductions against government records.",
+    "4. **Advance Tax & Challan 280**: Compute balance liability/interest u/s 234B/C and generate Challan ITNS 280.",
+    "5. **Notice Defense**: Review intimation u/s 143(1), defective return u/s 139(9), and assess audit risk.",
+    "6. **Track Refund Status**: Follow timeline progression from verification to SBI refund credit.",
+    "7. **Citizen Tax Vault**: Secure encrypted repository for Form 16, AIS, 26AS, and filed returns.",
+    "",
+    "Which task would you like to perform right now?",
+  ].join("\n");
+  await emit({ type: "message", role: "assistant", text: intro });
+
+  const q: Question = {
+    id: newId("q"),
+    text: "Which task would you like to perform right now?",
+    why: "Pick an action to start immediately",
+    expects: "choice",
+    resolves: "chosen_task",
+    choices: [
+      { value: "task:prepare_salaried_return", label: "📄 Prepare & File Return" },
+      { value: "task:compare_regimes", label: "⚖️ Compare Tax Regimes" },
+      { value: "task:reconcile_facts", label: "🔍 Reconcile AIS & 26AS" },
+      { value: "task:challan_280", label: "💳 Pay Tax / Challan 280" },
+      { value: "task:notice_defense", label: "🛡️ Defend Tax Notice" },
+      { value: "task:refund_tracker", label: "⚡ Track Refund Status" },
+      { value: "task:tax_vault", label: "🏛️ Open Citizen Tax Vault" },
+    ],
+  };
+  run.state.pendingQuestion = q;
+  await emit({ type: "question", question: q });
+  run.status = "waiting_for_input";
+  await emit({ type: "status", status: "waiting_for_input" });
+}
+
 async function stepClassify(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>) {
   const text = run.state.lastUserMessage ?? "";
   if (text) run.state.register = detectRegister(text, run.lang);
   // Small talk is answered like a friend would, without touching the return (docs/VOICE.md).
   const talk = text ? detectSmallTalk(text) : null;
   if (talk) {
-    // Reply now and finish: no plan walk, no return read — a greeting should cost one round-trip, not twenty.
     run.state.smallTalk = talk;
     run.task = "explain";
     run.state.steps = buildPlan(planningFacts("explain", null, null), s, run.state.steps).map((p) => ({ ...p, state: "done" as const }));
     await speak(deps, owner, run, emit, { intent: smallTalkIntent(talk), fallback: smallTalkReply(talk, s, firstName(owner.displayName)), maxWords: 40 });
     run.status = "completed";
     await emit({ type: "status", status: "completed" });
+    return;
+  }
+
+  if (isCapabilityInquiry(text)) {
+    run.task = "explain";
+    let steps = buildPlan(planningFacts("explain", null, null), s, run.state.steps);
+    steps = setStep(steps, "classify", "done");
+    run.state.steps = steps;
+    await emitGreetingCapabilities(deps, owner, run, s, emit);
     return;
   }
   let task = classifyByRules(text);
@@ -682,7 +750,14 @@ async function handleChosenTask(
     }
     run.task = "prepare_salaried_return";
     run.title = taskTitle("prepare_salaried_return", s);
-    run.state.steps = buildPlan(planningFacts("prepare_salaried_return", snapshot, !!deps.vault), s);
+    run.state.lastUserMessage = "prepare salaried return";
+    let steps = buildPlan(planningFacts("prepare_salaried_return", snapshot, !!deps.vault), s);
+    steps = setStep(steps, "classify", "done");
+    steps = setStep(steps, "plan", "done");
+    run.state.steps = steps;
+    await stepGather(deps, owner, run, s, emit);
+    run.state.steps = setStep(run.state.steps, "gather", "done");
+    await stepResolve(deps, owner, run, s, emit);
     return;
   }
 
@@ -718,16 +793,23 @@ async function handleChosenTask(
 
       if (snapshot?.state.filedAt) {
         lines.push("", `*Note: Your return was filed under the **${snapshot.state.regime === "old" ? "Old Regime" : "New Regime (s. 115BAC)"}**.*`);
-        await emit({ type: "message", role: "assistant", text: lines.join("\n") });
-        run.status = "completed";
-        await emit({ type: "status", status: "completed" });
-        return;
       }
-
       await emit({ type: "message", role: "assistant", text: lines.join("\n") });
-      run.task = "compare_regimes";
-      run.title = taskTitle("compare_regimes", s);
-      run.state.steps = buildPlan(planningFacts("compare_regimes", snapshot, !!deps.vault), s);
+      run.status = "completed";
+      await emit({ type: "status", status: "completed" });
+      return;
+    } else {
+      const lines = [
+        `### ⚖️ Tax Regime Comparison (FY 2025-26 / AY 2026-27)`,
+        "",
+        `• **New Regime (s. 115BAC)**: Default tax regime offering lower slab rates, a **₹75,000 standard deduction** for salaried individuals, and full tax rebate u/s 87A for taxable income up to ₹7,00,000. Exemptions under Chapter VI-A (80C, 80D, HRA) are forgone.`,
+        `• **Old Regime**: Retains exemptions and deductions including Section 80C (up to ₹1,50,000), Section 80D medical insurance, HRA exemption u/s 10(13A), and home loan interest u/s 24(b). Standard deduction is **₹50,000**.`,
+        "",
+        `To get an exact side-by-side calculation with your numbers, select **Prepare & File Return** so I can read your Form 16 or intake details.`,
+      ];
+      await emit({ type: "message", role: "assistant", text: lines.join("\n") });
+      run.status = "completed";
+      await emit({ type: "status", status: "completed" });
       return;
     }
   }
@@ -1012,41 +1094,8 @@ async function stepCompute(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
       if (run.status !== "running" || run.task !== "explain") return;
     }
 
-    if (isCapabilityInquiry(userMsg)) {
-      const intro = [
-        "Here is what I can do for your FY 2025-26 / AY 2026-27 return:",
-        "",
-        "1. **Prepare & File Return**: Read Form 16, deductions (80C, 80D), regime selection, simulated filing & download signed Form ITR-V PDF.",
-        "2. **Compare Tax Regimes**: Side-by-side calculation under Section 115BAC (New) vs Old Regime with custom deductions breakdown.",
-        "3. **Reconcile AIS & 26AS**: Match employer salary and TDS deductions against government records.",
-        "4. **Advance Tax & Challan 280**: Compute balance liability/interest u/s 234B/C and generate Challan ITNS 280.",
-        "5. **Notice Defense**: Review intimation u/s 143(1), defective return u/s 139(9), and assess audit risk.",
-        "6. **Track Refund Status**: Follow timeline progression from verification to SBI refund credit.",
-        "7. **Citizen Tax Vault**: Secure encrypted repository for Form 16, AIS, 26AS, and filed returns.",
-        "",
-        "Which task would you like to perform right now?",
-      ].join("\n");
-      await emit({ type: "message", role: "assistant", text: intro });
-      const q: Question = {
-        id: newId("q"),
-        text: "Which task would you like to perform right now?",
-        why: "Pick an action to start immediately",
-        expects: "choice",
-        resolves: "chosen_task",
-        choices: [
-          { value: "task:prepare_salaried_return", label: "📄 Prepare & File Return" },
-          { value: "task:compare_regimes", label: "⚖️ Compare Tax Regimes" },
-          { value: "task:reconcile_facts", label: "🔍 Reconcile AIS & 26AS" },
-          { value: "task:challan_280", label: "💳 Pay Tax / Challan 280" },
-          { value: "task:notice_defense", label: "🛡️ Defend Tax Notice" },
-          { value: "task:refund_tracker", label: "⚡ Track Refund Status" },
-          { value: "task:tax_vault", label: "🏛️ Open Citizen Tax Vault" },
-        ],
-      };
-      run.state.pendingQuestion = q;
-      await emit({ type: "question", question: q });
-      run.status = "waiting_for_input";
-      await emit({ type: "status", status: "waiting_for_input" });
+    if (isCapabilityInquiry(userMsg) || /^(hi+|hello+|hey+|namaste|greetings)\b/i.test(userMsg.trim())) {
+      await emitGreetingCapabilities(deps, owner, run, s, emit);
       return;
     }
     const answer = answerTaxQuestion(userMsg, deps.today());
@@ -1366,13 +1415,13 @@ function parseAnswer(q: Question, text: string, s: ReturnType<typeof strings>): 
   if (q.expects === "form" || q.expects === "source") return null; // these are answered on the card, not by typing
   if (q.expects === "choice" && q.choices) {
     if (q.resolves === "chosen_task") {
-      if (/\b(compare|regime|old vs new|new vs old|115bac|which (is )?(better|cheaper)|kaunsa regime)\b/i.test(t)) return "task:compare_regimes";
-      if (/\b(reconcile|ais|26as|mismatch|dispute|match)\b/i.test(t)) return "task:reconcile_facts";
-      if (/\b(file|prepare|itr|return|form 16|bhar do)\b/i.test(t)) return "task:prepare_salaried_return";
-      if (/\b(challan|280|advance tax|pay tax|payment|tax pay)\b/i.test(t)) return "task:challan_280";
-      if (/\b(notice|defend|scrutiny|143|139)\b/i.test(t)) return "task:notice_defense";
-      if (/\b(refund|track|tracker|status)\b/i.test(t)) return "task:refund_tracker";
-      if (/\b(vault|document|docs|stored)\b/i.test(t)) return "task:tax_vault";
+      if (/^1\b|^\b(1\.|first|prepare|file|filing|itr|return|form 16|salaried|bhar do)\b/i.test(t)) return "task:prepare_salaried_return";
+      if (/^2\b|^\b(2\.|second|compare|regime|old vs new|new vs old|115bac|which (is )?(better|cheaper)|kaunsa regime)\b/i.test(t)) return "task:compare_regimes";
+      if (/^3\b|^\b(3\.|third|reconcile|ais|26as|mismatch|dispute|match|reconciliation)\b/i.test(t)) return "task:reconcile_facts";
+      if (/^4\b|^\b(4\.|fourth|challan|280|advance tax|pay tax|payment|tax pay)\b/i.test(t)) return "task:challan_280";
+      if (/^5\b|^\b(5\.|fifth|notice|defend|scrutiny|143|139|audit)\b/i.test(t)) return "task:notice_defense";
+      if (/^6\b|^\b(6\.|sixth|refund|track|tracker|status|where is my refund)\b/i.test(t)) return "task:refund_tracker";
+      if (/^7\b|^\b(7\.|seventh|vault|document|docs|stored|tax vault)\b/i.test(t)) return "task:tax_vault";
     }
     const cleanStr = (str: string) => str.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "").trim().toLowerCase();
     const hit = q.choices.find((c) => {

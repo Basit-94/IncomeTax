@@ -223,8 +223,8 @@ export function runBudget(env: Record<string, string | undefined> = process.env)
     return Number.isFinite(v) && v > 0 ? Math.floor(v) : d;
   };
   return {
-    maxToolCallsPerRun: num("AGENT_MAX_TOOL_CALLS_PER_RUN", 40),
-    maxModelCallsPerRun: num("AGENT_MAX_MODEL_CALLS_PER_RUN", 12),
-    maxTokensPerDay: num("AGENT_DAILY_TOKEN_BUDGET", 200_000),
+    maxToolCallsPerRun: num("AGENT_MAX_TOOL_CALLS_PER_RUN", 500),
+    maxModelCallsPerRun: num("AGENT_MAX_MODEL_CALLS_PER_RUN", 200),
+    maxTokensPerDay: num("AGENT_DAILY_TOKEN_BUDGET", 5_000_000),
   };
 }

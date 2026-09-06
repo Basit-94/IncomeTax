@@ -116,8 +116,9 @@ export function setStep(steps: PlanStep[], id: StepId, state: StepState, note?: 
 export function isCapabilityInquiry(text: string): boolean {
   const t = text.toLowerCase().trim();
   return (
-    /\b(what (other |else )?(tasks?|things?|actions?|features?|can you do|could you do|do you do)|what can you do|what else|kya kya kar sakte ho|kya kar sakte ho|help me with|list (of )?tasks|other tasks|capabilities|all features|portal hub)\b/i.test(t) ||
-    /^(tasks?|help|features|capabilities|options|\?)$/i.test(t)
+    /\b(what (all |other |else )?(tasks?|things?|actions?|features?|can you do|could you do|do you do)|what (can|could) you do|what all|what else|kya kya kar sakte ho|kya kar sakte ho|help me with|list (of )?tasks|other tasks|capabilities|all features|portal hub|services|options|menu|features|commands|kya kar sakta hai|tum kya kar sakte ho|aap kya kar sakte ho)\b/i.test(t) ||
+    /^(tasks?|help|features|capabilities|options|menu|\?|hi|hello|hey|namaste)$/i.test(t) ||
+    /^(hi+|hello+|hey+|namaste)[,\s]+.*(what (all |other |else )?can you do|what can you do|what could you do|what all you could do|help|what do you do|tasks?)\b/i.test(t)
   );
 }
 

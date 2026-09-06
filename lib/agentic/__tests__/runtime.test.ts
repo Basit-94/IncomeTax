@@ -273,4 +273,50 @@ describe("runtime — the first end-to-end milestone (plan §7)", () => {
     const evs = await events(d, sunita, r);
     expect(evs.some((e) => e.type === "message" && /already filed/i.test(e.text))).toBe(true);
   });
+
+  it("handles 'Hi, what all you could do?' and transitions into intake upon selecting Prepare Return", async () => {
+    const d = deps();
+    const run = await createRun(d, sunita, { message: "Hi, what all you could do?", lang: "en" });
+    const r1 = (await advance(d, sunita, run.id))!;
+    expect(r1.status).toBe("waiting_for_input");
+    expect(r1.state.pendingQuestion?.resolves).toBe("chosen_task");
+    expect(r1.state.pendingQuestion?.choices?.some((c) => c.value === "task:prepare_salaried_return")).toBe(true);
+
+    // User chooses 📄 Prepare & File Return via answer
+    const r2 = (await advance(d, sunita, run.id, {
+      answer: { questionId: r1.state.pendingQuestion!.id, value: "task:prepare_salaried_return" },
+    }))!;
+    expect(r2.task).toBe("prepare_salaried_return");
+    expect(r2.status).toBe("waiting_for_input");
+    // Should now ask for intake (Form 16 consent or facts) without repeating the capabilities question!
+    expect(r2.state.pendingQuestion?.resolves).not.toBe("chosen_task");
+    const evs = await events(d, sunita, r2);
+    expect(evs.filter((e) => e.type === "message" && /Which task would you like to perform/i.test(e.text)).length).toBe(1);
+  });
+
+  it("handles numeric selection '1' or choice label '📄 Prepare & File Return' via message", async () => {
+    const d = deps();
+    const run = await createRun(d, sunita, { message: "what tasks you could perform?", lang: "en" });
+    const r1 = (await advance(d, sunita, run.id))!;
+    expect(r1.status).toBe("waiting_for_input");
+
+    // User types '📄 Prepare & File Return' in chat box
+    const r2 = (await advance(d, sunita, run.id, { message: "📄 Prepare & File Return" }))!;
+    expect(r2.task).toBe("prepare_salaried_return");
+    expect(r2.status).toBe("waiting_for_input");
+    expect(r2.state.pendingQuestion?.resolves).not.toBe("chosen_task");
+  });
+
+  it("handles '2' or 'task:compare_regimes' and computes comparison without looping", async () => {
+    const d = deps();
+    const run = await createRun(d, sunita, { message: "what can you do for me?", lang: "en" });
+    const r1 = (await advance(d, sunita, run.id))!;
+    expect(r1.status).toBe("waiting_for_input");
+
+    // User selects compare regimes
+    const r2 = (await advance(d, sunita, run.id, { message: "2" }))!;
+    expect(r2.status).toBe("completed");
+    const evs = await events(d, sunita, r2);
+    expect(evs.some((e) => e.type === "message" && /Tax Regime Comparison/i.test(e.text))).toBe(true);
+  });
 });

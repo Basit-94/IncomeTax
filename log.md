@@ -4764,5 +4764,41 @@ things there are already true and will NOT be rewritten:
   - `npx vitest run`: **350/350 tests passed** across all 37 test files.
 - **Git Action:** Staged all files, committed to branch `dev-2`, and pushed to `origin dev-2`.
 
-
->>>>>>> 62975fc (fix(agentic): resolve review card loop, enable all portal hub tasks, format financial tables, and sync vault ITR-V)
+## [2026-09-06 15:40] orchestrator
+- **Action:** MODIFY | VERIFY | COMMIT | PUSH
+- **Target:** lib/agentic/types.ts; lib/agentic/planner.ts; lib/agentic/runtime.ts; lib/agentic/__tests__/runtime.test.ts; log.md
+- **Intent:** Address user feedback from `pro.md` and Vercel deployment:
+  1. Fix agent behavior where broad or compound inquiries like "Hi, what all you could do?" or "what tasks you could perform?" either outputted statutory tax citations (ITR-1 FAQ) or looped repeatedly asking for tasks without executing them.
+  2. Substantially increase tool call, model call, and daily token budgets so the agent never prematurely exhausts budget during multi-turn chats.
+  3. Ensure immediate task execution (reading Form 16 / launching intake or rendering comparison tables) when the user selects or types any of the 7 tasks.
+  4. Ensure clean production build and push to `origin dev-2`.
+- **Why:**
+  - In `pro.md`, asking "Hi, what all you could do?" failed `isCapabilityInquiry` due to the word "all", falling back to `answerTaxQuestion` which returned the ITR-1 ₹50L ceiling citation.
+  - When the user subsequently asked "what tasks you could perform?" and selected `📄 Prepare & File Return`, `handleChosenTask` was unreachable because `run.task` was `"explain"`, whose plan lacks a `resolve` step. As a result, the loop ran `stepCompute` on the previous message and re-prompted the capability question indefinitely.
+  - Strict run budgets (40 tool calls, 12 model calls) caused premature session exhaustion.
+- **Changes Made:**
+  1. **Substantial Budget Increases (`lib/agentic/types.ts` & `lib/agentic/runtime.ts`):**
+     - Increased default `maxToolCallsPerRun` from 40 to **500** (>12x).
+     - Increased `maxModelCallsPerRun` from 12 to **200** (>16x).
+     - Increased `maxTokensPerDay` from 200,000 to **5,000,000** (25x).
+     - Increased `MAX_STEPS_PER_CALL` in `runtime.ts` from 8 to **25** for uninterrupted multi-step intake.
+  2. **Comprehensive Capability Matching (`lib/agentic/planner.ts`):**
+     - Expanded `isCapabilityInquiry(text)` regex to catch "what all you could do", "what (can|could) you do", "what all", "what else", "kya kya kar sakte ho", "help me with", "list tasks", "other tasks", and compound greetings like "Hi, what all you could do?".
+  3. **Immediate Task Execution & Loop Prevention (`lib/agentic/runtime.ts`):**
+     - In `advance()`, immediately intercepted `chosen_task` in `input.answer` and called `handleChosenTask(deps, owner, run, snapshot, s, emit)`.
+     - In `handleChosenTask` for `prepare_salaried_return`: switched `run.task` to `"prepare_salaried_return"`, marked `classify` and `plan` as `"done"`, executed `stepGather()`, marked `gather` as `"done"`, and called `stepResolve()` to prompt Form 16 consent or salary intake without looping.
+     - In `compare_regimes`: added complete informational fallback when snapshot figures are not yet populated.
+     - In `stepClassify`: marked `classify` as `"done"` when emitting greeting capabilities so the plan does not re-classify previous user messages.
+     - Added diversion handling in `advance()` when a user asks for capabilities while another question is pending.
+     - Enhanced `parseAnswer` to clean emojis and match numeric choices (`1` through `7`), ordinal numbers, and task name synonyms.
+  4. **Dedicated Test Suite Coverage (`lib/agentic/__tests__/runtime.test.ts`):**
+     - Added automated integration tests verifying:
+       - "Hi, what all you could do?" presents the 7 tasks and choice buttons.
+       - Selecting `task:prepare_salaried_return` transitions into intake without repeating capabilities.
+       - Typing "1" or "📄 Prepare & File Return" transitions into intake.
+       - Selecting "2" computes side-by-side tax regime comparison.
+- **Verification Results:**
+  - `npx tsc --noEmit`: **0 errors** (clean build).
+  - `npx vitest run`: **354/354 tests passed** across all 37 test files (100% green).
+  - `npm run build`: **Compiled successfully in 3.9s** with Next.js 16.3.2 Turbopack. All 16 routes optimized and generated.
+- **Git Policy:** Changes staged, committed, and pushed to `origin dev-2` per user instruction.
