@@ -5151,5 +5151,43 @@ things there are already true and will NOT be rewritten:
 - **Action:** GIT COMMIT & PUSH
 - **Target:** origin/dev-2
 - **Intent:** Push all verified features and bug fixes (Challan 280 Nil-due handling, CA review synchronization, language menu relocation, signin mode selection redesign, chat pagination, smart answers) to `dev-2` per user instruction.
-- **Result:** Executing `git add .`, `git commit`, and `git push origin dev-2`.
+- **Result:** Pushed to `origin/dev-2` (commit `204f14d`).
+
+## [2026-09-06 22:15] orchestrator
+- **Action:** MODIFY & GIT PUSH
+- **Target:** lib/agentic/model.ts; lib/agentic/runtime.ts; lib/agentic/__tests__/model.test.ts; log.md
+- **Intent:** Eliminate repetitive "I can't give you a recommendation..." and "no evidence found" fallbacks in the Agentic workspace by integrating Gemini AI Tax Expert advisory API with dynamic section citation and smart task capability routing.
+- **Why:** 
+  1. User reported: "Hey in agentic , there's an issue it if doesnt understand it say i cant give you a recommendation... see the thing is it will reflect a negative impact on users which i dont want i wat you to integrate api of gemini which is provided when the agentic gives false response or none then it should give a genuine answer and not same everytime and make it smart..."
+  2. Previously, whenever a citizen asked a question not strictly present in local static RAG rules, or described an ineligible return head, the system emitted a cold, repetitive boilerplate rejection.
+- **Key Implementation Details:**
+  1. `lib/agentic/model.ts`:
+     - Added `TaxExpertInput` and `TaxExpertResult` interfaces.
+     - Added `askTaxExpert(input)` to `ModelAdapter` and `geminiModel`.
+     - Built comprehensive AY 2026-27 (FY 2025-26) Indian Income Tax system instructions covering New Regime (s. 115BAC), Old Regime (80C, 80D, 80CCD, 24b, HRA), Capital Gains (112A, 111A, ITR-2), Presumptive Business (44ADA, 44AD), Crypto (115BBH), and Challan 280.
+     - Configured temperature 0.7 for authentic linguistic variety across all 23 languages.
+     - Automatically extracts cited IT sections into structured provisions and parses markdown headers into smart titles.
+     - Reuses multi-key failover (`GEMINI_API_KEY`, `GEMINI_FALLBACK_API_KEY_1/2/3`) on HTTP 429 rate limits.
+  2. `lib/agentic/runtime.ts`:
+     - In `stepResolve`: When static local RAG returns `no_evidence` or has no grounded match, invokes `deps.model.askTaxExpert`. Populates verified statutory sources, records model tokens, saves the smart run title, and displays the comprehensive AI advisory response.
+     - In `stepCompute`: When `advice.canRecommend === false` (outside simple ITR-1), invokes `deps.model.askTaxExpert` to constructively explain how the complex heads are taxed, why ITR-2/3 or CA audit is required, and offers interactive buttons (Compare Regimes, Reconcile AIS/26AS, Pay Challan).
+  3. `lib/agentic/__tests__/model.test.ts`:
+     - Added unit test verifying `askTaxExpert` generates advice, parses smart titles, and extracts sections (112A, 111A).
+- **Verification Results:**
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm test`: **366/366 tests passed** across all 39 test files.
+  - `npm run build`: Production Next.js Turbopack build succeeded with 0 errors across all 18 routes.
+  - **Live Browser Automation via Playwright MCP:**
+    1. Navigated to `/app` in browser.
+    2. Tested: *"Can I claim 80D deduction for my senior citizen parents if they do not have health insurance?"*
+       - Copilot responded with detailed senior medical expenditure rules u/s 80D up to ₹50,000, 80C aggregate limits, and 80TTB interest limits.
+       - Sidebar dynamically renamed to `Tax Query · Section 8...`.
+       - Sources panel populated with 4 verified statutory citations.
+    3. Tested: *"How is my income from freelancing web development and crypto trading taxed in India for AY 2026-27?"*
+       - Copilot responded with detailed breakdown of ITR-1 exclusions, capital gains u/s 112A, Section 115BBH crypto rules, and presumptive taxation.
+       - Sidebar dynamically renamed to `Tax Query · Indian Inc...`.
+       - Sources panel populated with 6 verified statutory citations.
+       - Zero "I can't make a recommendation" or "no evidence found" errors.
+- **Result:** Pushed to `origin/dev-2`.
+
 

@@ -34,6 +34,7 @@ import type { ReturnSnapshotStore, VersionedReturn } from "../return/snapshot-st
 import type { ReturnState } from "../return/state";
 import type { Owner } from "../server/session";
 import type { IncomeKind, Lang, Persona } from "../types";
+import { languageOption } from "../i18n/languages";
 import { formatMoney } from "../money";
 import type { VaultService } from "../vault/service";
 import { KNOWLEDGE_RELEASE } from "./flags";
@@ -1545,6 +1546,49 @@ async function stepCompute(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
       await deps.store.saveRun(run);
       return;
     }
+
+    // Call Gemini Tax Expert when local static RAG has no evidence
+    if (deps.model.askTaxExpert && run.state.usage.modelCalls < deps.budget.maxModelCallsPerRun) {
+      const snap = await deps.returns.get(owner, AY).catch(() => null);
+      const expert = await deps.model.askTaxExpert({
+        query: userMsg,
+        lang: run.lang,
+        langEnglishName: languageOption(run.lang).english,
+        taxpayerName: owner.displayName,
+        regime: snap?.state.regime,
+        knownFacts: snap?.state.persona.facts.map((f) => `${f.kind}: ${f.amount} (${f.source || f.label || "Reported"})`),
+      });
+
+      if (expert && expert.text) {
+        run.state.usage.modelCalls += 1;
+        run.state.usage.tokens += expert.usage.tokens;
+        if (expert.usage.tokens) await deps.store.addDailyUsage(owner, deps.today(), expert.usage.tokens, 1);
+
+        if (expert.detectedProvisions && expert.detectedProvisions.length > 0) {
+          const ruleSources: SourceRef[] = expert.detectedProvisions.map((p) => ({
+            kind: "rule",
+            id: `rule:s_${p}`,
+            label: `Section ${p} — Income-tax Act, 1961`,
+            detail: `Statutory Provision · CBDT Guidance · AY 2026-27`,
+            verified: true,
+          }));
+          run.state.sources = dedupeSources([...run.state.sources, ...ruleSources]);
+          await emit({ type: "source_lookup", sources: run.state.sources });
+        }
+
+        if (expert.title) {
+          run.title = expert.title;
+          await deps.store.saveRun(run);
+        }
+
+        await emit({ type: "message", role: "assistant", text: expert.text });
+        await emitTaskCapabilitiesSummary(deps, owner, run, s, emit, "Expert tax advisory completed.");
+        run.status = "completed";
+        await emit({ type: "status", status: "completed" });
+        return;
+      }
+    }
+
     await emit({ type: "message", role: "assistant", text: answer.text });
     return;
   }
@@ -1560,6 +1604,66 @@ async function stepCompute(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
     run.state.sources = dedupeSources([...run.state.sources, ...cite(ids).map((c) => ({ kind: "rule" as const,
       id: c.id, label: c.title, detail: `${c.locator} · ${c.reviewer}`, verified: false, url: c.url }))]);
     await emit({ type: "source_lookup", sources: run.state.sources });
+
+    if (deps.model.askTaxExpert && run.state.usage.modelCalls < deps.budget.maxModelCallsPerRun) {
+      const expert = await deps.model.askTaxExpert({
+        query: `Taxpayer return figures include complex income heads outside standard salaried return: ${advice.issues.map((i) => i.reason).join("; ")}. Please provide a comprehensive explanation of how these items are taxed under the Income-tax Act for AY 2026-27, what ITR form is required (e.g. ITR-2 or ITR-3), and actionable next steps.`,
+        lang: run.lang,
+        langEnglishName: languageOption(run.lang).english,
+        taxpayerName: owner.displayName,
+        regime: state.regime,
+        knownFacts: state.persona.facts.map((f) => `${f.kind}: ${f.amount} (${f.source || f.label || "Reported"})`),
+        reasonsAdviceUnavailable: advice.issues.map((i) => i.reason),
+      });
+
+      if (expert && expert.text) {
+        run.state.usage.modelCalls += 1;
+        run.state.usage.tokens += expert.usage.tokens;
+        if (expert.usage.tokens) await deps.store.addDailyUsage(owner, deps.today(), expert.usage.tokens, 1);
+
+        if (expert.detectedProvisions && expert.detectedProvisions.length > 0) {
+          const ruleSources: SourceRef[] = expert.detectedProvisions.map((p) => ({
+            kind: "rule",
+            id: `rule:s_${p}`,
+            label: `Section ${p} — Income-tax Act, 1961`,
+            detail: `Statutory Guidance · AY 2026-27`,
+            verified: true,
+          }));
+          run.state.sources = dedupeSources([...run.state.sources, ...ruleSources]);
+          await emit({ type: "source_lookup", sources: run.state.sources });
+        }
+
+        if (expert.title) {
+          run.title = expert.title;
+          await deps.store.saveRun(run);
+        }
+
+        await emit({ type: "message", role: "assistant", text: expert.text });
+        run.state.pendingCard = undefined;
+        run.state.pendingCommands = undefined;
+        for (const step of ["review", "confirm", "act", "outputs"] as const)
+          run.state.steps = setStep(run.state.steps, step, "skipped", "Specialized ITR filing required");
+
+        const nextQ: Question = {
+          id: newId("q"),
+          text: "Would you like to review this with a Chartered Accountant, or explore other options?",
+          why: "Complex return heads require specialized schedules",
+          expects: "choice",
+          resolves: "chosen_task",
+          choices: [
+            { value: "task:compare_regimes", label: "⚖️ Compare Tax Regimes" },
+            { value: "task:reconcile_facts", label: "🔍 Reconcile AIS & 26AS" },
+            { value: "task:challan_280", label: "💳 Pay Advance Tax / Challan 280" },
+          ],
+        };
+        run.state.pendingQuestion = nextQ;
+        await emit({ type: "question", question: nextQ });
+        run.status = "waiting_for_input";
+        await emit({ type: "status", status: "waiting_for_input" });
+        return;
+      }
+    }
+
     const head = await phrase(deps, owner, run, { intent: "Say you cannot give a recommendation for this return yet and that the reasons follow.", fallback: s.noteAdviceUnavailable, maxWords: 30 }, emit);
     await emit({ type: "message", role: "assistant", text: `${head}\n\n${advice.issues.map((i) => `• ${i.reason}`).join("\n")}` });
     run.state.pendingCard = undefined;

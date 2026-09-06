@@ -43,4 +43,21 @@ describe("the model adapter — a key out of quota is skipped, and every failure
     expect(geminiModel({ GEMINI_API_KEY: "REPLACE_ME", AGENT_MODEL: "x" }).name).toBe("none");
     expect(geminiModel({ GEMINI_API_KEY: "k" }).name).toBe("none");
   });
+
+  it("askTaxExpert delivers dynamic tax guidance, extracts cited sections, and parses titles", async () => {
+    const fetchImpl = (async () =>
+      reply("### Capital Gains under Section 112A\n\nLong-term capital gains on listed shares are taxed u/s 112A at 12.5% beyond the ₹1,25,000 threshold. Under Section 111A, short-term capital gains are taxed at 20%.")) as typeof fetch;
+    const m = geminiModel(env, fetchImpl);
+    const out = await m.askTaxExpert?.({
+      query: "how are my shares taxed?",
+      lang: "en",
+      langEnglishName: "English",
+      taxpayerName: "Arjun",
+    });
+    expect(out).toBeDefined();
+    expect(out?.title).toBe("Capital Gains under Section 112A");
+    expect(out?.text).toContain("Section 112A");
+    expect(out?.detectedProvisions).toContain("112A");
+    expect(out?.detectedProvisions).toContain("111A");
+  });
 });
