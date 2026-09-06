@@ -162,7 +162,13 @@ export async function advance(deps: RuntimeDeps, owner: Owner, runId: string, in
           if (run.state.pendingQuestion.resolves === "other_income" && /\b(freelance|business|consulting|gig|profession)\b/i.test(clean)) {
             run.state.answers.other_income_type = "freelance";
           }
-        } else if (isCapabilityInquiry(clean)) {
+        } else if (run.state.pendingQuestion.resolves === "chosen_task") {
+          run.state.pendingQuestion = undefined;
+          delete run.state.answers.chosen_task;
+          run.task = "explain";
+          run.state.steps = buildPlan(planningFacts("explain", null, deps.vault ? true : null), s);
+          run.status = "running";
+        } else if (isCapabilityInquiry(clean) || isTaxInformationQuestion(clean)) {
           run.state.pendingQuestion = undefined;
           delete run.state.answers.chosen_task;
           run.task = "explain";
@@ -371,6 +377,48 @@ async function emitGreetingCapabilities(
   await emit({ type: "question", question: q });
   run.status = "waiting_for_input";
   await emit({ type: "status", status: "waiting_for_input" });
+}
+
+async function emitTaskCapabilitiesSummary(
+  deps: RuntimeDeps,
+  owner: Owner,
+  run: Run,
+  s: ReturnType<typeof strings>,
+  emit: (p: RunEventPayload) => Promise<unknown>,
+  headerNote?: string,
+) {
+  const isHi = run.lang === "hi";
+  const text = isHi
+    ? [
+        headerNote || "कार्य पूरा हो गया है।",
+        "",
+        "**आगे के लिए उपलब्ध 7 कार्य (AY 2026-27):**",
+        "1. 📄 **रिटर्न तैयार करें और फाइल करें**: फॉर्म 16 पढ़ना, 80C/80D कटौतियां, व्यवस्था चयन, फाइलिंग और ITR-V PDF",
+        "2. ⚖️ **टैक्स व्यवस्थाओं की तुलना**: धारा 115BAC (नई) बनाम पुरानी व्यवस्था का विस्तृत विश्लेषण",
+        "3. 🔍 **AIS और 26AS मिलान**: सरकारी रिकॉर्ड व फॉर्म 16 के बीच TDS और वेतन का मिलान",
+        "4. 💳 **अग्रिम कर और चालान 280**: बकाया कर देनदारी का भुगतान और ITNS 280 रसीद",
+        "5. 🛡️ **नोटिस रक्षा**: धारा 143(1) सूचना, 139(9) दोषपूर्ण रिटर्न और ऑडिट जोखिम",
+        "6. ⚡ **रिफंड स्थिति ट्रैक करें**: CPC प्रसंस्करण से लेकर बैंक क्रेडिट तक का सीधा ट्रैक",
+        "7. 🏛️ **सिटिजन टैक्स वॉल्ट**: फॉर्म 16, AIS, 26AS और दाखिल ITR-V दस्तावेज़",
+        "",
+        "अगला कार्य शुरू करने के लिए 1 से 7 संख्या टाइप करें, कार्य का नाम लिखें, या कोई भी कर प्रश्न पूछें!",
+      ].join("\n")
+    : [
+        headerNote || "Task completed successfully.",
+        "",
+        "**Available Tasks for your Return (AY 2026-27):**",
+        "1. 📄 **Prepare & File Return**: Read Form 16, deductions (80C, 80D), regime selection, simulated filing & official ITR-V PDF.",
+        "2. ⚖️ **Compare Tax Regimes**: Side-by-side computation under Section 115BAC (New) vs Old Regime with custom deductions.",
+        "3. 🔍 **Reconcile AIS & 26AS**: Match employer salary and TDS deductions against CBDT records with zero notice risk.",
+        "4. 💳 **Advance Tax & Challan 280**: Compute balance liability/interest u/s 234B/C and generate Challan ITNS 280.",
+        "5. 🛡️ **Notice Defense**: Review intimation u/s 143(1), defective return u/s 139(9), and assess audit risk.",
+        "6. ⚡ **Track Refund Status**: Follow timeline progression from verification to SBI refund credit.",
+        "7. 🏛️ **Citizen Tax Vault**: Secure encrypted repository for Form 16, AIS, 26AS, and filed returns.",
+        "",
+        "Type any number (1–7), name a task, or ask any tax question to continue!",
+      ].join("\n");
+
+  await emit({ type: "message", role: "assistant", text });
 }
 
 async function stepClassify(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>) {
@@ -800,6 +848,7 @@ async function handleChosenTask(
         `There is nothing more to file. You can download or view your signed **Form ITR-V (Acknowledgement)** directly from your **Citizen Tax Vault**.`,
       ].join("\n");
       await emit({ type: "message", role: "assistant", text: msg });
+      await emitTaskCapabilitiesSummary(deps, owner, run, s, emit, "Your return for AY 2026-27 is already submitted.");
       run.status = "completed";
       await emit({ type: "status", status: "completed" });
       return;
@@ -851,6 +900,7 @@ async function handleChosenTask(
         lines.push("", `*Note: Your return was filed under the **${snapshot.state.regime === "old" ? "Old Regime" : "New Regime (s. 115BAC)"}**.*`);
       }
       await emit({ type: "message", role: "assistant", text: lines.join("\n") });
+      await emitTaskCapabilitiesSummary(deps, owner, run, s, emit, "Tax regime comparison completed.");
       run.status = "completed";
       await emit({ type: "status", status: "completed" });
       return;
@@ -864,6 +914,7 @@ async function handleChosenTask(
         `To get an exact side-by-side calculation with your numbers, select **Prepare & File Return** so I can read your Form 16 or intake details.`,
       ];
       await emit({ type: "message", role: "assistant", text: lines.join("\n") });
+      await emitTaskCapabilitiesSummary(deps, owner, run, s, emit, "Tax regime comparison completed.");
       run.status = "completed";
       await emit({ type: "status", status: "completed" });
       return;
@@ -891,6 +942,7 @@ async function handleChosenTask(
       `**Reconciliation Result**: All withholding tax credits and employer-reported income align perfectly with official department records. Zero notice risk detected.`,
     ];
     await emit({ type: "message", role: "assistant", text: lines.join("\n") });
+    await emitTaskCapabilitiesSummary(deps, owner, run, s, emit, "Reconciliation audit completed.");
     run.status = "completed";
     await emit({ type: "status", status: "completed" });
     return;
@@ -963,6 +1015,7 @@ async function handleChosenTask(
           `No scrutiny notices, tax demand intimations, or filing defect communications have been issued for your PAN for AY 2026-27. Your return status is in good standing.`,
         ];
     await emit({ type: "message", role: "assistant", text: lines.join("\n") });
+    await emitTaskCapabilitiesSummary(deps, owner, run, s, emit, "Notice defense & compliance review completed.");
     run.status = "completed";
     await emit({ type: "status", status: "completed" });
     return;
@@ -992,6 +1045,7 @@ async function handleChosenTask(
           `Your return for AY 2026-27 has not been submitted yet. Once simulated or official filing is complete, live refund tracking through the SBI refund banker will activate automatically.`,
         ];
     await emit({ type: "message", role: "assistant", text: lines.join("\n") });
+    await emitTaskCapabilitiesSummary(deps, owner, run, s, emit, "Live refund tracking status checked.");
     run.status = "completed";
     await emit({ type: "status", status: "completed" });
     return;
@@ -1012,6 +1066,7 @@ async function handleChosenTask(
       `You can open, preview, or print any of these documents directly by clicking **Tax Vault** in the top navigation.`,
     ].join("\n");
     await emit({ type: "message", role: "assistant", text: msg });
+    await emitTaskCapabilitiesSummary(deps, owner, run, s, emit, "Citizen Tax Vault inventory inspected.");
     run.status = "completed";
     await emit({ type: "status", status: "completed" });
     return;
@@ -1090,7 +1145,7 @@ async function handleChallanPaymentExecution(
       command: { type: "record_payment", payment },
       expectedRevision: currentSnap.revision,
       idempotencyKey: `challan-${run.id}-${seed}`,
-      actor: "agent",
+      actor: "agent" as const,
     });
     if (res.ok) {
       run.state.returnRevision = res.snapshot.revision;
@@ -1125,6 +1180,7 @@ async function handleChallanPaymentExecution(
     return;
   }
 
+  await emitTaskCapabilitiesSummary(deps, owner, run, s, emit, "Challan 280 payment confirmed and credited to return.");
   const nextQ: Question = {
     id: newId("q"),
     text: "What would you like to do next?",
@@ -1135,6 +1191,9 @@ async function handleChallanPaymentExecution(
       { value: "task:prepare_salaried_return", label: "📄 Continue to File Return" },
       { value: "task:compare_regimes", label: "⚖️ Compare Tax Regimes" },
       { value: "task:reconcile_facts", label: "🔍 Reconcile AIS & 26AS" },
+      { value: "task:challan_280", label: "💳 Pay Tax / Challan 280" },
+      { value: "task:notice_defense", label: "🛡️ Defend Tax Notice" },
+      { value: "task:refund_tracker", label: "⚡ Track Refund Status" },
       { value: "task:tax_vault", label: "🏛️ View in Citizen Tax Vault" },
     ],
   };
@@ -1277,14 +1336,16 @@ async function stepCompute(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
     }
     if (run.state.situation?.business) await speak(deps, owner, run, emit, { intent: "Say this release prepares salaried returns only and will not compute a business return, but rule questions are answered.", fallback: s.intakeBusinessUnsupported, maxWords: 50 });
     const userMsg = run.state.lastUserMessage ?? "";
+    const uTrim = userMsg.trim();
     const directTask =
       !isTaxInformationQuestion(userMsg) &&
-      (/\b(tax[- ]?vault|citizen vault|open vault|documents? in vault|my documents|vault)\b/i.test(userMsg) ? "tax_vault" :
-      /\b(challan|challan 280|advance tax|pay tax|pay balance|self[- ]assessment tax)\b/i.test(userMsg) ? "challan_280" :
-      /\b(defend( notice)?|tax notice|notice defense|143\(1\)|139\(9\)|audit risk)\b/i.test(userMsg) ? "notice_defense" :
-      /\b(refund status|track refund|refund tracker|where is my refund)\b/i.test(userMsg) ? "refund_tracker" :
-      /\b(reconcile|ais & 26as|reconcile ais|26as reconciliation)\b/i.test(userMsg) ? "reconcile_facts" :
-      /\b(compare( tax)? regimes|regime comparison|compare regimes)\b/i.test(userMsg) ? "compare_regimes" : null);
+      (/^1\b|^\b(1\.|first|prepare return|file return|file my return|file itr|prepare & file|salaried return|bhar do)\b/i.test(uTrim) || uTrim === "file" || uTrim === "prepare" ? "prepare_salaried_return" :
+      /^2\b|^\b(2\.|second|compare( tax)? regimes|regime comparison|compare regimes|old vs new|new vs old|115bac|which is better|which regime|kaunsa regime)\b/i.test(uTrim) || uTrim === "compare" || uTrim === "regime" ? "compare_regimes" :
+      /^3\b|^\b(3\.|third|reconcile|ais & 26as|reconcile ais|26as reconciliation|mismatch|dispute|reconciliation)\b/i.test(uTrim) || uTrim === "reconcile" ? "reconcile_facts" :
+      /^4\b|^\b(4\.|fourth|challan|challan 280|advance tax|pay tax|pay balance|self[- ]assessment tax|tax pay|payment)\b/i.test(uTrim) || uTrim === "challan" || uTrim === "pay" ? "challan_280" :
+      /^5\b|^\b(5\.|fifth|defend( notice)?|tax notice|notice defense|143\(1\)|139\(9\)|audit risk|audit)\b/i.test(uTrim) || uTrim === "notice" ? "notice_defense" :
+      /^6\b|^\b(6\.|sixth|refund status|track refund|refund tracker|where is my refund)\b/i.test(uTrim) || uTrim === "refund" || uTrim === "track" ? "refund_tracker" :
+      /^7\b|^\b(7\.|seventh|tax[- ]?vault|citizen vault|open vault|documents? in vault|my documents|vault)\b/i.test(uTrim) || uTrim === "vault" ? "tax_vault" : null);
 
     if (directTask) {
       const snapshot = await deps.returns.get(owner, AY);
@@ -1633,9 +1694,11 @@ async function stepOutputs(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
     }
     const { body: _pb, runId: _pr, ...itrvRef } = itrvOutput;
     await emit({ type: "output", output: itrvRef });
+    await emitTaskCapabilitiesSummary(deps, owner, run, s, emit, "Your return for AY 2026-27 has been successfully prepared and filed.");
   } else {
     const { body: _b, runId: _r, ...ref } = output;
     await emit({ type: "output", output: ref });
+    await emitTaskCapabilitiesSummary(deps, owner, run, s, emit, "Calculation and documentation generated successfully.");
   }
 }
 

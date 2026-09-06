@@ -983,6 +983,17 @@ export default function WapsiPrototype() {
       uploadedAt: new Date().toISOString().slice(0, 10),
       sizeKb: 140,
       status: "verified",
+      provenance: "uploaded",
+      hasOriginalBytes: Boolean(doc.file),
+      fields: {
+        pan: citizenPan,
+        name: citizenName,
+        employerName,
+        grossSalary: doc.extracted.grossSalary,
+        tds: doc.extracted.tds,
+      },
+    }).then((updated) => {
+      setVaultUser(updated);
     });
 
     setFlowStep("facts");

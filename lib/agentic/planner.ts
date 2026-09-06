@@ -116,7 +116,7 @@ export function setStep(steps: PlanStep[], id: StepId, state: StepState, note?: 
 export function isCapabilityInquiry(text: string): boolean {
   const t = text.toLowerCase().trim();
   return (
-    /\b(what (all |other |else )?(tasks?|things?|actions?|features?|can you do|could you do|do you do)|what (can|could) you do|what all|what else|kya kya kar sakte ho|kya kar sakte ho|help me with|list (of )?tasks|other tasks|capabilities|all features|portal hub|services|options|menu|features|commands|kya kar sakta hai|tum kya kar sakte ho|aap kya kar sakte ho)\b/i.test(t) ||
+    /\b(what (all |other |else )?(tasks?|things?|actions?|features?|can you do|could you do|do you do)|what (can|could) you do|what all|what else|kya kya kar sakte ho|kya kar sakte ho|help me with|list (of )?(all )?tasks|other tasks|all tasks|capabilities|all features|portal hub|services|options|menu|features|commands|kya kar sakta hai|tum kya kar sakte ho|aap kya kar sakte ho|tasks you (can|could) do)\b/i.test(t) ||
     /^(tasks?|help|features|capabilities|options|menu|\?|hi|hello|hey|namaste)$/i.test(t) ||
     /^(hi+|hello+|hey+|namaste)[,\s]+.*(what (all |other |else )?can you do|what can you do|what could you do|what all you could do|help|what do you do|tasks?)\b/i.test(t)
   );
@@ -153,7 +153,7 @@ export function isTaxInformationQuestion(text: string): boolean {
   }
   return (
     /^(what|when|why|how (does|do|is|are)|explain|tell me about|kya (hai|hota|hoti|matlab)|kab|kaise (hota|hoti|milta|milti)|kyun|kyu|matlab|samjhao)\b/i.test(text.trim()) ||
-    /\b(deadline|due date|standard deduction|87a|80d|80c|112a|111a|cess|surcharge)\b/i.test(text)
+    /\b(deadline|due date|standard deduction|87a|80d|80c|112a|111a|cess|surcharge|section 139|section 143|section 140a|section 115bac|rebate|slab rates|ltcg|stcg|capital gains|provident fund|nps|hra|house property|tds rate|advance tax rule)\b/i.test(text)
   );
 }
 

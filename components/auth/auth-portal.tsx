@@ -231,6 +231,15 @@ export default function AuthPortal({
             uploadedAt: new Date().toISOString().slice(0, 10),
             sizeKb: Math.max(1, Math.round(file.size / 1024)),
             status: "verified",
+            provenance: "uploaded",
+            hasOriginalBytes: true,
+            fields: {
+              pan: cleanPan,
+              name: detectedName,
+              employerName,
+              grossSalary,
+              tds: tdsAmount,
+            },
           };
 
           const updatedUser = await addDocumentToVault(cleanPan, vaultDoc);
@@ -308,6 +317,15 @@ export default function AuthPortal({
         uploadedAt: new Date().toISOString().slice(0, 10),
         sizeKb: Math.max(1, Math.round(uploadedFile.size / 1024)),
         status: "verified",
+        provenance: "uploaded",
+        hasOriginalBytes: true,
+        fields: {
+          pan: cleanPan,
+          name: extractedData.name,
+          employerName: extractedData.employerName,
+          grossSalary: extractedData.grossSalary,
+          tds: extractedData.tds,
+        },
       };
 
       // Auto-stored in vault by default without prompting

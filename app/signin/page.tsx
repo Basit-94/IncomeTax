@@ -24,7 +24,7 @@ import { save as savePersist } from "@/lib/return/persist";
 import { mirrorReturn } from "@/lib/return-sync-client";
 import { MOCK_OTP, blankPersona, completeSignIn, panIssueMessage, persistSignIn, personaForPan, returnStateFor, sessionForVaultUser } from "@/lib/signin-flow";
 import type { Lang, Persona, PersonaId, Provenance } from "@/lib/types";
-import type { CitizenVaultUser } from "@/lib/vault/vault-store";
+import { addDocumentToVault, type CitizenVaultUser } from "@/lib/vault/vault-store";
 import AuthPortal from "@/components/auth/auth-portal";
 import { PrototypeBanner } from "@/components/agentic/header-frame";
 import { LogoMark } from "@/components/brand/logo";
@@ -255,6 +255,29 @@ function SignIn() {
           // best-effort vault upload
         }
       }
+      // Auto-populate Citizen Tax Vault with the document and its extracted figures
+      try {
+        await addDocumentToVault(pan, {
+          id: `doc_${doc.kind.toLowerCase()}_${Date.now()}`,
+          title: doc.fileName,
+          docType: doc.kind === "AIS" ? "ANNUAL_INFO_STATEMENT" : "FORM_16",
+          issuer: employer,
+          uploadedAt: new Date().toISOString().slice(0, 10),
+          sizeKb: doc.file ? Math.max(1, Math.round(doc.file.size / 1024)) : 142,
+          status: "verified",
+          provenance: "uploaded",
+          hasOriginalBytes: Boolean(doc.file),
+          fields: {
+            pan,
+            name,
+            employerName: employer,
+            grossSalary: doc.extracted.grossSalary,
+            tds: doc.extracted.tds,
+          },
+        });
+      } catch (err) {
+        console.warn("[SignIn] addDocumentToVault error:", err);
+      }
       setAuthBusy(false);
       return arrive();
     }
@@ -273,6 +296,28 @@ function SignIn() {
         } catch {
           // best-effort vault upload
         }
+      }
+      try {
+        await addDocumentToVault(pan, {
+          id: `doc_${doc.kind.toLowerCase()}_${Date.now()}`,
+          title: doc.fileName,
+          docType: doc.kind === "AIS" ? "ANNUAL_INFO_STATEMENT" : "FORM_16",
+          issuer: employer,
+          uploadedAt: new Date().toISOString().slice(0, 10),
+          sizeKb: doc.file ? Math.max(1, Math.round(doc.file.size / 1024)) : 142,
+          status: "verified",
+          provenance: "uploaded",
+          hasOriginalBytes: Boolean(doc.file),
+          fields: {
+            pan,
+            name,
+            employerName: employer,
+            grossSalary: doc.extracted.grossSalary,
+            tds: doc.extracted.tds,
+          },
+        });
+      } catch (err) {
+        console.warn("[SignIn] addDocumentToVault error:", err);
       }
       arrive();
     } else {
