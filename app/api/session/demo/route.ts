@@ -9,20 +9,22 @@ import { sessionCookie } from "@/lib/server/session";
  * can only ever reach demo-owned rows.
  */
 export async function POST(req: NextRequest) {
-  let body: { personaId?: unknown };
+  let body: { personaId?: unknown; pan?: unknown; displayName?: unknown };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ ok: false, error: "bad_request" }, { status: 400 });
   }
-  if (typeof body.personaId !== "string") {
-    return NextResponse.json({ ok: false, error: "personaId required" }, { status: 400 });
+  if (typeof body.personaId !== "string" && typeof body.pan !== "string") {
+    return NextResponse.json({ ok: false, error: "personaId or pan required" }, { status: 400 });
   }
   const { sessions, dbConfigured } = await getServices();
-  const session = await sessions.issueDemo(body.personaId);
+  const personaId = typeof body.personaId === "string" ? body.personaId : "";
+  const custom = typeof body.pan === "string" ? { pan: body.pan, displayName: typeof body.displayName === "string" ? body.displayName : undefined } : undefined;
+  const session = await sessions.issueDemo(personaId, custom);
   if (!session) {
     return NextResponse.json(
-      { ok: false, error: "unknown_persona", message: "Demo sessions exist only for the seeded personas." },
+      { ok: false, error: "unknown_persona", message: "Demo sessions exist only for the seeded personas or valid PANs." },
       { status: 404 },
     );
   }

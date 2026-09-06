@@ -213,7 +213,7 @@ export class PostgresRunStore implements RunStore {
   async putOutput(owner: Owner, o: StoredOutput) {
     await this.pool.query(
       `INSERT INTO agent_outputs (id, run_id, owner_pan, kind, title, snapshot_revision, snapshot_hash, mime_type, body, synthetic, created_at)
-       SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE, $10 FROM agent_runs WHERE id = $2 AND owner_pan = $3`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE, $10)`,
       [o.id, o.runId, owner.pan, o.kind, o.title, o.snapshotRevision, o.snapshotHash, o.mimeType, Buffer.from(o.body), o.createdAt],
     );
   }

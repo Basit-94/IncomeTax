@@ -112,6 +112,15 @@ export function setStep(steps: PlanStep[], id: StepId, state: StepState, note?: 
   return steps.map((p) => (p.id === id ? { ...p, state, note: note ?? p.note } : p));
 }
 
+/** Inquiries about what tasks the assistant can do or what features exist in the portal. */
+export function isCapabilityInquiry(text: string): boolean {
+  const t = text.toLowerCase().trim();
+  return (
+    /\b(what (other |else )?(tasks?|things?|actions?|features?|can you do|could you do|do you do)|what can you do|what else|kya kya kar sakte ho|kya kar sakte ho|help me with|list (of )?tasks|other tasks|capabilities|all features|portal hub)\b/i.test(t) ||
+    /^(tasks?|help|features|capabilities|options|\?)$/i.test(t)
+  );
+}
+
 /**
  * Deterministic intent classification, used as the fallback when the model
  * is unavailable and as the guard on what it proposes (§5.3: "Model failure
@@ -120,6 +129,7 @@ export function setStep(steps: PlanStep[], id: StepId, state: StepState, note?: 
  */
 export function classifyByRules(text: string): RunTask {
   const t = text.toLowerCase();
+  if (isCapabilityInquiry(t)) return "explain";
   if (isTaxInformationQuestion(t)) return "explain";
   if (/\b(demo|sample|show me an example|try it)\b/.test(t)) return "load_demo";
   if (/\b(regime|old vs new|new vs old|115bac|which is (better|cheaper)|compare|kaunsa (regime )?(better|behtar|sasta|accha|acha)|behtar regime)\b/.test(t)) return "compare_regimes";
@@ -130,9 +140,14 @@ export function classifyByRules(text: string): RunTask {
 
 /** Questions about a rule/deadline must not start filing just because they contain 'ITR'. */
 export function isTaxInformationQuestion(text: string): boolean {
-  return /^(what|when|why|how (does|do|is|are)|explain|tell me about|kya (hai|hota|hoti|matlab)|kab|kaise (hota|hoti|milta|milti)|kyun|kyu|matlab|samjhao)\b/i.test(text.trim()) ||
-    /\b(deadline|due date|standard deduction|87a|80d|80c|112a|111a|cess|surcharge)\b/i.test(text) &&
-    !/\b(file my|prepare my|compare|better for me|cheaper for me|file karna|bharna|bharni|mera|meri)\b/i.test(text);
+  if (isCapabilityInquiry(text)) return false;
+  if (/\b(file my|prepare my|compare|better for me|cheaper for me|file karna|bharna|bharni|mera|meri|my refund|my tax|i owe|my salary|my return)\b/i.test(text)) {
+    return false;
+  }
+  return (
+    /^(what|when|why|how (does|do|is|are)|explain|tell me about|kya (hai|hota|hoti|matlab)|kab|kaise (hota|hoti|milta|milti)|kyun|kyu|matlab|samjhao)\b/i.test(text.trim()) ||
+    /\b(deadline|due date|standard deduction|87a|80d|80c|112a|111a|cess|surcharge)\b/i.test(text)
+  );
 }
 
 export function taskTitle(task: RunTask, s: AgenticStrings): string {

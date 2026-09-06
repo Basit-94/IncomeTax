@@ -197,6 +197,7 @@ export interface IngestedDocument {
   ingestedAt: string;
   /** Fields the parser actually found — absent means "not in this file". */
   extracted: ExtractedFields;
+  file?: File;
 }
 
 /**

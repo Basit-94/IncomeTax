@@ -108,14 +108,21 @@ export function InspectorPanel({ s, open, steps, outputs, sources, runId, manual
                   <div className="flex items-start gap-2">
                     <FileText size={14} className="text-money mt-0.5 shrink-0" aria-hidden="true" />
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-ink truncate">{o.title}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-semibold text-ink truncate">{o.title}</p>
+                        {(o.mimeType === "application/pdf" || o.kind === "itrv_acknowledgement_pdf") && (
+                          <span className="rounded bg-teal-800/10 px-1.5 py-0.5 text-[9px] font-bold text-teal-800 dark:text-teal-300 uppercase shrink-0">
+                            PDF
+                          </span>
+                        )}
+                      </div>
                       <p className="font-mono text-[10px] text-ink-3">rev {o.snapshotRevision} · {o.snapshotHash.slice(0, 10)}</p>
                     </div>
                   </div>
                   <p className="text-[11px] text-amber-700 dark:text-amber-300">{s.simulatedBadge}</p>
                   {runId && (
                     <a href={`/api/runs/${runId}/outputs/${o.id}`} className="inline-flex items-center gap-1.5 text-xs font-semibold text-money hover:underline" download>
-                      <Download size={12} aria-hidden="true" /> {s.download}
+                      <Download size={12} aria-hidden="true" /> {o.mimeType === "application/pdf" || o.kind === "itrv_acknowledgement_pdf" ? `${s.download} (PDF)` : s.download}
                     </a>
                   )}
                 </li>

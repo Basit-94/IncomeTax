@@ -41,10 +41,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "invalid_request" }, { status: 400 });
   }
   const lang = parsed.data.lang && isLang(parsed.data.lang) ? parsed.data.lang : "en";
-  const run = await createRun(deps, guard.session.owner, { message: parsed.data.message, task: parsed.data.task, lang });
-  // Answer at once with the created run; the steps execute after the response is sent, while the
-  // client streams events (plan.md §5.4). The run lives in the store, so nothing depends on this request.
+  const created = await createRun(deps, guard.session.owner, { message: parsed.data.message, task: parsed.data.task, lang });
   const owner = guard.session.owner;
-  after(() => advance(deps, owner, run.id, {}, "steps_only").catch(() => undefined));
+  let run: import("@/lib/agentic/types").Run = created;
+  if (run.status === "running") {
+    const adv = await advance(deps, owner, run.id, {}, "steps_only").catch(() => null);
+    if (adv) run = adv;
+  }
   return NextResponse.json({ ok: true, run: publicRun(run), durable: guard.services.dbConfigured }, { status: 201 });
 }

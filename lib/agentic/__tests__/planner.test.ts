@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { agenticStrings } from "../../i18n/agenticStrings";
-import { buildPlan, classifyByRules, nextStep, setStep } from "../planner";
+import { buildPlan, classifyByRules, isCapabilityInquiry, nextStep, setStep } from "../planner";
 
 const s = agenticStrings("en");
 
@@ -44,5 +44,14 @@ describe("planner (plan §5.1)", () => {
     expect(classifyByRules("my AIS shows interest that is not mine")).toBe("reconcile_facts");
     expect(classifyByRules("show me a demo")).toBe("load_demo");
     expect(classifyByRules("what is cess")).toBe("explain");
+    expect(classifyByRules("now what other tasks you could do?")).toBe("explain");
+  });
+
+  it("isCapabilityInquiry detects portal capabilities and task help questions", () => {
+    expect(isCapabilityInquiry("now what other tasks you could do?")).toBe(true);
+    expect(isCapabilityInquiry("what can you do?")).toBe(true);
+    expect(isCapabilityInquiry("what else can you do")).toBe(true);
+    expect(isCapabilityInquiry("kya kya kar sakte ho")).toBe(true);
+    expect(isCapabilityInquiry("what is the standard deduction?")).toBe(false);
   });
 });

@@ -19,14 +19,16 @@ import { dict, isLang } from "@/lib/i18n";
 import { agenticStrings } from "@/lib/i18n/agenticStrings";
 import { isRtl } from "@/lib/i18n/languages";
 import { PERSONAS, PERSONA_ORDER, findPersonaByPan } from "@/lib/personas";
-import { CURRENT_VERSION, save as savePersist } from "@/lib/return/persist";
+import { CURRENT_VERSION, load, save as savePersist } from "@/lib/return/persist";
+import { mirrorReturn } from "@/lib/return-sync-client";
 import type { ReturnState } from "@/lib/return/state";
 import { endServerSession, ensureServerSession, type ServerSessionInfo } from "@/lib/session-client";
 import type { Lang } from "@/lib/types";
-import { fetchVaultUser, getSeededVaultForPersona, type CitizenVaultUser } from "@/lib/vault/vault-store";
+import { fetchVaultUser, getSeededVaultForPersona, addDocumentToVault, type CitizenVaultUser } from "@/lib/vault/vault-store";
 import AppShell from "@/components/agentic/app-shell";
 import AgenticLanding from "@/components/agentic/landing";
 import Workspace from "@/components/agentic/workspace";
+import type { WorkMode } from "@/components/agentic/mode-switch";
 import { useRun, useRuns } from "@/components/agentic/use-run";
 import CitizenVaultModal from "@/components/vault/citizen-vault-modal";
 
@@ -97,6 +99,10 @@ function AgenticWorkspace() {
     if (r.ok) {
       setServer(r.session);
       setSessionState("ready");
+      const local = load();
+      if (local && "state" in local && local.state.persona.pan.toUpperCase() === c.pan.toUpperCase()) {
+        void mirrorReturn(local.state);
+      }
     } else {
       setServer(null);
       setSessionState(r.reason === "unverifiable" ? "unverifiable" : "none");
@@ -111,6 +117,7 @@ function AgenticWorkspace() {
   }, [sessionState, router]);
 
   const persona = useMemo(() => (server ? findPersonaByPan(server.owner.pan) ?? null : null), [server]);
+  const citizen = useMemo(() => (server ? { name: server.owner.displayName, pan: server.owner.pan, isDemo: server.owner.kind === "demo" } : null), [server]);
   useEffect(() => {
     if (!server) return setVaultUser(null);
     if (persona) setVaultUser((prev) => (prev && prev.pan === persona.pan ? prev : getSeededVaultForPersona(persona)));
@@ -133,12 +140,44 @@ function AgenticWorkspace() {
     router.replace("/app");
   };
 
+  const [workMode, setWorkMode] = useState<WorkMode>("agentic");
+  const handleModeChange = (m: WorkMode) => {
+    setWorkMode(m);
+    if (m === "manual") {
+      try {
+        localStorage.setItem("wapsi_user_mode", "manual");
+        localStorage.setItem("wapsi_ui_mode", "full");
+      } catch {
+        // ignore
+      }
+      router.push("/");
+    }
+  };
+
   /* --- runs --------------------------------------------------------------- */
   const runs = useRuns();
   const view = useRun(sessionState === "ready" ? activeRunId : null);
   useEffect(() => {
     if (sessionState === "ready") void runs.refresh();
   }, [sessionState, runs.refresh]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Automatically sync generated Form ITR-V into citizen's Tax Vault so it's stored and viewable there
+  useEffect(() => {
+    if (!citizen?.pan) return;
+    const itrv = view.outputs.find((o) => o.kind === "itrv_acknowledgement_pdf");
+    if (itrv) {
+      void addDocumentToVault(citizen.pan, {
+        id: `doc_itrv_${itrv.id}`,
+        title: itrv.title || "Form ITR-V (Acknowledgement) · AY 2026-27",
+        docType: "ITR_V",
+        issuer: "Income Tax Department",
+        status: "verified",
+        sizeKb: 12,
+      }).then((updated) => {
+        setVaultUser(updated);
+      });
+    }
+  }, [citizen?.pan, view.outputs]);
 
   const start = async (input: { message?: string; task?: import("@/lib/agentic/types").RunTask }) => {
     const run = await runs.create({ ...input, lang });
@@ -163,8 +202,6 @@ function AgenticWorkspace() {
     );
   }
 
-  const citizen = server ? { name: server.owner.displayName, pan: server.owner.pan, isDemo: server.owner.kind === "demo" } : null;
-
   // No active run → the landing (no sidebar); the chat shell appears once a question starts a run.
   if (!activeRunId) {
     return (
@@ -179,7 +216,7 @@ function AgenticWorkspace() {
             changeLang={changeLang}
             theme={theme}
             toggleTheme={toggleTheme}
-            onModeChange={(m) => m === "manual" && router.push("/")}
+            onModeChange={handleModeChange}
             citizen={citizen}
             onSignOut={citizen ? signOut : undefined}
             onOpenVault={() => setVaultOpen(true)}
@@ -197,8 +234,8 @@ function AgenticWorkspace() {
   return (
     <LazyMotion features={domMax} strict>
       <AppShell
-        mode="agentic"
-        onModeChange={(m) => m === "manual" && router.push("/")}
+        mode={workMode}
+        onModeChange={handleModeChange}
         modeBusy={view.loading && view.run?.status === "running"}
         lang={lang}
         changeLang={changeLang}
@@ -247,6 +284,7 @@ function AgenticWorkspace() {
             durable={view.durable}
             onStart={(input) => void start(input)}
             onSend={(input) => void view.send(input)}
+            onOpenVault={() => setVaultOpen(true)}
           />
         )}
       </AppShell>

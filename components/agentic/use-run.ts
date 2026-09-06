@@ -128,7 +128,7 @@ export function useRun(runId: string | null) {
           }
         } catch {
           // stream unavailable or aborted — the load below still converges; a hard failure waits a beat
-          if (!ac.signal.aborted) await new Promise((r) => setTimeout(r, 1000));
+          if (!ac.signal.aborted) await new Promise((r) => setTimeout(r, 200));
         }
         if (ac.signal.aborted) return;
         const run = await load(id, cursor.current);

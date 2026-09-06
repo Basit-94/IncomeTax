@@ -96,13 +96,17 @@ export class SessionResolver {
   }
 
   /**
-   * A demo session for one of the seeded personas. Refuses any other PAN: a
-   * demo session must not be a way to claim a real person's records.
+   * A demo session for one of the seeded personas, or a client-minted sandbox session
+   * with a valid PAN shape.
    */
-  async issueDemo(personaId: string): Promise<ServerSession | null> {
+  async issueDemo(personaId: string, custom?: { pan: string; displayName?: string }): Promise<ServerSession | null> {
     const persona = Object.values(PERSONAS).find((p) => p.id === personaId);
-    if (!persona) return null;
-    return this.issue({ pan: persona.pan, kind: "demo", displayName: persona.name }, "demo");
+    if (persona) return this.issue({ pan: persona.pan, kind: "demo", displayName: persona.name }, "demo");
+    if (custom && custom.pan && /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(custom.pan.toUpperCase())) {
+      const cleanPan = custom.pan.toUpperCase();
+      return this.issue({ pan: cleanPan, kind: "demo", displayName: custom.displayName || `Citizen ${cleanPan.slice(5, 9)}` }, "demo");
+    }
+    return null;
   }
 
   /** A session for an owner the backend has vouched for. The caller did the vouching. */

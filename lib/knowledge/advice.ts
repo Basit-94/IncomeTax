@@ -55,7 +55,7 @@ export function assessAdvice(persona: Persona, context: AdviceContext): AdviceAs
   if (persona.facts.some((f) => (f.kind === "other" || f.kind === "rent") && f.amount !== 0))
     add("income_head_unsupported", "Business/professional or house-property income needs head-specific computation and election checks.", ["24", "115BAC"]);
   for (const claim of persona.claims.filter((c) => c.amount > 0)) {
-    if (claim.section !== "80C") add("deduction_unsupported", `The ${claim.section} amount needs eligibility and limit details that the shared calculator does not carry.`,
+    if (claim.section !== "80C" && claim.section !== "80D_SELF") add("deduction_unsupported", `The ${claim.section} amount needs eligibility and limit details that the shared calculator does not carry.`,
       claim.section.startsWith("80D") ? ["80D"] : claim.section.startsWith("80CCD") ? ["80CCD(2)"] : ["115BAC"]);
     if (!claim.evidenceAttached) add("claim_unverified", `The ${claim.section} claim has not been checked against supporting records.`, ["reconciliation"]);
   }

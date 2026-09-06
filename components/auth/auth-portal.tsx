@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   ShieldCheck,
   ChevronRight,
@@ -16,6 +16,7 @@ import {
   AlertCircle,
   CheckCircle2,
   FileUp,
+  FileText,
   Loader2,
   HelpCircle,
   KeyRound,
@@ -31,7 +32,7 @@ import {
   type CitizenVaultUser,
   type VaultDocument,
 } from "@/lib/vault/vault-store";
-import { extractFieldsFromPdf, detectDocumentKind, isEmptyExtraction } from "@/lib/compliance/pdfExtract";
+import { extractFieldsFromPdf, detectDocumentKind, isEmptyExtraction, decodeLatin1 } from "@/lib/compliance/pdfExtract";
 import type { IngestedDocument } from "@/context/TaxReturnContext";
 
 interface AuthPortalProps {
@@ -46,6 +47,7 @@ interface AuthPortalProps {
   onLaunchWithForm16?: (doc: IngestedDocument) => void;
   /** Which tab opens first; the dedicated /signin page uses this for "Try a demo citizen" links. */
   initialTab?: "signin" | "signup" | "document" | "personas";
+  authBusy?: boolean;
 }
 
 export default function AuthPortal({
@@ -63,6 +65,10 @@ export default function AuthPortal({
   const [activeTab, setActiveTab] = useState<"signin" | "signup" | "document" | "personas">(initialTab ?? "signin");
   const ps = getPortalStrings(lang || "en");
 
+  useEffect(() => {
+    if (initialTab) setActiveTab(initialTab);
+  }, [initialTab]);
+
   // --- Sign Up Form State (Strictly PAN-only per directive) ---
   const [signUpPan, setSignUpPan] = useState("");
   const [signUpError, setSignUpError] = useState<string | null>(null);
@@ -71,9 +77,18 @@ export default function AuthPortal({
   // --- Document Sign In State ---
   const [docPhase, setDocPhase] = useState<"idle" | "reading" | "success" | "manual_pan" | "error">("idle");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [, setExtractedPan] = useState<string>("");
+  const [extractedPan, setExtractedPan] = useState<string>("");
+  const [extractedData, setExtractedData] = useState<{
+    name?: string;
+    employerName?: string;
+    grossSalary?: number;
+    tds?: number;
+    kind?: "FORM_16" | "AIS";
+  }>({});
   const [manualPanForDoc, setManualPanForDoc] = useState<string>("");
   const [docStatusMsg, setDocStatusMsg] = useState<string>("");
+  const [isDocLaunching, setIsDocLaunching] = useState(false);
+  const lastIngestedRef = useRef<IngestedDocument | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragCounter = useRef(0);
@@ -127,6 +142,7 @@ export default function AuthPortal({
       setUploadedFile(file);
       setDocPhase("reading");
       setDocStatusMsg(ps.readingDoc);
+      setIsDocLaunching(false);
 
       try {
         let foundPan: string | undefined = undefined;
@@ -149,12 +165,39 @@ export default function AuthPortal({
             grossSalary = extracted.grossSalary;
             tdsAmount = extracted.tds;
           }
+
+          // Fallback search in raw text stream if PAN was not matched yet
+          if (!foundPan) {
+            const rawText = decodeLatin1(bytes);
+            // 1. Spaced PAN (e.g. A B C D E 1 2 3 4 F)
+            const spaced = rawText.match(/(?:PAN|Permanent Account)?[^A-Za-z0-9]{0,40}([A-Za-z]\s+[A-Za-z]\s+[A-Za-z]\s+[A-Za-z]\s+[A-Za-z]\s+[0-9]\s+[0-9]\s+[0-9]\s+[0-9]\s+[A-Za-z])/i);
+            if (spaced) {
+              const candidate = spaced[1].replace(/\s+/g, "").toUpperCase();
+              if (PAN_REGEX.test(candidate)) foundPan = candidate;
+            }
+            // 2. Case-insensitive labelled PAN
+            if (!foundPan) {
+              const labelled = rawText.match(/(?:Employee|Deductee|Assessee|Citizen)?[\s\S]{0,30}?(?:PAN|Permanent Account)[^A-Za-z0-9]{0,25}([A-Za-z]{5}[0-9]{4}[A-Za-z])/i);
+              if (labelled) {
+                const candidate = labelled[1].toUpperCase();
+                if (PAN_REGEX.test(candidate)) foundPan = candidate;
+              }
+            }
+            // 3. Individual PAN fallback (4th char 'P')
+            if (!foundPan) {
+              const allPans = rawText.match(/[A-Za-z]{5}[0-9]{4}[A-Za-z]/g);
+              if (allPans && allPans.length > 0) {
+                const personalPan = allPans.find((p) => p[3].toUpperCase() === "P");
+                foundPan = (personalPan || allPans[0]).toUpperCase();
+              }
+            }
+          }
         } else {
           // For text, json, or other documents, read text stream
           const text = await file.text();
-          const panMatch = text.match(/[A-Z]{5}[0-9]{4}[A-Z]/);
+          const panMatch = text.match(/[A-Z]{5}[0-9]{4}[A-Z]/i);
           if (panMatch) {
-            foundPan = panMatch[0];
+            foundPan = panMatch[0].toUpperCase();
           }
           const nameMatch = text.match(/(?:Name of (?:the )?Employee|Name of (?:the )?Deductee|Name)[\s:]+([A-Za-z\s]{3,35})/i);
           if (nameMatch) {
@@ -162,16 +205,22 @@ export default function AuthPortal({
           }
         }
 
+        setExtractedData({
+          name: detectedName,
+          employerName,
+          grossSalary,
+          tds: tdsAmount,
+          kind: detectedKind,
+        });
+
         // Slight parse beat for high-trust user feedback
-        await new Promise((r) => setTimeout(r, 600));
+        await new Promise((r) => setTimeout(r, 400));
 
         if (foundPan && PAN_REGEX.test(foundPan.trim().toUpperCase())) {
           const cleanPan = foundPan.trim().toUpperCase();
           setExtractedPan(cleanPan);
           setDocPhase("success");
-          setDocStatusMsg(
-            `${cleanPan}: ${ps.readingDoc}`
-          );
+          setDocStatusMsg(`${cleanPan}: ${ps.readingDoc}`);
 
           // 1. Automatically store document in Citizen Tax Vault by default
           const vaultDoc: VaultDocument = {
@@ -198,15 +247,24 @@ export default function AuthPortal({
               grossSalary,
               tds: tdsAmount,
             },
+            file,
           };
+          lastIngestedRef.current = ingested;
 
           onPanChange(cleanPan);
 
           // 3. Log user in directly
-          if (onLaunchWithForm16) {
-            onLaunchWithForm16(ingested);
-          } else if (onSignUpComplete) {
-            onSignUpComplete(updatedUser);
+          setIsDocLaunching(true);
+          try {
+            if (onLaunchWithForm16) {
+              await onLaunchWithForm16(ingested);
+            } else if (onSignUpComplete) {
+              await onSignUpComplete(updatedUser);
+            }
+          } catch (launchErr) {
+            setIsDocLaunching(false);
+            setDocPhase("error");
+            setDocStatusMsg(launchErr instanceof Error ? launchErr.message : String(launchErr));
           }
         } else {
           // Document was read, but no 10-character PAN found in text stream
@@ -214,6 +272,7 @@ export default function AuthPortal({
           setDocStatusMsg(ps.panOnlySub);
         }
       } catch {
+        setIsDocLaunching(false);
         setDocPhase("error");
         setDocStatusMsg(ps.docError);
       }
@@ -230,37 +289,56 @@ export default function AuthPortal({
       return;
     }
 
-    if (!uploadedFile) return;
+    if (!uploadedFile) {
+      setDocStatusMsg("Please select a tax document first.");
+      return;
+    }
 
     setDocPhase("reading");
     setDocStatusMsg(ps.readingDoc);
+    setIsDocLaunching(true);
 
-    const vaultDoc: VaultDocument = {
-      id: `doc_${Date.now()}`,
-      title: uploadedFile.name,
-      docType: uploadedFile.name.toLowerCase().includes("ais") ? "ANNUAL_INFO_STATEMENT" : "FORM_16",
-      issuer: "Citizen Tax Document",
-      uploadedAt: new Date().toISOString().slice(0, 10),
-      sizeKb: Math.max(1, Math.round(uploadedFile.size / 1024)),
-      status: "verified",
-    };
+    try {
+      const detectedKind = extractedData.kind || (uploadedFile.name.toLowerCase().includes("ais") ? "AIS" : "FORM_16");
+      const vaultDoc: VaultDocument = {
+        id: `doc_${Date.now()}`,
+        title: uploadedFile.name,
+        docType: detectedKind === "AIS" ? "ANNUAL_INFO_STATEMENT" : "FORM_16",
+        issuer: extractedData.employerName || "Citizen Tax Document",
+        uploadedAt: new Date().toISOString().slice(0, 10),
+        sizeKb: Math.max(1, Math.round(uploadedFile.size / 1024)),
+        status: "verified",
+      };
 
-    // Auto-stored in vault by default without prompting
-    const updatedUser = await addDocumentToVault(cleanPan, vaultDoc);
+      // Auto-stored in vault by default without prompting
+      const updatedUser = await addDocumentToVault(cleanPan, vaultDoc);
 
-    const ingested: IngestedDocument = {
-      fileName: uploadedFile.name,
-      kind: uploadedFile.name.toLowerCase().includes("ais") ? "AIS" : "FORM_16",
-      ingestedAt: new Date().toISOString(),
-      extracted: { pan: cleanPan },
-    };
+      const ingested: IngestedDocument = {
+        fileName: uploadedFile.name,
+        kind: detectedKind,
+        ingestedAt: new Date().toISOString(),
+        extracted: {
+          pan: cleanPan,
+          name: extractedData.name,
+          employerName: extractedData.employerName,
+          grossSalary: extractedData.grossSalary,
+          tds: extractedData.tds,
+        },
+        file: uploadedFile,
+      };
+      lastIngestedRef.current = ingested;
 
-    onPanChange(cleanPan);
+      onPanChange(cleanPan);
 
-    if (onLaunchWithForm16) {
-      onLaunchWithForm16(ingested);
-    } else if (onSignUpComplete) {
-      onSignUpComplete(updatedUser);
+      if (onLaunchWithForm16) {
+        await onLaunchWithForm16(ingested);
+      } else if (onSignUpComplete) {
+        await onSignUpComplete(updatedUser);
+      }
+    } catch (err) {
+      setIsDocLaunching(false);
+      setDocPhase("error");
+      setDocStatusMsg(err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -579,18 +657,7 @@ export default function AuthPortal({
                   </p>
                 </div>
 
-                {/* Dropzone */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,.png,.jpg,.jpeg,.txt,.json"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) void processDocument(file);
-                  }}
-                />
-
+                {/* Dropzone with full-area invisible native input: 100% native reliable clicks with exact original UI */}
                 <div
                   onDragEnter={(e) => {
                     e.preventDefault();
@@ -621,13 +688,27 @@ export default function AuthPortal({
                     const file = e.dataTransfer.files?.[0];
                     if (file) void processDocument(file);
                   }}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-3 ${
+                  className={`relative border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-3 ${
                     isDragging
                       ? "border-indigo-500 bg-indigo-500/10 ring-4 ring-indigo-500/20 scale-[1.01]"
                       : "border-line hover:border-money hover:bg-paper-2 bg-paper-3"
                   }`}
                 >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg,.txt,.json"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    onClick={(e) => {
+                      // Reset value so selecting the SAME file fires onChange
+                      (e.target as HTMLInputElement).value = "";
+                    }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) void processDocument(file);
+                    }}
+                  />
+
                   <div className="pointer-events-none flex flex-col items-center gap-3">
                     <div className={`size-12 rounded-2xl flex items-center justify-center shadow-xs transition-transform ${
                       isDragging

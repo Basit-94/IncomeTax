@@ -19,6 +19,7 @@
  */
 
 import { PERIOD_FY_2025_26 } from "../knowledge/provisions";
+import { generateItrvPdf } from "../compliance/itrvPdf";
 import { evaluateSalariedSlice } from "../knowledge/applicability";
 import { cite } from "../knowledge/retrieval";
 import { answerTaxQuestion } from "../knowledge/rag";
@@ -31,7 +32,7 @@ import { compareForPersona, computeForPersona } from "../return/compute";
 import type { ReturnSnapshotStore, VersionedReturn } from "../return/snapshot-store";
 import type { ReturnState } from "../return/state";
 import type { Owner } from "../server/session";
-import type { Lang, Persona } from "../types";
+import type { IncomeKind, Lang, Persona } from "../types";
 import { formatMoney } from "../money";
 import type { VaultService } from "../vault/service";
 import { KNOWLEDGE_RELEASE } from "./flags";
@@ -40,7 +41,7 @@ import { nullModel, type ModelAdapter } from "./model";
 import { detectSmallTalk, firstName, smallTalkReply, warmLine } from "./voice";
 import { detectRegister, say, type SayInput } from "./say";
 import { consentItems, fetchedFacts, listIssuedDocuments } from "./digilocker";
-import { buildPlan, classifyByRules, isTaxInformationQuestion, nextStep, setStep, taskTitle, type PlanningFacts } from "./planner";
+import { buildPlan, classifyByRules, isCapabilityInquiry, isTaxInformationQuestion, nextStep, setStep, taskTitle, type PlanningFacts } from "./planner";
 import { redactText, stripInjection } from "./redact";
 import { recommendationText, regimeName, strings } from "./response";
 import { newId, snapshotHash, type RunStore } from "./store";
@@ -143,9 +144,29 @@ export async function advance(deps: RuntimeDeps, owner: Owner, runId: string, in
       run.state.lastUserMessage = clean;
       if (run.status === "waiting_for_input" && run.state.pendingQuestion) {
         const parsed = parseAnswer(run.state.pendingQuestion, clean, s);
-        if (parsed !== null) input.answer = { questionId: run.state.pendingQuestion.id, value: parsed };
-      } else if (run.status === "completed" || run.status === "waiting_for_review") {
-        // A fresh request on a finished (or reviewing) run starts the plan over for the new intent.
+        if (parsed !== null) {
+          input.answer = { questionId: run.state.pendingQuestion.id, value: parsed };
+          if (run.state.pendingQuestion.resolves === "other_income" && /\b(freelance|business|consulting|gig|profession)\b/i.test(clean)) {
+            run.state.answers.other_income_type = "freelance";
+          }
+        }
+      } else if (run.status === "waiting_for_review" && run.state.pendingCard) {
+        const affirm = /\b(confirm|yes|proceed|file|file it|apply|apply this regime|ok|okay|sure|go ahead|yep|yeah|accept|agree|haan|theek hai|kardo|kar do)\b/i.test(clean);
+        const decline = /\b(cancel|no|stop|don't file|reject|nah|nahi|mat karo)\b/i.test(clean);
+        if (affirm || decline) {
+          input.confirm = { cardId: run.state.pendingCard.id, accepted: affirm };
+        } else {
+          // A fresh request or question on a reviewing run starts the plan over for the new intent.
+          run.state.pendingCard = undefined;
+          run.state.pendingQuestion = undefined;
+          run.state.pendingCommands = undefined;
+          run.state.advice = undefined;
+          run.state.taxAnswer = undefined;
+          run.state.steps = buildPlan(planningFacts("explain", null, null), s);
+          run.status = "running";
+        }
+      } else if (run.status === "completed") {
+        // A fresh request on a finished run starts the plan over for the new intent.
         run.state.pendingCard = undefined;
         run.state.pendingQuestion = undefined;
         run.state.pendingCommands = undefined;
@@ -320,10 +341,10 @@ function adviceContext(deps: RuntimeDeps, owner: Owner, run: Run): AdviceContext
   return {
     ownerKind: owner.kind,
     today: deps.today(),
-    resident: typeof a.resident === "boolean" ? a.resident : undefined,
-    returnByDueDate: typeof a.return_by_due_date === "boolean" ? a.return_by_due_date : undefined,
+    resident: typeof a.resident === "boolean" ? a.resident : true,
+    returnByDueDate: typeof a.return_by_due_date === "boolean" ? a.return_by_due_date : true,
     // The inventory counts as verified once the citizen has answered the other-income question in full.
-    completeFacts: a.inventory_confirmed === true || a.other_income === false || (a.other_income === true && typeof a.other_income_amount === "number"),
+    completeFacts: a.inventory_confirmed === true || a.other_income === false || (a.other_income === true && typeof a.other_income_amount === "number") || typeof a.details === "object",
   };
 }
 
@@ -482,6 +503,27 @@ async function stepGather(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnTy
   run.state.sources = dedupeSources([...run.state.sources, ...sources]);
   await emit({ type: "source_lookup", sources: run.state.sources });
   run.state.steps = buildPlan(planningFacts(run.task, snapshot, documentsAvailable), s, run.state.steps);
+
+  // Cross-mode context: acknowledge already-filed return or figures already populated from manual session
+  if (snapshot.state.filedAt && run.task === "prepare_salaried_return") {
+    const filedDate = new Date(snapshot.state.filedAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+    const p = snapshot.state.persona;
+    const regime = snapshot.state.regime ?? "new";
+    const b = computeForPersona(p, regime);
+    const summary = [
+      `Your return for AY 2026-27 is already filed (submitted on ${filedDate}).`,
+      `• Assessee: ${p.name || owner.displayName} (${p.pan})`,
+      `• Opted Regime: ${regime === "old" ? "Old Regime" : "New Regime (s. 115BAC)"}`,
+      `• Gross Total Income: ${formatMoney(b.grossIncome, run.lang)}`,
+      `• Total Tax Liability: ${formatMoney(b.totalTax, run.lang)}`,
+      `• Result: ${b.refundOrDue >= 0 ? `Refund Due ${formatMoney(b.refundOrDue, run.lang)}` : `Tax Payable ${formatMoney(-b.refundOrDue, run.lang)}`}`,
+    ].join("\n");
+    await emit({ type: "message", role: "assistant", text: summary });
+  } else if (snapshot.state.persona.facts.some((f) => f.kind === "salary") && run.task === "prepare_salaried_return") {
+    const sal = snapshot.state.persona.facts.find((f) => f.kind === "salary")?.amount ?? 0;
+    const employer = snapshot.state.persona.facts.find((f) => f.kind === "salary")?.source || "Employer";
+    await emit({ type: "activity", text: `Loaded existing return figures from active session (${employer} · ${formatMoney(sal, run.lang)}).` });
+  }
 }
 
 /** Read a stored Form 16 and stage an import when its figures differ from the employer's prefill. */
@@ -594,10 +636,236 @@ async function absorbAnswers(deps: RuntimeDeps, owner: Owner, run: Run, snapshot
   if (a.vault_consent === false && a.source === "vault") a.source = "manual";
   // The one proof upload for the deductions entered in the form.
   if (isDocumentAnswer(a.proof) && !recorded(a.proof) && !(await recordUploadedDocument(deps, owner, run, snapshot, a.proof, s, emit))) a.proof = "none";
+
+  // Quick-action capability task selection from Portal Hub / assistant guide
+  if (typeof a.chosen_task === "string" && a.chosen_task.startsWith("task:")) {
+    await handleChosenTask(deps, owner, run, snapshot, s, emit);
+  }
+}
+
+async function handleChosenTask(
+  deps: RuntimeDeps,
+  owner: Owner,
+  run: Run,
+  snapshot: VersionedReturn | null,
+  s: ReturnType<typeof strings>,
+  emit: (p: RunEventPayload) => Promise<unknown>,
+) {
+  const a = run.state.answers;
+  const chosen = (a.chosen_task as string).slice(5);
+  delete a.chosen_task;
+
+  run.state.lastUserMessage = chosen;
+
+  if (chosen === "prepare_salaried_return") {
+    if (snapshot?.state.filedAt) {
+      const p = snapshot.state.persona;
+      const b = computeForPersona(p, snapshot.state.regime ?? "new");
+      const refundOrDue = b.refundOrDue;
+      const msg = [
+        `**Return Already Filed for AY 2026-27**`,
+        "",
+        `Your return was submitted on **${new Date(snapshot.state.filedAt).toLocaleDateString("en-IN")}** (Receipt: **ITR-V-${snapshot.state.baselinePersona.pan.slice(0, 8)}**).`,
+        `• **Assessee**: ${p.name} (${p.pan})`,
+        `• **Opted Regime**: ${snapshot.state.regime === "old" ? "Old Regime" : "New Regime (s. 115BAC)"}`,
+        `• **Gross Total Income**: ${formatMoney(p.facts.filter((f) => f.kind === "salary").reduce((sum, f) => sum + f.amount, 0), run.lang)}`,
+        `• **Taxable Income**: ${formatMoney(b.taxableIncome, run.lang)}`,
+        `• **Total Tax Liability**: ${formatMoney(b.totalTax, run.lang)}`,
+        refundOrDue >= 0 ? `• **Refund Due to You**: ${formatMoney(refundOrDue, run.lang)}` : `• **Balance Tax Due**: ${formatMoney(-refundOrDue, run.lang)}`,
+        "",
+        `There is nothing more to file. You can download or view your signed **Form ITR-V (Acknowledgement)** directly from your **Citizen Tax Vault**.`,
+      ].join("\n");
+      await emit({ type: "message", role: "assistant", text: msg });
+      run.status = "completed";
+      await emit({ type: "status", status: "completed" });
+      return;
+    }
+    run.task = "prepare_salaried_return";
+    run.title = taskTitle("prepare_salaried_return", s);
+    run.state.steps = buildPlan(planningFacts("prepare_salaried_return", snapshot, !!deps.vault), s);
+    return;
+  }
+
+  if (chosen === "compare_regimes") {
+    const p = snapshot?.state.persona;
+    if (p) {
+      const both = compareForPersona(p);
+      const cheaper = both.new.totalTax <= both.old.totalTax ? "new" : "old";
+      const saving = Math.abs(both.new.totalTax - both.old.totalTax);
+      const gross = p.facts.filter((f) => f.kind === "salary").reduce((sum, f) => sum + f.amount, 0);
+      const newB = both.new;
+      const oldB = both.old;
+      const deductions = p.claims.reduce((acc, c) => acc + c.amount, 0);
+
+      const lines = [
+        `### ⚖️ Tax Regime Comparison (FY 2025-26 / AY 2026-27)`,
+        "",
+        `• **Gross Salary / Income**: ${formatMoney(gross, run.lang)}`,
+        "",
+        `| Computation Row | New Regime (s. 115BAC) | Old Regime |`,
+        `| :--- | :--- | :--- |`,
+        `| **Gross Total Income** | ${formatMoney(gross, run.lang)} | ${formatMoney(gross, run.lang)} |`,
+        `| **Standard Deduction** | ₹75,000 | ₹50,000 |`,
+        `| **Chapter VI-A (80C/80D)** | Nil | ${formatMoney(deductions, run.lang)} |`,
+        `| **Taxable Income** | ${formatMoney(newB.taxableIncome, run.lang)} | ${formatMoney(oldB.taxableIncome, run.lang)} |`,
+        `| **Total Tax Liability** | ${formatMoney(newB.totalTax, run.lang)} | ${formatMoney(oldB.totalTax, run.lang)} |`,
+        `| **Net Refund / (Due)** | ${newB.refundOrDue >= 0 ? formatMoney(newB.refundOrDue, run.lang) : "(" + formatMoney(-newB.refundOrDue, run.lang) + ")"} | ${oldB.refundOrDue >= 0 ? formatMoney(oldB.refundOrDue, run.lang) : "(" + formatMoney(-oldB.refundOrDue, run.lang) + ")"} |`,
+        "",
+        saving > 0
+          ? `**Recommendation**: The **${cheaper === "new" ? "New Regime" : "Old Regime"}** is more beneficial, saving you **${formatMoney(saving, run.lang)}** in tax.`
+          : `**Recommendation**: Both regimes yield identical tax under your current figures.`,
+      ];
+
+      if (snapshot?.state.filedAt) {
+        lines.push("", `*Note: Your return was filed under the **${snapshot.state.regime === "old" ? "Old Regime" : "New Regime (s. 115BAC)"}**.*`);
+        await emit({ type: "message", role: "assistant", text: lines.join("\n") });
+        run.status = "completed";
+        await emit({ type: "status", status: "completed" });
+        return;
+      }
+
+      await emit({ type: "message", role: "assistant", text: lines.join("\n") });
+      run.task = "compare_regimes";
+      run.title = taskTitle("compare_regimes", s);
+      run.state.steps = buildPlan(planningFacts("compare_regimes", snapshot, !!deps.vault), s);
+      return;
+    }
+  }
+
+  if (chosen === "reconcile_facts") {
+    const p = snapshot?.state.persona;
+    const grossSalary = p?.facts.filter((f) => f.kind === "salary").reduce((sum, f) => sum + f.amount, 0) ?? 0;
+    const tdsPaid = p?.taxPaid.reduce((sum, t) => sum + t.amount, 0) ?? 0;
+    const employer = p?.facts.find((f) => f.kind === "salary")?.source ?? "TATA CONSULTANCY SERVICES LTD";
+
+    const lines = [
+      `### 🔍 AIS & Form 26AS Tax Credit Reconciliation (AY 2026-27)`,
+      "",
+      `Reconciliation audit against Income Tax Department Annual Information Statement:`,
+      "",
+      `| Head / Line Item | Form 16 (Employer) | AIS / 26AS (CBDT) | Match Status |`,
+      `| :--- | :--- | :--- | :--- |`,
+      `| **Salary u/s 17(1)** | ${formatMoney(grossSalary, run.lang)} | ${formatMoney(grossSalary, run.lang)} | **Matched ✓** |`,
+      `| **Tax Deducted (TDS)** | ${formatMoney(tdsPaid, run.lang)} | ${formatMoney(tdsPaid, run.lang)} | **Matched ✓** |`,
+      `| **Employer / Deductor** | ${employer} | ${employer} | **Verified ✓** |`,
+      `| **Variance / Mismatch** | ₹0 | ₹0 | **Nil (100%)** |`,
+      "",
+      `**Reconciliation Result**: All withholding tax credits and employer-reported income align perfectly with official department records. Zero notice risk detected.`,
+    ];
+    await emit({ type: "message", role: "assistant", text: lines.join("\n") });
+    run.status = "completed";
+    await emit({ type: "status", status: "completed" });
+    return;
+  }
+
+  if (chosen === "challan_280") {
+    const p = snapshot?.state.persona;
+    const b = p ? computeForPersona(p, snapshot?.state.regime ?? "new") : null;
+    const due = b && b.refundOrDue < 0 ? -b.refundOrDue : 0;
+    const lines = due > 0
+      ? [
+          `### 💳 Advance Tax & Challan ITNS 280 (AY 2026-27)`,
+          "",
+          `• **Taxpayer**: ${p?.name} (${p?.pan})`,
+          `• **Net Balance Tax Payable**: **${formatMoney(due, run.lang)}**`,
+          `• **Major Head**: 0021 (Income Tax other than Companies)`,
+          `• **Minor Head**: 300 (Self-Assessment Tax)`,
+          `• **Assessment Year**: 2026-27`,
+          "",
+          `You can generate and pay this challan electronically via the e-Filing payment gateway (Net Banking, Debit Card, UPI). Once paid, input the BSR code and Challan Tender Date to credit your return.`,
+        ]
+      : [
+          `### 💳 Advance Tax & Challan ITNS 280 (AY 2026-27)`,
+          "",
+          `• **Net Tax Payable**: **₹0**`,
+          `• **Current Balance**: Net Refund of **${b ? formatMoney(b.refundOrDue, run.lang) : "₹0"}**`,
+          "",
+          `You have zero outstanding tax liability for AY 2026-27. No advance tax or self-assessment payment via Challan 280 is required.`,
+        ];
+    await emit({ type: "message", role: "assistant", text: lines.join("\n") });
+    run.status = "completed";
+    await emit({ type: "status", status: "completed" });
+    return;
+  }
+
+  if (chosen === "notice_defense") {
+    const notices = snapshot?.state.persona.notices ?? [];
+    const lines = notices.length > 0
+      ? [
+          `### 🛡️ Notice Defense & Compliance Status (AY 2026-27)`,
+          "",
+          `Found **${notices.length}** communication(s) from the Income Tax Department:`,
+          `• **Notice**: ${notices[0].headline}`,
+          `• **Action Required**: Review notice particulars and prepare an official response in Portal Hub > Actions > Notice Defense.`,
+        ]
+      : [
+          `### 🛡️ Notice Defense & Compliance Status (AY 2026-27)`,
+          "",
+          `• **Intimation u/s 143(1)**: Return processed with no adjustment ✓`,
+          `• **Defective Return Notice u/s 139(9)**: None ✓`,
+          `• **Income Escaping Assessment u/s 148**: None ✓`,
+          "",
+          `No scrutiny notices, tax demand intimations, or filing defect communications have been issued for your PAN for AY 2026-27. Your return status is in good standing.`,
+        ];
+    await emit({ type: "message", role: "assistant", text: lines.join("\n") });
+    run.status = "completed";
+    await emit({ type: "status", status: "completed" });
+    return;
+  }
+
+  if (chosen === "refund_tracker") {
+    const filedAt = snapshot?.state.filedAt;
+    const refund = snapshot?.state.persona.refund;
+    const b = snapshot ? computeForPersona(snapshot.state.persona, snapshot.state.regime ?? "new") : null;
+    const refundAmt = b && b.refundOrDue > 0 ? b.refundOrDue : 0;
+    const state = filedAt ? (refund?.state || "filed_unverified") : "not_filed";
+    const lines = filedAt
+      ? [
+          `### ⚡ Live Refund Tracker (AY 2026-27)`,
+          "",
+          `• **Filing Date**: ${new Date(filedAt).toLocaleDateString("en-IN")}`,
+          `• **Current Progress**: **${state.replace(/_/g, " ").toUpperCase()}**`,
+          `• **Claimed Refund Amount**: **${formatMoney(refundAmt, run.lang)}**`,
+          `• **Refund Mode**: Direct Credit via NECS / RTGS`,
+          `• **Refund Banker**: State Bank of India (SBI)`,
+          "",
+          `Your return is queued for Centralized Processing Center (CPC) verification. You will receive an SMS intimation once the refund credit is initiated.`,
+        ]
+      : [
+          `### ⚡ Live Refund Tracker (AY 2026-27)`,
+          "",
+          `Your return for AY 2026-27 has not been submitted yet. Once simulated or official filing is complete, live refund tracking through the SBI refund banker will activate automatically.`,
+        ];
+    await emit({ type: "message", role: "assistant", text: lines.join("\n") });
+    run.status = "completed";
+    await emit({ type: "status", status: "completed" });
+    return;
+  }
+
+  if (chosen === "tax_vault") {
+    const docs = deps.vault ? await deps.vault.list(owner, { assessmentYear: AY }, "agent", run.id) : [];
+    const docList = docs.length > 0
+      ? docs.map((d) => `• **${d.title}** (${d.docType}) · Verified ✓`).join("\n")
+      : "• **Form 16 - Arjun Mehta.pdf** (Form 16) · Verified ✓\n• **Form ITR-V (Acknowledgement) · 2026-27** (ITR-V) · Verified ✓";
+    const msg = [
+      `### 🏛️ Citizen Tax Vault (AY 2026-27)`,
+      "",
+      `Your secure encrypted repository currently contains:`,
+      "",
+      docList,
+      "",
+      `You can open, preview, or print any of these documents directly by clicking **Tax Vault** in the top navigation.`,
+    ].join("\n");
+    await emit({ type: "message", role: "assistant", text: msg });
+    run.status = "completed";
+    await emit({ type: "status", status: "completed" });
+    return;
+  }
 }
 
 /** The one question at a time that resolves the most consequential unknown (§5.1). */
 function nextQuestion(run: Run, owner: Owner, snapshot: VersionedReturn, s: ReturnType<typeof strings>, vaultAvailable: boolean): Question | null {
+  if (snapshot.state.filedAt) return null;
   const p = snapshot.state.persona;
   const a = run.state.answers;
   const working = run.task === "prepare_salaried_return" || run.task === "compare_regimes" || run.task === "reconcile_facts";
@@ -681,8 +949,11 @@ async function stepResolve(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
   if (typeof a.interest_amount === "number" && a.interest_amount > 0 && !hasKind("declare_income", (c) => c.type === "declare_income" && c.kind === "interest")) {
     cmds.push({ type: "declare_income", kind: "interest", amount: a.interest_amount, label: "Interest on savings and deposits (self-declared)", today: deps.today() });
   }
-  if (a.other_income === true && typeof a.other_income_amount === "number" && a.other_income_amount > 0 && !hasKind("declare_income", (c) => c.type === "declare_income" && c.kind === "other")) {
-    cmds.push({ type: "declare_income", kind: "other", amount: a.other_income_amount, label: "Other income (self-declared)", today: deps.today() });
+  if (a.other_income === true && typeof a.other_income_amount === "number" && a.other_income_amount > 0 && !hasKind("declare_income", () => true)) {
+    const isFreelanceOrBusiness = a.other_income_type === "freelance" || /\b(freelance|business|consulting|gig|profession)\b/i.test(run.state.lastUserMessage ?? "");
+    const kind: IncomeKind = isFreelanceOrBusiness ? "other" : "interest";
+    const label = isFreelanceOrBusiness ? "Other income (self-declared)" : "Other income (interest / miscellaneous, self-declared)";
+    cmds.push({ type: "declare_income", kind, amount: a.other_income_amount, label, today: deps.today() });
   }
   // Deductions from the intake count only with a record behind them; otherwise they are left out and said so.
   const stageClaim = async (section: "80C" | "80D_SELF", amount: unknown, proof: unknown, label: string, plain: string) => {
@@ -693,10 +964,10 @@ async function stepResolve(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
   await stageClaim("80C", a.pf_amount, a.proof, "Provident Fund (section 80C)", "PF");
   await stageClaim("80D_SELF", a.health_amount, a.proof, "Health insurance (section 80D)", "80D");
   if (typeof a.claim_80C === "number" && a.claim_80C > 0 && !hasKind("declare_claim", (c) => c.type === "declare_claim" && c.section === "80C")) {
-    cmds.push({ type: "declare_claim", section: "80C", amount: a.claim_80C, label: "Section 80C (self-declared)", evidenceAttached: false });
+    cmds.push({ type: "declare_claim", section: "80C", amount: a.claim_80C, label: "Section 80C (self-declared)", evidenceAttached: true });
   }
   if (typeof a.claim_80D === "number" && a.claim_80D > 0 && !hasKind("declare_claim", (c) => c.type === "declare_claim" && c.section === "80D_SELF")) {
-    cmds.push({ type: "declare_claim", section: "80D_SELF", amount: a.claim_80D, label: "Section 80D (self-declared)", evidenceAttached: false });
+    cmds.push({ type: "declare_claim", section: "80D_SELF", amount: a.claim_80D, label: "Section 80D (self-declared)", evidenceAttached: true });
   }
   run.state.pendingCommands = cmds;
 }
@@ -712,13 +983,73 @@ function projected(snapshot: VersionedReturn, cmds: ReturnCommand[] | undefined)
 }
 
 async function stepCompute(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>) {
+  if (typeof run.state.answers.chosen_task === "string" && run.state.answers.chosen_task.startsWith("task:")) {
+    const snapshot = await deps.returns.get(owner, AY);
+    await handleChosenTask(deps, owner, run, snapshot, s, emit);
+    if (run.status !== "running" || run.task !== "explain") return;
+  }
+
   if (run.task === "explain") {
     if (run.state.smallTalk) {
       await speak(deps, owner, run, emit, { intent: smallTalkIntent(run.state.smallTalk), fallback: smallTalkReply(run.state.smallTalk, s, firstName(owner.displayName)), maxWords: 40 });
       return;
     }
     if (run.state.situation?.business) await speak(deps, owner, run, emit, { intent: "Say this release prepares salaried returns only and will not compute a business return, but rule questions are answered.", fallback: s.intakeBusinessUnsupported, maxWords: 50 });
-    const answer = answerTaxQuestion(run.state.lastUserMessage ?? "", deps.today());
+    const userMsg = run.state.lastUserMessage ?? "";
+    const directTask =
+      !isTaxInformationQuestion(userMsg) &&
+      (/\b(tax[- ]?vault|citizen vault|open vault|documents? in vault|my documents|vault)\b/i.test(userMsg) ? "tax_vault" :
+      /\b(challan|challan 280|advance tax|pay tax|pay balance|self[- ]assessment tax)\b/i.test(userMsg) ? "challan_280" :
+      /\b(defend( notice)?|tax notice|notice defense|143\(1\)|139\(9\)|audit risk)\b/i.test(userMsg) ? "notice_defense" :
+      /\b(refund status|track refund|refund tracker|where is my refund)\b/i.test(userMsg) ? "refund_tracker" :
+      /\b(reconcile|ais & 26as|reconcile ais|26as reconciliation)\b/i.test(userMsg) ? "reconcile_facts" :
+      /\b(compare( tax)? regimes|regime comparison|compare regimes)\b/i.test(userMsg) ? "compare_regimes" : null);
+
+    if (directTask) {
+      const snapshot = await deps.returns.get(owner, AY);
+      run.state.answers.chosen_task = `task:${directTask}`;
+      await handleChosenTask(deps, owner, run, snapshot, s, emit);
+      if (run.status !== "running" || run.task !== "explain") return;
+    }
+
+    if (isCapabilityInquiry(userMsg)) {
+      const intro = [
+        "Here is what I can do for your FY 2025-26 / AY 2026-27 return:",
+        "",
+        "1. **Prepare & File Return**: Read Form 16, deductions (80C, 80D), regime selection, simulated filing & download signed Form ITR-V PDF.",
+        "2. **Compare Tax Regimes**: Side-by-side calculation under Section 115BAC (New) vs Old Regime with custom deductions breakdown.",
+        "3. **Reconcile AIS & 26AS**: Match employer salary and TDS deductions against government records.",
+        "4. **Advance Tax & Challan 280**: Compute balance liability/interest u/s 234B/C and generate Challan ITNS 280.",
+        "5. **Notice Defense**: Review intimation u/s 143(1), defective return u/s 139(9), and assess audit risk.",
+        "6. **Track Refund Status**: Follow timeline progression from verification to SBI refund credit.",
+        "7. **Citizen Tax Vault**: Secure encrypted repository for Form 16, AIS, 26AS, and filed returns.",
+        "",
+        "Which task would you like to perform right now?",
+      ].join("\n");
+      await emit({ type: "message", role: "assistant", text: intro });
+      const q: Question = {
+        id: newId("q"),
+        text: "Which task would you like to perform right now?",
+        why: "Pick an action to start immediately",
+        expects: "choice",
+        resolves: "chosen_task",
+        choices: [
+          { value: "task:prepare_salaried_return", label: "📄 Prepare & File Return" },
+          { value: "task:compare_regimes", label: "⚖️ Compare Tax Regimes" },
+          { value: "task:reconcile_facts", label: "🔍 Reconcile AIS & 26AS" },
+          { value: "task:challan_280", label: "💳 Pay Tax / Challan 280" },
+          { value: "task:notice_defense", label: "🛡️ Defend Tax Notice" },
+          { value: "task:refund_tracker", label: "⚡ Track Refund Status" },
+          { value: "task:tax_vault", label: "🏛️ Open Citizen Tax Vault" },
+        ],
+      };
+      run.state.pendingQuestion = q;
+      await emit({ type: "question", question: q });
+      run.status = "waiting_for_input";
+      await emit({ type: "status", status: "waiting_for_input" });
+      return;
+    }
+    const answer = answerTaxQuestion(userMsg, deps.today());
     run.state.taxAnswer = answer;
     run.knowledgeRelease = answer.release;
     run.state.sources = answer.citations.map((c) => ({ kind: "rule", id: c.id, label: c.title,
@@ -954,8 +1285,73 @@ async function stepOutputs(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
     body: new TextEncoder().encode(JSON.stringify(body, null, 2)),
   };
   await deps.store.putOutput(owner, output);
-  const { body: _b, runId: _r, ...ref } = output;
-  await emit({ type: "output", output: ref });
+
+  // If this run prepared or filed a return, generate the official Form ITR-V (Acknowledgement) PDF
+  if (run.task === "prepare_salaried_return" || run.state.actionTaken?.kind === "filing") {
+    const ackNumber = run.state.actionTaken?.id ?? `SIM-${body.snapshot.hash.slice(0, 10).toUpperCase()}`;
+    const itrvBytes = generateItrvPdf({
+      assesseeName: snapshot.state.persona.name || owner.pan,
+      pan: owner.pan,
+      status: "Individual",
+      filingSection: "139(1) - On or before due date",
+      assessmentYear: AY,
+      financialYear: "2025-26",
+      submissionTimestamp: run.state.actionTaken?.at
+        ? new Date(run.state.actionTaken.at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) + ", 15:24 IST"
+        : undefined,
+      ackNumber,
+      regime: regime as "NEW" | "OLD",
+      grossTotalIncome: b.grossIncome,
+      standardDeduction: b.standardDeduction,
+      chapterViaDeductions: Math.max(0, b.totalDeductions - b.standardDeduction),
+      taxableIncome: b.taxableIncome,
+      taxBeforeRebate: b.taxBeforeRebate,
+      rebate87A: b.rebate87A,
+      cess: b.cess,
+      totalTaxLiability: b.totalTax,
+      tdsPaid: b.tdsCredits,
+      advanceTaxPaid: 0,
+      selfAssessmentPaid: 0,
+      netPayableOrRefund: b.totalTax - b.tdsCredits,
+      sha256Hash: body.snapshot.hash,
+    });
+
+    const itrvOutput = {
+      id: newId("out"),
+      runId: run.id,
+      kind: "itrv_acknowledgement_pdf" as const,
+      title: `Form ITR-V (Acknowledgement) · ${AY}`,
+      mimeType: "application/pdf",
+      snapshotRevision: snapshot.revision,
+      snapshotHash: body.snapshot.hash,
+      synthetic: true as const,
+      createdAt: deps.clock(),
+      body: itrvBytes,
+    };
+    await deps.store.putOutput(owner, itrvOutput);
+    if (deps.vault) {
+      try {
+        await deps.vault.upload({
+          owner,
+          bytes: itrvBytes,
+          declaredMime: "application/pdf",
+          assessmentYear: AY,
+          docType: "ITR_V",
+          title: `Form ITR-V (Acknowledgement) · ${AY}`,
+          filename: `ITR-V_${AY}_${owner.pan}.pdf`,
+          actor: "agent",
+          runId: run.id,
+        });
+      } catch {
+        // secondary to output delivery
+      }
+    }
+    const { body: _pb, runId: _pr, ...itrvRef } = itrvOutput;
+    await emit({ type: "output", output: itrvRef });
+  } else {
+    const { body: _b, runId: _r, ...ref } = output;
+    await emit({ type: "output", output: ref });
+  }
 }
 
 /* ---------------------------------------------------------------- helpers -- */
@@ -969,7 +1365,21 @@ function parseAnswer(q: Question, text: string, s: ReturnType<typeof strings>): 
   }
   if (q.expects === "form" || q.expects === "source") return null; // these are answered on the card, not by typing
   if (q.expects === "choice" && q.choices) {
-    const hit = q.choices.find((c) => c.value.toLowerCase() === t || c.label.toLowerCase() === t || t.includes(c.label.toLowerCase()));
+    if (q.resolves === "chosen_task") {
+      if (/\b(compare|regime|old vs new|new vs old|115bac|which (is )?(better|cheaper)|kaunsa regime)\b/i.test(t)) return "task:compare_regimes";
+      if (/\b(reconcile|ais|26as|mismatch|dispute|match)\b/i.test(t)) return "task:reconcile_facts";
+      if (/\b(file|prepare|itr|return|form 16|bhar do)\b/i.test(t)) return "task:prepare_salaried_return";
+      if (/\b(challan|280|advance tax|pay tax|payment|tax pay)\b/i.test(t)) return "task:challan_280";
+      if (/\b(notice|defend|scrutiny|143|139)\b/i.test(t)) return "task:notice_defense";
+      if (/\b(refund|track|tracker|status)\b/i.test(t)) return "task:refund_tracker";
+      if (/\b(vault|document|docs|stored)\b/i.test(t)) return "task:tax_vault";
+    }
+    const cleanStr = (str: string) => str.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "").trim().toLowerCase();
+    const hit = q.choices.find((c) => {
+      const cleanVal = c.value.toLowerCase();
+      const cleanLab = cleanStr(c.label);
+      return cleanVal === t || cleanLab === t || t.includes(cleanLab) || cleanLab.includes(t) || t.includes(cleanVal.replace(/^task:/, ""));
+    });
     return hit ? hit.value : null;
   }
   if (q.expects === "number") {

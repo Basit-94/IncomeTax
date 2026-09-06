@@ -79,12 +79,18 @@ describe("runtime — the first end-to-end milestone (plan §7)", () => {
     expect(after.revision).toBe(2);
 
     const outs = await d.store.listOutputs(sunita, r.id);
-    expect(outs).toHaveLength(1);
-    expect(outs[0].synthetic).toBe(true);
-    expect(outs[0].snapshotRevision).toBe(2);
-    const body = JSON.parse(new TextDecoder().decode((await d.store.getOutput(sunita, outs[0].id))!.body));
+    expect(outs.length).toBeGreaterThanOrEqual(1);
+    const summaryOut = outs.find((o) => o.kind === "return_summary_json")!;
+    expect(summaryOut).toBeDefined();
+    expect(summaryOut.synthetic).toBe(true);
+    expect(summaryOut.snapshotRevision).toBe(2);
+    const body = JSON.parse(new TextDecoder().decode((await d.store.getOutput(sunita, summaryOut.id))!.body));
     expect(body.synthetic).toBe(true);
     expect(body.figures.refundOrDue).toBe(8400);
+
+    const itrvOut = outs.find((o) => o.kind === "itrv_acknowledgement_pdf");
+    expect(itrvOut).toBeDefined();
+    expect(itrvOut?.mimeType).toBe("application/pdf");
 
     const log = await events(d, sunita, r);
     const types = log.map((e) => e.type);
@@ -231,5 +237,40 @@ describe("runtime — the first end-to-end milestone (plan §7)", () => {
     expect(r.state.pendingQuestion?.expects).toBe("form");
     expect(r.state.pendingQuestion?.text).toMatch(/आंकड़े/);
     expect(r.state.pendingQuestion?.fields?.map((f) => f.label)).toContain("बचत या जमा पर मिला ब्याज");
+  });
+
+  it("capability inquiry returns structured task capabilities and choice options instead of raw statutory text", async () => {
+    const d = deps();
+    const run = await createRun(d, sunita, { message: "now what other tasks you could do?", lang: "en" });
+    const r = (await advance(d, sunita, run.id))!;
+    expect(r.status).toBe("waiting_for_input");
+    expect(r.state.pendingQuestion?.resolves).toBe("chosen_task");
+    expect(r.state.pendingQuestion?.choices?.some((c) => c.value === "task:prepare_salaried_return")).toBe(true);
+    expect(r.state.pendingQuestion?.choices?.some((c) => c.value === "task:compare_regimes")).toBe(true);
+    expect(r.state.pendingQuestion?.choices?.some((c) => c.value === "task:challan_280")).toBe(true);
+    const evs = await events(d, sunita, r);
+    expect(evs.some((e) => e.type === "message" && e.role === "assistant" && /Prepare & File Return/i.test(e.text))).toBe(true);
+  });
+
+  it("already-filed return skips intake questions and acknowledges filing status", async () => {
+    const d = deps();
+    // Pre-seed a return that was already filed in manual mode
+    await d.returns.replace(sunita, "2026-27", {
+      version: 1,
+      lang: "en",
+      personaId: "sunita",
+      baselinePersona: PERSONAS.sunita,
+      persona: PERSONAS.sunita,
+      corrections: [],
+      confirmedFactIds: [],
+      regime: "new",
+      filedAt: "2026-07-20T10:00:00.000Z",
+    }, null);
+    const run = await createRun(d, sunita, { task: "prepare_salaried_return", lang: "en" });
+    const r = (await advance(d, sunita, run.id))!;
+    // Should NOT wait for other income or deduction questions
+    expect(r.state.pendingQuestion).toBeUndefined();
+    const evs = await events(d, sunita, r);
+    expect(evs.some((e) => e.type === "message" && /already filed/i.test(e.text))).toBe(true);
   });
 });

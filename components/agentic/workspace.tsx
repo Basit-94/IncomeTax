@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Check, CircleDot, FileText, Mic, MicOff, Send, ShieldAlert, Sparkles, Upload, X } from "lucide-react";
+import { ArrowRight, Check, CircleDot, Download, FileText, Mic, MicOff, Send, ShieldAlert, ShieldCheck, Sparkles, Upload, X } from "lucide-react";
 import type { PublicRun } from "@/lib/agentic/runtime";
 import type { OutputRef, Question, ReviewCard, RunEvent, RunTask } from "@/lib/agentic/types";
 import type { AgenticStrings } from "@/lib/i18n/agenticStrings";
@@ -29,6 +29,7 @@ export interface WorkspaceProps {
   durable: boolean;
   onStart: (input: { message?: string; task?: RunTask }) => void;
   onSend: (input: { message?: string; answer?: { questionId: string; value: string | number | boolean }; confirm?: { cardId: string; accepted: boolean } }) => void;
+  onOpenVault?: () => void;
 }
 
 const STATUS_KEY: Record<PublicRun["status"], keyof AgenticStrings> = {
@@ -97,7 +98,7 @@ export default function Workspace(props: WorkspaceProps) {
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4">
         <div className="mx-auto w-full max-w-3xl space-y-3">
           {events.map((e) => (
-            <EventRow key={e.seq} event={e} s={s} answered={answeredIds} confirmed={confirmedIds} questions={questionsById} />
+            <EventRow key={e.seq} event={e} s={s} answered={answeredIds} confirmed={confirmedIds} questions={questionsById} runId={run.id} onOpenVault={props.onOpenVault} />
           ))}
           {run.pendingQuestion && !answeredIds.has(run.pendingQuestion.id) && (
             <QuestionCard q={run.pendingQuestion} s={s} disabled={props.loading} onAnswer={(value) => props.onSend({ answer: { questionId: run.pendingQuestion!.id, value } })} />
@@ -129,7 +130,7 @@ function answerLabel(value: string | number | boolean, q: Question | undefined, 
   return q?.choices?.find((c) => c.value === String(value))?.label ?? String(value);
 }
 
-function EventRow({ event, s, answered, confirmed, questions }: { event: RunEvent; s: AgenticStrings; answered: Set<string>; confirmed: Set<string>; questions: Map<string, Question> }) {
+function EventRow({ event, s, answered, confirmed, questions, runId, onOpenVault }: { event: RunEvent; s: AgenticStrings; answered: Set<string>; confirmed: Set<string>; questions: Map<string, Question>; runId?: string; onOpenVault?: () => void }) {
   const p = event.payload;
   switch (p.type) {
     case "message":
@@ -150,41 +151,82 @@ function EventRow({ event, s, answered, confirmed, questions }: { event: RunEven
         </p>
       );
     case "question": {
-      if (!answered.has(p.question.id)) return null; // the live one renders at the bottom
-      return (
-        <div className="flex items-start gap-3">
-          <Avatar />
-          <div className="max-w-[85%] rounded-2xl rounded-tl-md border border-line bg-paper-2 px-4 py-3 text-[15px] text-ink">
-            <p>{p.question.text}</p>
-            <p className="mt-1 text-xs text-ink-3">{p.question.why}</p>
-          </div>
-        </div>
-      );
+      if (!answered.has(p.question.id)) return null; // rendered at the bottom
+      return null;
     }
-    case "answer":
+    case "answer": {
+      const q = questions.get(p.questionId);
+      const label = answerLabel(p.value, q, s);
       return (
         <div className="flex justify-end">
-          <div className="rounded-2xl rounded-br-md bg-amber-bg border border-amber-500/30 px-4 py-2 text-sm text-ink">{answerLabel(p.value, questions.get(p.questionId), s)}</div>
-        </div>
-      );
-    case "review_card":
-      if (!confirmed.has(p.card.id)) return null;
-      return <ReviewCardView card={p.card} s={s} disabled inert />;
-    case "confirmation":
-      return (
-        <p className="flex items-center gap-2 px-11 text-xs font-mono text-ink-3">
-          {p.accepted ? <Check size={12} className="text-money" aria-hidden="true" /> : <X size={12} aria-hidden="true" />} {p.accepted ? s.confirm : s.cancel}
-        </p>
-      );
-    case "output":
-      return (
-        <div className="px-11">
-          <span className="inline-flex items-center gap-2 rounded-lg border border-line bg-paper-2 px-3 py-1.5 text-xs text-ink">
-            <FileText size={13} className="text-money" aria-hidden="true" /> {p.output.title}
-            <span className="text-ink-3">· {s.simulatedBadge}</span>
+          <span className="inline-flex items-center gap-1.5 rounded-2xl rounded-br-md bg-paper-2 border border-line px-3.5 py-1.5 text-xs text-ink">
+            <Check size={12} className="text-money" aria-hidden="true" /> {label}
           </span>
         </div>
       );
+    }
+    case "review_card":
+      if (!confirmed.has(p.card.id)) return null;
+      return null;
+    case "confirmation":
+      return (
+        <div className="flex justify-end">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-paper-2 px-3 py-1 text-xs text-ink-2">
+            <Check size={11} className="text-money" aria-hidden="true" /> {p.accepted ? s.confirm : s.cancel}
+          </span>
+        </div>
+      );
+    case "output": {
+      const isPdf = p.output.mimeType === "application/pdf" || p.output.kind === "itrv_acknowledgement_pdf";
+      return (
+        <div className="px-11 my-2">
+          {isPdf ? (
+            <div className="rounded-2xl border-2 border-teal-700/30 bg-teal-500/5 p-4 space-y-3 max-w-md shadow-xs">
+              <div className="flex items-start gap-3">
+                <div className="size-9 rounded-xl bg-teal-800 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <FileText size={18} aria-hidden="true" />
+                </div>
+                <div className="min-w-0">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-teal-800/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-teal-900 dark:text-teal-200">
+                    Official CBDT Form ITR-V
+                  </span>
+                  <p className="text-sm font-bold text-ink mt-0.5">{p.output.title}</p>
+                  <p className="font-mono text-[11px] text-ink-3">
+                    rev {p.output.snapshotRevision} · {p.output.snapshotHash.slice(0, 10).toUpperCase()} · {s.simulatedBadge}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {runId && (
+                  <a
+                    href={`/api/runs/${runId}/outputs/${p.output.id}`}
+                    download
+                    className="inline-flex items-center gap-2 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-bold text-xs px-4 py-2.5 shadow-xs transition cursor-pointer"
+                  >
+                    <Download size={14} aria-hidden="true" /> Download Form ITR-V (PDF)
+                  </a>
+                )}
+                {onOpenVault && (
+                  <button
+                    type="button"
+                    onClick={onOpenVault}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-teal-700/30 bg-paper px-3.5 py-2 text-xs font-semibold text-ink hover:bg-paper-3 transition cursor-pointer"
+                  >
+                    <ShieldCheck size={14} className="text-amber-500" aria-hidden="true" />
+                    <span>Open in Citizen Tax Vault</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <span className="inline-flex items-center gap-2 rounded-lg border border-line bg-paper-2 px-3 py-1.5 text-xs text-ink">
+              <FileText size={13} className="text-money" aria-hidden="true" /> {p.output.title}
+              <span className="text-ink-3">· {s.simulatedBadge}</span>
+            </span>
+          )}
+        </div>
+      );
+    }
     case "status":
       if (p.status === "failed") {
         return (

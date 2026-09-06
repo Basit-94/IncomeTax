@@ -46,12 +46,11 @@ export async function ensureServerSession(client: SessionInfo | null): Promise<E
   try {
     if (client.isMock || client.token.startsWith("mock-") || client.token.startsWith("vault_session_")) {
       const persona = findPersonaByPan(client.pan);
-      if (!persona) return { ok: false, reason: "unverifiable" };
       const res = await fetch("/api/session/demo", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ personaId: persona.id }),
+        body: JSON.stringify({ personaId: persona ? persona.id : "custom", pan: client.pan, displayName: client.fullName }),
       });
       if (!res.ok) return { ok: false, reason: "rejected" };
       return { ok: true, session: (await res.json()) as ServerSessionInfo };

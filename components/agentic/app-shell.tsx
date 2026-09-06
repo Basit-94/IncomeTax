@@ -15,7 +15,7 @@
  */
 
 import { useEffect, useState, type ReactNode } from "react";
-import { Brain, FileText, History, LogOut, Menu, Moon, PanelLeftClose, Plus, Search, ShieldCheck, Sun, Trash2, X } from "lucide-react";
+import { Brain, FileText, History, LogOut, Menu, Moon, PanelLeftClose, PanelLeftOpen, Plus, Search, ShieldCheck, Sun, Trash2, X } from "lucide-react";
 import type { Dict } from "@/lib/i18n";
 import type { AgenticStrings } from "@/lib/i18n/agenticStrings";
 import type { Lang } from "@/lib/types";
@@ -215,17 +215,50 @@ export default function AppShell(props: AppShellProps) {
           Agentic/Manual switch sits at the same x/y as on the landing and the Manual page. */}
       <PrototypeBanner t={t} />
       <header className="shrink-0 border-b border-line bg-paper/95 backdrop-blur" data-testid="shell-header">
-        <HeaderBar t={t} s={s} mode={mode} onModeChange={props.onModeChange} busy={props.modeBusy}>
+        <HeaderBar
+          t={t}
+          s={s}
+          mode={mode}
+          onModeChange={props.onModeChange}
+          busy={props.modeBusy}
+          after={
+            withSidebar ? (
+              <button
+                type="button"
+                onClick={toggleCollapsed}
+                className={`size-9 hidden lg:flex items-center justify-center rounded-lg border border-line bg-paper text-ink-2 hover:text-ink hover:border-money/60 transition cursor-pointer shrink-0 ${collapsed ? "text-money border-money/40 shadow-xs" : ""}`}
+                title={collapsed ? "Expand sidebar (chats & tools)" : "Collapse sidebar"}
+                aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                {collapsed ? <PanelLeftOpen size={17} aria-hidden="true" /> : <PanelLeftClose size={17} aria-hidden="true" />}
+              </button>
+            ) : undefined
+          }
+        >
           {withSidebar && (
-            <button type="button" onClick={() => (window.matchMedia("(min-width: 1024px)").matches ? toggleCollapsed() : setDrawer(true))} className="size-9 flex items-center justify-center rounded-lg text-ink-2 hover:text-ink hover:bg-paper-2 cursor-pointer shrink-0" aria-label="Menu">
-              <Menu size={18} aria-hidden="true" />
+            <button type="button" onClick={() => (window.matchMedia("(min-width: 1024px)").matches ? toggleCollapsed() : setDrawer(true))} className="size-9 flex items-center justify-center rounded-lg text-ink-2 hover:text-ink hover:bg-paper-2 cursor-pointer shrink-0" aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}>
+              {collapsed ? <PanelLeftOpen size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
             </button>
           )}
           {withSidebar && <InspectorControls s={s} open={inspectorTab} onToggle={(tab) => setInspectorTab((cur) => (cur === tab ? null : tab))} steps={inspector.steps} outputs={inspector.outputs} sources={inspector.sources} />}
         </HeaderBar>
       </header>
 
-      <div className="flex-1 min-h-0 flex">
+      <div className="flex-1 min-h-0 flex relative">
+        {/* Docked quick-open button on the canvas when sidebar is collapsed */}
+        {withSidebar && collapsed && (
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className="hidden lg:flex fixed left-3 top-[92px] z-30 items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-line bg-paper/95 backdrop-blur shadow-sm text-ink-2 hover:text-ink hover:border-money/60 transition cursor-pointer text-xs font-medium"
+            title="Expand sidebar"
+            aria-label="Expand sidebar"
+          >
+            <PanelLeftOpen size={15} aria-hidden="true" className="text-money" />
+            <span>{s.newChat.replace("New ", "")}</span>
+          </button>
+        )}
+
         {/* Sidebar: fixed column on large screens, drawer below */}
         {withSidebar && <div className={`hidden lg:block shrink-0 transition-[width] duration-200 ${collapsed ? "w-0 overflow-hidden" : "w-[272px]"}`}>{sidebar}</div>}
         {withSidebar && drawer && (

@@ -14,6 +14,7 @@ import { clearSession, ensureSession, saveSession, type SessionInfo } from "./au
 import type { Dict } from "./i18n";
 import { findPersonaByPan } from "./personas";
 import { CURRENT_VERSION, save as savePersist } from "./return/persist";
+import { mirrorReturn } from "./return-sync-client";
 import type { ReturnState } from "./return/state";
 import { ensureServerSession, type EnsureResult } from "./session-client";
 import type { Lang, Persona } from "./types";
@@ -118,9 +119,18 @@ export async function completeSignIn(persona: Persona, code: string, lang: Lang)
  */
 export async function persistSignIn(session: SessionInfo, persona: Persona, lang: Lang): Promise<EnsureResult> {
   saveSession(session);
-  savePersist(returnStateFor(persona, lang));
+  const state = returnStateFor(persona, lang);
+  savePersist(state);
   try {
-    return await ensureServerSession(session);
+    const res = await ensureServerSession(session);
+    if (res.ok) {
+      try {
+        await mirrorReturn(state);
+      } catch {
+        // best-effort mirror to server store
+      }
+    }
+    return res;
   } catch {
     return { ok: false, reason: "network" };
   }

@@ -159,7 +159,7 @@ export function nextIntakeQuestion(ctx: IntakeContext): Question | null {
     };
   }
 
-  const salaryKnown = reportedSalary > 0 || ctx.salaryStaged;
+  const salaryKnown = reportedSalary > 0 || ctx.salaryStaged || snapshot.state.baselinePersona.facts.some((f) => f.kind === "salary");
   if (!salaryKnown && a.source === undefined) {
     const vaultDocs = a.vault_consent === false ? [] : ctx.vaultForm16;
     const options: NonNullable<Question["sourceOptions"]> = [];

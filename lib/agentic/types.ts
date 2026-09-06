@@ -112,7 +112,7 @@ export interface SourceRef {
 
 export interface OutputRef {
   id: string;
-  kind: "return_summary_json" | "regime_comparison_json" | "reconciliation_json";
+  kind: "return_summary_json" | "regime_comparison_json" | "reconciliation_json" | "itrv_acknowledgement_pdf";
   title: string;
   mimeType: string;
   snapshotRevision: number;

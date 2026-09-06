@@ -1997,7 +1997,21 @@ export default function WapsiPrototype() {
     taxDispatch({ type: "MARK_FILED", filedAt });
     // One mutation path (plan.md §3.3): the same command the agent runs to stamp a return.
     const stamped = applyReturnCommand(returnState, { type: "finalize_filing", filedAt, today: TODAY });
-    if (stamped.ok) saveState(stamped.state);
+    if (stamped.ok) {
+      saveState(stamped.state);
+      const citizenPan = persona?.pan || session?.pan;
+      if (citizenPan) {
+        void addDocumentToVault(citizenPan, {
+          id: `doc_itrv_${Date.now()}`,
+          title: `Form ITR-V (Acknowledgement) · AY 2026-27`,
+          docType: "ITR_V",
+          issuer: "Income Tax Department",
+          uploadedAt: new Date().toISOString().slice(0, 10),
+          sizeKb: 14,
+          status: "verified",
+        });
+      }
+    }
     setTimeout(() => setStampFired(true), 400);
 
     // Start automatic progression to Credited

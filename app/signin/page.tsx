@@ -14,13 +14,15 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Moon, Sun } from "lucide-react";
 import type { IngestedDocument } from "@/context/TaxReturnContext";
-import { clearSession, loadSession } from "@/lib/auth-client";
+import { clearSession, loadSession, saveSession, type SessionInfo } from "@/lib/auth-client";
 import { ensureServerSession } from "@/lib/session-client";
 import { localize } from "@/components/mock-i18n";
 import { dict, isLang } from "@/lib/i18n";
 import { isRtl } from "@/lib/i18n/languages";
 import { PERSONAS } from "@/lib/personas";
-import { MOCK_OTP, blankPersona, completeSignIn, panIssueMessage, persistSignIn, personaForPan, sessionForVaultUser } from "@/lib/signin-flow";
+import { save as savePersist } from "@/lib/return/persist";
+import { mirrorReturn } from "@/lib/return-sync-client";
+import { MOCK_OTP, blankPersona, completeSignIn, panIssueMessage, persistSignIn, personaForPan, returnStateFor, sessionForVaultUser } from "@/lib/signin-flow";
 import type { Lang, Persona, PersonaId, Provenance } from "@/lib/types";
 import type { CitizenVaultUser } from "@/lib/vault/vault-store";
 import AuthPortal from "@/components/auth/auth-portal";
@@ -115,6 +117,29 @@ function SignIn() {
       return;
     }
     setAuthBusy(true);
+    const res = await fetch("/api/session/demo", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ personaId, pan: persona.pan, displayName: persona.name }),
+    });
+    if (res.ok) {
+      const clientSession: SessionInfo = {
+        token: `demo_${persona.id}_${Date.now()}`,
+        pan: persona.pan,
+        fullName: persona.name,
+        personalisedMessage: "Welcome to Wapsi",
+        isMock: true,
+      };
+      saveSession(clientSession);
+      const state = returnStateFor(persona, lang);
+      savePersist(state);
+      try {
+        await mirrorReturn(state);
+      } catch {}
+      setAuthBusy(false);
+      return arrive();
+    }
     const out = await completeSignIn(persona, MOCK_OTP, lang);
     setAuthBusy(false);
     if (out.ok) arrive();
@@ -135,6 +160,29 @@ function SignIn() {
     setAuthBusy(true);
     setAuthNote(t.login.authVerifying);
     setOtpError(false);
+    const res = await fetch("/api/session/demo", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ personaId: pending.id === "custom" ? "custom" : pending.id, pan: pending.pan, displayName: pending.name }),
+    });
+    if (res.ok) {
+      const clientSession: SessionInfo = {
+        token: `demo_${pending.id}_${Date.now()}`,
+        pan: pending.pan,
+        fullName: pending.name,
+        personalisedMessage: "Welcome to Wapsi",
+        isMock: true,
+      };
+      saveSession(clientSession);
+      const state = returnStateFor(pending, lang);
+      savePersist(state);
+      try {
+        await mirrorReturn(state);
+      } catch {}
+      setAuthBusy(false);
+      return arrive();
+    }
     const out = await completeSignIn(pending, code, lang);
     setAuthBusy(false);
     if (out.ok) return arrive();
@@ -152,7 +200,10 @@ function SignIn() {
   };
   const onLaunchWithForm16 = async (doc: IngestedDocument) => {
     const pan = doc.extracted.pan?.trim().toUpperCase() || panInput.toUpperCase().trim() || "";
-    if (!pan) return setPanInputError(t.validate.panShape);
+    if (!pan) {
+      setPanInputError(t.validate.panShape);
+      throw new Error(t.validate.panShape);
+    }
     const base = personaForPan(pan, lang);
     const name = doc.extracted.name?.trim() || base.name;
     const employer = doc.extracted.employerName?.trim() || "Employer";
@@ -171,10 +222,60 @@ function SignIn() {
       else persona.taxPaid.push(paid);
     }
     setAuthBusy(true);
+    const res = await fetch("/api/session/demo", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ personaId: "custom", pan, displayName: name }),
+    });
+    if (res.ok) {
+      const clientSession: SessionInfo = {
+        token: `demo_form16_${pan}_${Date.now()}`,
+        pan,
+        fullName: name,
+        personalisedMessage: "Welcome to Wapsi",
+        isMock: true,
+      };
+      saveSession(clientSession);
+      const state = returnStateFor(persona, lang);
+      savePersist(state);
+      try {
+        await mirrorReturn(state);
+      } catch {}
+      if (doc.file) {
+        try {
+          const fd = new FormData();
+          fd.append("file", doc.file);
+          fd.append("docType", doc.kind === "AIS" ? "ANNUAL_INFO_STATEMENT" : "FORM_16");
+          fd.append("assessmentYear", "2026-27");
+          if (employer) fd.append("issuer", employer);
+          fd.append("title", doc.fileName);
+          await fetch("/api/vault/documents", { method: "POST", body: fd });
+        } catch {
+          // best-effort vault upload
+        }
+      }
+      setAuthBusy(false);
+      return arrive();
+    }
     const out = await completeSignIn(persona, MOCK_OTP, lang);
     setAuthBusy(false);
-    if (out.ok) arrive();
-    else {
+    if (out.ok) {
+      if (doc.file) {
+        try {
+          const fd = new FormData();
+          fd.append("file", doc.file);
+          fd.append("docType", doc.kind === "AIS" ? "ANNUAL_INFO_STATEMENT" : "FORM_16");
+          fd.append("assessmentYear", "2026-27");
+          if (employer) fd.append("issuer", employer);
+          fd.append("title", doc.fileName);
+          await fetch("/api/vault/documents", { method: "POST", body: fd });
+        } catch {
+          // best-effort vault upload
+        }
+      }
+      arrive();
+    } else {
       setPending(persona);
       setOtp(MOCK_OTP.split(""));
     }
@@ -237,6 +338,7 @@ function SignIn() {
               onSignUpComplete={(u) => void onSignUpComplete(u)}
               onLaunchWithForm16={(d) => void onLaunchWithForm16(d)}
               initialTab={initialTab === "personas" || initialTab === "signup" || initialTab === "document" ? initialTab : undefined}
+              authBusy={authBusy}
             />
           )}
         </div>

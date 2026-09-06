@@ -39,7 +39,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
             send("run_status", { status: current?.status ?? "failed", cursor });
             break;
           }
-          await new Promise((r) => setTimeout(r, 400));
+          const delay = events.length > 0 ? 50 : 100;
+          await new Promise((r) => setTimeout(r, delay));
         }
         send("cursor", { cursor });
       } finally {
