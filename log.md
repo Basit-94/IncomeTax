@@ -4933,7 +4933,7 @@ things there are already true and will NOT be rewritten:
     3. Verified Part A Quarters: **Q1: ₹41,250, Q2: ₹41,250, Q3: ₹41,250, Q4: ₹41,250**, Total TDS: **₹1,65,000** (no zeros!).
     4. Verified Part B: Gross salary: **₹18,50,000**, Standard deduction: **− ₹75,000**, Taxable salary: **₹17,75,000**, Total tax payable: **₹1,61,200**, TDS: **₹1,65,000**.
     5. Opened `Form ITR-V (Acknowledgement)`: Verified Part B-TI Gross salary: **₹18,50,000**, Taxable: **₹17,75,000**, Part B-TTI Total tax liability: **₹1,61,200**, TDS: **₹1,65,000**, Net refund: **₹3,800**, Bank: **HDFC Bank** (pre-validated).
-- **Git Policy:** Work strictly contained on `dev-2`. No commits or pushes performed.
+- **Git Action:** Committed `c783487` ("fix(vault): persist extracted fields, eliminate zero-value previews, and add original PDF toggle") and pushed to `origin/dev-2` per explicit user instruction. Production build verified with Next.js Turbopack (`npm run build`) passing 16/16 routes.
 
 
 
