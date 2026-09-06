@@ -12,6 +12,7 @@ import { runBudget } from "../types";
 import type { Run } from "../types";
 
 const sunita: Owner = { pan: "DEMPS4417K", kind: "demo", displayName: "Sunita Devi" };
+const citizen: Owner = { pan: "ABCPX7788Q", kind: "citizen", displayName: "Citizen 7788" };
 
 function deps(overrides: Partial<RuntimeDeps> = {}): RuntimeDeps {
   let t = 0;
@@ -19,7 +20,9 @@ function deps(overrides: Partial<RuntimeDeps> = {}): RuntimeDeps {
   return { store: new MemoryRunStore(clock), returns: new MemoryReturnStore({ now: clock, newId: (p) => `${p}-${t++}` }), vault: null, model: nullModel, budget: runBudget({}), clock, today: () => "2026-09-05", ...overrides };
 }
 const vault = () => new VaultService(new MemoryVaultRepository(), loadVaultKey({ WAPSI_VAULT_KEY: Buffer.alloc(32, 9).toString("base64") }));
-const msgs = async (d: RuntimeDeps, run: Run) => (await d.store.eventsAfter(sunita, run.id, 0)).map((e) => e.payload).filter((p) => p.type === "message" && p.role === "assistant").map((p) => (p as { text: string }).text);
+const msgs = async (d: RuntimeDeps, owner: Owner, run: Run) => (await d.store.eventsAfter(owner, run.id, 0)).map((e) => e.payload).filter((p) => p.type === "message" && p.role === "assistant").map((p) => (p as { text: string }).text);
+const answer = (d: RuntimeDeps, owner: Owner, r: Run, value: string | number | boolean) => advance(d, owner, r.id, { answer: { questionId: r.state.pendingQuestion!.id, value } }) as Promise<Run>;
+const form = (fields: Record<string, number | boolean>) => JSON.stringify(fields);
 
 describe("plain-English intake — the sentence becomes a situation (user request 2026-09-05)", () => {
   it("reads amounts the way people write them", () => {
@@ -40,113 +43,145 @@ describe("plain-English intake — the sentence becomes a situation (user reques
     expect(hasIntakeSignal(parseSituation("which regime is better for me?"))).toBe(false);
     expect(parseSituation("I have rental income from a flat").rentPaid).toBe(false);
   });
+
+  it("reads Hinglish the way people actually type it", () => {
+    const h = parseSituation("mujhe 12 lpa ki naukri mili hai, tax bharna hai, sabse accha kya hai");
+    expect(h).toMatchObject({ employment: true, salaryAmount: 1_200_000, wantsFiling: true, wantsBest: true, business: false });
+    expect(parseSituation("mera chhota dhandha hai, 30 lakh ka turnover").business).toBe(true);
+    expect(parseSituation("kiraye pe rehta hoon aur ghar ka loan bhi hai")).toMatchObject({ rentPaid: true, homeLoan: true });
+  });
 });
 
-describe("intake in the runtime — acknowledge, then one plain question at a time", () => {
+describe("intake in the runtime — document-first, one form, few steps (user direction 2026-09-06)", () => {
   const opening = "I got a job with a 12 LPA package, and I need to file my taxes. What's the best play here?";
 
-  it("a salaried sentence: acknowledgement first, the salary-figure conflict next, then Form 16 explained with an upload, then PF, then proof", async () => {
+  it("a salaried sentence on a return with an employer figure: acknowledgement, the salary conflict, then ONE form, then one proof, then review", async () => {
     const d = deps({ vault: vault() });
     const run = await createRun(d, sunita, { message: opening, lang: "en" });
     let r = (await advance(d, sunita, run.id))!;
     expect(r.task).toBe("prepare_salaried_return");
     expect(r.state.situation?.salaryAmount).toBe(1_200_000);
-    const first = (await msgs(d, r))[0];
-    expect(first).toMatch(/Got it — you're salaried, at about ₹12,00,000 a year/);
-    expect(first).toMatch(/Nothing is filed without your say-so/);
+    const first = (await msgs(d, sunita, r))[0];
+    expect(first).toMatch(/salaried, at about ₹12,00,000 a year/);
+    expect(first).not.toMatch(/say-so|jargon|honest/i); // no self-description (docs/VOICE.md)
 
     // Sunita's employer reported ₹4,20,000: the stated package conflicts, so that is the first question.
     expect(r.status).toBe("waiting_for_input");
     let q = r.state.pendingQuestion!;
     expect(q.resolves).toBe("salary_figure");
     expect(q.expects).toBe("choice");
-    expect(q.text).toContain("₹4,20,000");
-    expect(q.text).toContain("₹12,00,000");
-    r = (await advance(d, sunita, r.id, { answer: { questionId: q.id, value: "reported" } }))!;
+    expect(q.lead).toBeUndefined(); // no lead-ins: the question is the question
+    r = await answer(d, sunita, r, "reported");
 
-    // Then the document, described as a thing you would recognise, with an upload and an honest way out.
+    // Everything else in one card — PF, health insurance, other income — not one question at a time.
     q = r.state.pendingQuestion!;
-    expect(q.resolves).toBe("form16");
+    expect(q.resolves).toBe("details");
+    expect(q.expects).toBe("form");
+    expect(q.fields?.map((f) => f.key)).toEqual(["pf_amount", "health_amount", "other_income_amount"]); // salary is on record; demo personas are residents
+    r = await answer(d, sunita, r, form({ pf_amount: 60000, health_amount: 0, other_income_amount: 0 }));
+    expect(r.state.answers).toMatchObject({ pf_amount: 60000, health_amount: 0, other_income_amount: 0, other_income: false });
+
+    // A deduction was entered, so one proof upload is offered — with an honest way out.
+    q = r.state.pendingQuestion!;
+    expect(q.resolves).toBe("proof");
     expect(q.expects).toBe("file");
-    expect(q.docType).toBe("FORM_16");
-    expect(q.text).toMatch(/document called Form 16/);
-    expect(q.docHint).toMatch(/employer gives you/);
-    expect(q.skipLabel).toBe("I don't have it");
-    r = (await advance(d, sunita, r.id, { answer: { questionId: q.id, value: "none" } }))!;
-
-    // PF in words, not "section 80C".
-    q = r.state.pendingQuestion!;
-    expect(q.resolves).toBe("pf");
-    expect(q.text).toMatch(/Provident Fund \(PF\)/);
-    expect(q.text).not.toMatch(/80C/);
-    r = (await advance(d, sunita, r.id, { answer: { questionId: q.id, value: true } }))!;
-    q = r.state.pendingQuestion!;
-    expect(q.resolves).toBe("pf_amount");
-    r = (await advance(d, sunita, r.id, { answer: { questionId: q.id, value: 60000 } }))!;
-    q = r.state.pendingQuestion!;
-    expect(q.resolves).toBe("pf_proof");
-    expect(q.expects).toBe("file");
-    r = (await advance(d, sunita, r.id, { answer: { questionId: q.id, value: "none" } }))!;
-
-    // Health insurance, then the generic other-income question; no duplicate 80C/80D questions.
-    q = r.state.pendingQuestion!;
-    expect(q.resolves).toBe("health");
-    r = (await advance(d, sunita, r.id, { answer: { questionId: q.id, value: false } }))!;
-    q = r.state.pendingQuestion!;
-    expect(q.resolves).toBe("other_income");
-    r = (await advance(d, sunita, r.id, { answer: { questionId: q.id, value: false } }))!;
+    r = await answer(d, sunita, r, "none");
 
     // Review: the unproven PF amount was left out and said so; the reported salary stands; a card is offered.
     expect(r.status).toBe("waiting_for_review");
     expect(r.state.pendingCommands?.some((c) => c.type === "declare_claim")).toBeFalsy();
     expect(r.state.pendingCommands?.some((c) => c.type === "correct_fact")).toBeFalsy();
-    expect((await msgs(d, r)).some((m) => /left the PF amount out/.test(m))).toBe(true);
+    expect((await msgs(d, sunita, r)).some((m) => /left the PF amount out/.test(m))).toBe(true);
     expect(r.state.pendingCard?.rows.find((x) => x.label === "Refund due to you")?.value).toBe("₹8,400");
   });
 
-  it("an uploaded Form 16 is stored, read, and its figures staged as an import — the citizen only had to say 'that form'", async () => {
+  it("a blank return: where the money came from, then the source card, then an uploaded Form 16 is read and staged — the citizen never typed a salary", async () => {
     const v = vault();
     const d = deps({ vault: v });
-    const run = await createRun(d, sunita, { message: "New job, 4.5 lakh salary, need to file", lang: "en" });
-    let r = (await advance(d, sunita, run.id))!;
+    const run = await createRun(d, citizen, { message: "file my tax", lang: "en" });
+    let r = (await advance(d, citizen, run.id))!;
+    // The reviewer gate is said up front, once, without self-description.
+    expect((await msgs(d, citizen, r))[0]).toMatch(/hasn't been signed off by a tax reviewer/);
     let q = r.state.pendingQuestion!;
-    expect(q.resolves).toBe("salary_figure"); // 4.5 L vs reported 4.2 L
-    r = (await advance(d, sunita, r.id, { answer: { questionId: q.id, value: "stated" } }))!;
+    expect(q.resolves).toBe("income_source");
+    r = await answer(d, citizen, r, "salary");
+
     q = r.state.pendingQuestion!;
-    expect(q.resolves).toBe("form16");
-    // The UI uploads to /api/vault/documents and answers with the document id; the same store is used here.
-    const pdf = new TextEncoder().encode("%PDF-1.4\nFORM NO. 16 PAN of the Employee: DEMPS4417K Gross Salary: 4,50,000 Total Tax Deducted: 9,000\n%%EOF");
-    const up = await v.upload({ owner: sunita, bytes: pdf, filename: "Form16.pdf", assessmentYear: "2026-27", docType: "FORM_16" });
+    expect(q.resolves).toBe("source");
+    expect(q.expects).toBe("source");
+    expect(q.sourceOptions?.map((o) => o.value)).toEqual(["upload", "digilocker", "manual"]); // nothing in the vault yet
+    expect(q.sourceOptions?.[0].kind).toBe("upload");
+    // The UI uploads to /api/vault/documents and answers `upload:<id>`; the same store is used here.
+    const pdf = new TextEncoder().encode("%PDF-1.4\nFORM NO. 16 PAN of the Employee: ABCPX7788Q Gross Salary: 9,00,000 Total Tax Deducted: 42,000\n%%EOF");
+    const up = await v.upload({ owner: citizen, bytes: pdf, filename: "Form16.pdf", assessmentYear: "2026-27", docType: "FORM_16" });
     expect(up.ok).toBe(true);
-    r = (await advance(d, sunita, r.id, { answer: { questionId: q.id, value: (up as { document: { id: string } }).document.id } }))!;
-    expect((await msgs(d, r)).some((m) => /stored that document in your vault/.test(m))).toBe(true);
+    r = await answer(d, citizen, r, `upload:${(up as { document: { id: string } }).document.id}`);
+    expect(r.state.pendingCommands?.some((c) => c.type === "import_document")).toBe(true);
+    expect((await msgs(d, citizen, r)).at(-1)).toMatch(/₹9,00,000/); // what was read is said, not "lovely, thanks"
     expect(r.state.sources.some((s) => s.kind === "document" && s.verified)).toBe(true);
-    expect(r.state.documentTypes).toContain("FORM_16");
-    expect(r.state.pendingQuestion?.resolves).toBe("pf"); // it moved on
-    // Finish quickly and check what is staged: the stated salary correction and the Form 16 import.
-    for (const [key, value] of [["pf", false], ["health", false], ["other_income", false]] as const) {
-      expect(r.state.pendingQuestion?.resolves).toBe(key);
-      r = (await advance(d, sunita, r.id, { answer: { questionId: r.state.pendingQuestion!.id, value } }))!;
-    }
-    expect(r.status).toBe("waiting_for_review");
-    expect(r.state.pendingCommands?.map((c) => c.type)).toEqual(expect.arrayContaining(["correct_fact", "import_document"]));
-    const log = JSON.stringify(await d.store.eventsAfter(sunita, r.id, 0));
+
+    // The form no longer asks for the salary; a citizen is asked about residency in the same card.
+    q = r.state.pendingQuestion!;
+    expect(q.resolves).toBe("details");
+    expect(q.fields?.map((f) => f.key)).toEqual(["pf_amount", "health_amount", "other_income_amount", "resident"]);
+    r = await answer(d, citizen, r, form({ pf_amount: 0, health_amount: 0, other_income_amount: 0, resident: true }));
+
+    // Nothing else to ask. The only thing standing between this return and a recommendation is the reviewer.
+    expect(r.status).toBe("completed");
+    expect(r.state.advice?.issues.map((i) => i.code)).toEqual(["tax_review_required"]);
+    const log = JSON.stringify(await d.store.eventsAfter(citizen, r.id, 0));
     expect(log).not.toContain("Form16.pdf");
   });
 
-  it("without a document store the intake never asks for uploads, and an unproven deduction is left out", async () => {
+  it("DigiLocker (mock): offered on the source card, fetched only after a consent card that lists the documents, and labelled as sample data", async () => {
+    const d = deps({ vault: vault() });
+    let r = (await advance(d, citizen, (await createRun(d, citizen, { message: "file my tax", lang: "en" })).id))!;
+    r = await answer(d, citizen, r, "salary");
+    r = await answer(d, citizen, r, "digilocker");
+    let q = r.state.pendingQuestion!;
+    expect(q.resolves).toBe("digilocker_consent");
+    expect(q.expects).toBe("yes_no");
+    expect(q.items).toHaveLength(2);
+    expect(q.items?.[0]).toMatch(/Form 16 .*SAMPLE/);
+    expect(r.state.pendingCommands ?? []).toHaveLength(0); // nothing fetched before yes
+    r = await answer(d, citizen, r, true);
+    const said = (await msgs(d, citizen, r)).at(-1)!;
+    expect(said).toMatch(/DigiLocker/);
+    expect(said).toMatch(/SAMPLE/);
+    expect(r.state.pendingCommands?.some((c) => c.type === "import_document")).toBe(true);
+    expect(r.state.documentTypes).toEqual(expect.arrayContaining(["FORM_16", "ANNUAL_INFO_STATEMENT"]));
+    q = r.state.pendingQuestion!;
+    expect(q.resolves).toBe("details");
+    expect(q.fields?.some((f) => f.key === "salary_amount")).toBe(false);
+  });
+
+  it("DigiLocker declined falls back to typing: the form then carries the salary, and the typed figure is declared as the citizen's own", async () => {
+    const d = deps({ vault: vault() });
+    let r = (await advance(d, citizen, (await createRun(d, citizen, { message: "file my tax", lang: "en" })).id))!;
+    r = await answer(d, citizen, r, "salary");
+    r = await answer(d, citizen, r, "digilocker");
+    r = await answer(d, citizen, r, false);
+    const q = r.state.pendingQuestion!;
+    expect(q.resolves).toBe("details");
+    expect(q.fields?.map((f) => f.key)).toEqual(["salary_amount", "pf_amount", "health_amount", "other_income_amount", "resident"]);
+    expect(r.state.documentTypes ?? []).not.toContain("FORM_16"); // nothing was fetched
+    r = await answer(d, citizen, r, form({ salary_amount: 900000, pf_amount: 0, health_amount: 0, other_income_amount: 0, resident: true }));
+    expect(r.status).toBe("completed");
+    expect(r.state.advice?.issues.map((i) => i.code)).toEqual(["tax_review_required"]); // income known, residency known, inventory confirmed
+  });
+
+  it("without a document store there is no upload, no DigiLocker and no proof step; an unproven deduction is left out", async () => {
     const d = deps();
-    const run = await createRun(d, sunita, { message: "Got my first job, 3.5 lakh package, how do I file?", lang: "en" });
-    let r = (await advance(d, sunita, run.id))!;
+    let r = (await advance(d, sunita, (await createRun(d, sunita, { message: "Got my first job, 3.5 lakh package, how do I file?", lang: "en" })).id))!;
     const seen: string[] = [];
-    for (let i = 0; i < 8 && r.status === "waiting_for_input"; i += 1) {
+    for (let i = 0; i < 6 && r.status === "waiting_for_input"; i += 1) {
       const q = r.state.pendingQuestion!;
       seen.push(q.resolves);
       expect(q.expects).not.toBe("file");
-      const value = q.resolves === "pf" ? true : q.resolves === "pf_amount" ? 50000 : q.resolves === "salary_figure" ? "unsure" : false;
-      r = (await advance(d, sunita, r.id, { answer: { questionId: q.id, value } }))!;
+      expect(q.expects).not.toBe("source");
+      r = await answer(d, sunita, r, q.resolves === "details" ? form({ pf_amount: 50000, health_amount: 0, other_income_amount: 0 }) : "unsure");
     }
-    expect(seen).toEqual(["salary_figure", "pf", "pf_amount", "health", "other_income"]);
+    expect(seen).toEqual(["salary_figure", "details"]);
     expect(r.status).toBe("waiting_for_review");
     expect(r.state.pendingCommands?.some((c) => c.type === "declare_claim")).toBeFalsy();
   });
@@ -160,16 +195,28 @@ describe("intake in the runtime — acknowledge, then one plain question at a ti
     expect(r.state.pendingQuestion).toBeUndefined();
     expect(r.state.pendingCard).toBeUndefined();
     expect(r.state.pendingCommands).toBeUndefined();
-    expect((await msgs(d, r))[0]).toMatch(/business or freelance income/);
+    expect((await msgs(d, sunita, r))[0]).toMatch(/business or freelance income/);
     expect((await d.returns.get(sunita, "2026-27"))!.revision).toBe(1);
   });
 
-  it("Hindi: the acknowledgement and the Form 16 question come from the same deterministic templates", async () => {
+  it("a blank return whose money comes from a pension is told plainly, in one message, and nothing is computed", async () => {
+    const d = deps();
+    let r = (await advance(d, citizen, (await createRun(d, citizen, { message: "file my tax", lang: "en" })).id))!;
+    r = await answer(d, citizen, r, "other");
+    expect(r.status).toBe("completed");
+    expect(r.state.pendingQuestion).toBeUndefined();
+    expect(r.state.pendingCommands).toBeUndefined();
+    expect((await msgs(d, citizen, r)).filter((t) => /salaried returns only/.test(t))).toHaveLength(1);
+  });
+
+  it("Hinglish: recognised as a register, parsed like English, answered from the Hindi templates when the model is off", async () => {
     const d = deps({ vault: vault() });
     const run = await createRun(d, sunita, { message: "mujhe 12 lpa package ki job mili hai, salary aati hai, tax file karna hai", lang: "hi" });
     let r = (await advance(d, sunita, run.id))!;
-    expect((await msgs(d, r))[0]).toMatch(/समझ गया/);
-    r = (await advance(d, sunita, r.id, { answer: { questionId: r.state.pendingQuestion!.id, value: "reported" } }))!;
-    expect(r.state.pendingQuestion?.text).toMatch(/फॉर्म 16/);
+    expect(r.state.register).toBe("hinglish");
+    expect((await msgs(d, sunita, r))[0]).toMatch(/वेतनभोगी/);
+    r = await answer(d, sunita, r, "reported");
+    expect(r.state.pendingQuestion?.expects).toBe("form");
+    expect(r.state.pendingQuestion?.text).toMatch(/आंकड़े/);
   });
 });

@@ -152,7 +152,7 @@ describe("runtime — the first end-to-end milestone (plan §7)", () => {
     expect(await d.store.listOutputs(rakesh, r.id)).toHaveLength(0);
     const log = await events(d, rakesh, r);
     expect(log.some((e) => e.type === "review_card")).toBe(false);
-    expect(log.some((e) => e.type === "message" && e.role === "assistant" && /cannot make a recommendation/.test(e.text))).toBe(true);
+    expect(log.some((e) => e.type === "message" && e.role === "assistant" && /can't give you a recommendation/.test(e.text))).toBe(true);
     expect(r.state.steps.find((p) => p.id === "review")?.state).toBe("skipped");
   });
 
@@ -177,16 +177,22 @@ describe("runtime — the first end-to-end milestone (plan §7)", () => {
     expect((await d.returns.get(sunita, "2026-27"))!.revision).toBe(1);
   });
 
-  it("with a vault: an uploaded Form 16 that disagrees with the return is found, read and staged as an import", async () => {
+  it("with a vault: a Form 16 already stored is offered behind a consent card, and only after 'yes' is it read and staged as an import", async () => {
     const repo = new MemoryVaultRepository();
     const vault = new VaultService(repo, loadVaultKey({ WAPSI_VAULT_KEY: Buffer.alloc(32, 9).toString("base64") }));
     const pdf = new TextEncoder().encode("%PDF-1.4\nFORM NO. 16 PAN of the Employee: DEMPS4417K Gross Salary: 4,50,000 Total Tax Deducted: 9,000\n%%EOF");
     await vault.upload({ owner: sunita, bytes: pdf, filename: "Form16_DEMPS4417K.pdf", assessmentYear: "2026-27", docType: "FORM_16", issuer: "Infosys Ltd" });
     const d = deps({ vault });
     const run = await createRun(d, sunita, { task: "prepare_salaried_return", lang: "en" });
-    const r = (await advance(d, sunita, run.id))!;
+    let r = (await advance(d, sunita, run.id))!;
+    // Listed, yes; read, not yet: the citizen is asked first (user direction 2026-09-06: "it should take permission").
+    expect(r.state.pendingQuestion?.resolves).toBe("vault_consent");
+    expect(r.state.pendingQuestion?.items?.[0]).toMatch(/Form 16/);
+    expect(r.state.pendingCommands ?? []).toHaveLength(0);
+    r = (await advance(d, sunita, r.id, { answer: { questionId: r.state.pendingQuestion!.id, value: true } }))!;
     const log = await events(d, sunita, r);
     expect(log.some((e) => e.type === "activity" && /found 1 document/i.test(e.text))).toBe(true);
+    expect(log.some((e) => e.type === "message" && e.role === "assistant" && /₹4,50,000/.test(e.text))).toBe(true); // what was read is said
     expect(r.state.sources.some((s) => s.kind === "document" && s.verified)).toBe(true);
     expect(r.state.pendingCommands?.some((c) => c.type === "import_document")).toBe(true);
     // The filename never reaches the log; the agent's audit trail names the run.

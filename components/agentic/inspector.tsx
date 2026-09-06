@@ -25,6 +25,8 @@ export interface InspectorProps {
   runId: string | null;
   /** Manual mode: the controls exist, the panel explains where this data lives. */
   manualNote?: string;
+  /** Turns where the model's wording was not used, with the reason (quota, rejected reply, budget). */
+  modelNotes?: string[];
 }
 
 export function InspectorControls({ s, open, onToggle, steps, outputs, sources }: Pick<InspectorProps, "s" | "open" | "onToggle" | "steps" | "outputs" | "sources">) {
@@ -63,7 +65,7 @@ function StepIcon({ state }: { state: PlanStep["state"] }) {
   return <Circle size={14} className="text-ink-3" aria-hidden="true" />;
 }
 
-export function InspectorPanel({ s, open, steps, outputs, sources, runId, manualNote }: InspectorProps) {
+export function InspectorPanel({ s, open, steps, outputs, sources, runId, manualNote, modelNotes = [] }: InspectorProps) {
   if (!open) return null;
   return (
     <aside className="w-full lg:w-[320px] shrink-0 border-l border-line bg-paper-2/60 overflow-y-auto" aria-label={open === "progress" ? s.progress : open === "outputs" ? s.outputs : s.sources}>
@@ -86,6 +88,14 @@ export function InspectorPanel({ s, open, steps, outputs, sources, runId, manual
               ))}
             </ol>
           )
+        )}
+        {open === "progress" && modelNotes.length > 0 && (
+          <section className="rounded-lg border border-line bg-paper px-3 py-2">
+            <h4 className="cap mb-1">{s.inspectorModelNotes.replace("{n}", String(modelNotes.length))}</h4>
+            <ul className="space-y-0.5">
+              {[...new Set(modelNotes)].map((note) => <li key={note} className="font-mono text-[11px] text-ink-3 leading-snug break-words">{note}</li>)}
+            </ul>
+          </section>
         )}
 
         {open === "outputs" && (

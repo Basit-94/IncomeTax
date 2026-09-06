@@ -80,9 +80,10 @@ export function buildPlan(facts: PlanningFacts, s: AgenticStrings, previous: Pla
         state = "skipped";
         note = s.noteNothingToResolve;
       }
-      if (id === "gather" && facts.documentsAvailable === null) {
+      if (id === "gather") {
         // Storage down: the step still runs (it reads the return) but says the vault could not be reached.
-        note = s.noteVaultUnavailable;
+        // Once the vault has answered, a note left from before the run read it is cleared (2026-09-06).
+        note = facts.documentsAvailable === null ? s.noteVaultUnavailable : undefined;
       }
       if ((id === "confirm" || id === "act") && !facts.requiresConfirmation) {
         state = "skipped";
@@ -121,17 +122,17 @@ export function classifyByRules(text: string): RunTask {
   const t = text.toLowerCase();
   if (isTaxInformationQuestion(t)) return "explain";
   if (/\b(demo|sample|show me an example|try it)\b/.test(t)) return "load_demo";
-  if (/\b(regime|old vs new|new vs old|115bac|which is (better|cheaper)|compare)\b/.test(t)) return "compare_regimes";
-  if (/\b(wrong|dispute|mismatch|ais|26as|reconcile|not mine|duplicate|correct(ion)?|reported)\b/.test(t)) return "reconcile_facts";
-  if (/\b(file|filing|return|itr|prepare|submit|refund|form 16|salary)\b/.test(t)) return "prepare_salaried_return";
+  if (/\b(regime|old vs new|new vs old|115bac|which is (better|cheaper)|compare|kaunsa (regime )?(better|behtar|sasta|accha|acha)|behtar regime)\b/.test(t)) return "compare_regimes";
+  if (/\b(wrong|dispute|mismatch|ais|26as|reconcile|not mine|duplicate|correct(ion)?|reported|galat|mera nahi|meri nahi)\b/.test(t)) return "reconcile_facts";
+  if (/\b(file|filing|return|itr|prepare|submit|refund|form 16|salary|bharna|bharni|bharu|bharoon|bhar do|tax karna|naukri|tankha)\b/.test(t)) return "prepare_salaried_return";
   return "explain";
 }
 
 /** Questions about a rule/deadline must not start filing just because they contain 'ITR'. */
 export function isTaxInformationQuestion(text: string): boolean {
-  return /^(what|when|why|how (does|do|is|are)|explain|tell me about)\b/i.test(text.trim()) ||
+  return /^(what|when|why|how (does|do|is|are)|explain|tell me about|kya (hai|hota|hoti|matlab)|kab|kaise (hota|hoti|milta|milti)|kyun|kyu|matlab|samjhao)\b/i.test(text.trim()) ||
     /\b(deadline|due date|standard deduction|87a|80d|80c|112a|111a|cess|surcharge)\b/i.test(text) &&
-    !/\b(file my|prepare my|compare|better for me|cheaper for me)\b/i.test(text);
+    !/\b(file my|prepare my|compare|better for me|cheaper for me|file karna|bharna|bharni|mera|meri)\b/i.test(text);
 }
 
 export function taskTitle(task: RunTask, s: AgenticStrings): string {

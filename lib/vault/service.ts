@@ -10,6 +10,7 @@
 
 import { extractFieldsFromPdf, isEmptyExtraction } from "../compliance/pdfExtract";
 import { PDF_PARSER_VERSION } from "../agentic/flags";
+import type { ExtractedFields } from "../compliance/pdfExtract";
 import type { Owner } from "../server/session";
 import { decryptBytes, encryptBytes, sha256Hex, type VaultKey } from "./crypto";
 import type {
@@ -165,6 +166,34 @@ export class VaultService {
 
   async getExtraction(owner: Owner, id: string) {
     return this.repo.getExtraction(owner, id);
+  }
+
+  /**
+   * A document issued by a source that hands over fields, not a file (the
+   * DigiLocker mock, 2026-09-06). Stored without an original, provenance
+   * `synthetic`, with its fields as an extraction so the agent reads it the
+   * same way it reads an upload. Idempotent per owner/type/year.
+   */
+  async importIssued(input: { owner: Owner; assessmentYear: string; docType: VaultDocType; title: string; issuer: string; fields: ExtractedFields; actor?: AccessAuditEntry["actor"]; runId?: string }): Promise<StoredDocumentMeta> {
+    const actor = input.actor ?? "agent";
+    const meta: StoredDocumentMeta = {
+      id: `doc_issued_${input.docType.toLowerCase()}_${input.assessmentYear.replace("-", "")}_${input.owner.pan.toLowerCase()}`,
+      ownerPan: input.owner.pan,
+      ownerKind: input.owner.kind,
+      assessmentYear: input.assessmentYear,
+      docType: input.docType,
+      title: input.title,
+      byteLength: 0,
+      issuer: input.issuer,
+      provenance: "synthetic",
+      version: 1,
+      uploadedAt: this.now(),
+      hasBytes: false,
+    };
+    await this.repo.putDocument(meta);
+    await this.repo.putExtraction(input.owner, { documentId: meta.id, parserVersion: "issued", status: "ok", fields: input.fields, issues: [], reviewState: "unreviewed", extractedAt: this.now() });
+    await this.audit({ ownerPan: input.owner.pan, actor, runId: input.runId, documentId: meta.id, operation: "upload", result: "ok" });
+    return meta;
   }
 
   /** Re-run the parser on a stored original (a newer parser, or a first run for a legacy record). */

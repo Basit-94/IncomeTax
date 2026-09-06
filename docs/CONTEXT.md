@@ -159,19 +159,29 @@ card but not the summary" (log 2026-09-02 and 2026-09-03 00:50).
   BM25 retrieval with hard Act/year/category filters (`retrieval.ts`, `query.ts` — FY/AY/TY parsing and
   aliases from all 23 dictionaries), public QA that returns exact stored paraphrases or an explicit stop
   (`rag.ts`), three-outcome predicates (`applicability.ts`) and the shared guard (`advice.ts`).
-  **Plain-English intake** (`lib/agentic/intake.ts`, 2026-09-05): the opening sentence is parsed
-  deterministically into a `Situation` (employment, stated package, business, PF, health insurance,
-  rent, home loan, capital gains); the run acknowledges what it understood, then asks one question at a
-  time in plain words — a salary-figure conflict first, then "Do you have a document called Form 16?"
-  with a description and an inline upload (`Question.expects: "file"`, answered with the vault
-  document id, or `"none"`), then PF / health insurance, each followed by a proof upload before the
-  deduction is staged (`evidenceAttached: true`); unproven amounts are left out and said so. Business
-  situations are told plainly what the release will not do. **Voice** (`lib/agentic/voice.ts`, `docs/VOICE.md`):
-  small talk (hi/thanks/who/help/how are you/bye) gets a deterministic friendly reply with the first name and no
-  return read; questions carry rotating lead-ins (`Question.lead`); the recommendation ends with a human outcome
-  sentence that repeats the figure; a review intro precedes every card; the model may add ONE warm figure-free
-  sentence (`warmLine`, validated: no digit in any script, no ₹/%, no section, no filed/paid claim) else a
-  deterministic lead. `PostgresRunStore.saveRun` now persists
+  **Intake — document-first, one form** (`lib/agentic/intake.ts`, rewritten 2026-09-06 on the user's
+  correction "one question at a time feels worse than manual mode"): the opening sentence (English or
+  Hinglish) is parsed deterministically into a `Situation`; a blank return is first asked where the money
+  came from (`income_source`); then a **source card** (`Question.expects: "source"`, `sourceOptions`) —
+  upload Form 16 (answers `upload:<documentId>`), fetch from the **DigiLocker mock**
+  (`lib/agentic/digilocker.ts`: seeded figures for demo PANs, deterministic SAMPLE figures for any other,
+  imported via `VaultService.importIssued` as `provenance: "synthetic"` with an extraction record), use a
+  Form 16 already in the vault, or type; DigiLocker and vault reads sit behind a **consent card**
+  (`yes_no` with `items`) and nothing is fetched or read before "yes" — a readable Form 16 already stored
+  is offered behind consent at the start of every working run; then **one form**
+  (`Question.expects: "form"`, `fields`; the answer is a JSON object — PF, health insurance, other income,
+  residency for citizens; salary only when no document supplied it); then at most one proof upload
+  (`proof`). Typed salary → `declare_income` (self); Form 16 → `import_document`; deductions count only
+  with the proof attached. The guard receives `completeFacts` once the form is answered and `resident`
+  from it. **Voice** (`lib/agentic/say.ts`, `docs/VOICE.md`, rewritten 2026-09-06): every conversational
+  sentence is phrased by the model from a brief and checked (`whyRejected`: no figure outside the brief,
+  no filed/paid claim, no advice words, no self-description, required terms kept, no repeat of the run's
+  recent sentences); templates (`agenticStrings.ts`, trimmed of all self-description) are fallbacks only,
+  and every fallback is recorded as `tool_outcome model.phrase ok:false` with its reason. Questions carry
+  no lead-ins (`Question.lead` unused; `voice.ts questionLead` is dead code kept for now). Hinglish is a
+  register (`detectRegister`, `RunWorkingState.register`) applied by the model. `geminiModel` rotates
+  through `GEMINI_FALLBACK_API_KEY*` on HTTP 429 and exposes `lastFailure()`; the primary key was found
+  out of quota on 2026-09-06, which is why the agent had read as templates. `PostgresRunStore.saveRun` persists
   `task` and `knowledge_release` (it previously wrote only status/state/title, so a DB-backed run
   re-read as `explain` after classification).
   The guard is enforced in `lib/agentic/runtime.ts` (explain → public QA; recommendations abstain with
@@ -262,10 +272,11 @@ procedure or regime comparison.
 ## 10. Verification protocol
 
 1. `npx tsc --noEmit` (0 errors) — zero `any` is a project rule.
-2. `npx vitest run` — 30 files / 305 tests: engine + slab, golden export, return state/persist/compute/
+2. `npx vitest run` — 36 files / 346 tests (2026-09-06): engine + slab, golden export, return state/persist/compute/
    commands/filing/snapshot store, `upstreamSync`, context reducer, compliance (cass, pdfExtract),
    agent, onboarding, submission key, server sessions, vault service, migrations, knowledge
-   (corpus integrity, predicates, retrieval, release/RAG/guard), agentic (redact, planner, runtime, tools).
+   (corpus integrity, predicates, retrieval, release/RAG/guard), agentic (redact, planner, runtime, tools,
+   intake, voice, say, model, digilocker, store).
 3. `npx next build`.
 4. Anything visual or animation-related must be checked in a browser; unit tests cannot see it. Test
    hooks exist for automation: `data-testid="net-position"` + `data-position`, `data-fact-id`,

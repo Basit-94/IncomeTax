@@ -41,9 +41,11 @@ describe("the voice — small talk is answered like a friend, never like a form 
     expect(firstName("Sunita Devi")).toBe("Sunita");
     expect(firstName("Citizen 7710")).toBe("");
     expect(firstName("")).toBe("");
-    expect(smallTalkReply("hello", en, "Sunita")).toMatch(/^Hi Sunita!/);
-    expect(smallTalkReply("hello", en, "")).toMatch(/^Hi there!/);
-    expect(smallTalkReply("who", en, "")).toMatch(/friend who does taxes/);
+    expect(smallTalkReply("hello", en, "Sunita")).toMatch(/^Hi Sunita\./);
+    expect(smallTalkReply("hello", en, "")).toMatch(/^Hi\./);
+    expect(smallTalkReply("who", en, "")).toMatch(/already on record/);
+    // The fallbacks describe what happens, never the speaker (user direction 2026-09-06: "no jargon" is jargon).
+    for (const k of ["hello", "thanks", "who", "help", "howAreYou", "bye"] as const) expect(smallTalkReply(k, en, "Sunita")).not.toMatch(/friend who|jargon|honest|say-so/i);
     expect(smallTalkReply("bye", en, "Sunita")).toContain("Sunita");
   });
 
@@ -117,7 +119,7 @@ describe("small talk in the runtime — no return read, no figures, warm reply, 
     expect(r.state.smallTalk).toBe("hello");
     const texts = await assistant(d, r.id);
     expect(texts).toHaveLength(1);
-    expect(texts[0]).toMatch(/^Hi Sunita!/);
+    expect(texts[0]).toMatch(/^Hi Sunita\./);
     expect(texts[0]).not.toMatch(/could not find|no evidence/i);
     expect(await d.returns.get(sunita, "2026-27")).toBeNull(); // nothing was created or read into a snapshot
   });
@@ -129,12 +131,13 @@ describe("small talk in the runtime — no return read, no figures, warm reply, 
     const h = (await advance(d, sunita, (await createRun(d, sunita, { message: "what can you do?", lang: "en" })).id))!;
     expect((await assistant(d, h.id))[0]).toBe(en.chatHelp);
     const hi = (await advance(d, sunita, (await createRun(d, sunita, { message: "namaste", lang: "hi" })).id))!;
-    expect((await assistant(d, hi.id))[0]).toMatch(/^नमस्ते Sunita!/);
+    expect((await assistant(d, hi.id))[0]).toMatch(/^नमस्ते Sunita।/);
   });
 
-  it("questions in a run carry a lead-in above the question text", async () => {
+  it("questions in a run carry no lead-in: the question is the question (user direction 2026-09-06)", async () => {
     const d = deps();
     const r = (await advance(d, sunita, (await createRun(d, sunita, { task: "prepare_salaried_return", lang: "en" })).id))!;
-    expect(r.state.pendingQuestion?.lead).toBe(en.leadFirst);
+    expect(r.state.pendingQuestion?.lead).toBeUndefined();
+    expect(r.state.pendingQuestion?.text).toBe(en.askOtherIncome);
   });
 });

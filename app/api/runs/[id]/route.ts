@@ -7,7 +7,8 @@ type Ctx = { params: Promise<{ id: string }> };
 
 const inputSchema = z.object({
   message: z.string().min(1).max(4000).optional(),
-  answer: z.object({ questionId: z.string(), value: z.union([z.string().max(200), z.number(), z.boolean()]) }).optional(),
+  // A `form` answer is a small JSON object of figures; a document answer is an id.
+  answer: z.object({ questionId: z.string(), value: z.union([z.string().max(2000), z.number(), z.boolean()]) }).optional(),
   confirm: z.object({ cardId: z.string(), accepted: z.boolean() }).optional(),
 });
 

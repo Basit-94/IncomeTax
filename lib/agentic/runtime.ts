@@ -22,7 +22,8 @@ import { PERIOD_FY_2025_26 } from "../knowledge/provisions";
 import { evaluateSalariedSlice } from "../knowledge/applicability";
 import { cite } from "../knowledge/retrieval";
 import { answerTaxQuestion } from "../knowledge/rag";
-import { assessAdvice } from "../knowledge/advice";
+import { assessAdvice, type AdviceContext } from "../knowledge/advice";
+import { approvedForAdvice } from "../knowledge/release";
 import type { TaxpayerFacts } from "../knowledge/types";
 import { CURRENT_VERSION } from "../return/persist";
 import { applyReturnCommand, type ReturnCommand } from "../return/commands";
@@ -35,8 +36,10 @@ import { formatMoney } from "../money";
 import type { VaultService } from "../vault/service";
 import { KNOWLEDGE_RELEASE } from "./flags";
 import { hasIntakeSignal, intakeAcknowledgement, isDocumentAnswer, nextIntakeQuestion, parseSituation } from "./intake";
-import type { ModelAdapter } from "./model";
-import { detectSmallTalk, firstName, questionLead, smallTalkReply, warmLine } from "./voice";
+import { nullModel, type ModelAdapter } from "./model";
+import { detectSmallTalk, firstName, smallTalkReply, warmLine } from "./voice";
+import { detectRegister, say, type SayInput } from "./say";
+import { consentItems, fetchedFacts, listIssuedDocuments } from "./digilocker";
 import { buildPlan, classifyByRules, isTaxInformationQuestion, nextStep, setStep, taskTitle, type PlanningFacts } from "./planner";
 import { redactText, stripInjection } from "./redact";
 import { recommendationText, regimeName, strings } from "./response";
@@ -102,7 +105,8 @@ function planningFacts(task: RunTask, snapshot: VersionedReturn | null, document
     hasReturn: !!snapshot,
     documentsAvailable,
     unconfirmedFacts: snapshot ? snapshot.state.persona.facts.filter((f) => !snapshot.state.confirmedFactIds.includes(f.id)).length : 1,
-    openQuestions: 0,
+    // A blank return has everything still to ask; zero facts must not read as "nothing to resolve".
+    openQuestions: snapshot && snapshot.state.persona.facts.length === 0 ? 1 : 0,
     requiresConfirmation: task === "prepare_salaried_return" || task === "compare_regimes" || task === "reconcile_facts",
     alreadyFiled: !!snapshot?.state.filedAt,
     ...extra,
@@ -255,14 +259,15 @@ export async function cancelRun(deps: RuntimeDeps, owner: Owner, runId: string):
 
 async function stepClassify(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>) {
   const text = run.state.lastUserMessage ?? "";
-  // Small talk is answered like a friend would, without touching the return or calling the model (docs/VOICE.md).
+  if (text) run.state.register = detectRegister(text, run.lang);
+  // Small talk is answered like a friend would, without touching the return (docs/VOICE.md).
   const talk = text ? detectSmallTalk(text) : null;
   if (talk) {
     // Reply now and finish: no plan walk, no return read — a greeting should cost one round-trip, not twenty.
     run.state.smallTalk = talk;
     run.task = "explain";
     run.state.steps = buildPlan(planningFacts("explain", null, null), s, run.state.steps).map((p) => ({ ...p, state: "done" as const }));
-    await emit({ type: "message", role: "assistant", text: smallTalkReply(talk, s, firstName(owner.displayName)) });
+    await speak(deps, owner, run, emit, { intent: smallTalkIntent(talk), fallback: smallTalkReply(talk, s, firstName(owner.displayName)), maxWords: 40 });
     run.status = "completed";
     await emit({ type: "status", status: "completed" });
     return;
@@ -288,9 +293,100 @@ async function stepClassify(deps: RuntimeDeps, owner: Owner, run: Run, s: Return
   run.task = task;
   run.title = text ? run.title : taskTitle(task, s);
   run.state.steps = buildPlan(planningFacts(task, null, deps.vault ? true : null), s, setStep(run.state.steps, "classify", "done"));
-  // Say what was understood before asking anything (§5.8: the citizen should never wonder what the agent is doing).
-  if (run.state.situation && hasIntakeSignal(run.state.situation) && task !== "explain") {
-    await emit({ type: "message", role: "assistant", text: intakeAcknowledgement(run.state.situation, s, run.lang) });
+  // Say what was understood before asking anything (§5.8) — one turn, phrased by the model from facts.
+  const facts: string[] = [];
+  let fallback = "";
+  const sit = run.state.situation;
+  if (sit && hasIntakeSignal(sit) && task !== "explain") {
+    fallback = intakeAcknowledgement(sit, s, run.lang);
+    if (sit.business) facts.push("Business or freelance income: this release prepares salaried returns only and will not compute a business return.");
+    else if (sit.employment) facts.push(sit.salaryAmount ? `Salaried, about ${formatMoney(sit.salaryAmount, run.lang)} a year.` : "Salaried.");
+    if (sit.rentPaid || sit.homeLoan) facts.push("Rent or home-loan interest cannot be computed in this release and will be left out of the figures.");
+    if (sit.capitalGains && !sit.business) facts.push("Shares, funds or a property sale: the rules will be shown but no recommendation that depends on them.");
+  }
+  // A real citizen hears about the reviewer gate before answering questions, not after.
+  if (owner.kind === "citizen" && task !== "explain" && task !== "load_demo" && !approvedForAdvice()) {
+    facts.push("This release has no qualified tax reviewer sign-off yet, so the final recommendation stays locked; facts are still gathered and the rules explained.");
+    fallback = fallback ? `${fallback}\n\n${s.noteReviewPending}` : s.noteReviewPending;
+  }
+  if (fallback) {
+    await speak(deps, owner, run, emit, { intent: "Acknowledge what the person said about their situation in one or two sentences and say you will check what is already on record before asking anything.", facts, fallback, maxWords: 70 });
+  }
+}
+
+/** The guard's inputs, identical at compute, review and act (§5.2: one guard, one set of facts). */
+function adviceContext(deps: RuntimeDeps, owner: Owner, run: Run): AdviceContext {
+  const a = run.state.answers;
+  return {
+    ownerKind: owner.kind,
+    today: deps.today(),
+    resident: typeof a.resident === "boolean" ? a.resident : undefined,
+    returnByDueDate: typeof a.return_by_due_date === "boolean" ? a.return_by_due_date : undefined,
+    // The inventory counts as verified once the citizen has answered the other-income question in full.
+    completeFacts: a.other_income === false || (a.other_income === true && typeof a.other_income_amount === "number"),
+  };
+}
+
+/**
+ * One conversational turn through the model, checked, with the deterministic
+ * fallback (lib/agentic/say.ts). What was said is remembered so the model does
+ * not repeat itself; each call is charged to the run's model budget.
+ */
+async function phrase(deps: RuntimeDeps, owner: Owner, run: Run, input: SayInput, emit?: (p: RunEventPayload) => Promise<unknown>): Promise<string> {
+  const recent = run.state.recentSaid ?? [];
+  const overBudget = run.state.usage.modelCalls >= deps.budget.maxModelCallsPerRun;
+  const text = await say(
+    {
+      model: overBudget ? nullModel : deps.model,
+      // The fallback is visible in the Progress panel, with the reason — a model that is off, out of quota or over-reaching is never silent.
+      onFallback: emit ? (reason) => emit({ type: "tool_outcome", tool: "model.phrase", ok: false, summary: overBudget ? "run's model budget used up" : reason }) : undefined,
+      lang: run.lang,
+      register: run.state.register ?? "plain",
+      name: firstName(owner.displayName),
+      recent,
+      charge: async (tokens) => {
+        run.state.usage.modelCalls += 1;
+        run.state.usage.tokens += tokens;
+        if (tokens) await deps.store.addDailyUsage(owner, deps.today(), tokens, 1);
+      },
+    },
+    input,
+  );
+  run.state.recentSaid = [...recent, text].slice(-6);
+  return text;
+}
+
+async function speak(deps: RuntimeDeps, owner: Owner, run: Run, emit: (p: RunEventPayload) => Promise<unknown>, input: SayInput): Promise<string> {
+  const text = await phrase(deps, owner, run, input, emit);
+  await emit({ type: "message", role: "assistant", text });
+  return text;
+}
+
+/** What a read Form 16 said, as facts the conversation may state verbatim. */
+function fieldFacts(fields: { grossSalary?: number; tds?: number; employerName?: string }, lang: Lang): string[] {
+  const facts: string[] = [];
+  if (fields.grossSalary !== undefined) facts.push(`Salary for the year per Form 16${fields.employerName ? ` from ${fields.employerName}` : ""}: ${formatMoney(fields.grossSalary, lang)}`);
+  if (fields.tds !== undefined) facts.push(`Tax already deducted from salary (TDS) per Form 16: ${formatMoney(fields.tds, lang)}`);
+  return facts;
+}
+
+/** Terms a rephrased question must keep, so the model cannot drift from what is being asked. */
+const MUST_MENTION: Record<string, string[]> = {
+  source: ["Form 16"],
+  digilocker_consent: ["DigiLocker"],
+  vault_consent: ["vault"],
+  claim_80C: ["80C"],
+  claim_80D: ["80D"],
+};
+
+function smallTalkIntent(kind: NonNullable<Run["state"]["smallTalk"]>): string {
+  switch (kind) {
+    case "hello": return "Greet the person back briefly and ask what is going on with their taxes this year.";
+    case "thanks": return "Acknowledge the thanks in a few words and ask if there is anything else to look at.";
+    case "who": return "Say what Wapsi does: reads what is already on record about the person, asks only for what is missing, shows every figure with its source, and files nothing without their confirmation.";
+    case "help": return "List what can be done right now — prepare a salaried return, compare the old and new regimes, check figures others reported, answer a tax question — and ask where to start.";
+    case "howAreYou": return "Answer 'how are you' in a few words and turn to what the person needs.";
+    case "bye": return "Say goodbye briefly; their return stays exactly as it is.";
   }
 }
 
@@ -355,6 +451,7 @@ async function stepGather(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnTy
   const listed = await runTool("list_vault_documents", {}, ctx);
   run.state.usage.toolCalls += 1;
   let documentsAvailable: boolean | null = null;
+  const form16: { id: string; title: string }[] = [];
   if (listed.ok) {
     const r = listed.result as { available: boolean; documents: { id: string; docType: string; title: string; provenance: string; hasOriginal: boolean }[] };
     documentsAvailable = r.available;
@@ -371,10 +468,16 @@ async function stepGather(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnTy
           metadataOnlyNoted = true;
           await emit({ type: "activity", text: s.metadataOnly });
         }
-        if (d.docType === "FORM_16" && d.hasOriginal) await stageForm16(deps, run, ctx, snapshot, d.id, s, emit);
+        // A readable Form 16 is offered as a source and read only after consent (user direction 2026-09-06).
+        if (d.docType === "FORM_16") {
+          const probe = await runTool("read_document_fields", { documentId: d.id }, ctx);
+          run.state.usage.toolCalls += 1;
+          if (probe.ok && (probe.result as { readable?: boolean }).readable) form16.push({ id: d.id, title: d.title });
+        }
       }
     }
     run.state.documentTypes = r.documents.map((d) => d.docType);
+    run.state.vaultForm16 = form16;
   }
   run.state.sources = dedupeSources([...run.state.sources, ...sources]);
   await emit({ type: "source_lookup", sources: run.state.sources });
@@ -382,11 +485,12 @@ async function stepGather(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnTy
 }
 
 /** Read a stored Form 16 and stage an import when its figures differ from the employer's prefill. */
-async function stageForm16(deps: RuntimeDeps, run: Run, ctx: ToolContext, snapshot: VersionedReturn, documentId: string, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>) {
+type Form16Fields = { grossSalary?: number; tds?: number; employerName?: string };
+async function stageForm16(deps: RuntimeDeps, run: Run, ctx: ToolContext, snapshot: VersionedReturn, documentId: string, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>): Promise<Form16Fields | null> {
   const read = await runTool("read_document_fields", { documentId }, ctx);
   run.state.usage.toolCalls += 1;
-  if (!read.ok) return;
-  const rr = read.result as { readable?: boolean; fields?: { grossSalary?: number; tds?: number }; issues?: string[]; subjectMatchesOwner?: boolean };
+  if (!read.ok) return null;
+  const rr = read.result as { readable?: boolean; fields?: Form16Fields; issues?: string[]; subjectMatchesOwner?: boolean };
   const suspicious = (rr.issues ?? []).some((i) => stripInjection(i).suspicious);
   if (suspicious) await emit({ type: "message", role: "assistant", text: s.injectionNotice });
   if (rr.readable && rr.fields && rr.subjectMatchesOwner !== false) {
@@ -401,37 +505,120 @@ async function stageForm16(deps: RuntimeDeps, run: Run, ctx: ToolContext, snapsh
     }
   }
   await emit({ type: "tool_outcome", tool: "read_document_fields", ok: true, summary: rr.readable ? "fields read" : "not readable" });
+  return rr.readable && rr.fields && rr.subjectMatchesOwner !== false ? rr.fields : null;
 }
 
 /** A document the citizen just uploaded in answer to a question: record it as a source, read it if it is a Form 16. */
-async function recordUploadedDocument(deps: RuntimeDeps, owner: Owner, run: Run, snapshot: VersionedReturn, documentId: string, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>) {
+async function recordUploadedDocument(deps: RuntimeDeps, owner: Owner, run: Run, snapshot: VersionedReturn, documentId: string, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>, quiet = false) {
   if (!deps.vault) return false;
   const meta = await deps.vault.getMeta(owner, documentId, "agent", run.id);
   if (!meta) return false;
   run.state.sources = dedupeSources([
     ...run.state.sources,
-    { kind: "document", id: meta.id, label: meta.title, detail: meta.provenance, verified: meta.provenance === "uploaded" && meta.hasBytes, url: meta.hasBytes ? `/api/vault/documents/${meta.id}/bytes` : undefined },
+    { kind: "document", id: meta.id, label: meta.title, detail: meta.issuer ?? meta.provenance, verified: meta.provenance === "uploaded" && meta.hasBytes, url: meta.hasBytes ? `/api/vault/documents/${meta.id}/bytes` : undefined },
   ]);
   run.state.documentTypes = [...new Set([...(run.state.documentTypes ?? []), meta.docType])];
-  if (meta.docType === "FORM_16" && meta.hasBytes) {
+  let fields: Form16Fields | null = null;
+  if (meta.docType === "FORM_16") {
     const ctx: ToolContext = { owner, runId: run.id, assessmentYear: AY, vault: deps.vault, returns: deps.returns, store: deps.store, today: deps.today() };
-    await stageForm16(deps, run, ctx, snapshot, meta.id, s, emit);
+    fields = await stageForm16(deps, run, ctx, snapshot, meta.id, s, emit);
   }
   await emit({ type: "source_lookup", sources: run.state.sources });
-  await emit({ type: "message", role: "assistant", text: s.intakeDocumentRecorded });
+  if (!quiet) {
+    const facts = fields ? fieldFacts(fields, run.lang) : [];
+    await speak(deps, owner, run, emit, {
+      intent: "Confirm the document is stored in the person's vault and state exactly what was read from it.",
+      facts,
+      fallback: facts.length ? `${s.intakeDocumentRecorded}\n${facts.join("\n")}` : s.intakeDocumentRecorded,
+      maxWords: 60,
+    });
+  }
   return true;
 }
 
+/**
+ * Answers that carry more than a value — the one form, an upload from the
+ * source card, a consent — are acted on before the next question is chosen.
+ */
+async function absorbAnswers(deps: RuntimeDeps, owner: Owner, run: Run, snapshot: VersionedReturn, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>) {
+  const a = run.state.answers;
+  const recorded = (id: string) => run.state.sources.some((src) => src.kind === "document" && src.id === id);
+  // The one form: its fields become individual answers.
+  if (typeof a.details === "string" && a.details_parsed === undefined) {
+    try {
+      const obj = JSON.parse(a.details) as Record<string, unknown>;
+      for (const k of ["salary_amount", "pf_amount", "health_amount", "other_income_amount"]) {
+        const v = obj[k];
+        if (typeof v === "number" && Number.isFinite(v)) a[k] = Math.max(0, Math.round(v));
+      }
+      if (typeof obj.resident === "boolean") a.resident = obj.resident;
+    } catch {
+      // Free text where the form was expected: nothing usable, the form's fields stay unanswered.
+    }
+    a.details_parsed = true;
+    if (typeof a.other_income_amount === "number") a.other_income = a.other_income_amount > 0;
+  }
+  // A Form 16 uploaded from the source card.
+  if (typeof a.source === "string" && a.source.startsWith("upload:")) {
+    const id = a.source.slice("upload:".length);
+    if (!recorded(id) && !(await recordUploadedDocument(deps, owner, run, snapshot, id, s, emit))) a.source = "manual";
+  }
+  // DigiLocker (mock): fetched only after the consent card was answered yes, and said so with the figures.
+  if (a.digilocker_consent === true && a.digilocker_done === undefined) {
+    a.digilocker_done = true;
+    const issued = listIssuedDocuments(owner, AY);
+    if (deps.vault) {
+      for (const doc of issued) {
+        const meta = await deps.vault.importIssued({ owner, assessmentYear: AY, docType: doc.docType, title: doc.title, issuer: doc.issuer, fields: doc.fields, actor: "agent", runId: run.id });
+        await recordUploadedDocument(deps, owner, run, snapshot, meta.id, s, emit, true);
+      }
+    }
+    const facts = [`${s.fetchedFromDigiLocker} ${issued.map((d) => d.title).join("; ")}.`, ...fetchedFacts(issued, run.lang)];
+    await speak(deps, owner, run, emit, { intent: "Say which documents were fetched from DigiLocker and state the figures read from the Form 16.", facts, mustContain: ["DigiLocker"], fallback: facts.join("\n"), maxWords: 90 });
+  }
+  if (a.digilocker_consent === false && a.source === "digilocker") a.source = "manual";
+  // The vault's own Form 16: read only after consent.
+  if (a.vault_consent === true && a.vault_done === undefined) {
+    a.vault_done = true;
+    const facts: string[] = [];
+    if (deps.vault) {
+      const ctx: ToolContext = { owner, runId: run.id, assessmentYear: AY, vault: deps.vault, returns: deps.returns, store: deps.store, today: deps.today() };
+      for (const d of run.state.vaultForm16 ?? []) {
+        const fields = await stageForm16(deps, run, ctx, snapshot, d.id, s, emit);
+        if (fields) facts.push(...fieldFacts(fields, run.lang));
+      }
+    }
+    await speak(deps, owner, run, emit, { intent: "Say the Form 16 already in the vault was read and state the figures it gave.", facts, fallback: `${s.readFromVault}\n${facts.join("\n")}`, maxWords: 60 });
+  }
+  if (a.vault_consent === false && a.source === "vault") a.source = "manual";
+  // The one proof upload for the deductions entered in the form.
+  if (isDocumentAnswer(a.proof) && !recorded(a.proof) && !(await recordUploadedDocument(deps, owner, run, snapshot, a.proof, s, emit))) a.proof = "none";
+}
+
 /** The one question at a time that resolves the most consequential unknown (§5.1). */
-function nextQuestion(run: Run, snapshot: VersionedReturn, s: ReturnType<typeof strings>, vaultAvailable: boolean): Question | null {
+function nextQuestion(run: Run, owner: Owner, snapshot: VersionedReturn, s: ReturnType<typeof strings>, vaultAvailable: boolean): Question | null {
   const p = snapshot.state.persona;
   const a = run.state.answers;
+  const working = run.task === "prepare_salaried_return" || run.task === "compare_regimes" || run.task === "reconcile_facts";
+  // A readable Form 16 already in the vault is read only with consent — asked before anything it would change.
+  const sourceChosen = typeof a.source === "string" && a.source !== "vault";
+  if (working && run.state.vaultForm16?.length && a.vault_consent === undefined && !sourceChosen) {
+    return { id: newId("q"), text: s.askVaultConsent, why: s.askVaultConsentWhy, expects: "yes_no", resolves: "vault_consent", items: run.state.vaultForm16.map((d) => d.title) };
+  }
   // The situation the citizen described drives the first questions; the generic ones follow.
   if (run.state.situation && (run.task === "prepare_salaried_return" || run.task === "compare_regimes")) {
-    const q = nextIntakeQuestion({ situation: run.state.situation, snapshot, answers: a, vaultAvailable, documentTypes: run.state.documentTypes ?? [], s, lang: run.lang });
+    const cmds = run.state.pendingCommands ?? [];
+    const q = nextIntakeQuestion({
+      situation: run.state.situation, snapshot, answers: a, vaultAvailable, documentTypes: run.state.documentTypes ?? [], ownerKind: owner.kind,
+      vaultForm16: run.state.vaultForm16 ?? [],
+      salaryStaged: cmds.some((c) => c.type === "import_document" || (c.type === "declare_income" && c.kind === "salary")),
+      digilockerItems: consentItems(listIssuedDocuments(owner, AY)),
+      s, lang: run.lang,
+    });
     if (q) return q;
   }
-  if (run.task === "prepare_salaried_return" || run.task === "reconcile_facts") {
+  // The one form covers what follows; these remain for runs without a described situation.
+  if (a.details === undefined && (run.task === "prepare_salaried_return" || run.task === "reconcile_facts")) {
     if (a.other_income === undefined) {
       return { id: newId("q"), text: s.askOtherIncome, why: s.askOtherIncomeWhy, expects: "yes_no", resolves: "other_income", choices: [{ value: "yes", label: s.yes }, { value: "no", label: s.no }] };
     }
@@ -439,7 +626,7 @@ function nextQuestion(run: Run, snapshot: VersionedReturn, s: ReturnType<typeof 
       return { id: newId("q"), text: `${s.askOtherIncome} — ${s.rowTaxableIncome}?`.replace(` — ${s.rowTaxableIncome}?`, ""), why: s.askOtherIncomeWhy, expects: "number", resolves: "other_income_amount" };
     }
   }
-  if (run.task === "prepare_salaried_return" || run.task === "compare_regimes") {
+  if (a.details === undefined && (run.task === "prepare_salaried_return" || run.task === "compare_regimes")) {
     const has80C = p.claims.some((c) => c.section === "80C");
     const has80D = p.claims.some((c) => c.section.startsWith("80D"));
     // The intake's PF / health-insurance questions cover the same ground in plain words; do not ask twice.
@@ -452,23 +639,26 @@ function nextQuestion(run: Run, snapshot: VersionedReturn, s: ReturnType<typeof 
 async function stepResolve(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>) {
   const snapshot = await deps.returns.get(owner, AY);
   if (!snapshot) return;
-  // A business situation is outside this release: said once, plainly, and the run ends without figures.
-  if (run.state.situation?.business && run.task !== "explain") {
-    for (const step of ["compute", "review", "confirm", "act", "outputs"] as const) run.state.steps = setStep(run.state.steps, step, "skipped", s.intakeBusinessUnsupported);
+  const a = run.state.answers;
+  // The answer to "where did the money come from" becomes the situation the rest of the intake reads.
+  if (run.state.situation && a.income_source === "salary") run.state.situation.employment = true;
+  // A business (or pension/interest/rent) situation is outside this release: said once, plainly, and the run ends without figures.
+  const unsupported = run.task === "explain" ? null
+    : run.state.situation?.business || a.income_source === "business" ? s.intakeBusinessUnsupported
+    : a.income_source === "other" ? s.intakeOtherIncomeUnsupported : null;
+  if (unsupported) {
+    // The sentence itself was acknowledged at classify time; an answer has not been, so say it here.
+    if (a.income_source !== undefined && !run.state.steps.some((p) => p.id === "compute" && p.state === "skipped")) {
+      await speak(deps, owner, run, emit, { intent: "Tell the person plainly that this release prepares salaried returns only and will not compute a return for this kind of income; rule questions are still welcome.", fallback: unsupported, maxWords: 60 });
+    }
+    for (const step of ["compute", "review", "confirm", "act", "outputs"] as const) run.state.steps = setStep(run.state.steps, step, "skipped", unsupported);
     return;
   }
-  // A document uploaded in answer to the previous question is recorded before the next question is chosen.
-  const a = run.state.answers;
-  for (const key of ["form16", "pf_proof", "health_proof"] as const) {
-    const v = a[key];
-    if (isDocumentAnswer(v) && !run.state.sources.some((src) => src.kind === "document" && src.id === v)) {
-      const ok = await recordUploadedDocument(deps, owner, run, snapshot, v, s, emit);
-      if (!ok) a[key] = "none";
-    }
-  }
-  const q = nextQuestion(run, snapshot, s, !!deps.vault);
+  await absorbAnswers(deps, owner, run, snapshot, s, emit);
+  const q = nextQuestion(run, owner, snapshot, s, !!deps.vault);
   if (q) {
-    q.lead = questionLead(Object.keys(a).length, s, q.expects === "file" ? "file" : "question");
+    // The question is phrased by the model in fresh words; the terms it must keep and the figures it may use come from the template.
+    q.text = await phrase(deps, owner, run, { intent: `Ask this, in your own words, as one short question: ${q.text}`, facts: [q.text], mustContain: MUST_MENTION[q.resolves] ?? [], fallback: q.text, maxWords: 45 }, emit);
     run.state.pendingQuestion = q;
     await emit({ type: "question", question: q });
     run.status = "waiting_for_input";
@@ -482,6 +672,12 @@ async function stepResolve(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
     const salaryFact = snapshot.state.persona.facts.find((f) => f.kind === "salary");
     if (salaryFact) cmds.push({ type: "correct_fact", factId: salaryFact.id, amount: run.state.situation.salaryAmount, reason: "Stated by the citizen in conversation; to be checked against Form 16" });
   }
+  // No employer figure on record: the citizen's own figure is declared as such — unless an uploaded Form 16 supplies it.
+  const statedSalary = typeof a.salary_amount === "number" ? a.salary_amount : run.state.situation?.salaryAmount;
+  if (statedSalary && statedSalary > 0 && !snapshot.state.persona.facts.some((f) => f.kind === "salary")
+    && !hasKind("import_document", () => true) && !hasKind("declare_income", (c) => c.type === "declare_income" && c.kind === "salary")) {
+    cmds.push({ type: "declare_income", kind: "salary", amount: statedSalary, label: "Salary (stated in conversation; to be checked against Form 16)", today: deps.today() });
+  }
   if (a.other_income === true && typeof a.other_income_amount === "number" && a.other_income_amount > 0 && !hasKind("declare_income", () => true)) {
     cmds.push({ type: "declare_income", kind: "other", amount: a.other_income_amount, label: "Other income (self-declared)", today: deps.today() });
   }
@@ -491,8 +687,8 @@ async function stepResolve(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
     if (isDocumentAnswer(proof)) cmds.push({ type: "declare_claim", section, amount, label, evidenceAttached: true });
     else await emit({ type: "message", role: "assistant", text: s.intakeClaimSkipped.replace("{section}", plain) });
   };
-  await stageClaim("80C", a.pf_amount, a.pf_proof, "Provident Fund (section 80C)", "PF");
-  await stageClaim("80D_SELF", a.health_amount, a.health_proof, "Health insurance (section 80D)", "80D");
+  await stageClaim("80C", a.pf_amount, a.proof, "Provident Fund (section 80C)", "PF");
+  await stageClaim("80D_SELF", a.health_amount, a.proof, "Health insurance (section 80D)", "80D");
   if (typeof a.claim_80C === "number" && a.claim_80C > 0 && !hasKind("declare_claim", (c) => c.type === "declare_claim" && c.section === "80C")) {
     cmds.push({ type: "declare_claim", section: "80C", amount: a.claim_80C, label: "Section 80C (self-declared)", evidenceAttached: false });
   }
@@ -515,10 +711,10 @@ function projected(snapshot: VersionedReturn, cmds: ReturnCommand[] | undefined)
 async function stepCompute(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>) {
   if (run.task === "explain") {
     if (run.state.smallTalk) {
-      await emit({ type: "message", role: "assistant", text: smallTalkReply(run.state.smallTalk, s, firstName(owner.displayName)) });
+      await speak(deps, owner, run, emit, { intent: smallTalkIntent(run.state.smallTalk), fallback: smallTalkReply(run.state.smallTalk, s, firstName(owner.displayName)), maxWords: 40 });
       return;
     }
-    if (run.state.situation?.business) await emit({ type: "message", role: "assistant", text: s.intakeBusinessUnsupported });
+    if (run.state.situation?.business) await speak(deps, owner, run, emit, { intent: "Say this release prepares salaried returns only and will not compute a business return, but rule questions are answered.", fallback: s.intakeBusinessUnsupported, maxWords: 50 });
     const answer = answerTaxQuestion(run.state.lastUserMessage ?? "", deps.today());
     run.state.taxAnswer = answer;
     run.knowledgeRelease = answer.release;
@@ -532,9 +728,7 @@ async function stepCompute(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
   const snapshot = await deps.returns.get(owner, AY);
   if (!snapshot) return;
   const state = projected(snapshot, run.state.pendingCommands);
-  const advice = assessAdvice(state.persona, { ownerKind: owner.kind, today: deps.today(),
-    resident: typeof run.state.answers.resident === "boolean" ? run.state.answers.resident : undefined,
-    returnByDueDate: typeof run.state.answers.return_by_due_date === "boolean" ? run.state.answers.return_by_due_date : undefined });
+  const advice = assessAdvice(state.persona, adviceContext(deps, owner, run));
   run.state.advice = advice;
   run.knowledgeRelease = advice.release;
   if (!advice.canRecommend) {
@@ -543,7 +737,8 @@ async function stepCompute(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
     run.state.sources = dedupeSources([...run.state.sources, ...cite(ids).map((c) => ({ kind: "rule" as const,
       id: c.id, label: c.title, detail: `${c.locator} · ${c.reviewer}`, verified: false, url: c.url }))]);
     await emit({ type: "source_lookup", sources: run.state.sources });
-    await emit({ type: "message", role: "assistant", text: `${s.noteAdviceUnavailable}\n\n${advice.issues.map((i) => `• ${i.reason}`).join("\n")}` });
+    const head = await phrase(deps, owner, run, { intent: "Say you cannot give a recommendation for this return yet and that the reasons follow.", fallback: s.noteAdviceUnavailable, maxWords: 30 }, emit);
+    await emit({ type: "message", role: "assistant", text: `${head}\n\n${advice.issues.map((i) => `• ${i.reason}`).join("\n")}` });
     run.state.pendingCard = undefined;
     run.state.pendingCommands = undefined;
     for (const step of ["review", "confirm", "act", "outputs"] as const)
@@ -648,7 +843,7 @@ async function stepReview(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnTy
     basis: { applicability: run.state.applicability ?? [], provisions: [...new Set((run.state.applicability ?? []).flatMap((r) => r.provisions))] },
   };
   run.state.pendingCard = card;
-  await emit({ type: "message", role: "assistant", text: s.reviewIntro });
+  await speak(deps, owner, run, emit, { intent: "Introduce the review card that follows: the figures are ready to check, and nothing is applied until the person confirms.", fallback: s.reviewIntro, maxWords: 40 });
   await emit({ type: "review_card", card });
   run.status = "waiting_for_review";
   await emit({ type: "status", status: "waiting_for_review" });
@@ -683,15 +878,13 @@ async function handleConfirmation(deps: RuntimeDeps, owner: Owner, run: Run, con
     return;
   }
   // Recheck knowledge freshness/release and projected facts at the action boundary, even on replay.
-  const rechecked = assessAdvice(projected(current, run.state.pendingCommands).persona,
-    { ownerKind: owner.kind, today: deps.today(),
-      resident: typeof run.state.answers.resident === "boolean" ? run.state.answers.resident : undefined,
-      returnByDueDate: typeof run.state.answers.return_by_due_date === "boolean" ? run.state.answers.return_by_due_date : undefined });
+  const rechecked = assessAdvice(projected(current, run.state.pendingCommands).persona, adviceContext(deps, owner, run));
   if (!rechecked.canAct || run.knowledgeRelease !== rechecked.release || run.state.advice?.corpusHash !== rechecked.corpusHash) {
     run.state.pendingCard = undefined;
     run.state.pendingCommands = undefined;
     run.state.advice = rechecked;
-    await emit({ type: "message", role: "assistant", text: `${s.noteAdviceUnavailable}\n\n${rechecked.issues.map((i) => `• ${i.reason}`).join("\n")}` });
+    const head = await phrase(deps, owner, run, { intent: "Say you cannot give a recommendation for this return yet and that the reasons follow.", fallback: s.noteAdviceUnavailable, maxWords: 30 }, emit);
+    await emit({ type: "message", role: "assistant", text: `${head}\n\n${rechecked.issues.map((i) => `• ${i.reason}`).join("\n")}` });
     for (const step of ["review", "confirm", "act", "outputs"] as const) run.state.steps = setStep(run.state.steps, step, "skipped", s.noteAdviceUnavailable);
     run.status = "running";
     return;
@@ -770,6 +963,11 @@ function parseAnswer(q: Question, text: string, s: ReturnType<typeof strings>): 
     if (/^(y|yes|yeah|yep|haan|haa|ha|ஆம்|हाँ|हां|true)\b/.test(t) || t === s.yes.toLowerCase()) return true;
     if (/^(n|no|nope|nahi|nahin|इल்லை|नहीं|false)\b/.test(t) || t === s.no.toLowerCase()) return false;
     return null;
+  }
+  if (q.expects === "form" || q.expects === "source") return null; // these are answered on the card, not by typing
+  if (q.expects === "choice" && q.choices) {
+    const hit = q.choices.find((c) => c.value.toLowerCase() === t || c.label.toLowerCase() === t || t.includes(c.label.toLowerCase()));
+    return hit ? hit.value : null;
   }
   if (q.expects === "number") {
     const m = t.replace(/,/g, "").match(/\d+(\.\d+)?/);

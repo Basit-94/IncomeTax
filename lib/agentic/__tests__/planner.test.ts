@@ -17,6 +17,9 @@ describe("planner (plan §5.1)", () => {
     const p = buildPlan({ task: "prepare_salaried_return", hasReturn: true, documentsAvailable: null, unconfirmedFacts: 1, openQuestions: 0, requiresConfirmation: true, alreadyFiled: true }, s);
     expect(p.find((x) => x.id === "act")).toMatchObject({ state: "blocked", note: s.noteAlreadyFiled });
     expect(p.find((x) => x.id === "gather")?.note).toBe(s.noteVaultUnavailable);
+    // A run is created before the vault is read; once it answers, the stale note goes (2026-09-06).
+    const later = buildPlan({ task: "prepare_salaried_return", hasReturn: true, documentsAvailable: true, unconfirmedFacts: 1, openQuestions: 0, requiresConfirmation: true, alreadyFiled: false }, s, p);
+    expect(later.find((x) => x.id === "gather")?.note).toBeUndefined();
   });
 
   it("preserves completed steps across a replan", () => {

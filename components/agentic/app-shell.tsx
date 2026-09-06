@@ -53,7 +53,7 @@ export interface AppShellProps {
   onSelectRun: (id: string) => void;
   onNewChat: () => void;
   onDeleteRun?: (id: string) => void;
-  inspector: { steps: PlanStep[]; outputs: OutputRef[]; sources: SourceRef[]; runId: string | null; manualNote?: string };
+  inspector: { steps: PlanStep[]; outputs: OutputRef[]; sources: SourceRef[]; runId: string | null; manualNote?: string; modelNotes?: string[] };
   /** A short truthful note under the sidebar, e.g. "demo session clears on restart". */
   notice?: string;
   children: ReactNode;
@@ -237,7 +237,7 @@ export default function AppShell(props: AppShellProps) {
 
         <div className="flex-1 min-w-0 min-h-0 flex flex-col lg:flex-row">
           <main id="main-content" className="flex-1 min-w-0 min-h-0 flex flex-col">{props.children}</main>
-          {withSidebar && <InspectorPanel s={s} open={inspectorTab} onToggle={(tab) => setInspectorTab(tab)} steps={inspector.steps} outputs={inspector.outputs} sources={inspector.sources} runId={inspector.runId} manualNote={inspector.manualNote} />}
+          {withSidebar && <InspectorPanel s={s} open={inspectorTab} onToggle={(tab) => setInspectorTab(tab)} steps={inspector.steps} outputs={inspector.outputs} sources={inspector.sources} runId={inspector.runId} manualNote={inspector.manualNote} modelNotes={inspector.modelNotes} />}
         </div>
       </div>
     </div>

@@ -386,9 +386,9 @@ export const LOCALIZED_MOCK_STRINGS: Record<string, Record<string, string>> = {
     hi: "आपका एक तथ्य, जैसा वापसी दिखाता है",
     ta: "உங்கள் ஒரு உண்மை, வாப்சி காட்டும் விதம்"
   },
-  "Salary from Infosys Ltd": {
-    hi: "Infosys Ltd से वेतन",
-    ta: "Infosys Ltd-இலிருந்து சம்பளம்"
+  "Salary from Chettinad Textiles Pvt Ltd": {
+    hi: "Chettinad Textiles Pvt Ltd से वेतन",
+    ta: "Chettinad Textiles Pvt Ltd-இலிருந்து சம்பளம்"
   },
   "Tax already taken from your pay": {
     hi: "आपके वेतन से पहले ही काटा गया कर",

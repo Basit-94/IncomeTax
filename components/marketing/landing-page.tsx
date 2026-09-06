@@ -38,7 +38,7 @@ export interface MarketingLandingProps {
 
 /** Sunita's demo return — the same figures the product itself computes (₹8,400 back). */
 const FACTS = [
-  { label: "Salary from Infosys Ltd", amount: 420000, reporter: "Reported by your employer · Form 16" },
+  { label: "Salary from Chettinad Textiles Pvt Ltd", amount: 420000, reporter: "Reported by your employer · Form 16" },
   { label: "Interest your savings account earned", amount: 1240, reporter: "Reported by your bank · AIS" },
   { label: "Tax already taken from your pay", amount: 8400, reporter: "Deducted by your employer · Form 26AS" },
 ] as const;

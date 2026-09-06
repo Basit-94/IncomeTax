@@ -148,9 +148,9 @@ export const TOOLS = {
       if (!ctx.vault) return { available: false, reason: "storage_unavailable" };
       const meta = await ctx.vault.getMeta(ctx.owner, args.documentId, "agent", ctx.runId);
       if (!meta) return { found: false };
-      if (!meta.hasBytes) return { found: true, readable: false, reason: "metadata_only", provenance: meta.provenance };
       const ex = await ctx.vault.getExtraction(ctx.owner, args.documentId);
-      if (!ex) return { found: true, readable: false, reason: "not_extracted" };
+      // An issued document (DigiLocker mock) carries fields without an original; a metadata-only record carries neither.
+      if (!ex) return meta.hasBytes ? { found: true, readable: false, reason: "not_extracted" } : { found: true, readable: false, reason: "metadata_only", provenance: meta.provenance };
       // Identity fields stay out of tool summaries (§5.3); the figures are the work.
       return {
         found: true,

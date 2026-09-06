@@ -51,14 +51,29 @@ export interface PlanStep {
   dependsOn: StepId[];
 }
 
+/** One field of a `form` question (user direction 2026-09-06: several small facts in one card, not one question at a time). */
+export interface FormField {
+  key: string;
+  label: string;
+  type: "number" | "yes_no" | "choice";
+  choices?: { value: string; label: string }[];
+  hint?: string;
+}
+
 /** One targeted question. The answer is validated against `expects`. */
 export interface Question {
   id: string;
   text: string;
   /** Short reason the fact matters (§5.8: "One focused question and a short reason"). */
   why: string;
-  expects: "number" | "yes_no" | "choice" | "text" | "file";
+  expects: "number" | "yes_no" | "choice" | "text" | "file" | "source" | "form";
   choices?: { value: string; label: string }[];
+  /** For `source` questions: where the figures may come from. An `upload` option answers with `upload:<documentId>`. */
+  sourceOptions?: { value: string; label: string; kind: "upload" | "choice"; detail?: string }[];
+  /** For consent (`yes_no`) questions: exactly what will be read or fetched, one line each. */
+  items?: string[];
+  /** For `form` questions: the fields answered together; the answer is a JSON object keyed by `key`. */
+  fields?: FormField[];
   /** The fact this answer resolves, so it lands in the right place. */
   resolves: string;
   /** For `file` questions: what the document is and where it comes from, in plain words. */
@@ -152,6 +167,12 @@ export interface RunWorkingState {
   documentTypes?: string[];
   /** Set when the opening message was small talk (hello, thanks…); answered warmly, no return work. */
   smallTalk?: import("./voice").SmallTalk;
+  /** How the person writes: romanised Hindi is answered in Hinglish. */
+  register?: import("./say").Register;
+  /** Readable Form 16 documents already in the vault; read only after the citizen's consent. */
+  vaultForm16?: { id: string; title: string }[];
+  /** The last few assistant sentences, so the model does not repeat itself. */
+  recentSaid?: string[];
   /** Applicability results computed for this run. */
   applicability?: ApplicabilityResult[];
   /** Exact retrieved evidence and guarded decision persisted for audit/replay. */

@@ -124,6 +124,8 @@ export default function Workspace(props: WorkspaceProps) {
 function answerLabel(value: string | number | boolean, q: Question | undefined, s: AgenticStrings): string {
   if (typeof value === "boolean") return value ? s.yes : s.no;
   if (q?.expects === "file") return value === "none" ? (q.skipLabel ?? s.dontHaveIt) : s.uploaded;
+  if (q?.expects === "form") return s.detailsEntered;
+  if (q?.expects === "source") return String(value).startsWith("upload:") ? s.uploaded : (q.sourceOptions?.find((o) => o.value === String(value))?.label ?? String(value));
   return q?.choices?.find((c) => c.value === String(value))?.label ?? String(value);
 }
 
@@ -211,19 +213,19 @@ function QuestionCard({ q, s, disabled, onAnswer }: { q: Question; s: AgenticStr
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   /** A document answered inline: stored in the citizen's vault, then its id is the answer. */
-  const upload = async (file: File | undefined) => {
+  const upload = async (file: File | undefined, answerWith: (id: string) => void = onAnswer) => {
     if (!file || uploading) return;
     setUploading(true);
     setUploadError(null);
     try {
       const form = new FormData();
       form.append("file", file);
-      form.append("docType", q.docType ?? "OTHER");
+      form.append("docType", q.docType ?? (q.expects === "source" ? "FORM_16" : "OTHER"));
       form.append("assessmentYear", "2026-27");
       const res = await fetch("/api/vault/documents", { method: "POST", credentials: "same-origin", body: form });
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean; document?: { id: string } };
       if (!res.ok || !body.ok || !body.document?.id) throw new Error("refused");
-      onAnswer(body.document.id);
+      answerWith(body.document.id);
     } catch {
       setUploadError(s.uploadFailed);
     } finally {
@@ -238,8 +240,38 @@ function QuestionCard({ q, s, disabled, onAnswer }: { q: Question; s: AgenticStr
         {q.lead && <p className="text-sm text-ink-2 leading-relaxed">{q.lead}</p>}
         <p className="text-[15px] text-ink leading-relaxed">{q.text}</p>
         {q.docHint && <p className="text-sm text-ink-2 leading-relaxed">{q.docHint}</p>}
+        {q.items && q.items.length > 0 && (
+          <ul className="list-disc ps-5 text-sm text-ink-2 space-y-0.5">
+            {q.items.map((item) => <li key={item}>{item}</li>)}
+          </ul>
+        )}
         <p className="text-xs text-ink-3">{q.why}</p>
-        {q.expects === "file" ? (
+        {q.expects === "source" && q.sourceOptions ? (
+          <div className="space-y-2">
+            {q.sourceOptions.map((o) =>
+              o.kind === "upload" ? (
+                <label key={o.value} className={`flex items-start gap-3 rounded-xl border border-line bg-paper px-4 py-3 ${disabled || uploading ? "opacity-50 cursor-wait" : "hover:border-money/60 cursor-pointer"}`}>
+                  <Upload size={16} className="mt-0.5 shrink-0 text-money" aria-hidden="true" />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-ink">{uploading ? s.uploading : o.label}</span>
+                    {o.detail && <span className="block text-xs text-ink-3">{o.detail}</span>}
+                  </span>
+                  <input type="file" accept=".pdf,image/*" className="sr-only" disabled={disabled || uploading} onChange={(e) => void upload(e.target.files?.[0], (id) => onAnswer(`upload:${id}`))} />
+                </label>
+              ) : (
+                <button key={o.value} type="button" disabled={disabled || uploading} onClick={() => onAnswer(o.value)} className="w-full text-start flex items-start gap-3 rounded-xl border border-line bg-paper px-4 py-3 hover:border-money/60 disabled:opacity-50 cursor-pointer">
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-ink">{o.label}</span>
+                    {o.detail && <span className="block text-xs text-ink-3">{o.detail}</span>}
+                  </span>
+                </button>
+              ),
+            )}
+            {uploadError && <p className="text-xs font-semibold text-alarm">{uploadError}</p>}
+          </div>
+        ) : q.expects === "form" && q.fields ? (
+          <FormFields q={q} s={s} disabled={disabled} onAnswer={onAnswer} />
+        ) : q.expects === "file" ? (
           <div className="space-y-2">
             <div className="flex flex-wrap gap-2">
               <label className={`inline-flex items-center gap-2 rounded-lg bg-ink text-paper px-4 py-2 text-sm font-semibold ${disabled || uploading ? "opacity-50 cursor-wait" : "hover:opacity-90 cursor-pointer"}`}>
@@ -286,6 +318,54 @@ function QuestionCard({ q, s, disabled, onAnswer }: { q: Question; s: AgenticStr
         )}
       </div>
     </div>
+  );
+}
+
+/** The one form: several small figures answered together, sent as one JSON object (user direction 2026-09-06). */
+function FormFields({ q, s, disabled, onAnswer }: { q: Question; s: AgenticStrings; disabled: boolean; onAnswer: (v: string) => void }) {
+  const [values, setValues] = useState<Record<string, string | boolean>>({});
+  const fields = q.fields ?? [];
+  const complete = fields.every((f) => f.type !== "yes_no" || typeof values[f.key] === "boolean");
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const out: Record<string, number | boolean | string> = {};
+    for (const f of fields) {
+      const v = values[f.key];
+      if (f.type === "number") out[f.key] = Number(String(v ?? "").replace(/[^0-9.]/g, "")) || 0;
+      else if (f.type === "yes_no") out[f.key] = v === true;
+      else if (typeof v === "string" && v) out[f.key] = v;
+    }
+    onAnswer(JSON.stringify(out));
+  };
+  return (
+    <form className="space-y-3" onSubmit={submit}>
+      {fields.map((f) => {
+        const id = `${q.id}-${f.key}`;
+        return (
+          <div key={f.key} className="space-y-1">
+            <label className="block text-sm font-semibold text-ink" htmlFor={id}>{f.label}</label>
+            {f.hint && <p className="text-xs text-ink-3">{f.hint}</p>}
+            {f.type === "number" ? (
+              <input id={id} inputMode="numeric" placeholder="0" value={String(values[f.key] ?? "")} onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))} disabled={disabled} className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink font-mono tabular-nums focus:outline-none focus:ring-2 focus:ring-money/40" />
+            ) : f.type === "yes_no" ? (
+              <div className="flex gap-2" role="group" aria-label={f.label}>
+                {[true, false].map((b) => (
+                  <button key={String(b)} type="button" disabled={disabled} onClick={() => setValues((v) => ({ ...v, [f.key]: b }))} className={`rounded-lg border px-4 py-1.5 text-sm font-semibold cursor-pointer disabled:opacity-50 ${values[f.key] === b ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-line hover:bg-paper-3"}`}>
+                    {b ? s.yes : s.no}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <select id={id} value={String(values[f.key] ?? "")} onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))} disabled={disabled} className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink">
+                <option value="">—</option>
+                {f.choices?.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            )}
+          </div>
+        );
+      })}
+      <button type="submit" disabled={disabled || !complete} className="rounded-lg bg-ink text-paper px-4 py-2 text-sm font-semibold hover:opacity-90 disabled:opacity-50 cursor-pointer">{s.formSubmit}</button>
+    </form>
   );
 }
 
