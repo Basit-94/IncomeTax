@@ -84,7 +84,7 @@ export async function createRun(deps: RuntimeDeps, owner: Owner, opts: { message
     lang: opts.lang,
     knowledgeRelease: KNOWLEDGE_RELEASE,
     state: {
-      steps: buildPlan(planningFacts(task, null, null), s),
+      steps: buildPlan(planningFacts(task, null, deps.vault ? true : null), s),
       answers: {},
       sources: [],
       usage: { toolCalls: 0, modelCalls: 0, tokens: 0 },
@@ -153,7 +153,7 @@ export async function advance(deps: RuntimeDeps, owner: Owner, runId: string, in
           run.state.pendingQuestion = undefined;
           delete run.state.answers.chosen_task;
           run.task = "explain";
-          run.state.steps = buildPlan(planningFacts("explain", null, null), s);
+          run.state.steps = buildPlan(planningFacts("explain", null, deps.vault ? true : null), s);
           run.status = "running";
         }
       } else if (run.status === "waiting_for_review" && run.state.pendingCard) {
@@ -168,7 +168,7 @@ export async function advance(deps: RuntimeDeps, owner: Owner, runId: string, in
           run.state.pendingCommands = undefined;
           run.state.advice = undefined;
           run.state.taxAnswer = undefined;
-          run.state.steps = buildPlan(planningFacts("explain", null, null), s);
+          run.state.steps = buildPlan(planningFacts("explain", null, deps.vault ? true : null), s);
           run.status = "running";
         }
       } else if (run.status === "completed") {

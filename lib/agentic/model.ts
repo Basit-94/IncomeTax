@@ -75,7 +75,7 @@ export function geminiModel(env: Record<string, string | undefined> = process.en
   // The primary key and any fallback keys (.env.example): a key that is out of quota (HTTP 429) is skipped for the rest of the process.
   const clean = (k: string | undefined) => (k ?? "").trim().replace(/^["']|["']$/g, "");
   const keys = [env.GEMINI_API_KEY, env.GEMINI_FALLBACK_API_KEY, env.GEMINI_FALLBACK_API_KEY_2, env.GEMINI_FALLBACK_API_KEY_3].map(clean).filter((k) => k && !k.includes("REPLACE_ME"));
-  const model = env.AGENT_MODEL?.trim();
+  const model = env.AGENT_MODEL?.trim() || env.AGENT_FALLBACK_MODEL?.trim();
   const timeoutMs = Number(env.AGENT_MODEL_TIMEOUT_MS) || 3_500;
   const maxTokens = Number(env.AGENT_MAX_TOKENS_PER_REPLY) || 1024;
   if (keys.length === 0 || !model) return nullModel;

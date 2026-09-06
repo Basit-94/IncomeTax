@@ -4836,3 +4836,20 @@ things there are already true and will NOT be rewritten:
     3. Captured screenshot artifact verifying UI alignment, buttons, and responsive design.
 - **Git Action:** Committed and pushed to `origin/dev-2`.
 
+## [2026-09-06 16:16] orchestrator
+- **Action:** MODIFY | VERIFY | COMMIT | PUSH
+- **Target:** lib/agentic/runtime.ts; lib/agentic/model.ts; lib/db/postgres.ts; log.md
+- **Intent:** Resolve Vercel preview deployment environment configuration and database connectivity:
+  1. Add `AGENT_MODEL` (`gemini-2.5-flash`) across Vercel Preview, Production, and Development environments and add safe code fallback to `AGENT_FALLBACK_MODEL`.
+  2. Increase PostgreSQL connection timeout in `lib/db/postgres.ts` from 3s to 10s to handle serverless cold start handshakes without connection drops.
+  3. Ensure initial `buildPlan` reflects `deps.vault` availability rather than hardcoding `null`, eliminating false "vault unreachable" notes when database and vault are active.
+  4. Deploy Preview build directly to Vercel and verify live `durable: true` and instant agent responses.
+- **Verification Results:**
+  - `npx vitest run`: **354/354 passed** across all 37 test files (100% green).
+  - Vercel Deployment `https://wapsi-5xmy5zqvj-abs21.vercel.app`:
+    - `POST /api/session/demo` -> `200 OK`, `durable: true` (Supabase connected with pooler, all tables verified).
+    - `POST /api/runs` with message `"hi"` -> `201 Created` in 2.9s, `durable: true`, `status: waiting_for_input`.
+    - `GET /api/runs/[id]` -> Verified 7-task list and 7 interactive choice buttons emitted to events.
+- **Git Action:** Committed and pushed to `origin/dev-2`.
+
+
