@@ -5037,3 +5037,36 @@ things there are already true and will NOT be rewritten:
     7. Returned to `/app`: verified the green "🎖️ CA Review Complete from CA Rajesh Sharma, FCA!" banner appeared with `[ View Diff → ]`.
     8. Clicked `[ View Diff → ]`: verified comparison matrix opened cleanly with "Adopt CA Recommendations & Proceed to File" button.
 - **Git Policy:** Explicitly instructed by user to push to `dev-2`. Committed as `1923fee` and pushed cleanly to `origin dev-2` (never touched `main`).
+
+## [2026-09-06 21:54] Codex (Mascot-led redesign exploration)
+- Read AGENTS.md and docs/CONTEXT.md, existing design specification, public landing and agentic landing components, and global design tokens.
+- Developed three proposed creative directions: chibi red panda with warm stationery, bird with an airy workspace, and an original paper-inspired character. Recommended the red panda direction with mascot-derived shapes, restrained motion, and clear financial review surfaces.
+- Covered landing, sign-in, agent workspace, manual review, mobile, semantic status colours, all 23 languages, provenance, consent, and truthful simulated states. These are proposals, not adopted design contracts.
+- Verification: confirmed branch dev-2 and initially clean working tree. No application or UI changes; no runtime tests needed for this advisory task. Only this log entry was appended. No commit or push.
+
+- Log verification: the first whitespace check flagged an extra trailing blank line; completed the entry with this result and repeated the check successfully.
+
+## [2026-09-06 21:58] Codex (Human CA mascot comparison preview)
+- User clarified the mascot is a human Chartered Accountant, prefers male, and requested a female comparison.
+- Used the built-in image generation tool to create one side-by-side concept board: Indian male and female chibi CA characters, matching cream shirts and teal waistcoats, full-body welcoming poses and listening/document-review portraits.
+- Preview saved at C:/Users/anike/.codex/generated_images/01a07785-1842-7642-b9f4-38ab42b193f5/exec-d2dba188-97d4-4975-a8f4-d1c7b640f8c1.png and displayed inline; this is brainstorming art, not an integrated project asset.
+- Visually inspected the generated board for paired styling, legible labels, full-body framing and consistent characters. No website, localization or contract changes. No commit or push. Runtime tests not applicable; log whitespace check passed.
+
+## [2026-09-06 22:04] Codex (Divergent CA mascot exploration)
+- User rejected generic character styling and explicitly requested multiple wildly different characters in one image.
+- Generated a three-concept silhouette exploration followed by the requested eight-direction single board using built-in image generation: clay, vintage ink cartoon, cut paper, pixel art, watercolour mentor, minimal vinyl, comic investigator, and soft anime. Preserved the male human CA premise.
+- Final brainstorming preview: C:/Users/anike/.codex/generated_images/01a07785-1842-7642-b9f4-38ab42b193f5/exec-15286743-6967-4f3b-9969-c2cea6047099.png. Displayed inline and visually checked for eight numbered complete characters and visibly distinct media, silhouettes, ages and clothing.
+- Project-specific lesson: professional wardrobe and generic glasses did not satisfy the user's desired uniqueness. Future exploration must vary underlying silhouette, face, proportions and medium, not just accessories; present divergent options together before refining one.
+- No application, localization or design-contract changes. No commit or push. Runtime tests not applicable; log whitespace verification passed.
+
+## [2026-09-06 22:08] Codex (Simple chatbot mascot concepts)
+- User refined the brief toward simple mascots for animation and chatbot use. Generated one six-option male human chibi CA concept sheet with simplified shapes and three avatar expressions per character using built-in image generation.
+- Preview: C:/Users/anike/.codex/generated_images/01a07785-1842-7642-b9f4-38ab42b193f5/exec-97248712-68bc-476c-ac68-7bdbb53ab404.png. Visually checked six numbered concepts and expression sets. Some subtle shading remains; image is raster concept art, not separated vector parts or an animation rig.
+- Applied project lesson: simplify facial parts, hair silhouette and clothing for small avatars and future animation; material/style diversity alone did not meet the user's intended usage. Retain distinctive head features while limiting complexity.
+- No application, localization or design-contract changes. No commit or push. Runtime tests not applicable; log whitespace check passed.
+
+## [2026-09-06 22:13] Codex (Abstract chatbot mascot exploration)
+- User requested abstract characters instead of humans. Generated one six-concept image with return loop, folded note, stacked pebbles, chat droplet, bracket pair and soft spark, each with expression previews using built-in image generation.
+- Preview displayed inline: C:/Users/anike/.codex/generated_images/01a07785-1842-7642-b9f4-38ab42b193f5/exec-62253789-7612-4b09-a62a-7f5c4fd7d06a.png.
+- Visually verified six distinct nonhuman silhouettes and minimal faces. Some shading and silhouette variation remain in generated previews; these are raster concepts, not final vector animation assets. Proposed return loop and folded note as strongest product-linked directions.
+- No application, localization or design-contract changes. No commit or push. Runtime tests not applicable; log whitespace verification passed.
