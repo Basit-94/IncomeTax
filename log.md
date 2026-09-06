@@ -5190,4 +5190,41 @@ things there are already true and will NOT be rewritten:
        - Zero "I can't make a recommendation" or "no evidence found" errors.
 - **Result:** Pushed to `origin/dev-2`.
 
+## [2026-09-06 22:35] orchestrator
+- **Action:** MODIFY | VERIFY
+- **Target:** lib/agentic/store.ts, lib/agentic/runtime.ts, lib/agentic/__tests__/runtime.test.ts, log.md
+- **Intent:** Fix infinite loop on review card in Agentic workspace when confirming regime comparison (as documented in `ca.md`), eliminate continuous snapshot revision bumping when CA review is present, and ensure resilient review confirmation.
+- **Why:** 
+  1. User reported from `ca.md`: taxpayer compared regimes, and clicking "Apply this regime" / "Confirm" caused the agent to repeatedly respond with *"The figures are ready below. Nothing is applied until you confirm."* in an infinite loop, constantly bumping revisions (reaching `rev 45`).
+  2. Root cause 1: In `lib/agentic/runtime.ts` line 593 (`ensureSnapshot`), `existing.state.persona !== caReview.caPersona` was checking JS object identity (`!==`). Because `existing` from the database/store and `caReview` from the CA store are deserialized into separate objects in memory, this condition evaluated to `true` on every single step execution (`stepGather`, `stepResolve`, `stepCompute`, `stepReview`), continuously calling `deps.returns.replace` and bumping `snapshot.revision`.
+  3. Root cause 2: In `handleConfirmation`, `if (!current || current.revision !== card.boundTo.revision || snapshotHash(current.state) !== card.boundTo.snapshotHash)` strictly rejected the review card if `revision` differed, even if the underlying tax figures and facts were 100% identical (`snapshotHash` matched). This rejected the confirmation as "stale", reset `compute` and `review` to `pending`, and triggered a new review card with a higher revision.
+  4. Root cause 3: In `stepReview`, when the chosen regime matched the current regime (`regime === (state.regime ?? "new")`), `choose_regime` was not staged into `pendingCommands`. Confirming had no commands to execute, failing to finalize the step transition.
+- **Key Implementation Details:**
+  1. `lib/agentic/store.ts`:
+     - Added `deterministicStringify` with sorted keys to ensure canonical SHA-256 digests across PostgreSQL `jsonb` normalization and in-memory representations.
+  2. `lib/agentic/runtime.ts`:
+     - In `ensureSnapshot`: Replaced referential `!==` check with `snapshotHash(existing.state.persona) !== snapshotHash(caReview.caPersona) || existing.state.regime !== targetRegime`. Prevents spurious replaces and stops infinite revision bumping.
+     - In `stepReview`: Staged `{ type: "choose_regime", regime }` for all `kind === "regime"` reviews (subject to section 115BAC switch eligibility rule), ensuring confirmation always executes cleanly, records the action, and completes the plan.
+     - In `handleConfirmation`: Checked `hashMatches = currentHash === card.boundTo.snapshotHash`. If the return data is identical, confirmation succeeds using `current.revision` for command application, eliminating false stale rejections.
+  3. `lib/agentic/__tests__/runtime.test.ts`:
+     - Added unit test verifying `compare_regimes` confirmation when already on recommended regime completes cleanly without looping.
+     - Added unit test verifying `ensureSnapshot` does not continuously bump revision when a CA review is present.
+- **Verification Results:**
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm test`: **368/368 tests passed** across all 39 test files.
+  - **Live End-to-End Browser Automation via Playwright MCP:**
+    1. Navigated to `/app` with CA review and Form 16 present in vault.
+    2. Clicked *"Compare the two regimes"*.
+    3. Read Form 16, entered non-reported figures, and received side-by-side computation: New regime saves ₹2,05,400.
+    4. Review card displayed *"Apply the new regime"* (`rev 114`).
+    5. Clicked *"Apply this regime"*.
+    6. Confirmation succeeded instantly in 1 click without any looping:
+       - Emitted: `Done — I've applied the new regime to your return.`
+       - Emitted: `Regime Comparison · New saves ₹2,05,400 · 2026-27`
+       - Status reached `completed`.
+       - Rendered "Next Available Tasks (AY 2026-27)" bar.
+       - Captured visual snapshot and screenshot.
+- **Result:** Ready to push to `origin/dev-2`.
+
+
 

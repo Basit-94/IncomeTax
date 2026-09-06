@@ -35,8 +35,19 @@ export interface RunStore {
   addDailyUsage(owner: Owner, day: string, tokens: number, modelCalls: number): Promise<{ tokens: number; modelCalls: number }>;
 }
 
+function deterministicStringify(obj: unknown): string {
+  if (obj === null || typeof obj !== "object") {
+    return JSON.stringify(obj);
+  }
+  if (Array.isArray(obj)) {
+    return "[" + obj.map(deterministicStringify).join(",") + "]";
+  }
+  const keys = Object.keys(obj as Record<string, unknown>).sort();
+  return "{" + keys.map((k) => JSON.stringify(k) + ":" + deterministicStringify((obj as Record<string, unknown>)[k])).join(",") + "}";
+}
+
 export function snapshotHash(state: unknown): string {
-  return createHash("sha256").update(JSON.stringify(state)).digest("hex");
+  return createHash("sha256").update(deterministicStringify(state)).digest("hex");
 }
 
 export function newId(prefix: string): string {

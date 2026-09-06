@@ -590,14 +590,19 @@ async function ensureSnapshot(deps: RuntimeDeps, owner: Owner, run: Run): Promis
 
   if (existing) {
     // If CA has completed an audit that hasn't been merged yet into the snapshot, update it
-    if (hasCa && caReview.caPersona && existing.state.persona !== caReview.caPersona) {
-      const updatedState: ReturnState = {
-        ...existing.state,
-        persona: caReview.caPersona,
-        regime: caReview.caRegime || existing.state.regime || "new",
-      };
-      const rep = await deps.returns.replace(owner, AY, updatedState, null);
-      if (rep.ok) return rep.snapshot;
+    if (hasCa && caReview.caPersona) {
+      const personaDiffers = snapshotHash(existing.state.persona) !== snapshotHash(caReview.caPersona);
+      const targetRegime = caReview.caRegime || existing.state.regime || "new";
+      const regimeDiffers = existing.state.regime !== targetRegime;
+      if (personaDiffers || regimeDiffers) {
+        const updatedState: ReturnState = {
+          ...existing.state,
+          persona: caReview.caPersona,
+          regime: targetRegime,
+        };
+        const rep = await deps.returns.replace(owner, AY, updatedState, null);
+        if (rep.ok) return rep.snapshot;
+      }
     }
     return existing;
   }
@@ -1824,7 +1829,7 @@ async function stepReview(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnTy
     rows.push({ label: s.rowSaving, value: formatMoney(Math.abs(both.new.totalTax - both.old.totalTax), run.lang) });
   }
   const kind = run.task === "prepare_salaried_return" ? "filing" : run.task === "compare_regimes" ? "regime" : "corrections";
-  if (kind === "regime" && regime !== (state.regime ?? "new")) {
+  if (kind === "regime") {
     // Choosing the old regime is an election with conditions (s.115BAC(6)); the applicability
     // rule decides whether this system may execute it. Otherwise: comparison shown, switch not made.
     const switchRule = run.state.applicability?.find((r) => r.rule === "regime_switch_115BAC");
@@ -1873,7 +1878,16 @@ async function handleConfirmation(deps: RuntimeDeps, owner: Owner, run: Run, con
     return;
   }
   const current = await deps.returns.get(owner, AY);
-  if (!current || current.revision !== card.boundTo.revision || snapshotHash(current.state) !== card.boundTo.snapshotHash) {
+  if (!current) {
+    await emit({ type: "message", role: "assistant", text: s.staleReview });
+    run.state.pendingCard = undefined;
+    run.state.steps = setStep(setStep(run.state.steps, "compute", "pending"), "review", "pending");
+    run.status = "running";
+    return;
+  }
+  const currentHash = snapshotHash(current.state);
+  const hashMatches = currentHash === card.boundTo.snapshotHash;
+  if (!hashMatches && current.revision !== card.boundTo.revision) {
     await emit({ type: "message", role: "assistant", text: s.staleReview });
     run.state.pendingCard = undefined;
     run.state.steps = setStep(setStep(run.state.steps, "compute", "pending"), "review", "pending");
