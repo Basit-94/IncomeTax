@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PERSONAS } from "../../personas";
+import type { Persona } from "../../types";
 import { computeForPersona } from "../../return/compute";
 import { MemoryReturnStore } from "../../return/snapshot-store";
 import type { Owner } from "../../server/session";
@@ -318,5 +319,106 @@ describe("runtime — the first end-to-end milestone (plan §7)", () => {
     expect(r2.status).toBe("completed");
     const evs = await events(d, sunita, r2);
     expect(evs.some((e) => e.type === "message" && /Tax Regime Comparison/i.test(e.text))).toBe(true);
+  });
+
+  it("'how to pay?' initiates Challan 280 interactive flow with QR instead of statutory NPS RAG", async () => {
+    const d = deps();
+    const run = await createRun(d, sunita, { message: "how to pay?", lang: "en" });
+    const r = (await advance(d, sunita, run.id))!;
+    expect(r.status).toBe("waiting_for_input");
+    expect(r.state.pendingQuestion?.resolves).toBe("challan_payment_mode");
+    expect(r.state.pendingQuestion?.choices?.some((c) => c.value === "pay_challan_upi")).toBe(true);
+    const evs = await events(d, sunita, r);
+    expect(evs.some((e) => e.type === "message" && /Challan ITNS 280/i.test(e.text))).toBe(true);
+    // Crucial: Must NOT output NPS s.80CCD statutory citation!
+    expect(evs.some((e) => e.type === "message" && /80CCD/i.test(e.text))).toBe(false);
+  });
+
+  it("simulating Challan 280 payment records payment on return and generates ITNS 280 receipt", async () => {
+    const d = deps();
+    const run = await createRun(d, sunita, { message: "pay tax", lang: "en" });
+    const r1 = (await advance(d, sunita, run.id))!;
+    expect(r1.state.pendingQuestion?.resolves).toBe("challan_payment_mode");
+
+    // Citizen simulates UPI payment
+    const r2 = (await advance(d, sunita, run.id, {
+      answer: { questionId: r1.state.pendingQuestion!.id, value: "pay_challan_upi" },
+    }))!;
+    const evs = await events(d, sunita, r2);
+    expect(evs.some((e) => e.type === "message" && /Payment Successful — Challan ITNS 280 Receipt/i.test(e.text))).toBe(true);
+    expect(evs.some((e) => e.type === "message" && /Challan Identification Number/i.test(e.text))).toBe(true);
+
+    // Verify payment recorded on return snapshot
+    const snap = await d.returns.get(sunita, "2026-27");
+    expect(snap?.state.baselinePersona.taxPaid.some((t) => t.section === "140A")).toBe(true);
+  });
+
+  it("when balance due exists, stepReview proactively prompts to pay Challan 280, clears due upon payment, and proceeds to filing", async () => {
+    const d = deps();
+    // Seed Priya with salary 14.5L and TDS 85k -> balance due = 4,700
+    const priyaOwner: Owner = { kind: "demo", pan: "ABCDE1234F", displayName: "Priya Patel" };
+    const priyaPersona: Persona = {
+      id: "priya",
+      name: "PRIYA PATEL",
+      age: 29,
+      city: "Bengaluru",
+      state: "Karnataka",
+      occupation: "Software Engineer",
+      pan: "ABCDE1234F",
+      mobile: "9876543210",
+      preferredLang: "en",
+      situation: "Salaried employee",
+      act: 1,
+      actLabel: "Act I",
+      embodies: "Salaried employee",
+      assessmentYear: "2026-27",
+      facts: [{ id: "sal", kind: "salary", label: "Salary from Infosys", amount: 1450000, provenance: { reporter: "Infosys", reporterKind: "employer", filedOn: "2026-05-15", statement: "26AS", onlyReporterCanFix: true } }],
+      taxPaid: [{ id: "tds", label: "TDS by Infosys", amount: 85000, section: "192", provenance: { reporter: "Infosys", reporterKind: "employer", filedOn: "2026-05-15", statement: "26AS", onlyReporterCanFix: true } }],
+      claims: [],
+      banks: [],
+      refund: { state: "not_filed", amount: 0, holds: [], timeline: [] },
+      notices: [],
+    };
+    await d.returns.replace(priyaOwner, "2026-27", {
+      version: 1,
+      lang: "en",
+      personaId: "priya",
+      baselinePersona: priyaPersona,
+      persona: priyaPersona,
+      corrections: [],
+      confirmedFactIds: [],
+      regime: "new",
+    }, null);
+
+    const run = await createRun(d, priyaOwner, { task: "prepare_salaried_return", lang: "en" });
+    let r = (await advance(d, priyaOwner, run.id))!;
+
+    // Answer intake questions to reach compute/review
+    if (r.state.pendingQuestion?.resolves === "details") {
+      r = (await advance(d, priyaOwner, r.id, {
+        answer: {
+          questionId: r.state.pendingQuestion.id,
+          value: JSON.stringify({ pf_amount: 0, health_amount: 0, interest_amount: 0, resident: true }),
+        },
+      }))!;
+    }
+
+    // Now in stepReview: should have proactively prompted for Challan 280 because due is ₹4,700!
+    expect(r.state.pendingQuestion?.resolves).toBe("challan_payment_mode");
+    const evs = await events(d, priyaOwner, r);
+    expect(evs.some((e) => e.type === "message" && /Balance Tax Due: ₹4,700/i.test(e.text))).toBe(true);
+
+    // Priya clicks '⚡ Pay ₹4,700 Now (UPI / QR)'
+    r = (await advance(d, priyaOwner, r.id, { answer: { questionId: r.state.pendingQuestion!.id, value: "pay_challan_upi" } }))!;
+
+    // Payment receipt emitted
+    const payEvs = await events(d, priyaOwner, r);
+    expect(payEvs.some((e) => e.type === "message" && /Payment Successful — Challan ITNS 280 Receipt/i.test(e.text))).toBe(true);
+
+    // It advanced straight to review card!
+    expect(r.status).toBe("waiting_for_review");
+    expect(r.state.pendingCard).toBeDefined();
+    // Net tax due should now be cleared to ₹0 in the review card
+    expect(r.state.pendingCard?.boundTo.amount).toBe(0);
   });
 });

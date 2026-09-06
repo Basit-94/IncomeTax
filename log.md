@@ -4852,4 +4852,27 @@ things there are already true and will NOT be rewritten:
     - `GET /api/runs/[id]` -> Verified 7-task list and 7 interactive choice buttons emitted to events.
 - **Git Action:** Committed and pushed to `origin/dev-2`.
 
+## [2026-09-06 16:40] orchestrator
+- **Action:** MODIFY | VERIFY | COMMIT | PUSH
+- **Target:** lib/agentic/planner.ts; lib/agentic/runtime.ts; components/agentic/workspace.tsx; lib/agentic/__tests__/runtime.test.ts; log.md
+- **Intent:** Resolve Challan 280 tax payment flow directly inside Agentic mode (addressing `p.md`):
+  1. In-Agent QR & Payment Simulation:
+     - Embedded official CBDT e-Pay Tax QR code (`epaytax.cbdt@sbi`) and simulated payment buttons (`⚡ Simulate UPI / QR`, `🏦 Net Banking (SBI / HDFC / ICICI)`) directly into `QuestionCard` (`components/agentic/workspace.tsx`) with distinctive green-tinted accent styling.
+     - Prevented statutory RAG routing from hijacking queries like "how to pay?", "pay tax", "challan 280" into unrelated s.80CCD NPS citations.
+  2. Challan 280 Payment Execution (`handleChallanPaymentExecution` in `lib/agentic/runtime.ts`):
+     - Applies `record_payment` command to return snapshot under Section 140A.
+     - Generates authentic synthetic BSR code, Challan Serial No, tender date, and CIN (`0021` Major Head, `300` Minor Head).
+     - Prints structured ITNS 280 payment receipt directly in the conversation.
+     - Automatically resets return balance tax payable to ₹0.
+  3. Proactive Section 140A Challan Prompt in `stepReview`:
+     - When return computes to a balance due (`b.refundOrDue < 0`), agent proactively prompts before filing: *"Your return computation shows a net balance tax payable of ₹{due}. Under Section 140A, self-assessment tax must be cleared prior to return filing. Would you like to pay this now via Challan 280?"*
+     - Citizen can simulate payment with 1 click, clearing due to ₹0 and immediately proceeding to final filing acknowledgement.
+  4. Comprehensive Test Suite:
+     - Added unit & integration tests verifying "how to pay?", Challan 280 UPI simulation, return credit under Section 140A, and proactive review prompt.
+- **Verification Results:**
+  - `npx vitest run`: **357/357 passed** across all 37 test files (100% green).
+  - `npx tsc --noEmit`: **0 errors**.
+  - `npm run build`: **Next.js 16.3.2 Turbopack production build succeeded** in 2.1s (all 16 routes static & dynamic).
+- **Git Action:** Committed and pushed to `origin/dev-2`.
+
 

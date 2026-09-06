@@ -139,9 +139,15 @@ export function classifyByRules(text: string): RunTask {
   return "explain";
 }
 
+/** Inquiries regarding tax payment, Challan 280, UPI, or how to pay. */
+export function isPaymentInquiry(text: string): boolean {
+  return /\b(how (to|do i|can i) pay|pay (tax|now|challan|it)|payment|challan 280|itns 280|upi|qr|net banking|tax pay|kaise pay kare|pay kaise kare|tax bharna hai|chalan bharna|advance tax pay)\b/i.test(text);
+}
+
 /** Questions about a rule/deadline must not start filing just because they contain 'ITR'. */
 export function isTaxInformationQuestion(text: string): boolean {
   if (isCapabilityInquiry(text)) return false;
+  if (isPaymentInquiry(text)) return false;
   if (/\b(file my|prepare my|compare|better for me|cheaper for me|file karna|bharna|bharni|mera|meri|my refund|my tax|i owe|my salary|my return)\b/i.test(text)) {
     return false;
   }

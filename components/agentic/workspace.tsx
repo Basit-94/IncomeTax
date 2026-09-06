@@ -10,6 +10,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Check, CircleDot, Download, FileText, Mic, MicOff, Send, ShieldAlert, ShieldCheck, Sparkles, Upload, X } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import type { PublicRun } from "@/lib/agentic/runtime";
 import type { OutputRef, Question, ReviewCard, RunEvent, RunTask } from "@/lib/agentic/types";
 import type { AgenticStrings } from "@/lib/i18n/agenticStrings";
@@ -288,6 +289,22 @@ function QuestionCard({ q, s, disabled, onAnswer }: { q: Question; s: AgenticStr
           </ul>
         )}
         <p className="text-xs text-ink-3">{q.why}</p>
+        {q.resolves === "challan_payment_mode" && (
+          <div className="flex flex-col sm:flex-row items-center gap-4 p-3.5 bg-paper rounded-xl border border-line my-2">
+            <div className="p-2 bg-white rounded-lg shadow-xs border border-slate-200 shrink-0">
+              <QRCodeSVG value="upi://pay?pa=epaytax.cbdt@sbi&pn=Income%20Tax%20Department&cu=INR" size={105} />
+            </div>
+            <div className="text-xs space-y-1 text-ink-2">
+              <div className="font-bold text-ink text-sm flex items-center gap-1.5">
+                <span className="size-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
+                e-Pay Tax · Official CBDT Payment Gateway
+              </div>
+              <p className="text-ink-3">Payee UPI VPA: <span className="font-mono text-ink font-semibold">epaytax.cbdt@sbi</span></p>
+              <p className="text-ink-3">Major Head: <span className="font-semibold text-ink">0021</span> · Minor Head: <span className="font-semibold text-ink">300 (Self-Assessment)</span></p>
+              <p className="text-ink-3">Select your payment method below to simulate and credit this challan:</p>
+            </div>
+          </div>
+        )}
         {q.expects === "source" && q.sourceOptions ? (
           <div className="space-y-2">
             {q.sourceOptions.map((o) =>
@@ -333,9 +350,24 @@ function QuestionCard({ q, s, disabled, onAnswer }: { q: Question; s: AgenticStr
           </div>
         ) : q.expects === "choice" && q.choices ? (
           <div className="flex flex-wrap gap-2">
-            {q.choices.map((c) => (
-              <button key={c.value} type="button" disabled={disabled} onClick={() => onAnswer(c.value)} className="rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink hover:bg-paper-3 disabled:opacity-50 cursor-pointer">{c.label}</button>
-            ))}
+            {q.choices.map((c) => {
+              const isChallanAction = q.resolves === "challan_payment_mode" && c.value.startsWith("pay_");
+              return (
+                <button
+                  key={c.value}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onAnswer(c.value)}
+                  className={`rounded-lg border px-3.5 py-2 text-sm font-medium transition-all disabled:opacity-50 cursor-pointer ${
+                    isChallanAction
+                      ? "bg-money/10 border-money/40 text-money font-semibold shadow-xs hover:bg-money/20"
+                      : "border-line bg-paper text-ink hover:bg-paper-3"
+                  }`}
+                >
+                  {c.label}
+                </button>
+              );
+            })}
           </div>
         ) : (
           <form

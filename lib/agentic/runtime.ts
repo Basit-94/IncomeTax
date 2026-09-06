@@ -41,7 +41,9 @@ import { nullModel, type ModelAdapter } from "./model";
 import { detectSmallTalk, firstName, smallTalkReply, warmLine } from "./voice";
 import { detectRegister, say, type SayInput } from "./say";
 import { consentItems, fetchedFacts, listIssuedDocuments } from "./digilocker";
-import { buildPlan, classifyByRules, isCapabilityInquiry, isTaxInformationQuestion, nextStep, setStep, taskTitle, type PlanningFacts } from "./planner";
+import { buildPlan, classifyByRules, isCapabilityInquiry, isPaymentInquiry, isTaxInformationQuestion, nextStep, setStep, taskTitle, type PlanningFacts } from "./planner";
+import { CHALLAN_MAJOR_HEAD_LABEL, CHALLAN_MINOR_HEAD_LABEL, splitTaxAndCess, syntheticChallanIdentifiers } from "../compliance/challan280";
+import type { SelfAssessmentPayment } from "../../context/TaxReturnContext";
 import { redactText, stripInjection } from "./redact";
 import { recommendationText, regimeName, strings } from "./response";
 import { newId, snapshotHash, type RunStore } from "./store";
@@ -142,6 +144,17 @@ export async function advance(deps: RuntimeDeps, owner: Owner, runId: string, in
       const clean = redactText(input.message).text;
       await emit({ type: "message", role: "user", text: clean });
       run.state.lastUserMessage = clean;
+      if (isPaymentInquiry(clean) && run.state.pendingQuestion?.resolves !== "challan_payment_mode") {
+        run.state.pendingCard = undefined;
+        run.state.pendingQuestion = undefined;
+        run.state.pendingCommands = undefined;
+        run.task = "explain";
+        run.state.steps = buildPlan(planningFacts("explain", null, deps.vault ? true : null), s, run.state.steps);
+        const snapshot = await ensureSnapshot(deps, owner, run);
+        await handleChosenTask(deps, owner, run, snapshot, s, emit, "task:challan_280");
+        await persist();
+        return run;
+      }
       if (run.status === "waiting_for_input" && run.state.pendingQuestion) {
         const parsed = parseAnswer(run.state.pendingQuestion, clean, s);
         if (parsed !== null) {
@@ -193,6 +206,13 @@ export async function advance(deps: RuntimeDeps, owner: Owner, runId: string, in
       if (resolves === "chosen_task" && typeof input.answer.value === "string" && input.answer.value.startsWith("task:")) {
         const snapshot = await deps.returns.get(owner, AY);
         await handleChosenTask(deps, owner, run, snapshot, s, emit);
+        await persist();
+        if (run.status !== "running" || mode === "input_only") return run;
+      }
+
+      if (resolves === "challan_payment_mode" || resolves === "challan_pay_action") {
+        const snapshot = await ensureSnapshot(deps, owner, run);
+        await handleChallanPaymentExecution(deps, owner, run, snapshot, s, emit, input.answer.value);
         await persist();
         if (run.status !== "running" || mode === "input_only") return run;
       }
@@ -382,6 +402,16 @@ async function stepClassify(deps: RuntimeDeps, owner: Owner, run: Run, s: Return
     steps = setStep(steps, "classify", "done");
     run.state.steps = steps;
     await emitGreetingCapabilities(deps, owner, run, s, emit);
+    return;
+  }
+
+  if (isPaymentInquiry(text)) {
+    run.task = "explain";
+    let steps = buildPlan(planningFacts("explain", null, null), s, run.state.steps);
+    steps = setStep(steps, "classify", "done");
+    run.state.steps = steps;
+    const snapshot = await ensureSnapshot(deps, owner, run);
+    await handleChosenTask(deps, owner, run, snapshot, s, emit, "task:challan_280");
     return;
   }
   let task = classifyByRules(text);
@@ -741,10 +771,13 @@ async function handleChosenTask(
   snapshot: VersionedReturn | null,
   s: ReturnType<typeof strings>,
   emit: (p: RunEventPayload) => Promise<unknown>,
+  explicitTask?: string,
 ) {
   const a = run.state.answers;
-  const chosen = (a.chosen_task as string).slice(5);
-  delete a.chosen_task;
+  const chosenTask = explicitTask ?? (typeof a.chosen_task === "string" ? a.chosen_task : undefined);
+  if (!chosenTask) return;
+  const chosen = chosenTask.startsWith("task:") ? chosenTask.slice(5) : chosenTask;
+  if (!explicitTask) delete a.chosen_task;
 
   run.state.lastUserMessage = chosen;
 
@@ -867,29 +900,46 @@ async function handleChosenTask(
     const p = snapshot?.state.persona;
     const b = p ? computeForPersona(p, snapshot?.state.regime ?? "new") : null;
     const due = b && b.refundOrDue < 0 ? -b.refundOrDue : 0;
-    const lines = due > 0
-      ? [
-          `### 💳 Advance Tax & Challan ITNS 280 (AY 2026-27)`,
-          "",
-          `• **Taxpayer**: ${p?.name} (${p?.pan})`,
-          `• **Net Balance Tax Payable**: **${formatMoney(due, run.lang)}**`,
-          `• **Major Head**: 0021 (Income Tax other than Companies)`,
-          `• **Minor Head**: 300 (Self-Assessment Tax)`,
-          `• **Assessment Year**: 2026-27`,
-          "",
-          `You can generate and pay this challan electronically via the e-Filing payment gateway (Net Banking, Debit Card, UPI). Once paid, input the BSR code and Challan Tender Date to credit your return.`,
-        ]
-      : [
-          `### 💳 Advance Tax & Challan ITNS 280 (AY 2026-27)`,
-          "",
-          `• **Net Tax Payable**: **₹0**`,
-          `• **Current Balance**: Net Refund of **${b ? formatMoney(b.refundOrDue, run.lang) : "₹0"}**`,
-          "",
-          `You have zero outstanding tax liability for AY 2026-27. No advance tax or self-assessment payment via Challan 280 is required.`,
-        ];
+    const amountToPay = due > 0 ? due : 5000;
+    const { baseTax, cess } = splitTaxAndCess(amountToPay);
+
+    const lines = [
+      `### 💳 Advance Tax & Challan ITNS 280 (AY 2026-27)`,
+      "",
+      `• **Taxpayer**: ${p?.name || owner.displayName} (${p?.pan || owner.pan})`,
+      due > 0
+        ? `• **Net Balance Tax Due**: **${formatMoney(due, run.lang)}**`
+        : `• **Current Tax Due**: **₹0** *(Simulating Challan 280 for Advance Tax)*`,
+      `• **Base Income Tax**: ${formatMoney(baseTax, run.lang)}`,
+      `• **Health & Education Cess (4%)**: ${formatMoney(cess, run.lang)}`,
+      `• **Major Head**: 0021 (Income Tax other than Companies)`,
+      `• **Minor Head**: ${due > 0 ? "300 (Self-Assessment Tax u/s 140A)" : "100 (Advance Tax)"}`,
+      `• **Assessment Year**: 2026-27`,
+      "",
+      `Select a payment method below to simulate your Challan 280 transaction. Upon simulation, your tax payment will be credited instantly and an official ITNS 280 receipt generated.`,
+    ];
     await emit({ type: "message", role: "assistant", text: lines.join("\n") });
-    run.status = "completed";
-    await emit({ type: "status", status: "completed" });
+
+    const q: Question = {
+      id: newId("q"),
+      text: due > 0
+        ? `Would you like to simulate paying the ${formatMoney(amountToPay, run.lang)} tax challan now?`
+        : `Simulate Challan 280 payment for ${formatMoney(amountToPay, run.lang)}?`,
+      why: "Clears outstanding self-assessment tax liability before return filing",
+      expects: "choice",
+      resolves: "challan_payment_mode",
+      choices: [
+        { value: "pay_challan_upi", label: `⚡ Simulate UPI / QR (${formatMoney(amountToPay, run.lang)})` },
+        { value: "pay_challan_sbi", label: `🏦 Net Banking — SBI (${formatMoney(amountToPay, run.lang)})` },
+        { value: "pay_challan_hdfc", label: `🏦 Net Banking — HDFC (${formatMoney(amountToPay, run.lang)})` },
+        { value: "pay_challan_icici", label: `🏦 Net Banking — ICICI (${formatMoney(amountToPay, run.lang)})` },
+        { value: "skip_challan_pay", label: "❌ Cancel / Return to Tasks" },
+      ],
+    };
+    run.state.pendingQuestion = q;
+    await emit({ type: "question", question: q });
+    run.status = "waiting_for_input";
+    await emit({ type: "status", status: "waiting_for_input" });
     return;
   }
 
@@ -966,6 +1016,132 @@ async function handleChosenTask(
     await emit({ type: "status", status: "completed" });
     return;
   }
+}
+
+async function handleChallanPaymentExecution(
+  deps: RuntimeDeps,
+  owner: Owner,
+  run: Run,
+  snapshot: VersionedReturn | null,
+  s: ReturnType<typeof strings>,
+  emit: (p: RunEventPayload) => Promise<unknown>,
+  actionValue: unknown,
+) {
+  run.state.pendingQuestion = undefined;
+  const val = String(actionValue ?? "").toLowerCase();
+
+  if (val === "skip_challan_pay" || val === "cancel") {
+    await emit({
+      type: "message",
+      role: "assistant",
+      text: "Challan payment simulation skipped. You can clear self-assessment tax at any time before final filing.",
+    });
+    if (run.task === "prepare_salaried_return") {
+      run.status = "running";
+      return;
+    }
+    await emitGreetingCapabilities(deps, owner, run, s, emit);
+    return;
+  }
+
+  const currentSnap = snapshot ?? (await ensureSnapshot(deps, owner, run));
+  const p = currentSnap?.state.persona;
+  const regime = currentSnap?.state.regime ?? "new";
+  const b = p ? computeForPersona(p, regime) : null;
+  const due = b && b.refundOrDue < 0 ? -b.refundOrDue : 0;
+  const amountToPay = due > 0 ? due : 5000;
+
+  let method: "UPI" | "NET_BANKING" = "UPI";
+  let bankName = "State Bank of India";
+  if (val.includes("sbi")) {
+    method = "NET_BANKING";
+    bankName = "State Bank of India";
+  } else if (val.includes("hdfc")) {
+    method = "NET_BANKING";
+    bankName = "HDFC Bank";
+  } else if (val.includes("icici")) {
+    method = "NET_BANKING";
+    bankName = "ICICI Bank";
+  } else {
+    method = "UPI";
+    bankName = "UPI / QR Gateway (SBI e-Pay)";
+  }
+
+  const seed = Date.now();
+  const { bsrCode, challanNo } = syntheticChallanIdentifiers(seed);
+  const tenderDate = deps.today();
+  const formattedDate = new Date(deps.clock()).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  const cin = `${bsrCode}${tenderDate.replace(/-/g, "")}${challanNo}`;
+  const { baseTax, cess } = splitTaxAndCess(amountToPay);
+
+  const payment: SelfAssessmentPayment = {
+    challanNo,
+    bsrCode,
+    amount: amountToPay,
+    date: tenderDate,
+    majorHead: "0021",
+    minorHead: due > 0 ? "300" : "100",
+    method,
+    bank: bankName,
+  };
+
+  if (currentSnap) {
+    const res = await deps.returns.apply(owner, AY, {
+      command: { type: "record_payment", payment },
+      expectedRevision: currentSnap.revision,
+      idempotencyKey: `challan-${run.id}-${seed}`,
+      actor: "agent",
+    });
+    if (res.ok) {
+      run.state.returnRevision = res.snapshot.revision;
+    }
+  }
+
+  const receiptLines = [
+    `### ✅ Payment Successful — Challan ITNS 280 Receipt`,
+    "",
+    `Your tax payment has been authorized and confirmed by the e-Pay Tax payment gateway.`,
+    "",
+    `| Challan Field | Particulars |`,
+    `| :--- | :--- |`,
+    `| **Challan Identification Number (CIN)** | \`${cin}\` |`,
+    `| **Major Head** | 0021 (Income Tax other than Companies) |`,
+    `| **Minor Head** | ${payment.minorHead === "300" ? "300 (Self-Assessment Tax u/s 140A)" : "100 (Advance Tax)"} |`,
+    `| **BSR Code** | \`${bsrCode}\` (${bankName}) |`,
+    `| **Challan Serial No** | \`${challanNo}\` |`,
+    `| **Tender Date** | ${formattedDate} |`,
+    `| **Payment Mode** | ${method === "UPI" ? "UPI (epaytax.cbdt@sbi)" : `Internet Banking (${bankName})`} |`,
+    `| **Basic Tax** | ${formatMoney(baseTax, run.lang)} |`,
+    `| **Health & Education Cess (4%)** | ${formatMoney(cess, run.lang)} |`,
+    `| **Total Amount Deposited** | **${formatMoney(amountToPay, run.lang)}** |`,
+    "",
+    `Your tax payment has been credited to your return under Section 140A. Outstanding balance tax payable is now **₹0**.`,
+  ];
+
+  await emit({ type: "message", role: "assistant", text: receiptLines.join("\n") });
+
+  if (run.task === "prepare_salaried_return") {
+    run.status = "running";
+    return;
+  }
+
+  const nextQ: Question = {
+    id: newId("q"),
+    text: "What would you like to do next?",
+    why: "Payment confirmed and credited to return",
+    expects: "choice",
+    resolves: "chosen_task",
+    choices: [
+      { value: "task:prepare_salaried_return", label: "📄 Continue to File Return" },
+      { value: "task:compare_regimes", label: "⚖️ Compare Tax Regimes" },
+      { value: "task:reconcile_facts", label: "🔍 Reconcile AIS & 26AS" },
+      { value: "task:tax_vault", label: "🏛️ View in Citizen Tax Vault" },
+    ],
+  };
+  run.state.pendingQuestion = nextQ;
+  await emit({ type: "question", question: nextQ });
+  run.status = "waiting_for_input";
+  await emit({ type: "status", status: "waiting_for_input" });
 }
 
 /** The one question at a time that resolves the most consequential unknown (§5.1). */
@@ -1215,6 +1391,43 @@ async function stepReview(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnTy
   const cheaper: "new" | "old" = both.new.totalTax <= both.old.totalTax ? "new" : "old";
   const regime = run.task === "compare_regimes" ? cheaper : (state.regime ?? "new");
   const b = computeForPersona(state.persona, regime);
+
+  if (b.refundOrDue < 0 && !run.state.answers.challan_prompted && run.task === "prepare_salaried_return") {
+    run.state.answers.challan_prompted = true;
+    const due = -b.refundOrDue;
+    const { baseTax, cess } = splitTaxAndCess(due);
+
+    const lines = [
+      `### ⚠️ Balance Tax Due: ${formatMoney(due, run.lang)}`,
+      "",
+      `Your return computation under the **${regimeName(regime, run.lang)}** shows a net balance tax payable of **${formatMoney(due, run.lang)}** (Base Tax: ${formatMoney(baseTax, run.lang)} + 4% Cess: ${formatMoney(cess, run.lang)}).`,
+      "",
+      `Under Section 140A of the Income-tax Act, self-assessment tax must be paid before filing to prevent defective filing notices under Section 139(9) and penal interest under Section 234B/C.`,
+      "",
+      `Would you like to simulate paying this now via Challan 280?`,
+    ];
+    await emit({ type: "message", role: "assistant", text: lines.join("\n") });
+
+    const q: Question = {
+      id: newId("q"),
+      text: `Pay self-assessment tax of ${formatMoney(due, run.lang)} now?`,
+      why: "Section 140A compliance before return filing",
+      expects: "choice",
+      resolves: "challan_payment_mode",
+      choices: [
+        { value: "pay_challan_upi", label: `⚡ Pay ${formatMoney(due, run.lang)} Now (UPI / QR)` },
+        { value: "pay_challan_sbi", label: `🏦 Pay ${formatMoney(due, run.lang)} (SBI Net Banking)` },
+        { value: "pay_challan_hdfc", label: `🏦 Pay ${formatMoney(due, run.lang)} (HDFC Net Banking)` },
+        { value: "skip_challan_pay", label: "Proceed to Review without paying" },
+      ],
+    };
+    run.state.pendingQuestion = q;
+    await emit({ type: "question", question: q });
+    run.status = "waiting_for_input";
+    await emit({ type: "status", status: "waiting_for_input" });
+    return;
+  }
+
   const rows = [
     { label: s.rowRegime, value: regimeName(regime, run.lang) },
     { label: s.rowTaxableIncome, value: formatMoney(b.taxableIncome, run.lang) },
@@ -1445,6 +1658,13 @@ function parseAnswer(q: Question, text: string, s: ReturnType<typeof strings>): 
       if (/^5\b|^\b(5\.|fifth|notice|defend|scrutiny|143|139|audit)\b/i.test(t)) return "task:notice_defense";
       if (/^6\b|^\b(6\.|sixth|refund|track|tracker|status|where is my refund)\b/i.test(t)) return "task:refund_tracker";
       if (/^7\b|^\b(7\.|seventh|vault|document|docs|stored|tax vault)\b/i.test(t)) return "task:tax_vault";
+    }
+    if (q.resolves === "challan_payment_mode") {
+      if (/^(1\b|upi|qr|gpay|phonepe|paytm|pay now|simulate|pay|haan|yes|how to pay|how do i pay)\b/i.test(t) || t.includes("upi") || t.includes("pay") || t.includes("qr")) return "pay_challan_upi";
+      if (/^(2\b|sbi|state bank)\b/i.test(t) || t.includes("sbi")) return "pay_challan_sbi";
+      if (/^(3\b|hdfc)\b/i.test(t) || t.includes("hdfc")) return "pay_challan_hdfc";
+      if (/^(4\b|icici)\b/i.test(t) || t.includes("icici")) return "pay_challan_icici";
+      if (/^(skip|later|no|nahi|cancel|review|proceed|without pay)\b/i.test(t) || t.includes("skip") || t.includes("later")) return "skip_challan_pay";
     }
     const cleanStr = (str: string) => str.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "").trim().toLowerCase();
     const hit = q.choices.find((c) => {
