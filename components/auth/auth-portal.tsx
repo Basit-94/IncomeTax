@@ -44,6 +44,8 @@ interface AuthPortalProps {
   onLaunchPersona?: (personaId: PersonaId | "custom", directToDashboard?: boolean) => void;
   onSignUpComplete?: (user: CitizenVaultUser) => void;
   onLaunchWithForm16?: (doc: IngestedDocument) => void;
+  /** Which tab opens first; the dedicated /signin page uses this for "Try a demo citizen" links. */
+  initialTab?: "signin" | "signup" | "document" | "personas";
 }
 
 export default function AuthPortal({
@@ -56,8 +58,9 @@ export default function AuthPortal({
   onLaunchPersona,
   onSignUpComplete,
   onLaunchWithForm16,
+  initialTab,
 }: AuthPortalProps) {
-  const [activeTab, setActiveTab] = useState<"signin" | "signup" | "document" | "personas">("signin");
+  const [activeTab, setActiveTab] = useState<"signin" | "signup" | "document" | "personas">(initialTab ?? "signin");
   const ps = getPortalStrings(lang || "en");
 
   // --- Sign Up Form State (Strictly PAN-only per directive) ---
@@ -267,7 +270,7 @@ export default function AuthPortal({
         {/* =================================================================== */}
         {/* LEFT COLUMN: Wapsi Philosophy & Tax Discrepancy Storytelling       */}
         {/* =================================================================== */}
-        <div className="lg:col-span-6 bg-gradient-to-br from-[#0c1322] via-[#162238] to-[#0f172a] text-[#f8fafc] p-6 sm:p-8 lg:p-10 flex flex-col justify-between relative overflow-hidden border-b lg:border-b-0 lg:border-r border-line/40">
+        <div className="lg:col-span-6 bg-gradient-to-br from-[#0c1322] via-[#162238] to-[#0f172a] text-[#f8fafc] p-6 sm:p-8 lg:p-10 flex flex-col justify-between relative overflow-hidden border-t lg:border-t-0 lg:border-r border-line/40">
           {/* Subtle watermark background */}
           <div className="absolute top-0 right-0 p-6 opacity-[0.03] pointer-events-none select-none">
             <ShieldCheck size={320} />
@@ -356,7 +359,7 @@ export default function AuthPortal({
         {/* =================================================================== */}
         {/* RIGHT COLUMN: Interactive Sign In, Sign Up, Document, Personas     */}
         {/* =================================================================== */}
-        <div className="lg:col-span-6 p-6 sm:p-8 lg:p-10 flex flex-col justify-between bg-paper">
+        <div className="order-first lg:order-none lg:col-span-6 p-6 sm:p-8 lg:p-10 flex flex-col justify-between bg-paper">
           <div>
             {/* Segmented Tabs Bar */}
             <div className="flex rounded-2xl border border-line bg-paper-2 p-1 gap-1 text-xs font-bold mb-6">

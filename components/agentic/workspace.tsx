@@ -371,7 +371,7 @@ export function Composer({ s, lang, disabled, onSubmit, variant = "chat", placeh
           placeholder={hint}
           aria-label={hint}
           disabled={disabled}
-          className="flex-1 resize-none bg-transparent px-2 py-2 text-[15px] text-ink placeholder:text-ink-3 outline-none max-h-40 disabled:opacity-60"
+          className="flex-1 resize-none bg-transparent px-2 py-2 text-[15px] text-ink placeholder:text-ink-3 placeholder-shown:overflow-hidden outline-none max-h-40 disabled:opacity-60"
           style={{ height: `${Math.min(160, 40 + (text.split("\n").length - 1) * 22)}px` }}
         />
         {speech && (

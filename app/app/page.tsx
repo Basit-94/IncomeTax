@@ -105,6 +105,10 @@ function AgenticWorkspace() {
   useEffect(() => {
     void establish(loadSession());
   }, [establish]);
+  // Signing in is its own page (user request 2026-09-06); the Agentic home assumes a session.
+  useEffect(() => {
+    if (sessionState === "none" || sessionState === "unverifiable") router.replace("/signin");
+  }, [sessionState, router]);
 
   const persona = useMemo(() => (server ? findPersonaByPan(server.owner.pan) ?? null : null), [server]);
   useEffect(() => {

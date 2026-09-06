@@ -45,6 +45,8 @@ inspector are **Agentic only**, and the sidebar sits below the shared bar.
 | Filing | OTP flow → `submitReturn`; unreachable backend → explicit `simulatedFiling`. | Review card bound to `{revision, snapshotHash}`; confirm → the same `finalize_filing` command. | Manual shows the agent's filing on arrival (`pullReturn`). |
 | Mode switch | `router.push("/app")` | `router.push("/")` | Nothing is lost: both read the same server snapshot. |
 
+**Entry flow (2026-09-06):** a visitor sees the public landing page at `/`; sign-in is its own page at `/signin` (the Manual `AuthPortal` + OTP, no mode switch); a successful sign-in lands on the Agentic home (`/app`, "Explain your situation") — nothing is filed or started until the person asks. Manual is one switch away.
+
 Feature flag: `NEXT_PUBLIC_WAPSI_AGENTIC=false` hides the Agentic route and switch.
 
 ## Known residual compromises (deliberate, revisit when warranted)

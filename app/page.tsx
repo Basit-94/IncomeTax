@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { LazyMotion, domMax, m, AnimatePresence } from "motion/react";
 import AppShell from "../components/agentic/app-shell";
+import MarketingLanding from "../components/marketing/landing-page";
 import { useRuns } from "../components/agentic/use-run";
 import { agenticEnabled } from "../lib/agentic/flags";
 import { agenticStrings } from "../lib/i18n/agenticStrings";
@@ -92,7 +93,6 @@ import { Challan280Modal } from "../components/Challan280Modal";
 import { stableIdempotencyKey } from "@/lib/submission-key";
 import { CheckCircle2 } from "lucide-react";
 import CitizenVaultModal from "../components/vault/citizen-vault-modal";
-import AuthPortal from "../components/auth/auth-portal";
 import {
   getSeededVaultForPersona,
   fetchVaultUser,
@@ -2313,6 +2313,16 @@ export default function WapsiPrototype() {
       <div className="service-shell flex-1 text-ink selection:bg-money/20 relative overflow-x-hidden min-h-dvh flex flex-col">{children}</div>
     );
 
+  // Signed out: the public landing page. Signing in is its own page (/signin) and lands on the
+  // Agentic home; the Manual journey below is reached through the mode switch (user, 2026-09-06).
+  if (step === "auth") {
+    return (
+      <LazyMotion features={domMax} strict>
+        <MarketingLanding t={t} lang={lang} changeLang={changeLang} theme={theme} toggleTheme={toggleTheme} onSignIn={() => router.push("/signin")} onDemo={() => router.push("/signin?tab=personas")} />
+      </LazyMotion>
+    );
+  }
+
   return (
     <LazyMotion features={domMax} strict>
       {frame(<>
@@ -2420,29 +2430,8 @@ export default function WapsiPrototype() {
           <MiniBurstHost />
 
           <AnimatePresence mode="wait">
-            {/* STEP 0: SEPARATE DEDICATED SIGN IN / SIGN UP LANDING PAGE */}
-            {step === "auth" && (
-              <m.div
-                key="auth"
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-                className="space-y-6"
-              >
-                <AuthPortal
-                  t={t}
-                  lang={lang}
-                  panInput={panInput}
-                  panInputError={panInputError}
-                  onPanChange={handlePanInputChange}
-                  onPanSubmit={handlePanSubmit}
-                  onLaunchPersona={(personaId, direct) => void launchPersonaDirect(personaId, direct)}
-                  onSignUpComplete={handleSignUpComplete}
-                  onLaunchWithForm16={launchWithForm16}
-                />
-              </m.div>
-            )}
+            {/* STEP 0 (signed out) is the public landing page, returned above; sign-in lives at /signin
+                and mounts the same AuthPortal (user, 2026-09-06). */}
 
             {/* STEP 1: LANDING */}
             {step === "landing" && (
