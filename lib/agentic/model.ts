@@ -76,7 +76,7 @@ export function geminiModel(env: Record<string, string | undefined> = process.en
   const clean = (k: string | undefined) => (k ?? "").trim().replace(/^["']|["']$/g, "");
   const keys = [env.GEMINI_API_KEY, env.GEMINI_FALLBACK_API_KEY, env.GEMINI_FALLBACK_API_KEY_2, env.GEMINI_FALLBACK_API_KEY_3].map(clean).filter((k) => k && !k.includes("REPLACE_ME"));
   const model = env.AGENT_MODEL?.trim();
-  const timeoutMs = Number(env.AGENT_MODEL_TIMEOUT_MS) || 12_000;
+  const timeoutMs = Number(env.AGENT_MODEL_TIMEOUT_MS) || 3_500;
   const maxTokens = Number(env.AGENT_MAX_TOKENS_PER_REPLY) || 1024;
   if (keys.length === 0 || !model) return nullModel;
   const exhausted = new Set<string>();
@@ -100,9 +100,9 @@ export function geminiModel(env: Record<string, string | undefined> = process.en
           }),
           signal: AbortSignal.timeout(timeoutMs),
         });
-        if (res.status === 429) {
+        if (res.status === 429 || res.status === 404) {
           exhausted.add(key);
-          lastFailure = `HTTP 429 (quota) on key ${keys.indexOf(key) + 1} of ${keys.length}`;
+          lastFailure = `HTTP ${res.status} on key ${keys.indexOf(key) + 1} of ${keys.length}`;
           continue; // the next key, if any
         }
         if (!res.ok) {

@@ -300,26 +300,41 @@ async function emitGreetingCapabilities(
   emit: (p: RunEventPayload) => Promise<unknown>,
 ) {
   const name = firstName(owner.displayName);
-  const greeting = name ? `Hello ${name}!` : "Hello!";
-  const intro = [
-    `${greeting} Here is what I can do for your FY 2025-26 / AY 2026-27 return:`,
-    "",
-    "1. **Prepare & File Return**: Read Form 16, deductions (80C, 80D), regime selection, simulated filing & download signed Form ITR-V PDF.",
-    "2. **Compare Tax Regimes**: Side-by-side calculation under Section 115BAC (New) vs Old Regime with custom deductions breakdown.",
-    "3. **Reconcile AIS & 26AS**: Match employer salary and TDS deductions against government records.",
-    "4. **Advance Tax & Challan 280**: Compute balance liability/interest u/s 234B/C and generate Challan ITNS 280.",
-    "5. **Notice Defense**: Review intimation u/s 143(1), defective return u/s 139(9), and assess audit risk.",
-    "6. **Track Refund Status**: Follow timeline progression from verification to SBI refund credit.",
-    "7. **Citizen Tax Vault**: Secure encrypted repository for Form 16, AIS, 26AS, and filed returns.",
-    "",
-    "Which task would you like to perform right now?",
-  ].join("\n");
+  const isHi = run.lang === "hi";
+  const greeting = name ? (isHi ? `नमस्ते ${name}!` : `Hello ${name}!`) : (isHi ? "नमस्ते!" : "Hello!");
+  const intro = isHi
+    ? [
+        `${greeting} FY 2025-26 / AY 2026-27 के रिटर्न के लिए मैं ये कार्य कर सकता हूँ:`,
+        "",
+        "1. **रिटर्न तैयार करें और फाइल करें**: फॉर्म 16 पढ़ें, कटौतियां (80C, 80D), व्यवस्था चयन, सिम्युलेटेड फाइलिंग और हस्ताक्षरित फॉर्म ITR-V PDF डाउनलोड करें।",
+        "2. **टैक्स व्यवस्थाओं की तुलना**: धारा 115BAC (नई) बनाम पुरानी व्यवस्था के तहत कटौती विवरण के साथ तुलना।",
+        "3. **AIS और 26AS मिलान**: सरकारी रिकॉर्ड के साथ नियोक्ता वेतन और TDS कटौतियों का मिलान करें।",
+        "4. **अग्रिम कर और चालान 280**: धारा 234B/C के तहत शेष देनदारी/ब्याज की गणना करें और चालान ITNS 280 बनाएं।",
+        "5. **नोटिस रक्षा**: धारा 143(1) सूचना, 139(9) दोषपूर्ण रिटर्न की समीक्षा करें और ऑडिट जोखिम का आकलन करें।",
+        "6. **रिफंड स्थिति ट्रैक करें**: सत्यापन से लेकर SBI रिफंड क्रेडिट तक की समयसीमा का पालन करें।",
+        "7. **सिटिजन टैक्स वॉल्ट**: फॉर्म 16, AIS, 26AS और दाखिल रिटर्न के लिए सुरक्षित एन्क्रिप्टेड रिपॉजिटरी।",
+        "",
+        "आप अभी कौन सा कार्य करना चाहते हैं?",
+      ].join("\n")
+    : [
+        `${greeting} Here is what I can do for your FY 2025-26 / AY 2026-27 return:`,
+        "",
+        "1. **Prepare & File Return**: Read Form 16, deductions (80C, 80D), regime selection, simulated filing & download signed Form ITR-V PDF.",
+        "2. **Compare Tax Regimes**: Side-by-side calculation under Section 115BAC (New) vs Old Regime with custom deductions breakdown.",
+        "3. **Reconcile AIS & 26AS**: Match employer salary and TDS deductions against government records.",
+        "4. **Advance Tax & Challan 280**: Compute balance liability/interest u/s 234B/C and generate Challan ITNS 280.",
+        "5. **Notice Defense**: Review intimation u/s 143(1), defective return u/s 139(9), and assess audit risk.",
+        "6. **Track Refund Status**: Follow timeline progression from verification to SBI refund credit.",
+        "7. **Citizen Tax Vault**: Secure encrypted repository for Form 16, AIS, 26AS, and filed returns.",
+        "",
+        "Which task would you like to perform right now?",
+      ].join("\n");
   await emit({ type: "message", role: "assistant", text: intro });
 
   const q: Question = {
     id: newId("q"),
-    text: "Which task would you like to perform right now?",
-    why: "Pick an action to start immediately",
+    text: isHi ? "आप अभी कौन सा कार्य करना चाहते हैं?" : "Which task would you like to perform right now?",
+    why: isHi ? "शुरू करने के लिए एक कार्य चुनें" : "Pick an action to start immediately",
     expects: "choice",
     resolves: "chosen_task",
     choices: [
@@ -341,9 +356,9 @@ async function emitGreetingCapabilities(
 async function stepClassify(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>) {
   const text = run.state.lastUserMessage ?? "";
   if (text) run.state.register = detectRegister(text, run.lang);
-  // Small talk is answered like a friend would, without touching the return (docs/VOICE.md).
   const talk = text ? detectSmallTalk(text) : null;
-  if (talk) {
+  // Polite departure or thank you finishes cleanly
+  if (talk === "thanks" || talk === "bye" || talk === "howAreYou") {
     run.state.smallTalk = talk;
     run.task = "explain";
     run.state.steps = buildPlan(planningFacts("explain", null, null), s, run.state.steps).map((p) => ({ ...p, state: "done" as const }));
@@ -353,7 +368,15 @@ async function stepClassify(deps: RuntimeDeps, owner: Owner, run: Run, s: Return
     return;
   }
 
-  if (isCapabilityInquiry(text)) {
+  // Greetings ("hi", "hello", "namaste"), help, who-are-you, and capability inquiries present all 7 tasks
+  const isGreetingOrCapability =
+    talk === "hello" ||
+    talk === "help" ||
+    talk === "who" ||
+    isCapabilityInquiry(text) ||
+    /^(hi+|hello+|hey+|namaste|greetings|vanakkam|salaam)\b/i.test(text.trim());
+
+  if (isGreetingOrCapability) {
     run.task = "explain";
     let steps = buildPlan(planningFacts("explain", null, null), s, run.state.steps);
     steps = setStep(steps, "classify", "done");

@@ -4802,3 +4802,37 @@ things there are already true and will NOT be rewritten:
   - `npx vitest run`: **354/354 tests passed** across all 37 test files (100% green).
   - `npm run build`: **Compiled successfully in 3.9s** with Next.js 16.3.2 Turbopack. All 16 routes optimized and generated.
 - **Git Policy:** Changes staged, committed, and pushed to `origin dev-2` per user instruction.
+
+## [2026-09-06 15:58] orchestrator
+- **Action:** MODIFY | VERIFY | COMMIT | PUSH
+- **Target:** lib/agentic/runtime.ts; lib/agentic/model.ts; lib/agentic/__tests__/voice.test.ts; log.md
+- **Intent:** Fix agent greeting behavior, presentation of capabilities, and model call timeouts:
+  1. Fix greeting flow so that casual greetings ("hi", "hello", "hey", "namaste", "vanakkam", "salaam") and help prompts proactively present the full 7-task capability list with 7 interactive choice chips, rather than exiting on a bare small-talk reply with no action items.
+  2. Add bilingual greeting capability support in Hindi when the user's active language is Hindi (`run.lang === "hi"`), and English otherwise.
+  3. Prevent Vercel 10s serverless gateway timeouts (504) by reducing external Gemini model timeout from 12s to 3.5s and treating HTTP 404 model errors as exhausted keys for instant fallback to deterministic response engines.
+  4. Ensure complete end-to-end reliability on Vercel deployment.
+- **Why:**
+  - When the user typed "hi" on Vercel or locally, the agent previously classified "hi" under `detectSmallTalk` ("Hi Priya. What's going on with your taxes this year?") with `status: completed` and omitted the 7 tasks and choice buttons.
+  - Quota exhaustion (429) or model version unavailability (404) across multiple Gemini API keys caused 15s+ response latencies, crashing hobby Vercel functions with 504 gateway timeout.
+- **Changes Made:**
+  1. **Greeting & Capability Trigger in `stepClassify` (`lib/agentic/runtime.ts`):**
+     - Updated `stepClassify` so `talk === "hello"` ("hi", "hello", "hey", "namaste", "vanakkam", "salaam"), `talk === "help"`, and `isCapabilityInquiry(text)` all trigger `emitGreetingCapabilities()`.
+     - Only departure/farewell intents ("thanks", "bye", "howAreYou") complete without presenting tasks.
+  2. **Bilingual Greeting Capabilities (`lib/agentic/runtime.ts`):**
+     - Formatted greetings and the 7-task list in Hindi when `run.lang === "hi"` (*"नमस्ते Priya! FY 2025-26 / AY 2026-27 के रिटर्न के लिए मैं ये कार्य कर सकता हूँ..."*) and English otherwise, with 7 interactive choice chips.
+  3. **Fail-Fast Model Timeout & Key Exhaustion (`lib/agentic/model.ts`):**
+     - Reduced default `timeoutMs` from 12,000ms to **3,500ms** (3.5s).
+     - Added `res.status === 404` to `exhausted.add(key)` alongside `429` so unavailable models or keys fail over immediately.
+  4. **Updated Test Suite (`lib/agentic/__tests__/voice.test.ts`):**
+     - Updated assertions to reflect proactive capability presentation on "hi" and "what can you do?".
+- **Verification Results:**
+  - `npx vitest run lib/agentic/__tests__/voice.test.ts`: **10/10 passed**.
+  - `npx vitest run`: **354/354 passed** across all 37 test files (100% green).
+  - `npx tsc --noEmit`: **0 errors** (clean build).
+  - `npm run build`: **Next.js 16.3.2 Turbopack compiled successfully** in 3.1s; all 16 static/dynamic routes generated.
+  - **Live Browser Automation via Playwright MCP (`http://localhost:3000/app`):**
+    1. Typed `"hi"` into composer: received instant greeting *"Hello Priya! Here is what I can do for your FY 2025-26 / AY 2026-27 return:"* followed by all 7 numbered capabilities and 7 clickable choice buttons (`📄 Prepare & File Return`, `⚖️ Compare Tax Regimes`, `🔍 Reconcile AIS & 26AS`, `💳 Pay Tax / Challan 280`, `🛡️ Defend Tax Notice`, `⚡ Track Refund Status`, `🏛️ Open Citizen Tax Vault`).
+    2. Clicked `📄 Prepare & File Return`: agent immediately initiated salary & deduction intake with smooth transitions.
+    3. Captured screenshot artifact verifying UI alignment, buttons, and responsive design.
+- **Git Action:** Committed and pushed to `origin/dev-2`.
+

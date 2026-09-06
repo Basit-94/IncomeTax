@@ -110,28 +110,30 @@ describe("the warm line from the model — accepted only when it is pure warmth"
   });
 });
 
-describe("small talk in the runtime — no return read, no figures, warm reply, done", () => {
-  it("'hi' greets Sunita by first name and completes without touching the return", async () => {
+describe("greetings and capabilities in the runtime — no return read, warm greeting, presents tasks", () => {
+  it("'hi' greets Sunita by first name and presents capabilities without touching the return", async () => {
     const d = deps();
     const run = await createRun(d, sunita, { message: "hi", lang: "en" });
     const r = (await advance(d, sunita, run.id))!;
-    expect(r.status).toBe("completed");
-    expect(r.state.smallTalk).toBe("hello");
+    expect(r.status).toBe("waiting_for_input");
+    expect(r.state.pendingQuestion?.resolves).toBe("chosen_task");
     const texts = await assistant(d, r.id);
     expect(texts).toHaveLength(1);
-    expect(texts[0]).toMatch(/^Hi Sunita\./);
-    expect(texts[0]).not.toMatch(/could not find|no evidence/i);
+    expect(texts[0]).toMatch(/^Hello Sunita!/);
+    expect(texts[0]).toContain("Prepare & File Return");
     expect(await d.returns.get(sunita, "2026-27")).toBeNull(); // nothing was created or read into a snapshot
   });
 
-  it("'thanks' and 'what can you do' get their own replies; Hindi small talk answers in Hindi", async () => {
+  it("'thanks' gets its own reply, and 'what can you do' presents capabilities; Hindi answers in Hindi", async () => {
     const d = deps();
     const t = (await advance(d, sunita, (await createRun(d, sunita, { message: "thank you!", lang: "en" })).id))!;
     expect((await assistant(d, t.id))[0]).toBe(en.chatThanks);
     const h = (await advance(d, sunita, (await createRun(d, sunita, { message: "what can you do?", lang: "en" })).id))!;
-    expect((await assistant(d, h.id))[0]).toBe(en.chatHelp);
+    expect(h.status).toBe("waiting_for_input");
+    expect((await assistant(d, h.id))[0]).toContain("Prepare & File Return");
     const hi = (await advance(d, sunita, (await createRun(d, sunita, { message: "namaste", lang: "hi" })).id))!;
-    expect((await assistant(d, hi.id))[0]).toMatch(/^नमस्ते Sunita।/);
+    expect((await assistant(d, hi.id))[0]).toMatch(/^नमस्ते Sunita!/);
+    expect(hi.status).toBe("waiting_for_input");
   });
 
   it("questions in a run carry no lead-in: the question is the question (user direction 2026-09-06)", async () => {
