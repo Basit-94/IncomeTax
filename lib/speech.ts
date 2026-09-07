@@ -82,6 +82,10 @@ type DictationOptions = {
   onError(reason: string): void;
   /** Always fires last, whether the run succeeded or not. */
   onEnd(): void;
+  /** Real-time microphone audio volume level (0 to 1) for the speaking waveform. */
+  onAudioLevel?(level: number): void;
+  /** Fires when user stops speaking and the recorded clip is handed to the transcriber. */
+  onTranscribing?(): void;
 };
 
 function pickMimeType(): string | undefined {
@@ -130,13 +134,23 @@ export function startDictation(opts: DictationOptions): Dictation | null {
       return;
     }
     try {
+      opts.onTranscribing?.();
       const form = new FormData();
       form.append("audio", blob, `clip.${extensionFor(mime)}`);
       const language = whisperLanguageFor(opts.lang);
       if (language) form.append("language", language);
-      const res = await fetch("/api/transcribe", { method: "POST", credentials: "same-origin", body: form });
+      let res = await fetch("/api/transcribe", { method: "POST", credentials: "same-origin", body: form }).catch(() => null);
+      if (!res || !res.ok) {
+        // Dual fallback: try /api/speech if /api/transcribe errored or is unreachable
+        res = await fetch("/api/speech", { method: "POST", credentials: "same-origin", body: form }).catch(() => null);
+      }
+      if (!res) {
+        opts.onError("network");
+        opts.onEnd();
+        return;
+      }
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean; text?: string; error?: string };
-      if (!res.ok || !body.ok) opts.onError(body.error ?? "transcribe_failed");
+      if (!res.ok || body.ok === false) opts.onError(body.error ?? "transcribe_failed");
       else if (!String(body.text ?? "").trim()) opts.onError("no-speech");
       else opts.onFinal(String(body.text).trim());
     } catch {
@@ -193,6 +207,8 @@ export function startDictation(opts: DictationOptions): Dictation | null {
           }
           const rms = Math.sqrt(sum / buf.length);
           const now = performance.now();
+          const normalized = Math.min(1, Math.max(0, (rms - 0.005) * 14));
+          opts.onAudioLevel?.(normalized);
           if (rms > SPEECH_RMS) {
             lastLoud = now;
             heardSpeech = true;

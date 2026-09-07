@@ -15,6 +15,7 @@ import type { PublicRun } from "@/lib/agentic/runtime";
 import type { OutputRef, Question, ReviewCard, RunEvent, RunTask } from "@/lib/agentic/types";
 import type { AgenticStrings } from "@/lib/i18n/agenticStrings";
 import { isSpeechSupported, startDictation, type Dictation } from "@/lib/speech";
+import { SpeakingWaveform, TranscribingAnimation } from "./audio-waveforms";
 import type { Lang } from "@/lib/types";
 import { renderAssistantText } from "../agent/format";
 import { Munshi, MunshiAvatar } from "../brand/munshi";
@@ -672,26 +673,110 @@ export function Composer({ s, lang, disabled, onSubmit, variant = "chat", placeh
   const [text, setText] = useState("");
   const ask = variant === "ask";
   const hint = placeholder ?? s.composerPlaceholder;
-  const [listening, setListening] = useState(false);
+  const [speechState, setSpeechState] = useState<"idle" | "listening" | "transcribing">("idle");
+  const [audioLevel, setAudioLevel] = useState(0);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [speechNote, setSpeechNote] = useState<string | null>(null);
   const dictation = useRef<Dictation | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const speech = typeof window !== "undefined" && isSpeechSupported();
 
-  const toggleMic = () => {
-    if (listening) {
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
       dictation.current?.stop();
+    };
+  }, []);
+
+  const clearTimer = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const handleStopRecording = () => {
+    clearTimer();
+    dictation.current?.stop();
+  };
+
+  const handleCancelRecording = () => {
+    clearTimer();
+    dictation.current?.stop();
+    setSpeechState("idle");
+    setAudioLevel(0);
+    setRecordingSeconds(0);
+  };
+
+  const toggleMic = () => {
+    if (speechState === "listening") {
+      handleStopRecording();
       return;
     }
+    if (speechState === "transcribing") return;
+
+    setSpeechNote(null);
+    setSpeechState("listening");
+    setAudioLevel(0);
+    setRecordingSeconds(0);
+
+    clearTimer();
+    timerRef.current = setInterval(() => {
+      setRecordingSeconds((sec) => sec + 1);
+    }, 1000);
+
     const d = startDictation({
       lang,
-      onPartial: (t) => setText(t),
-      onFinal: (t) => setText(t),
-      onError: () => setListening(false),
-      onEnd: () => setListening(false),
+      onAudioLevel: (lvl) => setAudioLevel(lvl),
+      onTranscribing: () => {
+        clearTimer();
+        setSpeechState("transcribing");
+      },
+      onPartial: () => {},
+      onFinal: (t) => {
+        const trimmed = String(t).trim();
+        if (trimmed) {
+          setText((prev) => (prev.trim() ? `${prev.trim()} ${trimmed}` : trimmed));
+        }
+        setSpeechState("idle");
+        setAudioLevel(0);
+        setRecordingSeconds(0);
+        clearTimer();
+      },
+      onError: (reason) => {
+        clearTimer();
+        setSpeechState("idle");
+        setAudioLevel(0);
+        setRecordingSeconds(0);
+        if (reason === "not-allowed") {
+          setSpeechNote("Microphone permission was denied. Please allow microphone access.");
+        } else if (reason === "no-speech") {
+          setSpeechNote("Could not hear anything. Speak clearly or type instead.");
+        } else if (reason === "network") {
+          setSpeechNote("Network connection issue. Check your internet connection.");
+        } else {
+          setSpeechNote("Speech transcription failed. Please try typing instead.");
+        }
+        setTimeout(() => setSpeechNote(null), 4500);
+      },
+      onEnd: () => {
+        clearTimer();
+        setSpeechState("idle");
+        setAudioLevel(0);
+        setRecordingSeconds(0);
+        dictation.current = null;
+      },
     });
-    if (d) {
-      dictation.current = d;
-      setListening(true);
+
+    if (!d) {
+      clearTimer();
+      setSpeechState("idle");
+      setSpeechNote("Microphone recording is not supported in this browser.");
+      setTimeout(() => setSpeechNote(null), 4000);
+      return;
     }
+
+    dictation.current = d;
   };
 
   const submit = () => {
@@ -701,46 +786,81 @@ export function Composer({ s, lang, disabled, onSubmit, variant = "chat", placeh
     setText("");
   };
 
+  const isListening = speechState === "listening";
+  const isTranscribing = speechState === "transcribing";
+
   return (
     <div className={ask ? "shrink-0 pt-2" : "shrink-0 px-4 sm:px-6 pb-4 pt-2 max-md:pb-7 max-md:bg-[linear-gradient(to_top,var(--color-paper)_70%,transparent)]"}>
       <form
-        className={`glass mx-auto w-full flex items-end gap-2.5 p-2 ps-5 max-md:p-1.5 max-md:ps-3.5 rounded-[20px] max-md:rounded-[18px] focus-within:border-money/60 ${ask ? "max-w-[720px]" : "max-w-3xl"}`}
+        className={`glass mx-auto w-full flex items-center gap-2.5 p-2 ps-5 max-md:p-1.5 max-md:ps-3.5 rounded-[20px] max-md:rounded-[18px] transition-all duration-200 ${
+          isListening
+            ? "border-[var(--primary-accent)]/80 shadow-[var(--accent-glow)] ring-2 ring-[var(--primary-accent)]/20"
+            : isTranscribing
+            ? "border-[var(--tertiary-color)]/70 shadow-[var(--glass-shadow)] ring-2 ring-[var(--tertiary-color)]/20"
+            : "focus-within:border-money/60"
+        } ${ask ? "max-w-[720px]" : "max-w-3xl"}`}
         onSubmit={(e) => {
           e.preventDefault();
-          submit();
+          if (!isListening && !isTranscribing) submit();
         }}
       >
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              submit();
-            }
-          }}
-          rows={1}
-          placeholder={hint}
-          aria-label={hint}
-          disabled={disabled}
-          className={`flex-1 resize-none bg-transparent px-1 py-[11px] text-[16px] leading-[22px] text-ink placeholder:text-ink-3 outline-none max-h-40 disabled:opacity-60 ${text.includes("\n") ? "" : "overflow-hidden"}`}
-          style={{ height: `${Math.min(166, 44 + (text.split("\n").length - 1) * 22)}px` }}
-        />
-        {speech && (
-          <button type="button" onClick={toggleMic} disabled={disabled} className={`size-10 mb-[3px] shrink-0 rounded-[12px] flex items-center justify-center cursor-pointer disabled:opacity-50 ${listening ? "bg-alarm-soft text-alarm" : "text-ink-3 hover:text-ink"}`} aria-pressed={listening} aria-label="Dictate">
-            {listening ? <MicOff size={17} aria-hidden="true" /> : <Mic size={17} aria-hidden="true" />}
-          </button>
-        )}
-        {ask ? (
-          <button type="submit" disabled={disabled || !text.trim()} className="btn-primary h-[46px] max-md:size-[42px] max-md:mb-[2px] max-md:px-0 max-md:justify-center max-md:rounded-[13px] shrink-0 rounded-[14px] px-5 flex items-center gap-2 text-[14.5px] disabled:opacity-45 cursor-pointer" aria-label={s.ask}>
-            <span className="max-md:hidden">{s.ask}</span> <ArrowRight size={15} aria-hidden="true" />
-          </button>
+        {isListening ? (
+          <SpeakingWaveform
+            audioLevel={audioLevel}
+            timeSeconds={recordingSeconds}
+            onStop={handleStopRecording}
+            onCancel={handleCancelRecording}
+          />
+        ) : isTranscribing ? (
+          <TranscribingAnimation />
         ) : (
-          <button type="submit" disabled={disabled || !text.trim()} className="btn-primary h-[46px] max-md:size-[42px] max-md:mb-[2px] max-md:px-0 max-md:justify-center max-md:rounded-[13px] shrink-0 rounded-[14px] px-5 flex items-center gap-2 text-[14.5px] disabled:opacity-45 cursor-pointer" aria-label={s.send}>
-            <Send size={15} aria-hidden="true" /> <span className="hidden sm:inline">{s.send}</span>
-          </button>
+          <>
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  submit();
+                }
+              }}
+              rows={1}
+              placeholder={hint}
+              aria-label={hint}
+              disabled={disabled}
+              className={`flex-1 resize-none bg-transparent px-1 py-[11px] text-[16px] leading-[22px] text-ink placeholder:text-ink-3 outline-none max-h-40 disabled:opacity-60 ${text.includes("\n") ? "" : "overflow-hidden"}`}
+              style={{ height: `${Math.min(166, 44 + (text.split("\n").length - 1) * 22)}px` }}
+            />
+            {speech && (
+              <button
+                type="button"
+                onClick={toggleMic}
+                disabled={disabled}
+                className="size-10 mb-[3px] shrink-0 rounded-[12px] flex items-center justify-center cursor-pointer disabled:opacity-50 text-ink-3 hover:text-ink hover:bg-paper-2 transition-colors"
+                aria-pressed={false}
+                aria-label="Dictate with voice"
+                title="Dictate with voice"
+              >
+                <Mic size={17} aria-hidden="true" />
+              </button>
+            )}
+            {ask ? (
+              <button type="submit" disabled={disabled || !text.trim()} className="btn-primary h-[46px] max-md:size-[42px] max-md:mb-[2px] max-md:px-0 max-md:justify-center max-md:rounded-[13px] shrink-0 rounded-[14px] px-5 flex items-center gap-2 text-[14.5px] disabled:opacity-45 cursor-pointer" aria-label={s.ask}>
+                <span className="max-md:hidden">{s.ask}</span> <ArrowRight size={15} aria-hidden="true" />
+              </button>
+            ) : (
+              <button type="submit" disabled={disabled || !text.trim()} className="btn-primary h-[46px] max-md:size-[42px] max-md:mb-[2px] max-md:px-0 max-md:justify-center max-md:rounded-[13px] shrink-0 rounded-[14px] px-5 flex items-center gap-2 text-[14.5px] disabled:opacity-45 cursor-pointer" aria-label={s.send}>
+                <Send size={15} aria-hidden="true" /> <span className="hidden sm:inline">{s.send}</span>
+              </button>
+            )}
+          </>
         )}
       </form>
+      {speechNote && (
+        <p className="mt-2 text-center text-xs font-semibold text-alarm animate-pulse" role="status">
+          {speechNote}
+        </p>
+      )}
     </div>
   );
 }

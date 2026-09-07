@@ -24,3 +24,33 @@ describe("whisper language map", () => {
     expect(whisperLanguageFor("brx")).toBeNull();
   });
 });
+
+describe("speech audio mime mapping", () => {
+  it("resolves extensions to proper audio mime types", async () => {
+    const { mimeFromExt } = await import("../server/transcriber");
+    expect(mimeFromExt("wav")).toBe("audio/wav");
+    expect(mimeFromExt("webm")).toBe("audio/webm");
+    expect(mimeFromExt("mp3")).toBe("audio/mp3");
+    expect(mimeFromExt("ogg")).toBe("audio/ogg");
+    expect(mimeFromExt("m4a")).toBe("audio/mp4");
+  });
+});
+
+describe("transcribeWithGemini error handling", () => {
+  it("returns error when no API key is present", async () => {
+    const { transcribeWithGemini } = await import("../server/transcriber");
+    const originalKey = process.env.GEMINI_API_KEY;
+    try {
+      delete process.env.GEMINI_API_KEY;
+      delete process.env.GEMINI_FALLBACK_API_KEY;
+      const res = await transcribeWithGemini({ bytes: new Uint8Array([1, 2, 3]), mimeType: "audio/wav" });
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.error).toContain("GEMINI_API_KEY is not configured");
+      }
+    } finally {
+      if (originalKey) process.env.GEMINI_API_KEY = originalKey;
+    }
+  });
+});
+
