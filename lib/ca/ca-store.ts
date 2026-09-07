@@ -17,6 +17,12 @@ export interface CADetails {
   firmName?: string;
 }
 
+export interface ReviewPermissions {
+  allowEdit: boolean;
+  shareAIS: boolean;
+  shareForm16: boolean;
+}
+
 export interface CAReviewRecord {
   code: string; // E.g. "CA-7842-91"
   pinHash: string; // SHA-256 hex string
@@ -32,6 +38,12 @@ export interface CAReviewRecord {
   status: CAReviewStatus;
   createdAt: string;
   reviewedAt?: string;
+  // Async draft & Registered CA directory support
+  targetCaId?: string;
+  targetCaName?: string;
+  permissions?: ReviewPermissions;
+  clientNotes?: string;
+  isDraft?: boolean;
 }
 
 const STORAGE_KEY = "wapsi_ca_reviews";

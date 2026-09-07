@@ -236,40 +236,6 @@ function AgenticWorkspace() {
     };
   }, [persona?.pan]);
 
-  const handleAdoptCAReview = (newPersona: Persona, newRegime: "new" | "old") => {
-    const loaded = load();
-    const baseState: ReturnState = (loaded && "state" in loaded)
-      ? loaded.state
-      : {
-          version: CURRENT_VERSION,
-          lang,
-          personaId: newPersona.id === "custom" ? "custom" : newPersona.id,
-          baselinePersona: newPersona,
-          persona: newPersona,
-          corrections: [],
-          confirmedFactIds: [],
-          regime: newRegime,
-        };
-
-    const updatedState: ReturnState = {
-      ...baseState,
-      baselinePersona: newPersona,
-      persona: newPersona,
-      corrections: [],
-      regime: newRegime,
-    };
-
-    savePersist(updatedState);
-    void mirrorReturn(updatedState, true);
-    setReturnState(updatedState);
-    try {
-      window.dispatchEvent(new CustomEvent("wapsi_state_changed"));
-      window.dispatchEvent(new Event("storage"));
-      window.dispatchEvent(new CustomEvent("wapsi_ca_review_updated"));
-    } catch {}
-
-    setActiveCAReview((prev) => (prev ? { ...prev, status: "accepted" } : null));
-  };
 
   /** Demo sign-in: the same client session shape the manual page mints, so both modes agree. */
   const signInDemo = async (personaId: (typeof PERSONA_ORDER)[number]) => {
@@ -307,6 +273,54 @@ function AgenticWorkspace() {
   useEffect(() => {
     if (sessionState === "ready") void runs.refresh();
   }, [sessionState, runs.refresh]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleAdoptCAReview = (newPersona: Persona, newRegime: "new" | "old") => {
+    const loaded = load();
+    const baseState: ReturnState = (loaded && "state" in loaded)
+      ? loaded.state
+      : {
+          version: CURRENT_VERSION,
+          lang,
+          personaId: newPersona.id === "custom" ? "custom" : newPersona.id,
+          baselinePersona: newPersona,
+          persona: newPersona,
+          corrections: [],
+          confirmedFactIds: [],
+          regime: newRegime,
+        };
+
+    const updatedState: ReturnState = {
+      ...baseState,
+      baselinePersona: newPersona,
+      persona: newPersona,
+      corrections: [],
+      regime: newRegime,
+    };
+
+    savePersist(updatedState);
+    void mirrorReturn(updatedState, true);
+    setReturnState(updatedState);
+    try {
+      window.dispatchEvent(new CustomEvent("wapsi_state_changed"));
+      window.dispatchEvent(new Event("storage"));
+      window.dispatchEvent(new CustomEvent("wapsi_ca_review_updated"));
+    } catch {}
+
+    setActiveCAReview((prev) => (prev ? { ...prev, status: "accepted" } : null));
+
+    // Automatically resolve challan in active agent run if waiting
+    if (
+      view.run?.pendingQuestion &&
+      (view.run.pendingQuestion.resolves === "challan_payment_mode" || view.run.pendingQuestion.resolves === "challan_pay_action")
+    ) {
+      void view.send({
+        answer: {
+          questionId: view.run.pendingQuestion.id,
+          value: "adopt_ca",
+        },
+      });
+    }
+  };
 
   // Automatically sync generated Form ITR-V into citizen's Tax Vault so it's stored and viewable there
   useEffect(() => {

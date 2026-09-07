@@ -315,4 +315,54 @@ describe("Munshi ji thinks, the engine counts — the conversation loop (2026-09
     expect(model.inputs[2].system).toContain("Reply in English");
     expect(r.state.replyLanguage).toBe("en");
   });
+
+  it("deterministic engine fallback: when model hits HTTP 429, '1. Prepare & File Return' proceeds with the engine flow without failing", async () => {
+    const { service } = vault();
+    // Simulate model returning null due to HTTP 429 rate limit
+    const model429: import("../model").ModelAdapter = {
+      name: "gemini-3.5-flash",
+      lastFailure: () => "HTTP 429 on key 4 of 4 for gemini-3.5-flash (retry in 59 s)",
+      converse: async () => null,
+    };
+    const d = deps({ model: model429, vault: service });
+    const run = await createRun(d, sunita, { message: "1. Prepare & File Return", lang: "en" });
+    let r = (await advance(d, sunita, run.id))!;
+
+    // Step 1: DigiLocker consent card is shown
+    expect(r.status).toBe("waiting_for_input");
+    expect(r.state.pendingQuestion?.resolves).toBe("consent:digilocker");
+
+    // Step 2: Citizen consents to DigiLocker pull
+    r = (await advance(d, sunita, r.id, { answer: { questionId: r.state.pendingQuestion!.id, value: true } }))!;
+    // Now papers are pulled, year form is presented
+    expect(r.status).toBe("waiting_for_input");
+    expect(r.state.pendingQuestion?.resolves).toBe("year_form");
+
+    // Step 3: Citizen answers the year form
+    r = (await advance(d, sunita, r.id, { answer: { questionId: r.state.pendingQuestion!.id, value: JSON.stringify({ housing: "own", extras: "none", resident: true }) } }))!;
+
+    // Step 4: Engine calculates tax and presents the Filing Review Card
+    expect(r.status).toBe("waiting_for_review");
+    expect(r.state.pendingCard?.kind).toBe("filing");
+
+    // Step 5: Citizen confirms filing
+    r = (await advance(d, sunita, r.id, { confirm: { cardId: r.state.pendingCard!.id, accepted: true } }))!;
+    expect(r.status).toBe("completed");
+    expect(r.state.actionTaken?.kind).toBe("filing");
+
+    const texts = await said(d, sunita, r);
+    expect(texts[texts.length - 1]).toContain("ITR-1 return has been successfully filed");
+  });
+
+  it("deterministic engine fallback: 'Compare the two regimes' works when model is offline", async () => {
+    const d = deps({ model: nullModel });
+    const run = await createRun(d, sunita, { message: "Compare the two regimes", lang: "en" });
+    const r = (await advance(d, sunita, run.id))!;
+    expect(r.status).toBe("completed");
+    const texts = await said(d, sunita, r);
+    expect(texts[0]).toContain("Regime Comparison");
+    expect(texts[0]).toContain("New Regime");
+    expect(texts[0]).toContain("Old Regime");
+  });
 });
+

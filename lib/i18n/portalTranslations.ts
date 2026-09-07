@@ -93,6 +93,39 @@ export interface PortalSignInStrings {
   caNoDraft: string;
   caWrongPin: string;
   onboardingIntro: string;
+  // CA Self-Registration
+  caRegisterOption: string;
+  caRegisterTitle: string;
+  caRegisterSub: string;
+  caRegNameLabel: string;
+  caRegIcalLabel: string;
+  caRegFirmLabel: string;
+  caRegCityLabel: string;
+  caRegEmailLabel: string;
+  caRegPhoneLabel: string;
+  caRegPasswordLabel: string;
+  caRegSubmitBtn: string;
+  caRegSuccess: string;
+  caRegBackToLogin: string;
+  // CA Account Login
+  caAccountLoginOption: string;
+  caAccountLoginTitle: string;
+  caAccountLoginSub: string;
+  caAccountLoginBtn: string;
+  caClientCodeOption: string;
+  // Citizen CA Directory
+  findCaTab: string;
+  myCaTab: string;
+  registeredCaBadge: string;
+  caExperience: string;
+  requestReviewBtn: string;
+  saveDraftAndRequest: string;
+  clientNotesLabel: string;
+  clientNotesPlaceholder: string;
+  allowEditPermission: string;
+  shareDocPermission: string;
+  draftSavedSuccess: string;
+  waitingCaAudit: string;
 }
 
 export const SIGNIN_TRANSLATIONS: Partial<Record<Lang, PortalSignInStrings>> & { en: PortalSignInStrings } = {
@@ -128,6 +161,37 @@ export const SIGNIN_TRANSLATIONS: Partial<Record<Lang, PortalSignInStrings>> & {
     caNoDraft: "No draft found for that code. Check it with your client, or load the demo review.",
     caWrongPin: "That PIN isn't right. Ask the taxpayer for the PIN they set.",
     onboardingIntro: "A few quick questions so Munshi ji can tailor this to you.",
+    caRegisterOption: "Are you a Chartered Accountant? Add yourself as a registered CA",
+    caRegisterTitle: "Register as a Chartered Accountant",
+    caRegisterSub: "Join Wapsi's verified CA network. Help citizens audit, reconcile regimes, and claim maximum refunds.",
+    caRegNameLabel: "Full Name (as per ICAI)",
+    caRegIcalLabel: "ICAI Membership Number",
+    caRegFirmLabel: "Practice / Firm Name",
+    caRegCityLabel: "Practicing City",
+    caRegEmailLabel: "Professional Email",
+    caRegPhoneLabel: "Phone Number (optional)",
+    caRegPasswordLabel: "Create Account Password",
+    caRegSubmitBtn: "Complete CA Registration →",
+    caRegSuccess: "Successfully registered! Welcome to the Wapsi CA Network.",
+    caRegBackToLogin: "← Back to Client Review Login",
+    // CA Account Login
+    caAccountLoginOption: "Already registered? Sign in to your CA Account →",
+    caAccountLoginTitle: "Chartered Accountant Sign In",
+    caAccountLoginSub: "Access your dashboard to see clients and review requests assigned to you.",
+    caAccountLoginBtn: "Sign In to CA Workspace →",
+    caClientCodeOption: "← Have a Client Review Code instead?",
+    findCaTab: "Find a Registered CA",
+    myCaTab: "I have my own CA",
+    registeredCaBadge: "ICAI Verified",
+    caExperience: "yrs experience",
+    requestReviewBtn: "Request Review",
+    saveDraftAndRequest: "Save Draft & Request Review",
+    clientNotesLabel: "Special Instructions / Notes for CA (optional)",
+    clientNotesPlaceholder: "e.g., Please audit my NPS claim and Old vs New regime saving.",
+    allowEditPermission: "Allow CA to suggest edits to deductions and income facts",
+    shareDocPermission: "Share Form 16 / AIS line-item provenance with CA",
+    draftSavedSuccess: "Draft saved! Your review request was dispatched to",
+    waitingCaAudit: "Pending CA Audit • Saved as Draft",
   },
   hi: {
     citizenTab: "नागरिक",
@@ -161,6 +225,36 @@ export const SIGNIN_TRANSLATIONS: Partial<Record<Lang, PortalSignInStrings>> & {
     caNoDraft: "इस कोड का कोई ड्राफ्ट नहीं मिला। क्लाइंट से जाँचें, या डेमो रिव्यू लोड करें।",
     caWrongPin: "यह PIN सही नहीं है। करदाता से उनका PIN पूछें।",
     onboardingIntro: "कुछ छोटे सवाल, ताकि मुंशी जी इसे आपके हिसाब से बना सकें।",
+    caRegisterOption: "क्या आप चार्टर्ड अकाउंटेंट हैं? खुद को पंजीकृत CA के रूप में जोड़ें",
+    caRegisterTitle: "चार्टर्ड अकाउंटेंट के रूप में पंजीकरण करें",
+    caRegisterSub: "वापसी के सत्यापित CA नेटवर्क से जुड़ें। नागरिकों के रिटर्न का ऑडिट करें और अधिकतम रिफंड दिलाएं।",
+    caRegNameLabel: "पूरा नाम (ICAI के अनुसार)",
+    caRegIcalLabel: "ICAI सदस्यता संख्या",
+    caRegFirmLabel: "फर्म या प्रैक्टिस का नाम",
+    caRegCityLabel: "अभ्यास का शहर",
+    caRegEmailLabel: "व्यावसायिक ईमेल",
+    caRegPhoneLabel: "फ़ोन नंबर (वैकल्पिक)",
+    caRegPasswordLabel: "खाता पासवर्ड बनाएं",
+    caRegSubmitBtn: "पंजीकरण पूरा करें →",
+    caRegSuccess: "सफलतापूर्वक पंजीकृत! वापसी CA नेटवर्क में आपका स्वागत है।",
+    caRegBackToLogin: "← क्लाइंट रिव्यू लॉगिन पर वापस",
+    caAccountLoginOption: "पहले से पंजीकृत हैं? अपने CA खाते में साइन इन करें →",
+    caAccountLoginTitle: "चार्टर्ड अकाउंटेंट साइन इन",
+    caAccountLoginSub: "अपने डैशबोर्ड तक पहुँचें और सौंपे गए क्लाइंट रिव्यू देखें।",
+    caAccountLoginBtn: "CA वर्कस्पेस में साइन इन करें →",
+    caClientCodeOption: "← क्या आपके पास क्लाइंट रिव्यू कोड है?",
+    findCaTab: "पंजीकृत CA खोजें",
+    myCaTab: "मेरे पास अपना CA है",
+    registeredCaBadge: "ICAI सत्यापित",
+    caExperience: "वर्ष का अनुभव",
+    requestReviewBtn: "समीक्षा का अनुरोध करें",
+    saveDraftAndRequest: "ड्राफ्ट सहेजें और समीक्षा अनुरोध भेजें",
+    clientNotesLabel: "CA के लिए विशेष निर्देश (वैकल्पिक)",
+    clientNotesPlaceholder: "उदा. कृपया मेरी NPS कटौती और पुरानी बनाम नई व्यवस्था की बचत जांचें।",
+    allowEditPermission: "CA को कटौतियों और आंकड़ों में बदलाव का सुझाव देने की अनुमति दें",
+    shareDocPermission: "CA के साथ Form 16 / AIS विवरण साझा करें",
+    draftSavedSuccess: "ड्राफ्ट सहेजा गया! आपका समीक्षा अनुरोध भेज दिया गया है:",
+    waitingCaAudit: "CA समीक्षा लंबित • ड्राफ्ट के रूप में सहेजा गया",
   },
 };
 

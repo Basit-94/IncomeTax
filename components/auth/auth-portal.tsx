@@ -37,6 +37,7 @@ import {
 } from "@/lib/vault/vault-store";
 import { extractFieldsFromPdf, detectDocumentKind, isEmptyExtraction, decodeLatin1 } from "@/lib/compliance/pdfExtract";
 import { createDemoReview, fetchReviewRecord, verifyPin } from "@/lib/ca/ca-store";
+import { registerCA, loginCA, type RegisteredCA } from "@/lib/ca/ca-registry";
 import type { IngestedDocument } from "@/context/TaxReturnContext";
 import { Munshi } from "../brand/munshi";
 
@@ -102,6 +103,85 @@ export default function AuthPortal({
   const [caMembership, setCaMembership] = useState("");
   const [caError, setCaError] = useState<string | null>(null);
   const [caBusy, setCaBusy] = useState(false);
+
+  // CA Self-Registration and Account Login state
+  const [caSubView, setCaSubView] = useState<"client_code" | "account_login">("client_code");
+  const [isCaRegisterOpen, setIsCaRegisterOpen] = useState(false);
+  const [regCaName, setRegCaName] = useState("");
+  const [regCaMembership, setRegCaMembership] = useState("");
+  const [regCaPassword, setRegCaPassword] = useState("");
+  const [regCaFirm, setRegCaFirm] = useState("");
+  const [regCaCity, setRegCaCity] = useState("");
+  const [regCaEmail, setRegCaEmail] = useState("");
+  const [regCaPhone, setRegCaPhone] = useState("");
+  const [regCaError, setRegCaError] = useState<string | null>(null);
+  const [regCaSuccess, setRegCaSuccess] = useState(false);
+  const [isRegisteringCa, setIsRegisteringCa] = useState(false);
+
+  // CA Account Direct Login state (ICAI/Email + Password)
+  const [caLoginId, setCaLoginId] = useState("");
+  const [caLoginPassword, setCaLoginPassword] = useState("");
+  const [caAccountError, setCaAccountError] = useState<string | null>(null);
+  const [caAccountBusy, setCaAccountBusy] = useState(false);
+
+  const handleCaRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRegCaError(null);
+    setIsRegisteringCa(true);
+
+    try {
+      const res = await registerCA({
+        name: regCaName,
+        membershipNo: regCaMembership,
+        password: regCaPassword,
+        firmName: regCaFirm,
+        city: regCaCity,
+        email: regCaEmail,
+        phone: regCaPhone,
+      });
+
+      if (!res.ok || !res.ca) {
+        setRegCaError(res.error || "Registration failed. Check your ICAI details.");
+        setIsRegisteringCa(false);
+        return;
+      }
+
+      setRegCaSuccess(true);
+      setTimeout(() => {
+        setIsCaRegisterOpen(false);
+        router.push("/ca");
+      }, 1200);
+    } catch (err) {
+      setRegCaError(err instanceof Error ? err.message : "Error saving CA registration");
+    } finally {
+      setIsRegisteringCa(false);
+    }
+  };
+
+  const handleCaAccountLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCaAccountError(null);
+    setCaAccountBusy(true);
+
+    try {
+      const res = await loginCA({
+        identifier: caLoginId,
+        password: caLoginPassword,
+      });
+
+      if (!res.ok || !res.ca) {
+        setCaAccountError(res.error || "Invalid ICAI number/email or password");
+        setCaAccountBusy(false);
+        return;
+      }
+
+      router.push("/ca");
+    } catch (err) {
+      setCaAccountError(err instanceof Error ? err.message : "Sign in error");
+    } finally {
+      setCaAccountBusy(false);
+    }
+  };
 
   const openCaReview = (code: string, pin: string) => {
     try {
@@ -287,6 +367,44 @@ export default function AuthPortal({
           }
         }
 
+        // File name heuristic if name is still missing
+        if (!detectedName && file.name) {
+          const cleanBase = file.name.replace(/\.[^/.]+$/, "");
+          const m = cleanBase.match(/(?:AIS\s*(?:_\s*|\/\s*)TIS\s*(?:Statement)?\s*-\s*|Form\s*16\s*-\s*)([A-Za-z'’.\s]{2,40})/i);
+          if (m) detectedName = m[1].trim();
+        }
+
+        // Progressive AI enhancement via /api/extract (Gemini Document Intelligence)
+        try {
+          const aiRes = await fetch("/api/extract", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              fileName: file.name,
+              extracted: {
+                pan: foundPan,
+                name: detectedName,
+                employerName,
+                grossSalary,
+                tds: tdsAmount,
+              },
+            }),
+          });
+          if (aiRes.ok) {
+            const aiData = await aiRes.json();
+            if (aiData.data) {
+              if (aiData.data.pan && PAN_REGEX.test(aiData.data.pan)) foundPan = aiData.data.pan;
+              if (aiData.data.name && (!detectedName || /citizen/i.test(detectedName))) detectedName = aiData.data.name;
+              if (aiData.data.employerName && !employerName) employerName = aiData.data.employerName;
+              if (typeof aiData.data.grossSalary === "number" && grossSalary === undefined) grossSalary = aiData.data.grossSalary;
+              if (typeof aiData.data.tds === "number" && tdsAmount === undefined) tdsAmount = aiData.data.tds;
+              if (aiData.data.kind) detectedKind = aiData.data.kind;
+            }
+          }
+        } catch {
+          // AI extraction is progressive enhancement; deterministic extraction stands
+        }
+
         setExtractedData({
           name: detectedName,
           employerName,
@@ -302,7 +420,7 @@ export default function AuthPortal({
           const cleanPan = foundPan.trim().toUpperCase();
           setExtractedPan(cleanPan);
           setDocPhase("success");
-          setDocStatusMsg(`${cleanPan}: ${ps.readingDoc}`);
+          setDocStatusMsg(detectedName ? `${detectedName} (${cleanPan})` : `${cleanPan}: ${ps.readingDoc}`);
 
           // 1. Automatically store document in Citizen Tax Vault by default
           const vaultDoc: VaultDocument = {
@@ -629,7 +747,7 @@ export default function AuthPortal({
           )}
 
           {/* ---- Chartered Accountant: code + PIN + optional stamp (1c, m2c) ---- */}
-          {view === "ca" && (
+          {view === "ca" && caSubView === "client_code" && (
             <form onSubmit={handleCaSubmit} className="flex flex-col gap-[18px] animate-in fade-in text-start">
               <div>
                 <h3 className="text-[22px] max-md:text-[19px] font-extrabold tracking-[-0.02em] text-ink">{ps.caLoginTitle}</h3>
@@ -708,8 +826,251 @@ export default function AuthPortal({
                   {ps.caDemoLink}
                 </button>
               </p>
+
+              {/* CA Account Login vs Registration Options */}
+              <div className="pt-2 border-t border-glass-edge space-y-2 text-center">
+                <button
+                  type="button"
+                  onClick={() => setCaSubView("account_login")}
+                  className="w-full text-[13px] font-bold text-money hover:underline cursor-pointer py-1"
+                >
+                  {ps.caAccountLoginOption}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsCaRegisterOpen(true)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-[12px] bg-paper-2 hover:bg-amber-bg border border-glass-edge hover:border-money/40 text-[12.5px] font-bold text-ink-2 hover:text-money transition cursor-pointer"
+                >
+                  <Award size={15} className="text-money shrink-0" />
+                  <span>{ps.caRegisterOption}</span>
+                </button>
+              </div>
+
               {footer}
             </form>
+          )}
+
+          {/* ---- Registered CA: Account Login with ICAI/Email + Password ---- */}
+          {view === "ca" && caSubView === "account_login" && (
+            <form onSubmit={handleCaAccountLogin} className="flex flex-col gap-[18px] animate-in fade-in text-start">
+              <div>
+                <h3 className="text-[22px] max-md:text-[19px] font-extrabold tracking-[-0.02em] text-ink">{ps.caAccountLoginTitle}</h3>
+                <p className="mt-1 text-[13.5px] max-md:text-[13px] text-ink-2 leading-[1.55]">{ps.caAccountLoginSub}</p>
+              </div>
+
+              <div>
+                <label htmlFor="ca-login-id" className={LABEL}>ICAI Membership Number or Email</label>
+                <input
+                  id="ca-login-id"
+                  type="text"
+                  required
+                  value={caLoginId}
+                  onChange={(e) => {
+                    setCaLoginId(e.target.value);
+                    setCaAccountError(null);
+                  }}
+                  placeholder="e.g. 084920 or ca@firm.in"
+                  autoCapitalize="none"
+                  autoComplete="username"
+                  className={`${MONO_FIELD} ${caAccountError ? FIELD_BAD : FIELD_OK}`}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="ca-login-password" className={LABEL}>Account Password</label>
+                <input
+                  id="ca-login-password"
+                  type="password"
+                  required
+                  value={caLoginPassword}
+                  onChange={(e) => {
+                    setCaLoginPassword(e.target.value);
+                    setCaAccountError(null);
+                  }}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  className={`${FIELD} ${FIELD_OK}`}
+                />
+              </div>
+
+              {caAccountError && (
+                <p role="alert" className="flex items-center gap-2 rounded-[14px] bg-bad-soft px-3.5 py-3 text-[13px] font-semibold text-bad">
+                  <AlertCircle size={16} className="shrink-0" />
+                  <span>{caAccountError}</span>
+                </p>
+              )}
+
+              <div className={PINNED}>
+                <button type="submit" disabled={caAccountBusy} className={PRIMARY}>
+                  {caAccountBusy ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Lock size={16} aria-hidden="true" />}
+                  <span>{caAccountBusy ? "Signing in…" : ps.caAccountLoginBtn}</span>
+                </button>
+              </div>
+
+              <div className="pt-2 border-t border-glass-edge flex items-center justify-between text-[13px]">
+                <button
+                  type="button"
+                  onClick={() => setCaSubView("client_code")}
+                  className="font-bold text-ink-2 hover:text-ink cursor-pointer"
+                >
+                  {ps.caClientCodeOption}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsCaRegisterOpen(true)}
+                  className="font-bold text-money hover:underline cursor-pointer"
+                >
+                  Register as CA
+                </button>
+              </div>
+
+              {footer}
+            </form>
+          )}
+
+          {/* ---- CA Self-Registration Modal / View ---- */}
+          {isCaRegisterOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+              <div className="w-full max-w-md bg-paper rounded-[24px] border border-glass-edge shadow-2xl p-6 space-y-4 text-start animate-in zoom-in-95">
+                <div className="flex items-center justify-between pb-2 border-b border-glass-edge">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-xl bg-amber-bg text-money border border-money/30">
+                      <Award size={18} />
+                    </div>
+                    <div>
+                      <h3 className="text-[16px] font-extrabold text-ink">{ps.caRegisterTitle}</h3>
+                      <span className="text-[11px] font-mono text-money font-semibold uppercase tracking-wider">ICAI Network</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCaRegisterOpen(false);
+                      setRegCaError(null);
+                      setRegCaSuccess(false);
+                    }}
+                    className="text-ink-3 hover:text-ink text-sm p-1 cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <p className="text-[12.5px] text-ink-2 leading-relaxed">
+                  {ps.caRegisterSub}
+                </p>
+
+                {regCaError && (
+                  <p role="alert" className="flex items-center gap-2 rounded-[14px] bg-bad-soft px-3.5 py-2.5 text-[12px] font-semibold text-bad">
+                    <AlertCircle size={15} className="shrink-0" />
+                    <span>{regCaError}</span>
+                  </p>
+                )}
+
+                {regCaSuccess ? (
+                  <div className="p-5 text-center bg-ok/10 border border-ok/30 rounded-2xl space-y-2">
+                    <CheckCircle2 size={32} className="text-ok mx-auto" />
+                    <h4 className="text-[14px] font-bold text-ink">{ps.caRegSuccess}</h4>
+                    <p className="text-[12px] text-ink-2">Opening CA Portal workspace…</p>
+                  </div>
+                ) : (
+                  <form onSubmit={handleCaRegisterSubmit} className="space-y-3">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-ink-3 mb-1">{ps.caRegNameLabel} *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. CA Rajesh Sharma"
+                        value={regCaName}
+                        onChange={(e) => setRegCaName(e.target.value)}
+                        className="w-full h-[40px] px-3.5 rounded-[12px] bg-paper-2 border border-glass-edge text-[13px] text-ink outline-none focus:border-money"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-ink-3 mb-1">{ps.caRegIcalLabel} *</label>
+                      <input
+                        type="text"
+                        required
+                        maxLength={7}
+                        placeholder="e.g. 084920"
+                        value={regCaMembership}
+                        onChange={(e) => setRegCaMembership(e.target.value)}
+                        className="w-full h-[40px] px-3.5 rounded-[12px] bg-paper-2 border border-glass-edge font-mono text-[13px] text-ink outline-none focus:border-money"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-ink-3 mb-1">{ps.caRegPasswordLabel} *</label>
+                      <input
+                        type="password"
+                        required
+                        minLength={4}
+                        placeholder="••••••••"
+                        value={regCaPassword}
+                        onChange={(e) => setRegCaPassword(e.target.value)}
+                        className="w-full h-[40px] px-3.5 rounded-[12px] bg-paper-2 border border-glass-edge text-[13px] text-ink outline-none focus:border-money"
+                      />
+                    </div>
+
+                    {/* Optional Practice Details Toggle */}
+                    <div className="pt-1">
+                      <details className="text-xs group">
+                        <summary className="text-[11.5px] font-bold text-ink-3 hover:text-ink cursor-pointer list-none flex items-center justify-between py-1">
+                          <span>+ Add optional practice details (firm, city, email)</span>
+                          <span className="text-[10px] text-money group-open:rotate-180 transition-transform">▼</span>
+                        </summary>
+                        <div className="pt-2 space-y-2.5">
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-[10px] font-bold uppercase tracking-wider text-ink-3 mb-0.5">{ps.caRegFirmLabel}</label>
+                              <input
+                                type="text"
+                                placeholder="e.g. Sharma & Co."
+                                value={regCaFirm}
+                                onChange={(e) => setRegCaFirm(e.target.value)}
+                                className="w-full h-[36px] px-3 rounded-[10px] bg-paper-2 border border-glass-edge text-[12px] text-ink outline-none focus:border-money"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold uppercase tracking-wider text-ink-3 mb-0.5">{ps.caRegCityLabel}</label>
+                              <input
+                                type="text"
+                                placeholder="e.g. New Delhi"
+                                value={regCaCity}
+                                onChange={(e) => setRegCaCity(e.target.value)}
+                                className="w-full h-[36px] px-3 rounded-[10px] bg-paper-2 border border-glass-edge text-[12px] text-ink outline-none focus:border-money"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-ink-3 mb-0.5">{ps.caRegEmailLabel}</label>
+                            <input
+                              type="email"
+                              placeholder="ca@firm.in"
+                              value={regCaEmail}
+                              onChange={(e) => setRegCaEmail(e.target.value)}
+                              className="w-full h-[36px] px-3 rounded-[10px] bg-paper-2 border border-glass-edge text-[12px] text-ink outline-none focus:border-money"
+                            />
+                          </div>
+                        </div>
+                      </details>
+                    </div>
+
+                    <div className="pt-2">
+                      <button
+                        type="submit"
+                        disabled={isRegisteringCa}
+                        className="w-full h-[44px] flex items-center justify-center gap-2 rounded-[14px] bg-ink text-paper dark:bg-paper dark:text-ink hover:opacity-90 font-bold text-[13.5px] transition cursor-pointer shadow-md"
+                      >
+                        {isRegisteringCa ? <Loader2 size={16} className="animate-spin" /> : <Award size={16} />}
+                        <span>{ps.caRegSubmitBtn}</span>
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
           )}
 
           {/* ---- Create account (1d–1f, m2d) ---- */}

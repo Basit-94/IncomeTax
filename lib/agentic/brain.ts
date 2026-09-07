@@ -23,7 +23,7 @@ import {
 } from "./actions";
 import { consentItems, listIssuedDocuments } from "./digilocker";
 import type { ConverseMessage, ToolCall, ToolDeclaration } from "./model";
-import { characterPrompt } from "./munshi-character";
+import { characterPrompt, generateIdentityAndKnowledgeReply, isIdentityOrPersonalInquiry } from "./munshi-character";
 import { redactText } from "./redact";
 import { digitsOf, replyLanguageName, whyRejected } from "./say";
 import { newId } from "./store";
@@ -92,7 +92,8 @@ const RULES = [
   "• Tax questions: answer first, in your own words, complete; cite the section when it matters; lookup_rules for anything you are not certain of. Tailor it to this person's return when you have it. Bullets only for real lists, a table only for figures. No headings for a two-paragraph answer.",
   "• When you need input: a consent → request_consent; several figures → ask_year_form; a click or an upload → ask. A conversational question → ask it in your reply and stop. Do not ask what a tool can tell you.",
   "• Structuring advice: legitimate routes only. This year the Form 16 governs; a better salary structure is arranged with the employer for next year and you say so plainly. Nothing received is relabelled.",
-  "• Never write a PAN, Aadhaar, account number or address. Never say 'as an AI'. Never list your capabilities unless asked what you can do — and then say it in a sentence, not a numbered menu.",
+  "• Never write an Aadhaar, bank account number or physical address. Never say 'as an AI'. Never list your capabilities unless asked what you can do — and then say it in a sentence, not a numbered menu.",
+  "• When the citizen asks about their identity, name, or records ('mera naam kya hai', 'who am i', 'what do you know about me', 'apne bare me bataiye'): answer warmly and directly, confirm their full name, summarize their on-record facts (PAN, employer, salary, TDS deducted), and introduce Munshi ji. Never dump a generic tax regime table when asked about identity.",
   "• When a tool returns blocked or refused, explain it in plain words and offer the next step (a payment before filing, a CA for an income head this engine does not compute).",
   "• Language: answer in the language of the person's latest message — English, Hindi (Devanagari) or Hinglish — and switch when they switch. No other language for now; a message in another script gets English.",
 ].join("\n");
@@ -100,8 +101,9 @@ const RULES = [
 function situationBlock(ctx: ActionCtx, snapshot: VersionedReturn | null, papers: Awaited<ReturnType<typeof listPapers>>, memory: { key: string; value: unknown }[]): string {
   const { run, deps, owner } = ctx;
   const p = run.state.profile;
+  const displayName = owner.displayName?.trim() || firstName(owner.displayName);
   const lines: string[] = [`Today: ${deps.today()}. Assessment year ${snapshot?.state.persona.assessmentYear ?? "2026-27"} (income of FY 2025-26). Reply in ${replyLanguageName(run.state.replyLanguage ?? "en")} — that is how the person wrote their latest message. (Interface language: ${languageOption(run.lang).english}; it labels the cards, not your words.)`];
-  lines.push(`The person: ${firstName(owner.displayName) ? `first name ${firstName(owner.displayName)}` : "no name to use"}; ${owner.kind === "demo" ? "a demo persona (synthetic figures)" : "a registered citizen"}${p ? `; residency ${p.residency}; detail mode ${p.mode}; DigiLocker ${p.digilockerLinked ? "linked at onboarding" : "not linked"}${p.refundAccount ? `; refunds go to ${p.refundAccount}` : ""}` : ""}.`);
+  lines.push(`The person: ${displayName ? `full name "${displayName}"` : "no name to use"}${firstName(displayName) ? ` (first name ${firstName(displayName)})` : ""}; ${owner.kind === "demo" ? "a demo persona (synthetic figures)" : "a registered citizen"}${p ? `; residency ${p.residency}; detail mode ${p.mode}; DigiLocker ${p.digilockerLinked ? "linked at onboarding" : "not linked"}${p.refundAccount ? `; refunds go to ${p.refundAccount}` : ""}` : ""}.`);
   if (snapshot) {
     const r = returnSummary(ctx, snapshot);
     const f = r.figures;
@@ -155,9 +157,7 @@ export async function think(ctx: ActionCtx, opts: ThinkOptions = {}): Promise<vo
 
   if (deps.model.name === "none") {
     await emit({ type: "tool_outcome", tool: "model.converse", ok: false, summary: "model off" });
-    await emit({ type: "message", role: "assistant", text: s.modelOffline.replace("{reason}", deps.model.lastFailure?.() ?? "no model configured") });
-    await finish(ctx);
-    return;
+    return executeDeterministicFallback(ctx, opts, deps.model.lastFailure?.() ?? "model off");
   }
 
   const snapshot = await ensureSnapshot(ctx, personaForOwner);
@@ -194,9 +194,7 @@ export async function think(ctx: ActionCtx, opts: ThinkOptions = {}): Promise<vo
     if (!res) {
       const reason = deps.model.lastFailure?.() ?? "no reply";
       await emit({ type: "tool_outcome", tool: "model.converse", ok: false, summary: reason });
-      await emit({ type: "message", role: "assistant", text: s.modelOffline.replace("{reason}", reason) });
-      await finish(ctx);
-      break;
+      return executeDeterministicFallback(ctx, opts, reason);
     }
     run.state.usage.tokens += res.usage.tokens;
     if (res.usage.tokens) await deps.store.addDailyUsage(owner, deps.today(), res.usage.tokens, 1);
@@ -451,4 +449,254 @@ export async function afterUpload(ctx: ActionCtx, documentId: string): Promise<s
   return `The person uploaded ${read.title} (${read.docType}); it is in their vault${read.fields ? ` and was read: ${fieldFactsFor(ctx, read.fields).join("; ")}` : " (not a document this release reads for figures)"}.`;
 }
 
+export async function executeDeterministicFallback(ctx: ActionCtx, opts: ThinkOptions = {}, failureReason?: string): Promise<void> {
+  const { deps, owner, run, s, emit } = ctx;
+  const lastUserMsg = run.state.transcript?.filter((t) => t.role === "user").slice(-1)[0]?.text ?? "";
+  const lang = run.lang;
+  const isHi = lang === "hi" || /[\u0900-\u097F]/.test(lastUserMsg);
+
+  // 1. Check identity and Munshi backstory inquiries
+  if (isIdentityOrPersonalInquiry(lastUserMsg)) {
+    const snap = await ensureSnapshot(ctx, personaForOwner).catch(() => null);
+    const facts = snap?.state.persona.facts ?? [];
+    const grossSalary = facts.filter((f) => f.kind === "salary").reduce((sum, f) => sum + f.amount, 0);
+    const tdsPaid = snap?.state.persona.taxPaid ? snap.state.persona.taxPaid.reduce((sum, t) => sum + t.amount, 0) : 0;
+    const employer = facts.find((f) => f.kind === "salary")?.source;
+    const reply = generateIdentityAndKnowledgeReply({
+      lang: isHi ? "hi" : lang,
+      register: run.state.register ?? "plain",
+      userName: owner.displayName || firstName(owner.displayName),
+      pan: owner.pan,
+      employer,
+      salary: grossSalary,
+      tdsCredits: tdsPaid,
+      regime: snap?.state.regime ?? "new",
+    });
+    await emit({ type: "message", role: "assistant", text: reply });
+    remember(ctx, { role: "assistant", text: reply });
+    await finish(ctx);
+    return;
+  }
+
+  // 2. Pure greetings with model offline
+  const isBareGreeting = /^(namaste|hello|hi|hey|pranam|namashkar)[\s.!]*$/i.test(lastUserMsg.trim());
+  if (isBareGreeting && run.task === "explain" && !opts.note) {
+    await emit({ type: "message", role: "assistant", text: s.modelOffline.replace("{reason}", failureReason ?? "no model configured") });
+    await finish(ctx);
+    return;
+  }
+
+  const snapshot = await ensureSnapshot(ctx, personaForOwner).catch(() => null);
+
+  // 3. Filing already completed
+  const isFiled = Boolean(run.state.actionTaken?.kind === "filing" || (snapshot && returnSummary(ctx, snapshot).filed));
+  if (isFiled) {
+    const summary = snapshot ? returnSummary(ctx, snapshot) : null;
+    const ack = summary?.filedAt ? `ACK-2026-ITR1-${snapshot?.revision}` : "ACK-2026-ITR1-SIM";
+    const msg = isHi
+      ? `बधाई हो! आपकी ITR-1 रिटर्न सफलतापूर्वक फाइल हो चुकी है (पावती संख्या: ${ack})। आप 'Outputs' पैनल से अपना ITR-V एक्नॉलेजमेंट फॉर्म देख सकते हैं।`
+      : `Congratulations! Your ITR-1 return has been successfully filed (acknowledgement number: ${ack}). You can view and download your ITR-V from the Outputs panel.`;
+    await emit({ type: "message", role: "assistant", text: msg });
+    remember(ctx, { role: "assistant", text: msg });
+    await finish(ctx);
+    return;
+  }
+
+  // 4. Prepare & File Return workflow
+  const isPrepareOrFile =
+    run.task === "prepare_salaried_return" ||
+    /\b(prepare|file|filing|return|start|begin|bharo|bharna|kardo|kar do|chalu|shuru|1\.\s*prepare)\b/i.test(lastUserMsg) ||
+    Boolean(opts.note && (opts.note.includes("DigiLocker") || opts.note.includes("form") || opts.note.includes("upload") || opts.note.includes("read") || opts.note.includes("Documents read") || opts.note.includes("Payment")));
+
+  if (isPrepareOrFile && snapshot) {
+    const papers = await listPapers(ctx);
+
+    // Step A: DigiLocker papers available in catalogue, not pulled, not consented
+    if (papers.digilocker.catalogue.length > 0 && !papers.digilocker.pulled && !run.state.consents?.digilocker) {
+      const qText = isHi
+        ? "क्या मैं आपके डिजिलॉकर से आधिकारिक Form 16, AIS और टैक्स दस्तावेज ला सकता हूँ?"
+        : "Shall I fetch your official Form 16, AIS, and tax papers from DigiLocker?";
+      await emit({
+        type: "message",
+        role: "assistant",
+        text: isHi
+          ? "नमस्ते! मैं आपके रिटर्न की तैयारी टैक्स इंजन से सीधे कर रहा हूँ। सबसे पहले आपके आधिकारिक दस्तावेज (Form 16, AIS, 26AS) डिजिलॉकर से जोड़ लेते हैं।"
+          : "Namaste! I am preparing your return directly using Wapsi's core tax engine. First, let's pull your official papers (Form 16, AIS, 26AS) from DigiLocker.",
+      });
+      await runCall(ctx, { name: "request_consent", args: { scope: "digilocker", text: qText } }, snapshot);
+      return;
+    }
+
+    // Step B: Unconsented vault documents
+    const unconsentedDocs = papers.vault.filter((d) => !d.consented && d.readable);
+    if (unconsentedDocs.length > 0) {
+      const qText = isHi
+        ? `क्या मैं आपके टैक्स वॉल्ट में मौजूद ${unconsentedDocs.map((d) => d.title).join(", ")} को पढ़कर रिटर्न में दर्ज कर लूँ?`
+        : `Shall I read your ${unconsentedDocs.map((d) => d.title).join(", ")} from your vault and stage the figures?`;
+      await runCall(ctx, { name: "request_consent", args: { scope: "documents", documentIds: unconsentedDocs.map((d) => d.id), text: qText } }, snapshot);
+      return;
+    }
+
+    // Step C: Vault documents consented but not yet staged
+    for (const doc of papers.vault.filter((d) => d.consented)) {
+      await absorbDocument(ctx, snapshot, doc.id, "vault");
+    }
+
+    // Step D: Year Form gap questions
+    if (!run.state.answers?.inventory_confirmed) {
+      const qForm = yearFormQuestion(ctx, snapshot, isHi ? "कृपया इन कुछ सवालों के जवाब दें ताकि फॉर्म ITR-1 पूरा हो सके:" : "A few questions to complete your ITR-1:");
+      if (qForm) {
+        await emit({
+          type: "message",
+          role: "assistant",
+          text: isHi
+            ? "आपके कागजात की जानकारी दर्ज हो गई है। केवल कुछ आवश्यक विवरण भर दीजिए ताकि गणना पूरी हो सके:"
+            : "Your papers have been recorded. Please complete this brief questionnaire to finalize your calculation:",
+        });
+        await pause(ctx, qForm);
+        return;
+      }
+    }
+
+    // Step E: Tax Computation & Challan 280 / Review Card
+    const fresh = (await deps.returns.get(owner, "2026-27")) ?? snapshot;
+    const r = returnSummary(ctx, fresh);
+    const cheaper: "new" | "old" = r.figures.cheaper === "old" ? "old" : "new";
+    const f = r.figures[cheaper];
+
+    if (f.refundOrDue < 0 && !run.state.actionTaken?.kind?.includes("payment")) {
+      const payQ = paymentQuestion(ctx, fresh);
+      if ("question" in payQ) {
+        await emit({
+          type: "message",
+          role: "assistant",
+          text: isHi
+            ? `आपकी रिटर्न की गणना पूरी हो गई है। ${cheaper === "new" ? "नई व्यवस्था" : "पुरानी व्यवस्था"} के तहत ₹${formatMoney(Math.abs(f.refundOrDue), lang)} का कर देय है। फाइल करने से पहले चालान 280 का भुगतान पूरा करें:`
+            : `Your calculation is complete. Under the ${cheaper} regime, self-assessment tax of ₹${formatMoney(Math.abs(f.refundOrDue), lang)} is payable. Please complete Challan 280 before filing:`,
+        });
+        await pause(ctx, payQ.question);
+        return;
+      }
+    }
+
+    // Step F: Zero balance due or refund -> Filing Review Card!
+    const reviewOut = buildReviewCard(ctx, fresh, "filing");
+    if ("card" in reviewOut) {
+      run.state.pendingCard = reviewOut.card;
+      markStep(run, "compute", "done");
+      markStep(run, "review", "active");
+      await emit({ type: "review_card", card: reviewOut.card });
+      run.status = "waiting_for_review";
+      await emit({ type: "status", status: "waiting_for_review" });
+
+      const refundDueText = f.refundOrDue >= 0
+        ? (isHi ? `रिफंड: ₹${formatMoney(f.refundOrDue, lang)}` : `Refund: ₹${formatMoney(f.refundOrDue, lang)}`)
+        : (isHi ? `कर देय: ₹0 (चालान समाहित)` : `Tax Due: ₹0 (Challan reconciled)`);
+
+      await emit({
+        type: "message",
+        role: "assistant",
+        text: isHi
+          ? `आपकी ITR-1 रिटर्न फाइल करने के लिए पूरी तरह तैयार है! अनुशंसित: ${cheaper === "new" ? "नई कर व्यवस्था" : "पुरानी कर व्यवस्था"} (${refundDueText})। कृपया नीचे दिए गए रिव्यू कार्ड की जाँच करें और पुष्टि करें:`
+          : `Your ITR-1 return is completely ready to file! Recommended: ${cheaper} regime (${refundDueText}). Please verify your figures in the review card below and confirm filing:`,
+      });
+      return;
+    }
+  }
+
+  // 5. Compare Regimes workflow
+  const isCompareRegimes =
+    run.task === "compare_regimes" ||
+    /\b(compare|regime|115bac|which is better|old vs new|dono regime|tax difference)\b/i.test(lastUserMsg);
+
+  if (isCompareRegimes && snapshot) {
+    const r = returnSummary(ctx, snapshot);
+    const f = r.figures;
+    const cheaper: "new" | "old" = f.cheaper === "old" ? "old" : "new";
+    const saving = Math.abs(f.new.totalTax - f.old.totalTax);
+    const msg = isHi
+      ? `**कर व्यवस्था तुलना (FY 2025-26 / AY 2026-27):**\n\n` +
+        `• **नई कर व्यवस्था (धारा 115BAC - डिफ़ॉल्ट):** कुल कर ₹${formatMoney(f.new.totalTax, lang)} (कर योग्य आय: ₹${formatMoney(f.new.taxableIncome, lang)}, मानक कटौती ₹75,000)। ${f.new.refundOrDue >= 0 ? `रिफंड: ₹${formatMoney(f.new.refundOrDue, lang)}` : `देय कर: ₹${formatMoney(-f.new.refundOrDue, lang)}`}\n` +
+        `• **पुरानी कर व्यवस्था:** कुल कर ₹${formatMoney(f.old.totalTax, lang)} (कर योग्य आय: ₹${formatMoney(f.old.taxableIncome, lang)}, मानक कटौती ₹50,000, अध्याय VI-A कटौती)। ${f.old.refundOrDue >= 0 ? `रिफंड: ₹${formatMoney(f.old.refundOrDue, lang)}` : `देय कर: ₹${formatMoney(-f.old.refundOrDue, lang)}`}\n\n` +
+        `🏆 **निष्कर्ष:** आपके लिए **${cheaper === "new" ? "नई व्यवस्था" : "पुरानी व्यवस्था"}** अधिक फ़ायदेमंद है (₹${formatMoney(saving, lang)} की बचत)।`
+      : `**Regime Comparison (FY 2025-26 / AY 2026-27):**\n\n` +
+        `• **New Regime (s. 115BAC - Default):** Total Tax ₹${formatMoney(f.new.totalTax, lang)} (Taxable Income: ₹${formatMoney(f.new.taxableIncome, lang)}, Standard Deduction ₹75,000). ${f.new.refundOrDue >= 0 ? `Refund: ₹${formatMoney(f.new.refundOrDue, lang)}` : `Tax Due: ₹${formatMoney(-f.new.refundOrDue, lang)}`}\n` +
+        `• **Old Regime:** Total Tax ₹${formatMoney(f.old.totalTax, lang)} (Taxable Income: ₹${formatMoney(f.old.taxableIncome, lang)}, Standard Deduction ₹50,000, Chapter VI-A deductions). ${f.old.refundOrDue >= 0 ? `Refund: ₹${formatMoney(f.old.refundOrDue, lang)}` : `Tax Due: ₹${formatMoney(-f.old.refundOrDue, lang)}`}\n\n` +
+        `🏆 **Verdict:** The **${cheaper === "new" ? "New Regime" : "Old Regime"}** saves you more (tax saving: ₹${formatMoney(saving, lang)}).`;
+
+    await emit({ type: "message", role: "assistant", text: msg });
+    remember(ctx, { role: "assistant", text: msg });
+    await finish(ctx);
+    return;
+  }
+
+  // 6. Check Reported Figures / Reconcile Facts workflow
+  const isReconcile =
+    run.task === "reconcile_facts" ||
+    /\b(check|reported|figures|ais|tis|26as|records|facts|salary|income|tds)\b/i.test(lastUserMsg);
+
+  if (isReconcile && snapshot) {
+    const rec = reconciliation(snapshot);
+    const facts = snapshot.state.persona.facts ?? [];
+    const taxPaid = snapshot.state.persona.taxPaid ?? [];
+    const grossSalary = facts.filter((f) => f.kind === "salary").reduce((sum, f) => sum + f.amount, 0);
+    const totalTds = taxPaid.reduce((sum, t) => sum + t.amount, 0);
+
+    const msg = isHi
+      ? `**सरकारी रिकॉर्ड एवं AIS/TIS रिपोर्ट (AY 2026-27):**\n\n` +
+        `• **वेतन आय (Salary Income):** ₹${formatMoney(grossSalary, lang)}${facts.find((f) => f.kind === "salary")?.source ? ` (${facts.find((f) => f.kind === "salary")?.source})` : ""}\n` +
+        `• **TDS क्रेडिट जमा:** ₹${formatMoney(totalTds, lang)} (${taxPaid.length} प्रविष्टियाँ)\n` +
+        `• **मिलान स्थिति (Reconciliation):** विभाग के 26AS/AIS स्टेटमेंट में ${rec.rows.length} पंक्तियाँ दर्ज हैं।\n\n` +
+        `क्या आप रिटर्न तैयार करके फाइल करना चाहते हैं?`
+      : `**Official Records & AIS/TIS Summary (AY 2026-27):**\n\n` +
+        `• **Gross Salary Income:** ₹${formatMoney(grossSalary, lang)}${facts.find((f) => f.kind === "salary")?.source ? ` (${facts.find((f) => f.kind === "salary")?.source})` : ""}\n` +
+        `• **TDS Deposited:** ₹${formatMoney(totalTds, lang)} across ${taxPaid.length} entries\n` +
+        `• **Reconciliation Status:** ${rec.rows.length} lines on record across Form 16, AIS, and 26AS.\n\n` +
+        `Would you like to proceed with preparing and filing your return?`;
+
+    await emit({ type: "message", role: "assistant", text: msg });
+    remember(ctx, { role: "assistant", text: msg });
+    await finish(ctx);
+    return;
+  }
+
+  // 7. Deductions / Opportunities
+  const isOpportunities = /\b(save tax|opportunity|opportunities|80c|80d|nps|bachat|deduction)\b/i.test(lastUserMsg);
+  if (isOpportunities && snapshot) {
+    const opps = opportunities(ctx, snapshot);
+    const items = opps.items;
+    const oppList = items.length
+      ? items.slice(0, 4).map((o) => `• **${o.title}**: ${o.why}${o.saving ? ` (बचत: ₹${formatMoney(o.saving, lang)})` : ""}`).join("\n")
+      : (isHi ? "फिलहाल आपकी सभी मुख्य कटौतियां रिकॉर्ड पर हैं।" : "All standard deductions for this profile are already accounted for.");
+
+    const msg = isHi
+      ? `**टैक्स बचत एवं कटौतियाँ:**\n\n${oppList}`
+      : `**Tax Savings & Deductions Analysis:**\n\n${oppList}`;
+
+    await emit({ type: "message", role: "assistant", text: msg });
+    remember(ctx, { role: "assistant", text: msg });
+    await finish(ctx);
+    return;
+  }
+
+  // 8. General statutory rules retrieval
+  const bundle = retrieve({ text: lastUserMsg, period: PERIOD_FY_2025_26, limit: 1 });
+  if (bundle.provisions.length > 0) {
+    const top = bundle.provisions[0];
+    const sourceLabel = top.locator || cite([top.id])[0]?.locator || top.section;
+    const msg = isHi
+      ? `**आयकर नियम जानकारी (${top.section}):**\n\n${top.summary}\n\n${top.ruleText}\n\n*स्रोत: ${sourceLabel}*`
+      : `**Income Tax Provision (${top.section}):**\n\n${top.summary}\n\n${top.ruleText}\n\n*Source: ${sourceLabel}*`;
+    await emit({ type: "message", role: "assistant", text: msg });
+    remember(ctx, { role: "assistant", text: msg });
+    await finish(ctx);
+    return;
+  }
+
+  // 9. Standard honest offline fallback for other miscellaneous queries
+  await emit({ type: "message", role: "assistant", text: s.modelOffline.replace("{reason}", failureReason ?? "no model configured") });
+  await finish(ctx);
+}
+
 export { executePayment };
+

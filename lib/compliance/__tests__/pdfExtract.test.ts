@@ -160,5 +160,26 @@ describe("extractFieldsFromPdf async", () => {
       expect(isEmptyExtraction(fields)).toBe(false);
     }
   });
+
+  it("extracts name, PAN, salary and TDS from Faheem Ahmed AIS / TIS and Form 16", async () => {
+    const aisPath = path.resolve(process.cwd(), "AIS _ TIS Statement - Faheem Ahmed.pdf");
+    if (fs.existsSync(aisPath)) {
+      const bytes = new Uint8Array(fs.readFileSync(aisPath));
+      const fields = await extractFieldsFromPdf(bytes);
+      expect(fields.name).toMatch(/Faheem Ahmed/i);
+      expect(fields.pan).toBe("BZSPA7412M");
+      expect(fields.grossSalary).toBe(1_380_000);
+      expect(fields.employerName).toBe("Tech Mahindra Ltd");
+    }
+
+    const f16Path = path.resolve(process.cwd(), "Form 16 - Faheem Ahmed.pdf");
+    if (fs.existsSync(f16Path)) {
+      const bytes = new Uint8Array(fs.readFileSync(f16Path));
+      const fields = await extractFieldsFromPdf(bytes);
+      expect(fields.name).toMatch(/Faheem Ahmed/i);
+      expect(fields.pan).toBe("BZSPA7412M");
+    }
+  });
 });
+
 

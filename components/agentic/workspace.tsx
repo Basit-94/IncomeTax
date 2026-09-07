@@ -68,6 +68,61 @@ export default function Workspace(props: WorkspaceProps) {
   if (!run) {
     return (
       <div className="flex-1 flex flex-col">
+        {/* CA Review Status Banner on Empty State */}
+        {props.activeCAReview?.status === "pending" && (
+          <div className="px-4 sm:px-6 pt-3">
+            <div className="mx-auto w-full max-w-2xl p-3 bg-amber-bg border border-money/30 rounded-[18px] flex items-center justify-between gap-3 animate-in fade-in">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <MunshiAvatar size={28} state="waiting" />
+                <div className="min-w-0 text-left">
+                  <span className="text-xs font-bold text-amber-ink block truncate">
+                    ⏳ Review Draft Assigned to {props.activeCAReview.targetCaName || "Registered CA"}
+                  </span>
+                  <span className="text-[11px] text-ink-3 block truncate">
+                    Access Code: <strong className="font-mono text-ink">{props.activeCAReview.code}</strong> • Saved as Draft. Your CA can audit this asynchronously.
+                  </span>
+                </div>
+              </div>
+              {props.onReviewWithCA && (
+                <button
+                  type="button"
+                  onClick={props.onReviewWithCA}
+                  className="h-[30px] px-3 rounded-xl bg-paper border border-line text-xs font-semibold text-ink hover:text-money transition cursor-pointer shrink-0"
+                >
+                  View Status
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {props.activeCAReview?.status === "reviewed" && (
+          <div className="px-4 sm:px-6 pt-3">
+            <div className="mx-auto w-full max-w-2xl p-3.5 bg-ok-soft rounded-[18px] flex items-center justify-between gap-3 animate-in fade-in">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <MunshiAvatar size={28} state="happy" />
+                <div className="min-w-0 text-left">
+                  <span className="text-xs font-bold text-ok-ink block truncate">
+                    🎖️ CA Review Complete from {props.activeCAReview.caDetails?.name || props.activeCAReview.targetCaName || "Chartered Accountant"}!
+                  </span>
+                  <span className="text-[11px] text-ink-3 block truncate">
+                    Your CA has audited deductions & figures. Check side-by-side diff before filing.
+                  </span>
+                </div>
+              </div>
+              {props.onOpenComparison && (
+                <button
+                  type="button"
+                  onClick={props.onOpenComparison}
+                  className="ink-surface h-[34px] px-3.5 hover:opacity-90 text-xs font-bold rounded-[12px] transition cursor-pointer shrink-0"
+                >
+                  View Diff →
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="flex-1 flex items-center justify-center px-4 py-10">
           <div className="w-full max-w-2xl text-center space-y-5">
             {/* Munshi ji greets the empty state (handoff: 96 px on empty states). */}
@@ -110,15 +165,43 @@ export default function Workspace(props: WorkspaceProps) {
         {!props.durable && <span className="text-ink-3 truncate">{s.notDurable}</span>}
       </div>
 
+      {/* CA Review Status Banner (Pending or Complete) */}
+      {props.activeCAReview?.status === "pending" && (
+        <div className="px-4 sm:px-6 pt-2">
+          <div className="mx-auto w-full max-w-3xl p-3 bg-amber-bg border border-money/30 rounded-[18px] flex items-center justify-between gap-3 animate-in fade-in">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <MunshiAvatar size={28} state="waiting" />
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-amber-ink block truncate">
+                  ⏳ Review Draft Assigned to {props.activeCAReview.targetCaName || "Registered CA"}
+                </span>
+                <span className="text-[11px] text-ink-3 block truncate">
+                  Access Code: <strong className="font-mono text-ink">{props.activeCAReview.code}</strong> • Saved as Draft. Your CA can audit this asynchronously.
+                </span>
+              </div>
+            </div>
+            {props.onReviewWithCA && (
+              <button
+                type="button"
+                onClick={props.onReviewWithCA}
+                className="h-[30px] px-3 rounded-xl bg-paper border border-line text-xs font-semibold text-ink hover:text-money transition cursor-pointer shrink-0"
+              >
+                View Status
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* CA Review Complete Banner */}
       {props.activeCAReview?.status === "reviewed" && (
         <div className="px-4 sm:px-6 pt-2">
-          <div className="mx-auto w-full max-w-3xl p-3.5 bg-ok-soft rounded-[18px] flex items-center justify-between gap-3">
+          <div className="mx-auto w-full max-w-3xl p-3.5 bg-ok-soft rounded-[18px] flex items-center justify-between gap-3 animate-in fade-in">
             <div className="flex items-center gap-2.5 min-w-0">
               <MunshiAvatar size={28} state="happy" />
               <div className="min-w-0">
                 <span className="text-xs font-bold text-ok-ink block truncate">
-                  🎖️ CA Review Complete from {props.activeCAReview.caDetails?.name || "Chartered Accountant"}!
+                  🎖️ CA Review Complete from {props.activeCAReview.caDetails?.name || props.activeCAReview.targetCaName || "Chartered Accountant"}!
                 </span>
                 <span className="text-[11px] text-ink-3 block truncate">
                   Your CA has audited deductions & figures. Check side-by-side diff before paying challan or filing.
@@ -169,6 +252,46 @@ export default function Workspace(props: WorkspaceProps) {
           )}
         </div>
       </div>
+
+      {run.status === "completed" && (
+        <div className="px-4 sm:px-6 py-2.5 border-t border-line/60 bg-paper-2/60 backdrop-blur-xs">
+          <div className="mx-auto w-full max-w-3xl space-y-1.5">
+            <div className="flex items-center justify-between gap-2 text-xs text-ink-3">
+              <span className="inline-flex items-center gap-1.5 font-medium text-ink-2">
+                <Sparkles size={12} className="text-money" aria-hidden="true" />
+                <span>{props.lang === "hi" ? "अगले 7 उपलब्ध कार्य (AY 2026-27):" : "Next Available Tasks (AY 2026-27):"}</span>
+              </span>
+              <span className="text-[11px] text-ink-3 font-mono">Select or type 1–7</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {[
+                { id: "1", label: "📄 Prepare Return", message: "1. Prepare & File Return" },
+                { id: "2", label: "⚖️ Compare Regimes", message: "2. Compare Tax Regimes" },
+                { id: "3", label: "🔍 Reconcile AIS", message: "3. Reconcile AIS & 26AS" },
+                { id: "4", label: "💳 Pay Tax / Challan 280", message: "4. Pay Tax / Challan 280" },
+                { id: "5", label: "🛡️ Defend Notice", message: "5. Defend Tax Notice" },
+                { id: "6", label: "⚡ Track Refund", message: "6. Track Refund Status" },
+                { id: "7", label: "🏛️ Citizen Tax Vault", message: "7. Citizen Tax Vault" },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  disabled={props.loading}
+                  onClick={() => {
+                    if (item.id === "7" && props.onOpenVault) {
+                      props.onOpenVault();
+                    }
+                    props.onSend({ message: item.message });
+                  }}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-line bg-paper hover:bg-paper-2 hover:border-money/60 text-xs font-medium text-ink transition shadow-2xs hover:shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <Composer s={s} lang={props.lang} disabled={props.loading || run.status === "cancelled" || run.status === "failed"} onSubmit={(message) => props.onSend({ message })} />
     </div>
@@ -413,24 +536,22 @@ function QuestionCard({
               </div>
             ) : null}
 
-            <div className="glass-flat flex flex-col sm:flex-row items-center gap-4 p-3.5 rounded-[14px]">
-              <div className="p-2 bg-white rounded-[12px] border border-line shrink-0">
-                <QRCodeSVG value="upi://pay?pa=epaytax.cbdt@sbi&pn=Income%20Tax%20Department&cu=INR" size={105} />
-              </div>
-              <div className="text-xs space-y-1 text-ink-2">
-                <div className="font-bold text-ink text-sm flex items-center gap-1.5">
-                  <span className="size-2 rounded-full bg-ok inline-block" />
-                  e-Pay Tax · Official CBDT Payment Gateway
+            {(!hasReviewedCA || caDue > 0) && (
+              <div className="glass-flat flex flex-col sm:flex-row items-center gap-4 p-3.5 rounded-[14px]">
+                <div className="p-2 bg-white rounded-[12px] border border-line shrink-0">
+                  <QRCodeSVG value="upi://pay?pa=epaytax.cbdt@sbi&pn=Income%20Tax%20Department&cu=INR" size={105} />
                 </div>
-                <p className="text-ink-3">Payee UPI VPA: <span className="font-mono text-ink font-semibold">epaytax.cbdt@sbi</span></p>
-                <p className="text-ink-3">Major Head: <span className="font-semibold text-ink">0021</span> · Minor Head: <span className="font-semibold text-ink">300 (Self-Assessment)</span></p>
-                <p className="text-ink-3">
-                  {hasReviewedCA && caDue === 0
-                    ? "Your CA audited deductions. Total payable tax is ₹0."
-                    : "Select your payment method below to simulate and credit this challan:"}
-                </p>
+                <div className="text-xs space-y-1 text-ink-2">
+                  <div className="font-bold text-ink text-sm flex items-center gap-1.5">
+                    <span className="size-2 rounded-full bg-ok inline-block" />
+                    e-Pay Tax · Official CBDT Payment Gateway
+                  </div>
+                  <p className="text-ink-3">Payee UPI VPA: <span className="font-mono text-ink font-semibold">epaytax.cbdt@sbi</span></p>
+                  <p className="text-ink-3">Major Head: <span className="font-semibold text-ink">0021</span> · Minor Head: <span className="font-semibold text-ink">300 (Self-Assessment)</span></p>
+                  <p className="text-ink-3">Select your payment method below to simulate and credit this challan:</p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
         {q.expects === "source" && q.sourceOptions ? (
@@ -478,49 +599,77 @@ function QuestionCard({
           </div>
         ) : q.expects === "choice" && q.choices ? (
           <div className="flex flex-wrap gap-2">
-            {q.choices.map((c) => {
-              const isChallanAction = q.resolves === "challan_payment_mode" && c.value.startsWith("pay_");
-              const isCAAction = c.value === "review_with_ca";
-
-              let label = c.label;
-              if (hasReviewedCA && isChallanAction) {
-                if (caDue === 0) {
-                  label = c.label.replace(/₹[\d,]+(\s*Now)?/gi, "₹0 (Nil Due)");
-                } else {
-                  label = c.label.replace(/₹[\d,]+/g, formatMoney(caDue, lang));
-                }
-              }
-
-              return (
+            {q.resolves === "challan_payment_mode" && hasReviewedCA && caDue === 0 ? (
+              <>
                 <button
-                  key={c.value}
                   type="button"
                   disabled={disabled}
                   onClick={() => {
-                    if (isCAAction && hasReviewedCA && onOpenComparison) {
+                    if (onOpenComparison) {
                       onOpenComparison();
-                      return;
+                    } else {
+                      onAnswer("adopt_ca");
                     }
-                    if (isCAAction && onReviewWithCA) {
-                      onReviewWithCA();
-                    }
-                    onAnswer(c.value);
                   }}
-                  className={`rounded-[14px] border h-[38px] px-3.5 text-[13px] font-medium transition-all disabled:opacity-50 cursor-pointer ${
-                    isCAAction
-                      ? "bg-amber-bg border-money/40 text-amber-ink font-bold hover:opacity-90 flex items-center gap-1.5"
-                      : isChallanAction && hasReviewedCA && caDue === 0
-                      ? "bg-ok-soft border-ok/40 text-ok-ink font-semibold hover:opacity-90"
-                      : isChallanAction
-                      ? "bg-amber-bg border-money/40 text-amber-ink font-semibold hover:opacity-90"
-                      : "glass-flat text-ink hover:border-money/60"
-                  }`}
+                  className="rounded-[14px] h-[38px] px-4 text-[13px] font-bold bg-ok-soft border border-ok/50 text-ok-ink hover:opacity-90 flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
                 >
-                  {isCAAction && <Award size={14} className="text-money shrink-0" />}
-                  {label}
+                  <Award size={14} className="text-ok shrink-0" />
+                  <span>🎖️ Adopt CA Recommendations & Proceed to File</span>
                 </button>
-              );
-            })}
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onAnswer("skip_challan_pay")}
+                  className="glass-flat rounded-[14px] h-[38px] px-3.5 text-[13px] font-semibold text-ink-2 hover:text-ink disabled:opacity-50 cursor-pointer"
+                >
+                  <span>Proceed to Return Review (Nil Due)</span>
+                </button>
+              </>
+            ) : (
+              q.choices.map((c) => {
+                const isChallanAction = q.resolves === "challan_payment_mode" && c.value.startsWith("pay_");
+                const isCAAction = c.value === "review_with_ca";
+
+                let label = c.label;
+                if (hasReviewedCA && isChallanAction) {
+                  if (caDue === 0) {
+                    label = c.label.replace(/₹[\d,]+(\s*Now)?/gi, "₹0 (Nil Due)");
+                  } else {
+                    label = c.label.replace(/₹[\d,]+/g, formatMoney(caDue, lang));
+                  }
+                }
+
+                return (
+                  <button
+                    key={c.value}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => {
+                      if (isCAAction && hasReviewedCA && onOpenComparison) {
+                        onOpenComparison();
+                        return;
+                      }
+                      if (isCAAction && onReviewWithCA) {
+                        onReviewWithCA();
+                      }
+                      onAnswer(c.value);
+                    }}
+                    className={`rounded-[14px] border h-[38px] px-3.5 text-[13px] font-medium transition-all disabled:opacity-50 cursor-pointer ${
+                      isCAAction
+                        ? "bg-amber-bg border-money/40 text-amber-ink font-bold hover:opacity-90 flex items-center gap-1.5"
+                        : isChallanAction && hasReviewedCA && caDue === 0
+                        ? "bg-ok-soft border-ok/40 text-ok-ink font-semibold hover:opacity-90"
+                        : isChallanAction
+                        ? "bg-amber-bg border-money/40 text-amber-ink font-semibold hover:opacity-90"
+                        : "glass-flat text-ink hover:border-money/60"
+                    }`}
+                  >
+                    {isCAAction && <Award size={14} className="text-money shrink-0" />}
+                    {label}
+                  </button>
+                );
+              })
+            )}
           </div>
         ) : (
           <form

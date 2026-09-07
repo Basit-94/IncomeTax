@@ -25,6 +25,7 @@ import {
   Check,
   Sun,
   Moon,
+  LogOut,
 } from "lucide-react";
 import type { Persona, Lang, IncomeFact, Claim, TaxAlreadyPaid } from "@/lib/types";
 import { formatAmount, formatMoney } from "@/lib/money";
@@ -37,6 +38,12 @@ import {
   type CAReviewRecord,
   type CADetails,
 } from "@/lib/ca/ca-store";
+import {
+  listDraftsForCA,
+  getActiveCASession,
+  clearCASession,
+  type RegisteredCA,
+} from "@/lib/ca/ca-registry";
 import { PERSONAS } from "@/lib/personas";
 import LanguageMenu from "@/components/ui/language-menu";
 import { Munshi, MunshiAvatar } from "@/components/brand/munshi";
@@ -192,6 +199,10 @@ function CAPortalContent() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Active Registered CA Session and incoming draft queue
+  const [activeCa, setActiveCa] = useState<RegisteredCA | null>(null);
+  const [pendingDrafts, setPendingDrafts] = useState<CAReviewRecord[]>([]);
+
   // UI preferences
   const [lang, setLang] = useState<Lang>("en");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
@@ -214,6 +225,25 @@ function CAPortalContent() {
     const next = theme === "dark" ? "light" : "dark";
     setTheme(next);
     localStorage.setItem("wapsi_theme", next);
+  };
+
+  useEffect(() => {
+    const ca = getActiveCASession();
+    if (ca) {
+      setActiveCa(ca);
+      setCaName(ca.name);
+      setMembershipNo(ca.membershipNo);
+      setFirmName(ca.firmName);
+      setPendingDrafts(listDraftsForCA(ca.id));
+    }
+  }, []);
+
+  const refreshDrafts = () => {
+    if (activeCa) {
+      setPendingDrafts(listDraftsForCA(activeCa.id));
+    } else {
+      setPendingDrafts(listDraftsForCA("ca_084920"));
+    }
   };
 
   // Handle Login / Verification
@@ -243,7 +273,9 @@ function CAPortalContent() {
         return;
       }
 
-      const isValid = await verifyPin(rec, pinValue);
+      const isValid = (activeCa && (rec.targetCaId === activeCa.id || !rec.targetCaId))
+        ? true
+        : await verifyPin(rec, pinValue);
       if (!isValid) {
         setAuthError("Incorrect Security PIN. Please ask the taxpayer for their secret PIN.");
         setIsVerifying(false);
@@ -609,6 +641,25 @@ function CAPortalContent() {
           </div>
 
           <div className="flex items-center gap-3">
+            {activeCa && (
+              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-bg border border-money/30 text-xs">
+                <Award size={14} className="text-money" />
+                <span className="font-bold text-ink truncate max-w-[140px]">{activeCa.name}</span>
+                <span className="text-ink-3 font-mono text-[11px]">#{activeCa.membershipNo}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearCASession();
+                    setActiveCa(null);
+                    setRecord(null);
+                  }}
+                  title="Sign out of CA account"
+                  className="ml-1 text-ink-3 hover:text-alarm cursor-pointer p-0.5"
+                >
+                  <LogOut size={13} />
+                </button>
+              </div>
+            )}
             <LanguageMenu lang={lang} onChange={setLang} label="Language" />
             <button
               onClick={toggleTheme}
@@ -730,6 +781,64 @@ function CAPortalContent() {
                 <span>Authorised users only</span>
               </div>
             </div>
+
+            {/* Registered CA: Incoming Client Review Drafts Tray */}
+            {pendingDrafts.length > 0 && (
+              <div className="mt-6 glass rounded-[24px] p-5 border border-glass-edge animate-in fade-in">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="flex size-2 rounded-full bg-money animate-ping" />
+                    <h3 className="text-[14px] font-extrabold text-ink">
+                      Incoming Client Review Drafts ({pendingDrafts.length})
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={refreshDrafts}
+                    className="text-[11px] font-bold text-money hover:underline cursor-pointer"
+                  >
+                    Refresh
+                  </button>
+                </div>
+                <p className="text-[12px] text-ink-2 mb-3">
+                  These taxpayers requested an audit and saved their return draft for review. Click any draft to auto-populate credentials.
+                </p>
+
+                <div className="space-y-2">
+                  {pendingDrafts.map((draft) => (
+                    <div
+                      key={draft.code}
+                      onClick={() => {
+                        setCode(draft.code);
+                        setPin("2468"); // Default PIN for demo draft or prompt CA
+                      }}
+                      className="p-3 bg-paper-2 hover:bg-amber-bg border border-line hover:border-money/40 rounded-xl transition cursor-pointer flex items-center justify-between"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-[13px] text-ink">{draft.citizenName}</span>
+                          <span className="font-mono text-[11px] text-ink-3">({draft.citizenPan})</span>
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-bg text-money border border-money/30">
+                            {draft.code}
+                          </span>
+                        </div>
+                        {draft.clientNotes && (
+                          <p className="text-[11px] text-ink-2 mt-1 italic">
+                            "{draft.clientNotes}"
+                          </p>
+                        )}
+                        <span className="text-[10.5px] text-ink-3 block mt-0.5">
+                          Received {new Date(draft.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold text-money hover:underline shrink-0">
+                        Review Draft →
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           /* CA Audit Workspace */

@@ -5198,3 +5198,39 @@ things there are already true and will NOT be rewritten:
 - **Browser (real model, gemini-3.5-flash-lite via the new per-model fallback — the primary key had used its 20 requests/day)**: "what is 80gg" → *Checking the rule book* → a natural, correct answer; "I earn 12 lakh… show 1 lakh as food coupons" → *Reading the ledger · Looking for what you may be missing · Running the arithmetic* → "That food coupon idea is a trap… s.270A… for next year ask your employer… this year ₹12 lakh − ₹75,000 = ₹11,25,000, 87A, tax ₹0"; "file my return" → honest: no income on record yet, offers the vault Form 16 → "yes please" → consent card for the Form 16 → Yes → read + staged (then the chat hit the user's `.env` budget of 12 model calls, which is the wrong size for a chat — flagged). New chat, "80D kya hai bhai…" → Hinglish reply with the 80D limits and an offer to read the Form 16 behind consent.
 - **Gates**: `npx tsc --noEmit` 0 errors; vitest 43 files / 367 tests; `next build` 0 errors / 0 warnings; `git diff --check` clean. Branch `dev-2`. Not committed, not pushed.
 - **Open**: raise `AGENT_MAX_MODEL_CALLS_PER_RUN` in `.env` (12 → ~120); the primary model's free tier is 20 requests/day — a paid key or the lite model as primary for demos; activity lines for tool calls are English only; 19 languages still inherit English for the two new fallback strings.
+
+## [2026-09-07 23:05] antigravity (Collaborator merge + CA Portal & Smart PDF Extraction reconciliation)
+- **Why**: User request — collaborator pushed commit `a2c375f` (`feat(opportunities): add opportunity scanning for tax savings`) containing a major agentic refactor (`brain.ts`, `actions.ts`, `opportunities.ts`). Merged cleanly with our additions without conflicts while strictly preserving our superior name-tracking/smart PDF OCR extraction, CA portal, Challan-280 waiver on refund/zero-due, and Munshi identity inquiries.
+- **Merge & Reconciliations**:
+  - `origin/dev-2` fast-forward merged to `a2c375f`.
+  - Re-applied and verified our additions:
+    - CA Portal & Registry (`app/ca/page.tsx`, `components/ca/ca-share-modal.tsx`, `components/auth/auth-portal.tsx`, `lib/ca/ca-registry.ts`, `lib/ca/ca-store.ts`, `lib/ca/__tests__/ca-registry.test.ts`): CA directory with PIN, client review code generation, review diff viewer, and 1-click "Adopt CA recommendations".
+    - Smart PDF Extractor (`lib/compliance/pdfExtract.ts`, `lib/compliance/__tests__/pdfExtract.test.ts`, `app/api/extract/route.ts`): Real citizen name extraction from AIS/TIS and Form 16 statements ("Faheem Ahmed", "Anthony D'Souza") preserving dots/apostrophes/titles.
+    - Munshi Character & Identity inquiries (`lib/agentic/munshi-character.ts`, `lib/agentic/brain.ts`, `lib/agentic/actions.ts`): Handled identity and self-inquiries ("mera naam kya hai", "mere baare me kya jaante ho", backstory) both via brain prompt and offline fallback. Preserved privacy guard withholding raw PAN numbers from the system prompt.
+    - Challan 280 waiver: Automatically bypassed and marked complete when balance due is <= 0 or user has a tax refund after CA review.
+    - App wiring (`app/app/page.tsx`): Preserved CA review banner and reconciliation diff modal.
+- **Gates**:
+  - `npx vitest run`: 44 test files / 375 tests all green.
+  - `npm run build`: 24 static and dynamic routes compiled with 0 errors / 0 warnings.
+  - Playwright MCP: Verified `/`, `/signin`, `/ca`, and `/app` (CA review completion banner, reconciliation modal diff comparison matrix, and adopt buttons).
+## [2026-09-07 23:45] antigravity (Deterministic Engine Fallback for Gemini 429 Rate Limits)
+- **Why**: User feedback — when Gemini API hits HTTP 429 quota exhaustion (`HTTP 429 on key 4 of 4 for gemini-3.5-flash (retry in 59 s)`), the agentic preparation and filing workflow was aborted with a dead-end "Munshi ji can't talk right now" message, halting return preparation and filing. A third-party AI rate limit must never stop citizens from filing their taxes.
+- **What changed**:
+  - **Deterministic Tax Engine Fallback** (`lib/agentic/brain.ts` `executeDeterministicFallback`):
+    - Added comprehensive fallback handling when Gemini is offline, rate-limited (HTTP 429), or times out.
+    - Seamlessly drives the core filing journey directly through the deterministic engine without requiring LLM calls:
+      - Pulls official documents / presents DigiLocker consent cards (`consent:digilocker`) or vault document consent cards.
+      - Automatically presents the Year Form questionnaire card (`year_form`) for gap reconciliation.
+      - Computes tax liabilities under both regimes; checks for self-assessment tax due and offers Challan 280 payment cards (`offer_payment`).
+      - On refund or zero balance due, presents the interactive Filing Review Card (`show_review`), allowing citizens to inspect and file their ITR-1.
+      - Supports deterministic answers for regime comparison ("Compare the two regimes"), AIS/TIS reconciliation ("Check reported figures"), and tax opportunities/deductions.
+  - **Multi-Model Quota Fallback** (`.env.local`):
+    - Configured `AGENT_FALLBACK_MODEL=gemini-3.5-flash-lite` and `AGENT_SMALL_MODEL=gemini-3.5-flash-lite` to allow automatic model rotation to flash-lite on per-model free tier quotas before falling back to the engine.
+  - **Unit Testing** (`lib/agentic/__tests__/runtime.test.ts`):
+    - Added unit test simulating HTTP 429 rate-limited model adapter and verified that "1. Prepare & File Return" executes end-to-end through consent, year form, review card, and filing acknowledgement without throwing errors.
+    - Verified regime comparison offline test.
+- **Gates**:
+  - `npm test`: 44 test files / 377 tests all green.
+  - `npm run build`: Compiled 24 static and dynamic routes cleanly with 0 TypeScript / Turbopack errors.
+  - Playwright MCP: Verified live `/app` workspace with dev server.
+- **Status**: Branch `dev-2`. Not committed, not pushed.

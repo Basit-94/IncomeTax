@@ -15,7 +15,7 @@ import { CHALLAN_MAJOR_HEAD_LABEL, CHALLAN_MINOR_HEAD_LABEL, splitTaxAndCess, sy
 import { generateItrvPdf } from "../compliance/itrvPdf";
 import type { ExtractedFields } from "../compliance/pdfExtract";
 import { NEW_REGIME_ALLOWED_SECTIONS, OLD_REGIME_CLAIM_CAPS } from "../engine/constants";
-import { getLatestReviewForPan } from "../ca/ca-store";
+import { getLatestReviewForPan, acceptCAReview } from "../ca/ca-store";
 import type { AgenticStrings } from "../i18n/agenticStrings";
 import { evaluateSalariedSlice } from "../knowledge/applicability";
 import { assessAdvice, type AdviceAssessment, type AdviceContext } from "../knowledge/advice";
@@ -598,6 +598,15 @@ export async function executePayment(ctx: ActionCtx, snapshot: VersionedReturn, 
   const val = value.toLowerCase();
   if (val === "skip_challan_pay" || val === "cancel") return ["The person chose not to pay the challan now; the balance stays due and filing waits."];
   if (val === "review_with_ca") return ["The person wants a CA to review first. The 'Review with CA' button on their screen generates the CA's access code; the due stays until then."];
+  if (val === "adopt_ca" || val.includes("adopt")) {
+    const caReview = getLatestReviewForPan(owner.pan);
+    if (caReview && caReview.status !== "accepted") {
+      try {
+        await acceptCAReview(caReview.code);
+      } catch {}
+    }
+    return ["The CA's audited figures and regime were accepted. If balance due is ₹0 or a refund, no challan is needed; ready to file."];
+  }
   const caReview = getLatestReviewForPan(owner.pan);
   const hasCa = caReview && (caReview.status === "reviewed" || caReview.status === "accepted") && caReview.caPersona;
   const state = projected(snapshot, run.state.pendingCommands);

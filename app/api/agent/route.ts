@@ -22,6 +22,7 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "fs";
 import { join } from "path";
 import { NextRequest, NextResponse } from "next/server";
+import { executeCopilotConversation } from "../../../lib/agent/copilot";
 
 import { computeTax, compareRegimes } from "../../../lib/engine/tax";
 import type { TaxInput, TaxInputFact } from "../../../lib/engine/types";
@@ -520,95 +521,19 @@ export async function POST(request: NextRequest) {
   const lastUser = messages[messages.length - 1];
   appendTranscript(sessionId, { type: "user", text: lastUser?.text ?? "" });
 
-  const contents: { role: string; parts: GeminiPart[] }[] = messages.map((m) => ({
-    role: m.role,
-    parts: [{ text: m.text }],
-  }));
-
-  const toolEvents: ToolEvent[] = [];
-  const clientActions: ClientAction[] = [];
-
-  // The agent loop: at most 6 tool rounds before the model must speak.
-  for (let round = 0; round < 6; round++) {
-    const result = await callGemini(systemPrompt(ctx), contents);
-    if ("error" in result) {
-      appendTranscript(sessionId, { type: "error", error: result.error });
-      return NextResponse.json(
-        { reply: "", error: result.error, toolEvents, clientActions },
-        { status: 502 },
-      );
-    }
-    const calls = result.parts.filter((p) => p.functionCall);
-    const text = result.parts.map((p) => p.text ?? "").join("");
-
-    if (calls.length === 0) {
-      appendTranscript(sessionId, { type: "model", text });
-      return NextResponse.json({ reply: text, toolEvents, clientActions });
-    }
-
-    // The model called tools: execute (or dispatch) each and answer it.
-    contents.push({ role: "model", parts: result.parts });
-    const responses: GeminiPart[] = [];
-    for (const part of calls) {
-      const call = part.functionCall!;
-      const spec = toolByName(call.name);
-      const args = call.args ?? {};
-      let response: Record<string, unknown>;
-      if (!spec) {
-        response = { error: `Unknown tool ${call.name}` };
-      } else if (spec.side === "client") {
-        // Dispatched to the browser. prepare_filing additionally carries the
-        // exact figures so the human confirms what will actually be filed.
-        const action: ClientAction = { tool: call.name, args };
-        if (call.name === "prepare_filing") {
-          const breakdown = computeTax(taxInputFrom(ctx));
-          action.summary = {
-            totalTax: breakdown.totalTax,
-            refundOrDue: breakdown.refundOrDue,
-            taxableIncome: breakdown.taxableIncome,
-            regime: ctx.regime,
-          };
-          response = {
-            status: "prepared_awaiting_human_confirmation",
-            figures: action.summary,
-            note: "The confirmation card is on the user's screen. Filing happens only if they click confirm.",
-          };
-        } else {
-          response = { status: "dispatched_to_user_screen" };
-        }
-        clientActions.push(action);
-      } else {
-        response = (await runServerTool(call.name, args, ctx)) as Record<string, unknown>;
-        // Defensive wrap: primitives/arrays become an object for functionResponse.
-        if (response === null || typeof response !== "object" || Array.isArray(response)) {
-          response = { result: response };
-        }
-      }
-      toolEvents.push({ tool: call.name, args, result: response });
-      appendTranscript(sessionId, { type: "tool", tool: call.name, args, result: response });
-      responses.push({ functionResponse: { name: call.name, response } });
-    }
-    contents.push({ role: "user", parts: responses });
+  const out = await executeCopilotConversation({ ctx, messages });
+  for (const ev of out.toolEvents) {
+    appendTranscript(sessionId, { type: "tool", tool: ev.tool, args: ev.args, result: ev.result });
   }
-
-  appendTranscript(sessionId, { type: "error", error: "tool round limit reached, attempting final reply" });
-  // Call Gemini one last time with tools disabled to synthesize a final correct answer using the accumulated history and tool results.
-  const finalResult = await callGemini(
-    systemPrompt(ctx) + "\n\nCRITICAL LIMITATION: You have reached the maximum allowed tool rounds. Do not try to invoke any tools. Based on the tool execution history and results above, formulate a final, correct, and helpful response to the user's questions as best as you can with the available data.",
-    contents,
-    true
-  );
-  if (!("error" in finalResult)) {
-    const text = finalResult.parts.map((p) => p.text ?? "").join("");
-    appendTranscript(sessionId, { type: "model", text });
-    return NextResponse.json({ reply: text, toolEvents, clientActions });
+  if (out.error) {
+    appendTranscript(sessionId, { type: "error", error: out.error });
+    return NextResponse.json(
+      { reply: "", error: out.error, toolEvents: out.toolEvents, clientActions: out.clientActions },
+      { status: 502 },
+    );
   }
-
-  return NextResponse.json({
-    reply: "I could not finish within the allowed number of steps — nothing was filed or changed. Please try a narrower request.",
-    toolEvents,
-    clientActions,
-  });
+  appendTranscript(sessionId, { type: "model", text: out.reply });
+  return NextResponse.json(out);
 }
 
 /** T6.7 — the session transcript, reviewable by the user (and a CA). */

@@ -268,15 +268,16 @@ export function extractFieldsFromPdfBytes(bytes: Uint8Array): ExtractedFields {
 
   const nameMatch =
     text.match(
-      // Apostrophes and dots are part of names (D'Souza, A. Kumar) — found on the 2026-09-07 mock PDFs.
-      /(?:Name of (?:the )?Employee|Name of (?:the )?Deductee)[\s:]+([A-Za-z'’.\s]{3,35})/i,
+      /(?:Name of (?:the )?(?:Employee|Deductee|Assessee|Taxpayer)|Taxpayer Name|Assessee Name)[\s:]+([A-Za-z'’.\s]{2,40})/i,
     ) ||
-    // The compact layout: "Name: ANTHONY D'SOUZA PAN: ABCPD1982K" on one line (the employer's line carries TAN, not PAN).
-    text.match(/Name:\s*([A-Za-z'’.][A-Za-z'’. ]{2,34}?)\s+PAN\b/);
+    text.match(/Name:\s*([A-Za-z'’.][A-Za-z'’. ]{2,34}?)(?:\s+(?:PAN|DOB|P AN)\b|\n|$)/i) ||
+    text.match(/\/Title\s*\((?:AIS\s*\/?\s*TIS\s*Statement\s*-\s*|Form\s*16\s*-\s*)([A-Za-z'’.\s]{2,40})\)/i);
   const employerMatch =
     text.match(
       /(?:Name of (?:the )?Employer|Name of (?:the )?Deductor)[\s:]+([A-Za-z\s.,&-]{3,50})/i,
-    ) || text.match(/Name:\s*([A-Za-z&.,'][A-Za-z&.,' -]{2,49}?)\s+TAN\b/);
+    ) ||
+    text.match(/TDS-192\s*\n\s*([A-Za-z\s.,&-]{3,50}?)\s*\n\s*(?:TAN|T AN)/i) ||
+    text.match(/Name:\s*([A-Za-z&.,'][A-Za-z&.,' -]{2,49}?)\s+TAN\b/);
 
   return {
     pan,
@@ -481,19 +482,35 @@ export async function extractFieldsFromPdf(bytes: Uint8Array): Promise<Extracted
 
   const fullText = textLines.join("\n");
 
-  // 1. Employee Name
+  // 1. Employee / Taxpayer Name
   let name = syncFields.name;
   if (!name) {
     const empNameMatch =
       fullText.match(
-        // Apostrophes and dots are part of names (D'Souza, A. Kumar) — found on the 2026-09-07 mock PDFs.
-    /(?:Name of (?:the )?Employee|Name of (?:the )?Deductee)[\s:]+([A-Za-z'’.\s]{3,35})/i,
+        /(?:Name of (?:the )?(?:Employee|Deductee|Assessee|Taxpayer)|Taxpayer Name|Assessee Name)[\s:]+([A-Za-z'’.\s]{2,40})/i,
       ) ||
+      // Multi-line layout where "Name:" is followed by newline and then name, followed by DOB / Aadhaar / PAN / etc.
+      fullText.match(
+        /Name\s*:\s*\n\s*([A-Za-z'’.\s]{2,40}?)\s*\n\s*(?:DOB|Date of Birth|P\s*AN|PAN|Aadhaar|Father|Address|Mobile|Financial|Assessment)/i,
+      ) ||
+      fullText.match(/Name\s*:\s*\n\s*([A-Za-z'’.\s]{2,40})/i) ||
+      fullText.match(/Name\s*:\s*([A-Za-z'’.\s]{2,40})/i) ||
       fullText.match(
         /Name[^\w\n]*\n\s*([A-Za-z\s]{3,35})\s*\n\s*(?:PAN|P AN)/i,
       );
     if (empNameMatch) {
-      name = empNameMatch[1].replace(/\s+/g, " ").trim();
+      const cand = empNameMatch[1].replace(/\s+/g, " ").trim();
+      if (!/^(of the|the employee|the employer|taxpayer|assessee|pan|tan|na|null|undefined)$/i.test(cand)) {
+        name = cand;
+      }
+    }
+  }
+
+  // Title / Metadata fallback if still not found
+  if (!name) {
+    const titleMatch = latin.match(/\/Title\s*\((?:AIS\s*\/?\s*TIS\s*Statement\s*-\s*|Form\s*16\s*-\s*)([A-Za-z'’.\s]{2,40})\)/i);
+    if (titleMatch) {
+      name = titleMatch[1].replace(/\s+/g, " ").trim();
     }
   }
 
@@ -504,6 +521,7 @@ export async function extractFieldsFromPdf(bytes: Uint8Array): Promise<Extracted
       fullText.match(
         /(?:Name of (?:the )?Employer|Name of (?:the )?Deductor)[\s:]+([A-Za-z\s.,&-]{3,50})/i,
       ) ||
+      fullText.match(/TDS-192\s*\n\s*([A-Za-z\s.,&-]{3,50}?)\s*\n\s*(?:TAN|T AN)/i) ||
       fullText.match(
         /Name[^\w\n]*\n\s*([A-Za-z\s.,&<-]{3,50})\s*\n\s*(?:TAN|T AN)/i,
       );
@@ -516,7 +534,7 @@ export async function extractFieldsFromPdf(bytes: Uint8Array): Promise<Extracted
   let pan = syncFields.pan;
   if (!pan) {
     const empMatch = fullText.match(
-      /(?:Employee Details|Deductee)[\s\S]{0,250}?(?:PAN|P AN)[^\w]*([A-Z]{5}[0-9]{4}[A-Z])/i,
+      /(?:Employee Details|Deductee|Taxpayer|Assessee)[\s\S]{0,250}?(?:PAN|P AN)[^\w]*([A-Z]{5}[0-9]{4}[A-Z])/i,
     );
     if (empMatch) {
       pan = empMatch[1];
@@ -529,9 +547,11 @@ export async function extractFieldsFromPdf(bytes: Uint8Array): Promise<Extracted
   // 4. Gross Salary Extraction
   let grossSalary = syncFields.grossSalary;
   if (grossSalary === undefined) {
-    const salMatch = fullText.match(
-      /(?:Salary\s*u\/s\s*17\(1\)|Total\s*Gross\s*Salary|Gross\s*Salary)[\s\S]{0,60}?([0-9]{1,3}(?:,[0-9]{2,3})+)/i,
-    );
+    const salMatch =
+      fullText.match(
+        /(?:Salary\s*u\/s\s*17\(1\)|Total\s*Gross\s*Salary|Gross\s*Salary|Salary\s*\(TDS-192\))[\s\S]{0,60}?([0-9]{1,3}(?:,[0-9]{2,3})+)/i,
+      ) ||
+      fullText.match(/TDS-192[\s\S]{0,80}?TAN:[^\n]+\n\s*([0-9]{1,3}(?:,[0-9]{2,3})+)/i);
     if (salMatch) {
       grossSalary = parseIndianNumber(salMatch[1]);
     }
