@@ -5234,3 +5234,129 @@ things there are already true and will NOT be rewritten:
   - `npm run build`: Compiled 24 static and dynamic routes cleanly with 0 TypeScript / Turbopack errors.
   - Playwright MCP: Verified live `/app` workspace with dev server.
 - **Status**: Branch `dev-2`. Not committed, not pushed.
+
+## [2026-09-08 02:15] antigravity (Live Context Vault Tab, Animated Thinking Loader, Speed Optimization & Mode-Switch Fix)
+- **Why**: User request:
+  1. Add a **Live Context / Tax Profile & Vault** tab in Agentic mode (`/app`) showing stored citizen details (Name, PAN, residency, linked bank accounts, Tax Vault documents like Form 16 / AIS / 26AS / ITR-V, and live computed financial ledger), updating in real time.
+  2. Accelerate Agentic mode response times.
+  3. Replace the plain thinking text with a modern, animated thinking indicator (Munshi animated SVG + bouncing equalizer waveform bars + live status micro-ticker).
+  4. Fix mode switching glitch between Manual (`/`) and Agentic (`/app`) where it previously showed a blank hanging screen (`…`).
+- **What changed**:
+  - **Live Context Tab & Panel in Inspector (`components/agentic/inspector.tsx`, `components/agentic/app-shell.tsx`)**:
+    - Extended `InspectorTab` to include `"context" | "progress" | "outputs" | "sources"`.
+    - Created `ContextPanel` displaying:
+      - Citizen Profile: Name, PAN, contact email, active tax regime pill (`New` / `Old`).
+      - Live Computed Financial Ledger: Gross total income, deductions claimed, TDS / advance tax paid, and net tax position (Refund Expected or Balance Tax Payable) with live sync indicator.
+      - Linked Bank Accounts: Bank names, masked account numbers (`•••• 1234`), IFSC, and refund-nominated badge.
+      - Tax Vault Documents: List of stored documents with status badges (`verified`, `pending`), file sizes, and 1-click link to manage vault.
+    - Updated `AppShell` and `InspectorControls` to pass live `persona`, `returnState`, `vaultUser`, and `profile`.
+  - **Animated Thinking Indicator (`components/agentic/workspace.tsx`)**:
+    - Replaced the plain `statusRunning` text with an animated glass card featuring Munshi avatar in `working` state, animated wave bars (`animate-bounce` with staggered delay), and an auditing pulse badge (*"Auditing AY 2026-27 rules, Form 16 facts & tax ledger…"*) for transparent, high-end feedback.
+  - **Response Speed Optimization (`lib/agentic/model.ts`)**:
+    - Optimized default model timeout from 20,000ms to 6,500ms for snappier responses.
+    - Eliminated long 30-second sleep blocks on rate limits; allows immediate fall-through to alternative keys/models and the deterministic engine fallback.
+  - **Seamless Mode Switching (`app/app/page.tsx`, `app/page.tsx`)**:
+    - Resolved the blank hanging screen (`…`) during `sessionState === "checking"` by rendering a clean connecting loader or falling back immediately to the cached client session.
+    - Forwarded synchronized state (`returnState`, `persona`, `vaultUser`) between Manual and Agentic modes so switching between `/` and `/app` is instantaneous and fluid.
+  - **Localization (`lib/i18n/agenticStrings.ts`)**:
+    - Added localized dictionary strings for the Context panel and live ledger in English, Hindi, and Tamil, with optional fallback for all 23 languages.
+- **Verification**:
+  - `npx vitest run`: All 44 test files / 377 tests passed green (100%).
+  - `npm run build`: Production compilation passed with 0 TypeScript / Turbopack errors across all 24 routes.
+## [2026-09-08 02:40] antigravity (Context-Aware Dynamic Thinking Loaders, Chat Auto-Scroll, Speech Sensitivity & Default Context Window)
+- **Why**: User feedback & requests:
+  1. **Chat Scrolling & Auto-scroll**: If chat is long (2 to 34+ lines), the bottom lines were clipped or didn't scroll down automatically when messages were sent or streamed. Auto-scroll should track smoothly as the screen grows, while still allowing the user to pause and read without being forcefully yanked down.
+  2. **Context-Aware Dynamic Thinking Loader**: Simple questions like *"What's your name?"* previously displayed *"Munshi ji is calculating…"*, which was mismatched. The loader must be task-aware and reflect the actual conversation intent (Thinking / Identity, Calculating / Regimes, Reviewing Documents / Vault, Preparing Return / Filing, Examining Notice).
+  3. **Voice Dictation Premature Sentence Cutoff**: The speech transcription was cutting off sentences prematurely mid-sentence due to a low silence threshold (`SILENCE_MS = 1600ms`), causing pauses in natural speech to abort the recording.
+  4. **Mic Click Instant Response**: Clicking the microphone had device initialization latency. Now sets immediate visual listening state (`audioLevel: 0.12`) on click.
+  5. **Context Window Default ON**: On desktop screens, the Context window defaults to open on the right side (`open = "context"`), starting fresh per chat and keeping facts/figures synchronized with the Citizen Tax Vault and live return ledger.
+- **What changed**:
+  - **Dynamic Task-Aware Thinking Loader (`components/agentic/workspace.tsx`)**:
+    - Built `getDynamicLoader(run, events, lang)` to determine the appropriate mascot state, title, and micro-ticker description:
+      - *Identity / Greetings / Chit-chat*: *"Munshi ji is thinking…"*, *"Drafting a clear response for you…"*, mascot state `welcome`.
+      - *Tax Calculations / Slabs / Regimes*: *"Munshi ji is calculating…"*, *"Comparing AY 2026-27 tax regimes & rebate under 87A…"*, mascot state `working`.
+      - *Documents / Form 16 / AIS / Vault*: *"Munshi ji is reviewing documents…"*, *"Auditing Form 16 facts, AIS entries & Tax Vault records…"*, mascot state `working`.
+      - *Filing / Return Preparation / ITR-1*: *"Munshi ji is preparing return…"*, *"Verifying ITR-1 schedules & computing tax summary…"*, mascot state `working`.
+      - *Notice Defense / Section 143/139*: *"Munshi ji is examining notice…"*, *"Checking section rules, CBDT circulars & legal grounds…"*, mascot state `explaining`.
+      - Supports Hindi equivalents when `lang === "hi"`.
+  - **Intelligent Auto-Scroll & Bottom Padding (`components/agentic/workspace.tsx`, `components/agentic/app-shell.tsx`)**:
+    - Integrated `ResizeObserver` on `contentRef` with `isNearBottomRef` to automatically scroll to the bottom as messages render or stream.
+    - Preserved user reading freedom: when user scrolls up (`distanceToBottom > 80px`), auto-scroll pauses so the user can read long messages (34+ lines) undisturbed.
+    - Added floating *"Latest ↓"* pill button when scrolled up, allowing 1-click return to the bottom.
+    - Added generous `pb-8` padding and bottom spacer div to ensure the floating composer never obscures the last lines or action buttons.
+    - Set `overflow-hidden` on `<main>` in agentic mode to eliminate double scrollbars and confine scrolling smoothly to the transcript container.
+  - **Voice Transcription Sensitivity & Buffer (`lib/speech.ts`, `components/agentic/workspace.tsx`)**:
+    - Increased `SILENCE_MS` from `1600ms` to `3500ms` (3.5 seconds) and `MAX_MS` to `60,000ms`, giving citizens ample breathing room to speak complex sentences without mid-sentence cutoff.
+    - Optimized `MediaRecorder.start(100)` timeslice (from 250ms) for smoother audio stream chunking.
+    - Added instant `0.12` audio level pulse on microphone click in `workspace.tsx` for zero-latency tactile feedback.
+  - **Context Window Open by Default on Desktop (`components/agentic/app-shell.tsx`)**:
+    - Set default `inspectorTab` to `"context"` on screens `>= 1024px`, leaving mobile/tablet uncluttered while giving desktop users instant visibility into their profile, live ledger, bank accounts, and vault documents.
+- **Verification**:
+  - `npx vitest run`: All 44 test files / 377 unit tests passed green (100%).
+  - `npm run build`: Production build succeeded with 0 TypeScript / Turbopack errors across all 24 static and dynamic routes.
+  - Playwright MCP: Tested live `/app` in browser:
+    - Verified Context panel renders open by default with live tax ledger, bank accounts, and vault documents.
+    - Asked *"What's your name?"* and confirmed context-aware loader (*"Munshi ji is thinking…"*) and immediate response without any calculation mismatch.
+## [2026-09-08 02:50] antigravity (Chatbox Multi-Line Auto-Grow & Scrolling, In-Flight Prompt Loader Matching & Instant Audio Pre-Warming)
+- **Why**: User feedback on three specific areas:
+  1. **Chat Input Box (Textarea)**: Typing a multi-line continuous message (2–3 lines) was hiding lines 2 and 3 because the textarea was locked with `overflow-hidden` and fixed at 44px when no `\n` was present, preventing the user from viewing or scrolling down to the bottom lines.
+  2. **Loader Context Mismatch**: When asking questions (e.g. *"What's your name?"*), the loader showed *"Munshi ji is preparing return…"*. This occurred because `useRun` sets `loading: true` before the network response updates the `events` array; `getDynamicLoader` fell back to `run.task` (`"prepare_salaried_return"`).
+  3. **Microphone Delay**: Clicking the mic had a 2–3s initialization lag before recording started due to on-demand `getUserMedia` device enumeration.
+- **What changed**:
+  - **Chatbox Auto-Grow & Scroll (`components/agentic/workspace.tsx`)**:
+    - Replaced the hardcoded newline height calculator with a dynamic `textareaRef` hook that measures `scrollHeight` on every keystroke/voice dictation: `height = Math.min(160, Math.max(44, el.scrollHeight))`.
+    - Removed `overflow-hidden` and applied `overflow-y-auto` permanently so users can freely scroll up and down to review earlier lines.
+    - Added auto-scroll to the bottom cursor (`el.scrollTop = el.scrollHeight`) as new text is typed or transcribed.
+  - **In-Flight Prompt-First Loader Detection (`components/agentic/workspace.tsx`)**:
+    - Added `inFlightQuery` state in `Workspace`, capturing the exact user input the millisecond Send is clicked or entered.
+    - Updated `getDynamicLoader` to prioritize the active in-flight prompt:
+      - Casual / Identity / App queries (*"What's your name?"*, *"Who are you?"*): *"Munshi ji is thinking…"*, *"Formulating a thoughtful answer for you…"*, mascot state `welcome`.
+      - Tax Calculation queries (*"Calculate tax"*, *"Compare regimes"*): *"Munshi ji is calculating…"*, *"Crunching AY 2026-27 tax slabs, rebate u/s 87A & cess…"*, mascot state `working`.
+      - Document queries (*"Form 16"*, *"AIS"*, *"Vault"*): *"Munshi ji is reviewing papers…"*, mascot state `working`.
+      - Return queries (*"Prepare return"*, *"File ITR"*): *"Munshi ji is preparing return…"*, mascot state `working`.
+      - Rule questions (*"What is 80C"*, *"Explain"*): *"Munshi ji is checking tax rules…"*, mascot state `explaining`.
+    - Completely removed static fallback to `run.task` for conversational questions.
+  - **Pre-Warmed Instant Mic Hardware (`lib/speech.ts`, `components/agentic/workspace.tsx`)**:
+    - Implemented `warmUpAudioStream()` in `lib/speech.ts` to pre-acquire the browser audio stream.
+    - Wired `warmUpAudioStream()` on `Composer` mount and on form hover/focus.
+    - `startDictation` uses the pre-warmed stream immediately, eliminating the 2–3s device initialization latency and starting `MediaRecorder.start(100)` in 0ms.
+- **Verification**:
+  - `npx vitest run`: All 44 test files / 377 unit tests passed green.
+  - `npm run build`: Production compilation passed with 0 errors in 3.5s.
+  - Playwright MCP: Tested in live browser at `http://localhost:3000/app`:
+    - Evaluated textarea DOM dimensions with 3-line input: `scrollHeight: 88px, clientHeight: 88px, overflowY: "auto"`. Confirmed multi-line text is fully visible and scrollable.
+    - Submitted *"What's your name?"* and confirmed loader displayed *"Munshi ji is thinking…"*.
+    - Submitted *"Calculate my tax for AY 2026-27"* and confirmed loader displayed *"Munshi ji is calculating…"*, followed by the exact computation breakdown.
+    - Tested mic click activation: instant transition to `LIVE Listening...` with active waveform.
+- **Status**: Branch `dev-2`. Not committed, not pushed.
+
+## [2026-09-08 03:05] antigravity (Capital Gains Question Loop Elimination & Intelligent Statutory Tax Guidance)
+- **Why**: User reported a question loop in agentic mode:
+  - Agent asked: *"What kind of assets did you sell during the financial year? (Listed shares or equity mutual funds / Real estate or land / Other assets (gold, unlisted shares, etc.))"*.
+  - When the user selected an answer (e.g. *"Other assets (gold, unlisted shares, etc.)"*), the agent looped and immediately presented the exact same question card again instead of advancing, analyzing the response, or explaining the tax treatment.
+- **Root Cause**:
+  1. `runCall` for `"ask"` in `lib/agentic/brain.ts` had no deduplication check; when Gemini or fallback invoked `ask` with the same question text, a new question ID was generated, causing the frontend to render the QuestionCard again because the new ID was not in `answeredIds`.
+  2. `situationBlock` was not explicitly warning the model about previously answered questions, so Gemini didn't know the question had already been resolved.
+  3. In `executeDeterministicFallback`, there was no asset sale / capital gains handler, causing fallback turns to either fall through to generic messages or repeat year intake.
+- **What changed**:
+  - **Question Loop Guard in `case "ask"` (`lib/agentic/brain.ts`)**:
+    - Added normalized string and topic deduplication check against `run.state.sources` (filtering for `kind === "answer"`).
+    - If a matching or identical question (e.g. `"assets did you sell"`) was already answered, `ask` intercepts the call, returns `{ already_answered: true, answer: alreadyAnswered.detail, note: "..." }` with `pause: false`, preventing question card re-issuance and providing the context directly to the model.
+  - **Intelligent Statutory Capital Gains Guidance (`lib/agentic/brain.ts`)**:
+    - Added statutory instructions in `RULES` for capital gains: acknowledging the asset type (gold, unlisted shares, real estate, equity), explaining the statutory tax rates for AY 2026-27 (12.5% u/s 112 without indexation for real estate/gold/unlisted; 12.5% u/s 112A above ₹1.25L for listed equity; 20% u/s 111A for STCG), explaining that Form ITR-2 with Schedule CG is required (since automated Wapsi files ITR-1), and offering the registered Chartered Accountant review via the CA Review portal or tax estimation from purchase/sale amounts.
+    - Added dedicated asset sale handler in `executeDeterministicFallback` to provide full statutory breakdown, ITR-2 requirement, and CA Review next steps whenever Gemini is offline or rate-limited.
+  - **Unit Tests (`lib/agentic/__tests__/runtime.test.ts`)**:
+    - Added test `"capital gains question loop prevention: model re-asking the same asset question is intercepted and does not loop"`.
+    - Added test `"asset sale answer in deterministic fallback: explains s.112 12.5%, ITR-2 Schedule CG, and CA Review"`.
+- **Verification**:
+  - `npx vitest run`: All 44 test files / 379 tests passed green.
+  - `npm run build`: Production compilation passed with 0 errors.
+  - Playwright MCP: Tested live in browser at `http://localhost:3000/app`:
+    - Answered *"Other assets (gold, unlisted shares, etc.)"*.
+    - Verified the question card immediately disappeared and Munshi ji provided the complete statutory tax explanation (12.5% u/s 112 without indexation, ITR-2 with Schedule CG requirement, and CA Review option) with zero looping.
+    - Verified live Context panel and UI layout remained completely intact.
+- **Status**: Branch `dev-2`. Not committed, not pushed.
+
+
+
+

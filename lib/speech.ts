@@ -51,10 +51,10 @@ export function whisperLanguageFor(lang: Lang): string | null {
 }
 
 /** Stop after this much silence once speech was heard; never record longer than MAX_MS. */
-const SILENCE_MS = 1600;
-const MAX_MS = 45_000;
+const SILENCE_MS = 3500;
+const MAX_MS = 60_000;
 /** Below this RMS (0–1) a frame counts as silence. Room noise on a laptop mic sits around 0.005–0.01. */
-const SPEECH_RMS = 0.02;
+const SPEECH_RMS = 0.015;
 
 /**
  * Must only be called from an effect or an event handler. Calling it during render would disagree with the
@@ -99,6 +99,29 @@ function extensionFor(mime: string): string {
   return "webm";
 }
 
+let prewarmedStream: MediaStream | null = null;
+let prewarmingPromise: Promise<MediaStream | null> | null = null;
+
+/** Pre-warm the audio input device so clicking the mic starts recording in 0ms without hardware startup latency. */
+export function warmUpAudioStream(): void {
+  if (typeof window === "undefined" || !isSpeechSupported()) return;
+  if (prewarmedStream && prewarmedStream.active && prewarmedStream.getAudioTracks().some((t) => t.readyState === "live")) {
+    return;
+  }
+  if (prewarmingPromise) return;
+  prewarmingPromise = navigator.mediaDevices
+    .getUserMedia({ audio: true })
+    .then((s) => {
+      prewarmedStream = s;
+      prewarmingPromise = null;
+      return s;
+    })
+    .catch(() => {
+      prewarmingPromise = null;
+      return null;
+    });
+}
+
 /**
  * Starts one recording and returns a handle to stop it. Returns `null` when the browser cannot record —
  * the caller is expected to check `isSpeechSupported()` first and say so in the interface.
@@ -121,6 +144,8 @@ export function startDictation(opts: DictationOptions): Dictation | null {
     if (capTimer) clearTimeout(capTimer);
     stream?.getTracks().forEach((t) => t.stop());
     void audioCtx?.close().catch(() => {});
+    // Pre-warm the next stream in background
+    setTimeout(warmUpAudioStream, 500);
   };
 
   const send = async () => {
@@ -170,65 +195,92 @@ export function startDictation(opts: DictationOptions): Dictation | null {
     }
   };
 
-  navigator.mediaDevices
-    .getUserMedia({ audio: true })
-    .then((s) => {
-      if (stopped) {
-        s.getTracks().forEach((t) => t.stop());
-        return;
-      }
-      stream = s;
-      const mimeType = pickMimeType();
-      recorder = new MediaRecorder(s, mimeType ? { mimeType } : undefined);
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.push(e.data);
-      };
-      recorder.onstop = () => void send();
-      recorder.start(250);
-      capTimer = setTimeout(stopRecording, MAX_MS);
+  const setupRecorder = (s: MediaStream) => {
+    if (stopped) {
+      s.getTracks().forEach((t) => t.stop());
+      return;
+    }
+    stream = s;
+    const mimeType = pickMimeType();
+    recorder = new MediaRecorder(s, mimeType ? { mimeType } : undefined);
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunks.push(e.data);
+    };
+    recorder.onstop = () => void send();
+    recorder.start(100);
+    capTimer = setTimeout(stopRecording, MAX_MS);
 
-      // Silence detection: end the phrase on its own, the way the old recognizer did.
-      try {
-        audioCtx = new AudioContext();
-        const source = audioCtx.createMediaStreamSource(s);
-        const analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 1024;
-        source.connect(analyser);
-        const buf = new Uint8Array(analyser.fftSize);
-        meterAvailable = true;
-        let lastLoud = performance.now();
-        const tick = () => {
-          if (stopped) return;
-          analyser.getByteTimeDomainData(buf);
-          let sum = 0;
-          for (let i = 0; i < buf.length; i += 1) {
-            const d = (buf[i] - 128) / 128;
-            sum += d * d;
-          }
-          const rms = Math.sqrt(sum / buf.length);
-          const now = performance.now();
-          const normalized = Math.min(1, Math.max(0, (rms - 0.005) * 14));
-          opts.onAudioLevel?.(normalized);
-          if (rms > SPEECH_RMS) {
-            lastLoud = now;
-            heardSpeech = true;
-          }
-          if (heardSpeech && now - lastLoud > SILENCE_MS) {
-            stopRecording();
-            return;
-          }
-          frame = requestAnimationFrame(tick);
-        };
+    // Silence detection: end the phrase on its own, the way the old recognizer did.
+    try {
+      audioCtx = new AudioContext();
+      const source = audioCtx.createMediaStreamSource(s);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 1024;
+      source.connect(analyser);
+      const buf = new Uint8Array(analyser.fftSize);
+      meterAvailable = true;
+      let lastLoud = performance.now();
+      const tick = () => {
+        if (stopped) return;
+        analyser.getByteTimeDomainData(buf);
+        let sum = 0;
+        for (let i = 0; i < buf.length; i += 1) {
+          const d = (buf[i] - 128) / 128;
+          sum += d * d;
+        }
+        const rms = Math.sqrt(sum / buf.length);
+        const now = performance.now();
+        const normalized = Math.min(1, Math.max(0, (rms - 0.005) * 14));
+        opts.onAudioLevel?.(normalized);
+        if (rms > SPEECH_RMS) {
+          lastLoud = now;
+          heardSpeech = true;
+        }
+        if (heardSpeech && now - lastLoud > SILENCE_MS) {
+          stopRecording();
+          return;
+        }
         frame = requestAnimationFrame(tick);
-      } catch {
-        // No Web Audio: the cap timer and the user's tap end the recording.
-      }
-    })
-    .catch(() => {
+      };
+      frame = requestAnimationFrame(tick);
+    } catch {
+      // No Web Audio: the cap timer and the user's tap end the recording.
+    }
+  };
+
+  // If we already have a live prewarmed stream ready, use it immediately (0ms start delay)!
+  if (prewarmedStream && prewarmedStream.active && prewarmedStream.getAudioTracks().some((t) => t.readyState === "live")) {
+    const s = prewarmedStream;
+    prewarmedStream = null;
+    setupRecorder(s);
+  } else if (prewarmingPromise) {
+    prewarmingPromise
+      .then((s) => {
+        if (s && s.active && s.getAudioTracks().some((t) => t.readyState === "live")) {
+          prewarmedStream = null;
+          setupRecorder(s);
+        } else {
+          navigator.mediaDevices.getUserMedia({ audio: true }).then(setupRecorder).catch(() => {
+            stopped = true;
+            opts.onError("not-allowed");
+            opts.onEnd();
+          });
+        }
+      })
+      .catch(() => {
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(setupRecorder).catch(() => {
+          stopped = true;
+          opts.onError("not-allowed");
+          opts.onEnd();
+        });
+      });
+  } else {
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(setupRecorder).catch(() => {
       stopped = true;
       opts.onError("not-allowed");
       opts.onEnd();
     });
+  }
 
   return {
     stop() {

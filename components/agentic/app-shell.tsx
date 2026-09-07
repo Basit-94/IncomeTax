@@ -54,7 +54,18 @@ export interface AppShellProps {
   onSelectRun: (id: string) => void;
   onNewChat: () => void;
   onDeleteRun?: (id: string) => void;
-  inspector: { steps: PlanStep[]; outputs: OutputRef[]; sources: SourceRef[]; runId: string | null; manualNote?: string; modelNotes?: string[] };
+  inspector: {
+    steps: PlanStep[];
+    outputs: OutputRef[];
+    sources: SourceRef[];
+    runId: string | null;
+    persona?: import("@/lib/types").Persona | null;
+    returnState?: import("@/lib/return/state").ReturnState | null;
+    vaultUser?: import("@/lib/vault/vault-store").CitizenVaultUser | null;
+    profile?: import("@/lib/onboarding").OnboardingProfile | null;
+    manualNote?: string;
+    modelNotes?: string[];
+  };
   /** A short truthful note under the sidebar, e.g. "demo session clears on restart". */
   notice?: string;
   children: ReactNode;
@@ -64,7 +75,12 @@ export default function AppShell(props: AppShellProps) {
   const { s, t, mode, citizen, runs, inspector } = props;
   const [drawer, setDrawer] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [inspectorTab, setInspectorTab] = useState<InspectorTab | null>(null);
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab | null>(() => {
+    if (typeof window !== "undefined" && window.innerWidth >= 1024) {
+      return "context";
+    }
+    return null;
+  });
   const [query, setQuery] = useState("");
 
   useEffect(() => {
@@ -270,7 +286,17 @@ export default function AppShell(props: AppShellProps) {
           }
         >
           <div className="flex items-center gap-2 sm:gap-3">
-            {withSidebar && <InspectorControls s={s} open={inspectorTab} onToggle={(tab) => setInspectorTab((cur) => (cur === tab ? null : tab))} steps={inspector.steps} outputs={inspector.outputs} sources={inspector.sources} />}
+            {withSidebar && (
+              <InspectorControls
+                s={s}
+                open={inspectorTab}
+                onToggle={(tab) => setInspectorTab((cur) => (cur === tab ? null : tab))}
+                steps={inspector.steps}
+                outputs={inspector.outputs}
+                sources={inspector.sources}
+                vaultUser={inspector.vaultUser}
+              />
+            )}
             {/* Phones in Agentic: the title and the compact pill need the width; the language menu lives in the drawer (M4g). */}
             <div className={`relative z-[60] ${withSidebar ? "max-md:hidden" : ""}`}>
               <LanguageMenu lang={props.lang} onChange={props.changeLang} label={t.shell.language} className="shrink-0" />
@@ -303,8 +329,26 @@ export default function AppShell(props: AppShellProps) {
         )}
 
         <div className="flex-1 min-w-0 min-h-0 flex flex-col lg:flex-row">
-          <main id="main-content" className="shell-main flex-1 min-w-0 min-h-0 flex flex-col overflow-y-auto">{props.children}</main>
-          {withSidebar && <InspectorPanel s={s} open={inspectorTab} onToggle={(tab) => setInspectorTab(tab)} onClose={() => setInspectorTab(null)} steps={inspector.steps} outputs={inspector.outputs} sources={inspector.sources} runId={inspector.runId} manualNote={inspector.manualNote} modelNotes={inspector.modelNotes} />}
+          <main id="main-content" className={`shell-main flex-1 min-w-0 min-h-0 flex flex-col ${mode === "agentic" ? "overflow-hidden" : "overflow-y-auto"}`}>{props.children}</main>
+          {withSidebar && (
+            <InspectorPanel
+              s={s}
+              open={inspectorTab}
+              onToggle={(tab) => setInspectorTab(tab)}
+              onClose={() => setInspectorTab(null)}
+              steps={inspector.steps}
+              outputs={inspector.outputs}
+              sources={inspector.sources}
+              runId={inspector.runId}
+              persona={inspector.persona}
+              returnState={inspector.returnState}
+              vaultUser={inspector.vaultUser}
+              profile={inspector.profile}
+              onOpenVault={props.onOpenVault}
+              manualNote={inspector.manualNote}
+              modelNotes={inspector.modelNotes}
+            />
+          )}
         </div>
       </div>
     </div>

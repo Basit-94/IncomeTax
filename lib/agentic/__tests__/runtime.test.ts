@@ -364,5 +364,53 @@ describe("Munshi ji thinks, the engine counts — the conversation loop (2026-09
     expect(texts[0]).toContain("New Regime");
     expect(texts[0]).toContain("Old Regime");
   });
+
+  it("capital gains question loop prevention: model re-asking the same asset question is intercepted and does not loop", async () => {
+    const assetQuestion = "What kind of assets did you sell during the financial year?";
+    const choices = [
+      { value: "shares", label: "Listed shares or equity mutual funds" },
+      { value: "real_estate", label: "Real estate or land" },
+      { value: "other", label: "Other assets (gold, unlisted shares, etc.)" },
+    ];
+    // Model asks the asset question in turn 1. In turn 2, even if it tries to re-ask the exact same question, it is intercepted.
+    const model = scripted([
+      { calls: [{ name: "ask", args: { text: assetQuestion, why: "To know schedules", kind: "choice", choices } }] },
+      // In turn 2, the model mistakenly calls ask with the same question:
+      { calls: [{ name: "ask", args: { text: assetQuestion, why: "To know schedules", kind: "choice", choices } }] },
+      // In the continued hop, the model replies with guidance:
+      { text: "For other assets like gold and unlisted shares, LTCG is taxed at 12.5% u/s 112 and requires Form ITR-2." },
+    ]);
+    const d = deps({ model });
+    const run = await createRun(d, sunita, { message: "I sold some assets this year", lang: "en" });
+    let r = (await advance(d, sunita, run.id))!;
+
+    // Turn 1: Question is shown
+    expect(r.status).toBe("waiting_for_input");
+    expect(r.state.pendingQuestion?.text).toBe(assetQuestion);
+
+    // Turn 2: User answers "Other assets (gold, unlisted shares, etc.)"
+    r = (await advance(d, sunita, r.id, {
+      answer: { questionId: r.state.pendingQuestion!.id, value: "Other assets (gold, unlisted shares, etc.)" },
+    }))!;
+
+    // Turn 2 completed without getting stuck in a loop! The question card is not shown again.
+    expect(r.state.pendingQuestion).toBeUndefined();
+    expect(r.status).toBe("completed");
+    const texts = await said(d, sunita, r);
+    expect(texts[texts.length - 1]).toContain("12.5%");
+  });
+
+  it("asset sale answer in deterministic fallback: explains s.112 12.5%, ITR-2 Schedule CG, and CA Review", async () => {
+    const d = deps({ model: nullModel });
+    const run = await createRun(d, sunita, { message: "I sold gold this year", lang: "en" });
+    const r = (await advance(d, sunita, run.id))!;
+
+    expect(r.status).toBe("completed");
+    const texts = await said(d, sunita, r);
+    expect(texts[0]).toContain("Capital Gains Tax Guidance");
+    expect(texts[0]).toContain("12.5%");
+    expect(texts[0]).toContain("ITR-2 with Schedule CG");
+    expect(texts[0]).toContain("CA Review");
+  });
 });
 

@@ -95,6 +95,14 @@ const RULES = [
   "• Never write an Aadhaar, bank account number or physical address. Never say 'as an AI'. Never list your capabilities unless asked what you can do — and then say it in a sentence, not a numbered menu.",
   "• When the citizen asks about their identity, name, or records ('mera naam kya hai', 'who am i', 'what do you know about me', 'apne bare me bataiye'): answer warmly and directly, confirm their full name, summarize their on-record facts (PAN, employer, salary, TDS deducted), and introduce Munshi ji. Never dump a generic tax regime table when asked about identity.",
   "• When a tool returns blocked or refused, explain it in plain words and offer the next step (a payment before filing, a CA for an income head this engine does not compute).",
+  "• Capital Gains and Asset Sales: When a person reports selling assets (real estate, land, gold, unlisted shares, crypto, or mutual funds):",
+  "  1. Immediately acknowledge the asset type they selected.",
+  "  2. Explain the statutory treatment under FY 2025-26 / AY 2026-27:",
+  "     - Real Estate / Land: Long-term capital gains tax is 12.5% without indexation u/s 112. Requires ITR-2 with Schedule CG.",
+  "     - Gold / Unlisted Shares: Holding period > 24 months is long-term, taxed at 12.5% u/s 112 without indexation; short-term at slab rates. Requires ITR-2.",
+  "     - Listed Equity / Mutual Funds: LTCG u/s 112A taxed at 12.5% above ₹1,25,000 exemption; STCG u/s 111A taxed at 20%.",
+  "  3. State clearly: Wapsi's direct automated return currently processes ITR-1 (salaried income, one house property, and other sources). Because selling real estate, gold or unlisted shares requires ITR-2 with Schedule CG, they can have their return audited and filed through our registered Chartered Accountants via the CA Review portal, or provide their purchase cost and sale consideration if they want an estimate.",
+  "  4. NEVER repeat the question 'What kind of assets did you sell' once they have answered. Proceed directly to the explanation and next steps.",
   "• Language: answer in the language of the person's latest message — English, Hindi (Devanagari) or Hinglish — and switch when they switch. No other language for now; a message in another script gets English.",
 ].join("\n");
 
@@ -127,12 +135,23 @@ function situationBlock(ctx: ActionCtx, snapshot: VersionedReturn | null, papers
   if (run.state.pendingCard) lines.push(`A review card is on screen: ${run.state.pendingCard.title} — waiting for confirm or cancel.`);
   if (run.state.actionTaken) lines.push(`Already happened this run: ${run.state.actionTaken.kind} ${run.state.actionTaken.id} at ${run.state.actionTaken.at}.`);
   if (memory.length) lines.push(`Remembered from earlier visits: ${memory.map((m) => `${m.key}=${String(m.value)}`).join("; ")}.`);
+  const answeredSources = run.state.sources.filter((s) => s.kind === "answer");
+  if (answeredSources.length) {
+    lines.push(`Questions already answered by the person in this conversation: ${answeredSources.map((s) => `"${s.label}" → "${s.detail}"`).join("; ")}. NEVER re-ask these questions; acknowledge the answer and proceed to the next step.`);
+  }
   lines.push(`Model budget left this conversation: ${Math.max(0, deps.budget.maxModelCallsPerRun - run.state.usage.modelCalls)} calls.`);
   return lines.join("\n");
 }
 
 function transcriptMessages(entries: TranscriptEntry[]): ConverseMessage[] {
-  return entries.map((e): ConverseMessage => e.role === "assistant" ? { role: "model", text: e.text } : { role: "user", text: e.role === "tool" ? `[earlier tool result] ${e.text}` : e.text });
+  return entries.map((e): ConverseMessage => {
+    if (e.role === "assistant") return { role: "model", text: e.text };
+    if (e.role === "tool") {
+      if (e.text.startsWith("The person answered ")) return { role: "user", text: e.text };
+      return { role: "user", text: `[earlier tool result] ${e.text}` };
+    }
+    return { role: "user", text: e.text };
+  });
 }
 
 function remember(ctx: ActionCtx, entry: TranscriptEntry) {
@@ -338,6 +357,29 @@ async function runCall(ctx: ActionCtx, call: ToolCall, snapshot: VersionedReturn
         const text = str("text");
         const kind = str("kind");
         if (!text || !["yes_no", "choice", "number", "text", "file"].includes(kind)) return { response: { error: "invalid_args", detail: "text and a valid kind are required" } };
+
+        // Loop prevention: do not re-ask questions that were already answered
+        const norm = (strVal: string) => strVal.toLowerCase().replace(/[^a-z0-9]/g, "");
+        const normText = norm(text);
+        const alreadyAnswered = run.state.sources.find(
+          (s) => s.kind === "answer" && (
+            norm(s.label) === normText ||
+            (s.label.toLowerCase().includes("assets did you sell") && text.toLowerCase().includes("assets did you sell")) ||
+            (normText.length > 15 && norm(s.label).includes(normText)) ||
+            (norm(s.label).length > 15 && normText.includes(norm(s.label)))
+          )
+        );
+        if (alreadyAnswered) {
+          return {
+            response: {
+              already_answered: true,
+              answer: alreadyAnswered.detail,
+              note: `The person ALREADY answered "${alreadyAnswered.detail}" to "${alreadyAnswered.label}". Do NOT ask this question again. In your reply, acknowledge their answer, explain the tax treatment u/s 112/112A, state that ITR-2 with Schedule CG is required, and advise them to file via CA Review or provide buy/sell figures.`,
+            },
+            pause: false,
+          };
+        }
+
         const choices = Array.isArray(a.choices) ? (a.choices as { value?: unknown; label?: unknown }[]).filter((c) => typeof c.value === "string" && typeof c.label === "string").map((c) => ({ value: String(c.value).slice(0, 60), label: String(c.label).slice(0, 80) })).slice(0, 6) : [];
         if (kind === "choice" && choices.length < 2) return { response: { error: "invalid_args", detail: "choice needs 2–6 choices" } };
         const docType = ["FORM_16", "ANNUAL_INFO_STATEMENT", "FORM_26AS", "BANK_STATEMENT", "OTHER"].includes(str("docType")) ? str("docType") : "OTHER";
@@ -478,7 +520,85 @@ export async function executeDeterministicFallback(ctx: ActionCtx, opts: ThinkOp
     return;
   }
 
-  // 2. Pure greetings with model offline
+  // 2. Asset sale / Capital gains inquiry or answer
+  const assetAnswerSource = run.state.sources.find(
+    (s) => s.kind === "answer" && s.label.toLowerCase().includes("assets did you sell")
+  );
+  const isAssetSaleTurn =
+    Boolean(opts.note && /assets did you sell|answered\s*"(other assets|real estate|listed shares|gold|land)/i.test(opts.note)) ||
+    /\b(other assets|real estate|listed shares|sold assets?|capital gains?|unlisted shares?|land|gold|sona|zameen|jameen|shares beche)\b/i.test(lastUserMsg);
+
+  if (isAssetSaleTurn || (assetAnswerSource && !run.state.transcript?.some((t) => t.role === "assistant" && /ITR-2|Schedule CG|12\.5%|Capital Gains/i.test(t.text)))) {
+    const selectedAsset = assetAnswerSource?.detail || (
+      /gold|unlisted|other assets|sona/i.test(lastUserMsg) ? "Other assets (gold, unlisted shares, etc.)"
+      : /real estate|land|property|zameen|jameen/i.test(lastUserMsg) ? "Real estate or land"
+      : /listed|equity|mutual fund/i.test(lastUserMsg) ? "Listed shares or equity mutual funds"
+      : "Assets sold during the financial year"
+    );
+    const isGoldOrUnlisted = /other assets|gold|unlisted|sona/i.test(selectedAsset);
+    const isRealEstate = /real estate|land|property|zameen|jameen/i.test(selectedAsset);
+
+    // Check if user provided purchase and sale figures to calculate
+    const amounts = (lastUserMsg.match(/\b\d+[\d,]*(?:\.\d+)?\b/g) || [])
+      .map((n) => Number(n.replace(/,/g, "")))
+      .filter((n) => n > 0 && n < 1_000_000_000);
+
+    let calculationSnippet = "";
+    if (amounts.length >= 2) {
+      const cost = Math.min(...amounts);
+      const sale = Math.max(...amounts);
+      const gain = sale - cost;
+      if (gain > 0) {
+        const taxRate = isGoldOrUnlisted || isRealEstate ? 0.125 : 0.125;
+        const taxBeforeCess = Math.round(gain * taxRate);
+        const cess = Math.round(taxBeforeCess * 0.04);
+        const totalTax = taxBeforeCess + cess;
+        calculationSnippet = isHi
+          ? `\n\n📊 **अनुमानित गणना (Tentative Computation):**\n• बिक्री मूल्य (Sale): ₹${formatMoney(sale, lang)}\n• खरीद लागत (Cost): ₹${formatMoney(cost, lang)}\n• शुद्ध पूंजीगत लाभ (Net Gain): ₹${formatMoney(gain, lang)}\n• अनुमानित कर (12.5% + 4% सेस u/s 112): **₹${formatMoney(totalTax, lang)}**`
+          : `\n\n📊 **Tentative Computation:**\n• Sale Consideration: ₹${formatMoney(sale, lang)}\n• Purchase Cost: ₹${formatMoney(cost, lang)}\n• Net Capital Gain: ₹${formatMoney(gain, lang)}\n• Estimated Tax (12.5% + 4% cess u/s 112): **₹${formatMoney(totalTax, lang)}**`;
+      }
+    }
+
+    let specificExplanation = "";
+    if (isGoldOrUnlisted) {
+      specificExplanation = isHi
+        ? "सोना (Gold) या गैर-सूचीबद्ध शेयर (Unlisted Shares) की बिक्री पर: यदि इन्हें 24 महीने से अधिक समय तक रखा गया है, तो दीर्घकालिक पूंजीगत लाभ (LTCG) बिना इंडेक्सेशन के धारा 112 के तहत 12.5% की दर से कर योग्य है। 24 महीने से कम अवधि पर यह अल्पकालिक लाभ (STCG) सामान्य टैक्स स्लैब के अनुसार कर योग्य होता है।"
+        : "For Other Assets (Gold / Unlisted Shares): Holding period exceeding 24 months qualifies as Long-Term Capital Gains (LTCG), taxed at 12.5% without indexation u/s 112. Holding under 24 months is treated as Short-Term Capital Gains (STCG) and taxed at your regular income tax slab rates.";
+    } else if (isRealEstate) {
+      specificExplanation = isHi
+        ? "अचल संपत्ति या भूमि (Real Estate / Land) की बिक्री पर: 24 महीने से अधिक अवधि के बाद बिक्री पर धारा 112 के तहत 12.5% की फ्लैट दर से LTCG लगता है (इंडेक्सेशन लाभ समाप्त कर दिया गया है)।"
+        : "For Real Estate or Land: Sales after a 24-month holding period incur Long-Term Capital Gains (LTCG) taxed at 12.5% flat u/s 112 without indexation benefit (as per Finance Act 2024/2025).";
+    } else {
+      specificExplanation = isHi
+        ? "सूचीबद्ध शेयर या इक्विटी म्यूचुअल फंड (Listed Shares / Equity MFs): धारा 112A के तहत ₹1,25,000 से अधिक के दीर्घकालिक लाभ पर 12.5% कर देय है। अल्पकालिक लाभ (STCG u/s 111A) पर 20% की दर से टैक्स लगता है।"
+        : "For Listed Shares / Equity Mutual Funds: Long-Term Capital Gains (LTCG u/s 112A) are taxed at 12.5% on gains exceeding the ₹1,25,000 annual exemption limit. Short-Term Capital Gains (STCG u/s 111A) are taxed at 20%.";
+    }
+
+    const reply = isHi
+      ? `**पूंजीगत लाभ (Capital Gains) कर नियम — AY 2026-27:**\n\n` +
+        `आपने चुना: **${selectedAsset}**\n\n` +
+        `• **टैक्स दर:** ${specificExplanation}${calculationSnippet}\n\n` +
+        `📋 **फॉर्म आवश्यकता (ITR-2):**\n` +
+        `आयकर नियमों के अनुसार, पूंजीगत लाभ (Schedule CG) की रिपोर्टिंग के लिए **Form ITR-2** अनिवार्य है। Wapsi का प्रत्यक्ष स्वचालित रिटर्न वर्तमान में वेतनभोगी व्यक्तियों के लिए सीधे ITR-1 तैयार करता है।\n\n` +
+        `🤝 **आगे के विकल्प:**\n` +
+        `1. आप हमारे पंजीकृत चार्टर्ड अकाउंटेंट के माध्यम से **CA Review** पोर्टल पर अपनी ITR-2 रिटर्न तैयार और फाइल करवा सकते हैं।\n` +
+        `2. यदि आप केवल अनुमानित कर जानना चाहते हैं, तो कृपया अपनी खरीद कीमत (Purchase Cost), खरीद वर्ष और कुल बिक्री राशि (Sale Consideration) बताएं।`
+      : `**Capital Gains Tax Guidance — FY 2025-26 / AY 2026-27:**\n\n` +
+        `You selected: **${selectedAsset}**\n\n` +
+        `• **Tax Treatment:** ${specificExplanation}${calculationSnippet}\n\n` +
+        `📋 **Filing Form Requirement (ITR-2):**\n` +
+        `Under Income-tax Act provisions, reporting capital gains from asset sales requires **Form ITR-2 with Schedule CG**. Wapsi's direct automated return filing currently files Form ITR-1 (for salary, one house property, and interest income).\n\n` +
+        `🤝 **Next Steps & Options:**\n` +
+        `1. **File with CA Assistance:** You can seamlessly get your ITR-2 reviewed, optimized, and filed through our verified Chartered Accountants via the **CA Review** portal.\n` +
+        `2. **Tax Estimate:** If you would like an immediate estimate of your capital gains liability, please share your purchase cost, purchase date/year, and final sale consideration.`;
+
+    await emit({ type: "message", role: "assistant", text: reply });
+    remember(ctx, { role: "assistant", text: reply });
+    await finish(ctx);
+    return;
+  }
+
+  // 3. Pure greetings with model offline
   const isBareGreeting = /^(namaste|hello|hi|hey|pranam|namashkar)[\s.!]*$/i.test(lastUserMsg.trim());
   if (isBareGreeting && run.task === "explain" && !opts.note) {
     await emit({ type: "message", role: "assistant", text: s.modelOffline.replace("{reason}", failureReason ?? "no model configured") });

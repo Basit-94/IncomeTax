@@ -387,21 +387,32 @@ function AgenticWorkspace() {
         activeRunId={activeRunId}
         onSelectRun={(id) => router.push(`/app?run=${id}`)}
         onNewChat={() => router.push("/app")}
-        onDeleteRun={(id) => void runs.remove(id).then(() => activeRunId === id && router.push("/app"))}
+        onDeleteRun={(id: string) => void runs.remove(id).then(() => activeRunId === id && router.push("/app"))}
         inspector={{
           steps: view.run?.steps ?? [],
           outputs: view.outputs,
           sources: view.run?.sources ?? [],
           runId: view.run?.id ?? null,
+          persona,
+          returnState,
+          vaultUser,
+          profile: loadOnboardingProfile(),
           // Every turn where the model's wording was not used, with the reason — never silent (docs/VOICE.md).
           modelNotes: view.events.flatMap((e) => (e.payload.type === "tool_outcome" && e.payload.tool.startsWith("model.") && !e.payload.ok ? [e.payload.summary] : [])),
         }}
         notice={server && !server.durable ? s.notDurable : undefined}
       >
-        {sessionState === "checking" ? (
-          <div className="flex-1 flex items-center justify-center text-sm text-ink-3 font-mono">…</div>
-        ) : sessionState !== "ready" ? (
-          <SignInPrompt s={s} state={sessionState} onDemo={signInDemo} onManual={() => router.push("/")} />
+        {sessionState === "checking" && !client ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-3">
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-4 bg-money rounded-full animate-bounce [animation-delay:-0.3s]" />
+              <span className="w-1.5 h-5 bg-money rounded-full animate-bounce [animation-delay:-0.15s]" />
+              <span className="w-1.5 h-4 bg-money rounded-full animate-bounce" />
+            </div>
+            <p className="text-xs text-ink-3 font-mono">Connecting to Munshi ji…</p>
+          </div>
+        ) : sessionState !== "ready" && !client ? (
+          <SignInPrompt s={s} state={sessionState === "unverifiable" ? "unverifiable" : "none"} onDemo={signInDemo} onManual={() => router.push("/")} />
         ) : runs.status === "unavailable" ? (
           <div className="flex-1 flex items-center justify-center p-8">
             <p className="max-w-md text-center text-sm text-ink-2 leading-relaxed">{s.storageUnavailable}</p>

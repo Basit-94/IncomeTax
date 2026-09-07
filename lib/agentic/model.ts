@@ -102,13 +102,11 @@ export function geminiModel(env: Record<string, string | undefined> = process.en
   // gemini-3.5-flash usually still has the day's budget on gemini-3.5-flash-lite (found live 2026-09-07).
   const models = [...new Set([env.AGENT_MODEL, env.AGENT_FALLBACK_MODEL, env.AGENT_SMALL_MODEL].map(clean).filter(Boolean))];
   const model = models[0];
-  // A thinking turn with tools takes longer than a phrasing; 20 s by default, env wins.
-  const timeoutMs = Number(env.AGENT_MODEL_TIMEOUT_MS) || 20_000;
+  // A thinking turn with tools takes longer than a phrasing; 6.5 s default for fast responses, env wins.
+  const timeoutMs = Number(env.AGENT_MODEL_TIMEOUT_MS) || 6_500;
   const maxTokens = Number(env.AGENT_MAX_TOKENS_PER_REPLY) || 2048;
   if (keys.length === 0 || !model) return nullModel;
-  // A key+model pair that hit HTTP 429 rests until the API's own "retry in Ns" (an hour when it gives none). A short
-  // wait (≤ 30 s: a per-minute cap) is simply waited out and the same pair tried again once — the old rule benched a
-  // key for the whole process on any 429, which turned a one-minute stall into a dead agent (2026-09-07).
+  // A key+model pair that hit HTTP 429 rests until the API's own "retry in Ns" (an hour when it gives none).
   const restingUntil = new Map<string, number>();
   const pairs = keys.flatMap((key) => models.map((m) => ({ key, model: m, id: `${keys.indexOf(key) + 1}:${m}` })));
   let lastFailure: string | null = null;
@@ -137,43 +135,43 @@ export function geminiModel(env: Record<string, string | undefined> = process.en
       for (const pair of live) {
         let waited = false;
         for (;;) {
-        try {
-          const res = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${pair.model}:generateContent`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "x-goog-api-key": pair.key },
-            body: JSON.stringify(body),
-            signal: AbortSignal.timeout(timeoutMs),
-          });
-          if (res.status === 429 || res.status === 404) {
-            const hint = res.status === 429 ? retryHint(await res.text().catch(() => "")) : null;
-            if (hint !== null && hint <= 30 && !waited) {
-              waited = true;
-              await new Promise((r) => setTimeout(r, Math.ceil(hint * 1000) + 500));
-              continue; // the same pair, once, after the wait the API asked for
+          try {
+            const res = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${pair.model}:generateContent`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "x-goog-api-key": pair.key },
+              body: JSON.stringify(body),
+              signal: AbortSignal.timeout(timeoutMs),
+            });
+            if (res.status === 429 || res.status === 404) {
+              const hint = res.status === 429 ? retryHint(await res.text().catch(() => "")) : null;
+              if (hint !== null && hint <= 2 && !waited) {
+                waited = true;
+                await new Promise((r) => setTimeout(r, Math.ceil(hint * 1000) + 50));
+                continue;
+              }
+              restingUntil.set(pair.id, Date.now() + (hint !== null ? Math.ceil(hint * 1000) : 45_000));
+              lastFailure = `HTTP ${res.status} on key ${keys.indexOf(pair.key) + 1} of ${keys.length} for ${pair.model}${hint !== null ? ` (retry in ${Math.ceil(hint)} s)` : ""}`;
+              break;
             }
-            restingUntil.set(pair.id, Date.now() + (hint !== null ? Math.ceil(hint * 1000) : 3_600_000));
-            lastFailure = `HTTP ${res.status} on key ${keys.indexOf(pair.key) + 1} of ${keys.length} for ${pair.model}${hint !== null ? ` (retry in ${Math.ceil(hint)} s)` : ""}`;
-            break; // the next model on this key, then the next key
+            if (!res.ok) {
+              lastFailure = `HTTP ${res.status}`;
+              return null;
+            }
+            const data = await res.json();
+            const parts: GeminiPart[] = data?.candidates?.[0]?.content?.parts ?? [];
+            const text = parts.filter((p) => typeof p.text === "string" && !p.thought).map((p) => p.text as string).join("").trim();
+            const calls: ToolCall[] = parts.filter((p) => p.functionCall?.name).map((p) => ({ name: p.functionCall!.name, args: (p.functionCall!.args ?? {}) as Record<string, unknown> }));
+            const tokens = Number(data?.usageMetadata?.totalTokenCount) || Math.ceil((input.system.length + JSON.stringify(input.messages).length + text.length) / 4);
+            if (!text && calls.length === 0) {
+              lastFailure = `empty reply (${data?.candidates?.[0]?.finishReason ?? "no candidate"})`;
+              return null;
+            }
+            lastFailure = null;
+            return { text, calls, raw: parts, usage: { tokens, model: pair.model } };
+          } catch (err) {
+            lastFailure = err instanceof Error && err.name === "TimeoutError" ? `timeout after ${timeoutMs} ms` : "network error";
+            break;
           }
-          if (!res.ok) {
-            lastFailure = `HTTP ${res.status}`;
-            return null;
-          }
-          const data = await res.json();
-          const parts: GeminiPart[] = data?.candidates?.[0]?.content?.parts ?? [];
-          const text = parts.filter((p) => typeof p.text === "string" && !p.thought).map((p) => p.text as string).join("").trim();
-          const calls: ToolCall[] = parts.filter((p) => p.functionCall?.name).map((p) => ({ name: p.functionCall!.name, args: (p.functionCall!.args ?? {}) as Record<string, unknown> }));
-          const tokens = Number(data?.usageMetadata?.totalTokenCount) || Math.ceil((input.system.length + JSON.stringify(input.messages).length + text.length) / 4);
-          if (!text && calls.length === 0) {
-            lastFailure = `empty reply (${data?.candidates?.[0]?.finishReason ?? "no candidate"})`;
-            return null;
-          }
-          lastFailure = null;
-          return { text, calls, raw: parts, usage: { tokens, model: pair.model } };
-        } catch (err) {
-          lastFailure = err instanceof Error && err.name === "TimeoutError" ? `timeout after ${timeoutMs} ms` : "network error";
-          return null;
-        }
         }
       }
       return null;

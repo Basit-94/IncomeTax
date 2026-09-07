@@ -2487,7 +2487,17 @@ export default function WapsiPrototype() {
         activeRunId={null}
         onSelectRun={(id) => router.push(`/app?run=${id}`)}
         onNewChat={() => router.push("/app")}
-        inspector={{ steps: [], outputs: [], sources: [], runId: null, manualNote: shellStrings.manualInspectorNote }}
+        inspector={{
+          steps: [],
+          outputs: [],
+          sources: [],
+          runId: null,
+          persona,
+          returnState,
+          vaultUser,
+          profile: onboardingProfile,
+          manualNote: shellStrings.manualInspectorNote,
+        }}
       >
         <div className="service-shell flex-1 text-ink selection:bg-money/20 relative overflow-x-hidden flex flex-col">{children}</div>
       </AppShell>

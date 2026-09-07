@@ -8,13 +8,13 @@
  * obvious.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Check, CircleDot, Download, FileText, Mic, MicOff, Send, ShieldAlert, ShieldCheck, Sparkles, Upload, X, Award } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowDown, ArrowRight, Check, CircleDot, Download, FileText, Mic, MicOff, Send, ShieldAlert, ShieldCheck, Sparkles, Upload, X, Award } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import type { PublicRun } from "@/lib/agentic/runtime";
 import type { OutputRef, Question, ReviewCard, RunEvent, RunTask } from "@/lib/agentic/types";
 import type { AgenticStrings } from "@/lib/i18n/agenticStrings";
-import { isSpeechSupported, startDictation, type Dictation } from "@/lib/speech";
+import { isSpeechSupported, startDictation, warmUpAudioStream, type Dictation } from "@/lib/speech";
 import { SpeakingWaveform, TranscribingAnimation } from "./audio-waveforms";
 import type { Lang } from "@/lib/types";
 import { renderAssistantText } from "../agent/format";
@@ -53,12 +53,187 @@ const STATUS_KEY: Record<PublicRun["status"], keyof AgenticStrings> = {
   failed: "statusFailed",
 };
 
+function getDynamicLoader(inFlightQuery: string | null, run: PublicRun | null, events: RunEvent[], lang: Lang): { title: string; subtext: string; state: MunshiState } {
+  let userText = inFlightQuery?.toLowerCase().trim() || "";
+  if (!userText) {
+    for (let i = events.length - 1; i >= 0; i--) {
+      const p = events[i].payload;
+      if (p.type === "message" && p.role === "user") {
+        userText = p.text.toLowerCase().trim();
+        break;
+      }
+    }
+  }
+
+  const isHindi = lang === "hi";
+
+  // 1. Casual / Identity / App / Conversational questions (e.g. "What's your name?", "Who are you?", "Munshi ji")
+  const isIdentityOrChat =
+    !userText ||
+    /^(who are you|what is your name|what'?s your name|what are you|who r u|who made you|tum kaun ho|aap kaun ho|apka naam|aapka naam|nam kya|naam kya|kya naam|hello|hi|hey|kya hal|kaise ho|namaste|pranam|help|who|what)\b/i.test(userText) ||
+    userText.includes("your name") ||
+    userText.includes("naam") ||
+    userText.includes("who are you") ||
+    userText === "munshi" ||
+    userText === "munshi ji" ||
+    userText === "munshiji";
+
+  if (isIdentityOrChat && (!userText.includes("tax") && !userText.includes("return") && !userText.includes("calc") && !userText.includes("file"))) {
+    return {
+      title: isHindi ? "मुंशी जी सोच रहे हैं…" : "Munshi ji is thinking…",
+      subtext: isHindi ? "आपके सवाल का उत्तर तैयार कर रहे हैं…" : "Formulating a thoughtful answer for you…",
+      state: "welcome",
+    };
+  }
+
+  // 2. Tax Calculation / Slabs / Regimes / Computations
+  const isTaxCalc =
+    /\b(calculate|calc|tax on|compare|regime|saving|rebate|87a|80c|80d|deduction|slab|nps|hra|tax payable|how much tax|kitna tax)\b/i.test(userText) ||
+    userText.startsWith("2.") ||
+    userText.includes("compare tax regimes");
+
+  if (isTaxCalc) {
+    return {
+      title: isHindi ? "मुंशी जी कर गणना कर रहे हैं…" : "Munshi ji is calculating…",
+      subtext: isHindi ? "AY 2026-27 के स्लैब, 87A छूट और टैक्स देयता की गणना हो रही है…" : "Crunching AY 2026-27 tax slabs, rebate u/s 87A & cess…",
+      state: "working",
+    };
+  }
+
+  // 3. Document / Vault / AIS / 26AS / Form 16 / Salary slips
+  const isDocOrVault =
+    /\b(form 16|form16|ais|26as|tis|vault|document|documents|paper|papers|salary slip|bank statement|upload|proof|tds certificate)\b/i.test(userText) ||
+    userText.startsWith("3.") ||
+    userText.startsWith("7.") ||
+    userText.includes("reconcile ais");
+
+  if (isDocOrVault) {
+    return {
+      title: isHindi ? "मुंशी जी दस्तावेज़ जांच रहे हैं…" : "Munshi ji is reviewing papers…",
+      subtext: isHindi ? "Form 16, AIS और टैक्स वॉल्ट के रिकॉर्ड्स का मिलान हो रहा है…" : "Cross-checking Form 16 facts, AIS entries & Tax Vault records…",
+      state: "working",
+    };
+  }
+
+  // 4. Return preparation / filing / ITR submission
+  const isFilingOrReturn =
+    /\b(prepare return|file return|prepare & file|submit return|file my itr|itr-1|itr 1|file itr|filing)\b/i.test(userText) ||
+    userText.startsWith("1.") ||
+    (userText.includes("return") && (userText.includes("file") || userText.includes("prepare")));
+
+  if (isFilingOrReturn) {
+    return {
+      title: isHindi ? "मुंशी जी रिटर्न तैयार कर रहे हैं…" : "Munshi ji is preparing return…",
+      subtext: isHindi ? "ITR-1 सारांश और शेड्यूल का मिलान किया जा रहा है…" : "Assembling ITR-1 schedules & drafting return summary…",
+      state: "working",
+    };
+  }
+
+  // 5. Tax Rules / Explanations
+  const isExplanation = /\b(what is|explain|rule|section|how does|tell me about|guide|help)\b/i.test(userText);
+
+  if (isExplanation) {
+    return {
+      title: isHindi ? "मुंशी जी नियम जांच रहे हैं…" : "Munshi ji is checking tax rules…",
+      subtext: isHindi ? "CBDT नियमों और आयकर प्रावधानों की समीक्षा हो रही है…" : "Looking up CBDT provisions & income tax guidelines…",
+      state: "explaining",
+    };
+  }
+
+  // 6. Notice defense / legal
+  const isNotice = /\b(notice|defend|143\(1\)|139\(9\)|penalty|scrutiny|appeal)\b/i.test(userText) || userText.startsWith("5.");
+
+  if (isNotice) {
+    return {
+      title: isHindi ? "मुंशी जी नोटिस का विश्लेषण कर रहे हैं…" : "Munshi ji is examining notice…",
+      subtext: isHindi ? "CBDT नियमों और वैधानिक आधार की समीक्षा की जा रही है…" : "Reviewing statutory notice & defense grounds…",
+      state: "explaining",
+    };
+  }
+
+  // Default fallback: thinking
+  return {
+    title: isHindi ? "मुंशी जी सोच रहे हैं…" : "Munshi ji is thinking…",
+    subtext: isHindi ? "आपके सवाल का विश्लेषण और समाधान तैयार हो रहा है…" : "Analyzing your question & consulting the books…",
+    state: "welcome",
+  };
+}
+
 export default function Workspace(props: WorkspaceProps) {
   const { s, run, events } = props;
   const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const [inFlightQuery, setInFlightQuery] = useState<string | null>(null);
+
+  const scrollToBottom = useCallback((smooth = true) => {
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: smooth ? "smooth" : "auto",
+    });
+  }, []);
+
+  const handleScroll = useCallback(() => {
+    if (!scrollRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+    const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+    const nearBottom = distanceToBottom < 80;
+    isNearBottomRef.current = nearBottom;
+    setShowScrollBottom(distanceToBottom > 150);
+  }, []);
+
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [events.length, run?.status]);
+    if (!props.loading && run?.status !== "running") {
+      setInFlightQuery(null);
+    }
+  }, [props.loading, run?.status]);
+
+  useEffect(() => {
+    if (isNearBottomRef.current) {
+      const t = setTimeout(() => scrollToBottom(true), 50);
+      return () => clearTimeout(t);
+    }
+  }, [events.length, run?.status, props.loading, scrollToBottom]);
+
+  useEffect(() => {
+    if (!contentRef.current) return;
+    const observer = new ResizeObserver(() => {
+      if (isNearBottomRef.current) {
+        scrollToBottom(true);
+      }
+    });
+    observer.observe(contentRef.current);
+    return () => observer.disconnect();
+  }, [scrollToBottom]);
+
+  const dynamicLoader = useMemo(
+    () => getDynamicLoader(inFlightQuery, run, events, props.lang),
+    [inFlightQuery, run, events, props.lang]
+  );
+
+  const handleUserSend = useCallback(
+    (input: Parameters<typeof props.onSend>[0]) => {
+      isNearBottomRef.current = true;
+      if (input.message) {
+        setInFlightQuery(input.message);
+      }
+      props.onSend(input);
+      setTimeout(() => scrollToBottom(true), 40);
+    },
+    [props, scrollToBottom]
+  );
+
+  const handleStart = useCallback(
+    (input: Parameters<typeof props.onStart>[0]) => {
+      if (input.message) {
+        setInFlightQuery(input.message);
+      }
+      props.onStart(input);
+    },
+    [props]
+  );
 
   const answeredIds = useMemo(() => new Set(events.filter((e) => e.payload.type === "answer").map((e) => (e.payload as { questionId: string }).questionId)), [events]);
   const confirmedIds = useMemo(() => new Set(events.filter((e) => e.payload.type === "confirmation").map((e) => (e.payload as { cardId: string }).cardId)), [events]);
@@ -142,14 +317,24 @@ export default function Workspace(props: WorkspaceProps) {
                   ["reconcile_facts", s.taskReconcile],
                 ] as const
               ).map(([task, label]) => (
-                <button key={task} type="button" onClick={() => props.onStart({ task })} className="glass-flat inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold text-ink-2 hover:border-money/60 transition cursor-pointer">
+                <button
+                  key={task}
+                  type="button"
+                  onClick={() => {
+                    if (task === "prepare_salaried_return") setInFlightQuery("Prepare return");
+                    else if (task === "compare_regimes") setInFlightQuery("Compare regimes");
+                    else if (task === "reconcile_facts") setInFlightQuery("Reconcile AIS");
+                    props.onStart({ task });
+                  }}
+                  className="glass-flat inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold text-ink-2 hover:border-money/60 transition cursor-pointer"
+                >
                   <Sparkles size={13} className="text-money" aria-hidden="true" /> {label} <ArrowRight size={13} className="text-ink-3" aria-hidden="true" />
                 </button>
               ))}
             </div>
           </div>
         </div>
-        <Composer s={s} lang={props.lang} disabled={props.loading} onSubmit={(message) => props.onStart({ message })} />
+        <Composer s={s} lang={props.lang} disabled={props.loading} onSubmit={(message) => handleStart({ message })} />
       </div>
     );
   }
@@ -221,8 +406,12 @@ export default function Workspace(props: WorkspaceProps) {
         </div>
       )}
 
-      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4">
-        <div className="mx-auto w-full max-w-3xl space-y-3">
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 scroll-smooth relative"
+      >
+        <div ref={contentRef} className="mx-auto w-full max-w-3xl space-y-3 pb-8">
           {events.map((e) => (
             <EventRow key={e.seq} event={e} s={s} answered={answeredIds} confirmed={confirmedIds} questions={questionsById} runId={run.id} onOpenVault={props.onOpenVault} />
           ))}
@@ -235,22 +424,55 @@ export default function Workspace(props: WorkspaceProps) {
               onReviewWithCA={props.onReviewWithCA}
               activeCAReview={props.activeCAReview}
               onOpenComparison={props.onOpenComparison}
-              onAnswer={(value) => props.onSend({ answer: { questionId: run.pendingQuestion!.id, value } })}
+              onAnswer={(value) => handleUserSend({ answer: { questionId: run.pendingQuestion!.id, value } })}
             />
           )}
           {run.pendingCard && !confirmedIds.has(run.pendingCard.id) && (
-            <ReviewCardView card={run.pendingCard} s={s} disabled={props.loading} onReviewWithCA={props.onReviewWithCA} onDecide={(accepted) => props.onSend({ confirm: { cardId: run.pendingCard!.id, accepted } })} />
+            <ReviewCardView card={run.pendingCard} s={s} disabled={props.loading} onReviewWithCA={props.onReviewWithCA} onDecide={(accepted) => handleUserSend({ confirm: { cardId: run.pendingCard!.id, accepted } })} />
           )}
           {(props.loading || run.status === "running") && !props.error && (
-            <div className="flex items-center gap-3 px-1" role="status">
-              <Munshi size={72} state="working" />
-              <p className="text-xs text-ink-3 font-mono">{s.statusRunning}…</p>
+            <div className="flex items-center gap-3.5 p-3.5 rounded-[18px] bg-paper border border-line/70 shadow-xs animate-in fade-in" role="status">
+              <Munshi size={52} state={dynamicLoader.state} />
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-ink flex items-center gap-1.5">
+                    <Sparkles size={13} className="text-money animate-pulse" />
+                    <span>{dynamicLoader.title}</span>
+                  </span>
+                  <div className="flex items-center gap-0.5 ml-auto">
+                    <span className="w-1 h-3.5 bg-money rounded-full animate-bounce [animation-delay:-0.3s]" />
+                    <span className="w-1 h-4 bg-money rounded-full animate-bounce [animation-delay:-0.15s]" />
+                    <span className="w-1 h-3.5 bg-money rounded-full animate-bounce" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-ink-3 font-mono">
+                  <span className="size-1.5 rounded-full bg-money animate-ping" />
+                  <span className="truncate">{dynamicLoader.subtext}</span>
+                </div>
+              </div>
             </div>
           )}
           {props.error && (
             <p className="text-xs font-semibold text-alarm bg-alarm-soft border border-alarm/30 rounded-lg px-3 py-2">{props.error}</p>
           )}
+          <div className="h-4 shrink-0" aria-hidden="true" />
         </div>
+
+        {/* Quick jump to bottom pill if user scrolled up */}
+        {showScrollBottom && (
+          <button
+            type="button"
+            onClick={() => {
+              isNearBottomRef.current = true;
+              scrollToBottom(true);
+            }}
+            className="sticky bottom-3 float-right z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-paper/95 border border-line shadow-md text-xs font-semibold text-ink hover:text-money hover:border-money transition animate-in fade-in cursor-pointer"
+            aria-label="Scroll to newest message"
+          >
+            <ArrowDown size={13} className="text-money" />
+            <span>Latest</span>
+          </button>
+        )}
       </div>
 
       {run.status === "completed" && (
@@ -281,7 +503,7 @@ export default function Workspace(props: WorkspaceProps) {
                     if (item.id === "7" && props.onOpenVault) {
                       props.onOpenVault();
                     }
-                    props.onSend({ message: item.message });
+                    handleUserSend({ message: item.message });
                   }}
                   className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-line bg-paper hover:bg-paper-2 hover:border-money/60 text-xs font-medium text-ink transition shadow-2xs hover:shadow-xs cursor-pointer disabled:opacity-50"
                 >
@@ -293,7 +515,7 @@ export default function Workspace(props: WorkspaceProps) {
         </div>
       )}
 
-      <Composer s={s} lang={props.lang} disabled={props.loading || run.status === "cancelled" || run.status === "failed"} onSubmit={(message) => props.onSend({ message })} />
+      <Composer s={s} lang={props.lang} disabled={props.loading || run.status === "cancelled" || run.status === "failed"} onSubmit={(message) => handleUserSend({ message })} />
     </div>
   );
 }
@@ -808,6 +1030,7 @@ function ReviewCardView({ card, s, disabled, inert = false, onDecide, onReviewWi
 /** `variant="ask"` is the landing's single pill box with an "Ask →" button; `"chat"` is the transcript composer. */
 export function Composer({ s, lang, disabled, onSubmit, variant = "chat", placeholder }: { s: AgenticStrings; lang: Lang; disabled: boolean; onSubmit: (message: string) => void; variant?: "chat" | "ask"; placeholder?: string }) {
   const [text, setText] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const ask = variant === "ask";
   const hint = placeholder ?? s.composerPlaceholder;
   const [speechState, setSpeechState] = useState<"idle" | "listening" | "transcribing">("idle");
@@ -817,6 +1040,21 @@ export function Composer({ s, lang, disabled, onSubmit, variant = "chat", placeh
   const dictation = useRef<Dictation | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const speech = typeof window !== "undefined" && isSpeechSupported();
+
+  // Pre-warm audio hardware so clicking the mic starts recording in 0ms
+  useEffect(() => {
+    warmUpAudioStream();
+  }, []);
+
+  // Dynamically auto-expand height up to 160px and ensure vertical scrollability
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const newHeight = Math.min(160, Math.max(44, el.scrollHeight));
+    el.style.height = `${newHeight}px`;
+    el.scrollTop = el.scrollHeight;
+  }, [text]);
 
   useEffect(() => {
     return () => {
@@ -854,7 +1092,7 @@ export function Composer({ s, lang, disabled, onSubmit, variant = "chat", placeh
 
     setSpeechNote(null);
     setSpeechState("listening");
-    setAudioLevel(0);
+    setAudioLevel(0.12);
     setRecordingSeconds(0);
 
     clearTimer();
@@ -929,6 +1167,8 @@ export function Composer({ s, lang, disabled, onSubmit, variant = "chat", placeh
   return (
     <div className={ask ? "shrink-0 pt-2" : "shrink-0 px-4 sm:px-6 pb-4 pt-2 max-md:pb-7 max-md:bg-[linear-gradient(to_top,var(--color-paper)_70%,transparent)]"}>
       <form
+        onMouseEnter={warmUpAudioStream}
+        onFocus={warmUpAudioStream}
         className={`glass mx-auto w-full flex items-center gap-2.5 p-2 ps-5 max-md:p-1.5 max-md:ps-3.5 rounded-[20px] max-md:rounded-[18px] transition-all duration-200 ${
           isListening
             ? "border-[var(--primary-accent)]/80 shadow-[var(--accent-glow)] ring-2 ring-[var(--primary-accent)]/20"
@@ -953,6 +1193,7 @@ export function Composer({ s, lang, disabled, onSubmit, variant = "chat", placeh
         ) : (
           <>
             <textarea
+              ref={textareaRef}
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => {
@@ -965,8 +1206,8 @@ export function Composer({ s, lang, disabled, onSubmit, variant = "chat", placeh
               placeholder={hint}
               aria-label={hint}
               disabled={disabled}
-              className={`flex-1 resize-none bg-transparent px-1 py-[11px] text-[16px] leading-[22px] text-ink placeholder:text-ink-3 outline-none max-h-40 disabled:opacity-60 ${text.includes("\n") ? "" : "overflow-hidden"}`}
-              style={{ height: `${Math.min(166, 44 + (text.split("\n").length - 1) * 22)}px` }}
+              className="flex-1 resize-none bg-transparent px-1 py-[11px] text-[16px] leading-[22px] text-ink placeholder:text-ink-3 outline-none max-h-40 overflow-y-auto disabled:opacity-60"
+              style={{ height: "44px" }}
             />
             {speech && (
               <button

@@ -33,9 +33,21 @@ export interface AgenticStrings {
   progress: string;
   outputs: string;
   sources: string;
+  context?: string;
   inspectorEmptyProgress: string;
   inspectorEmptyOutputs: string;
   inspectorEmptySources: string;
+  inspectorEmptyContext?: string;
+  contextCitizenProfile?: string;
+  contextBankAccounts?: string;
+  contextVaultDocs?: string;
+  contextLiveLedger?: string;
+  contextGrossIncome?: string;
+  contextDeductions?: string;
+  contextTaxPaid?: string;
+  contextNetPosition?: string;
+  contextRefundDue?: string;
+  contextTaxPayable?: string;
   manualInspectorNote: string;
   sourcesDocuments: string;
   sourcesAnswers: string;
@@ -234,10 +246,22 @@ const en: AgenticStrings = {
   progress: "Progress",
   outputs: "Outputs",
   sources: "Sources",
+  context: "Context",
   inspectorEmptyProgress: "No steps yet. Progress appears here once a task starts.",
   inspectorEmptyOutputs: "Nothing produced yet. Files appear here only after they are stored.",
   inspectorEmptySources: "Nothing used yet. The documents, answers and rules this chat relies on will be listed here.",
-  manualInspectorNote: "Progress, outputs and sources belong to an Agentic chat. Switch to Agentic to see them for the current chat.",
+  inspectorEmptyContext: "No stored citizen profile or return data yet. Sign in or load a return to view live context.",
+  contextCitizenProfile: "Citizen Profile",
+  contextBankAccounts: "Bank Accounts",
+  contextVaultDocs: "Tax Vault Documents",
+  contextLiveLedger: "Live Tax Ledger",
+  contextGrossIncome: "Gross Total Income",
+  contextDeductions: "Deductions Claimed",
+  contextTaxPaid: "TDS / Advance Tax Paid",
+  contextNetPosition: "Net Tax Position",
+  contextRefundDue: "Refund Expected",
+  contextTaxPayable: "Balance Tax Payable",
+  manualInspectorNote: "Progress, outputs, sources and live context belong to an Agentic chat. Switch to Agentic to see them for the current chat.",
   sourcesDocuments: "Your documents",
   sourcesAnswers: "Information you provided",
   sourcesRules: "Tax rules",
@@ -421,10 +445,22 @@ const hi: AgenticStrings = {
   progress: "प्रगति",
   outputs: "परिणाम",
   sources: "स्रोत",
+  context: "संदर्भ",
   inspectorEmptyProgress: "अभी कोई चरण नहीं। काम शुरू होने पर प्रगति यहाँ दिखेगी।",
   inspectorEmptyOutputs: "अभी कुछ नहीं बना। फ़ाइलें सहेजे जाने के बाद ही यहाँ दिखती हैं।",
   inspectorEmptySources: "अभी कुछ प्रयोग नहीं हुआ। इस बातचीत में प्रयुक्त दस्तावेज़, उत्तर और नियम यहाँ सूचीबद्ध होंगे।",
-  manualInspectorNote: "प्रगति, परिणाम और स्रोत एजेंटिक बातचीत के होते हैं। वर्तमान बातचीत के लिए इन्हें देखने हेतु एजेंटिक पर जाएँ।",
+  inspectorEmptyContext: "अभी कोई नागरिक प्रोफ़ाइल या रिटर्न डेटा नहीं है। लाइव संदर्भ देखने के लिए साइन इन करें।",
+  contextCitizenProfile: "नागरिक प्रोफ़ाइल",
+  contextBankAccounts: "बैंक खाते",
+  contextVaultDocs: "कर वॉल्ट दस्तावेज़",
+  contextLiveLedger: "लाइव कर बहीखाता",
+  contextGrossIncome: "सकल कुल आय",
+  contextDeductions: "दावा की गई कटौतियाँ",
+  contextTaxPaid: "टीडीएस / अग्रिम कर भुगतान",
+  contextNetPosition: "शुद्ध कर स्थिति",
+  contextRefundDue: "अपेक्षित रिफंड",
+  contextTaxPayable: "देय शेष कर",
+  manualInspectorNote: "प्रगति, परिणाम, स्रोत और संदर्भ एजेंटिक बातचीत के होते हैं। वर्तमान बातचीत के लिए इन्हें देखने हेतु एजेंटिक पर जाएँ।",
   sourcesDocuments: "आपके दस्तावेज़",
   sourcesAnswers: "आपके द्वारा दी गई जानकारी",
   sourcesRules: "कर नियम",
@@ -608,10 +644,22 @@ const ta: AgenticStrings = {
   progress: "முன்னேற்றம்",
   outputs: "வெளியீடுகள்",
   sources: "ஆதாரங்கள்",
+  context: "சூழல்",
   inspectorEmptyProgress: "இன்னும் படிகள் இல்லை. பணி தொடங்கியதும் முன்னேற்றம் இங்கு தோன்றும்.",
   inspectorEmptyOutputs: "இன்னும் எதுவும் உருவாக்கப்படவில்லை. கோப்புகள் சேமிக்கப்பட்ட பின்பே இங்கு தோன்றும்.",
   inspectorEmptySources: "இன்னும் எதுவும் பயன்படுத்தப்படவில்லை. இந்த உரையாடல் சார்ந்த ஆவணங்கள், பதில்கள், விதிகள் இங்கு பட்டியலிடப்படும்.",
-  manualInspectorNote: "முன்னேற்றம், வெளியீடுகள், ஆதாரங்கள் ஏஜென்டிக் உரையாடலுக்கு உரியவை. தற்போதைய உரையாடலுக்கு அவற்றைக் காண ஏஜென்டிக்கிற்கு மாறுங்கள்.",
+  inspectorEmptyContext: "இன்னும் குடிமக்கள் சுயவிவரமோ ரிட்டர்ன் தகவலோ இல்லை. நேரடி சூழலைக் காண உள்நுழையவும்.",
+  contextCitizenProfile: "குடிமகன் சுயவிவரம்",
+  contextBankAccounts: "வங்கி கணக்குகள்",
+  contextVaultDocs: "வரி பெட்டக ஆவணங்கள்",
+  contextLiveLedger: "நேரடி வரி பேரேடு",
+  contextGrossIncome: "மொத்த வருமானம்",
+  contextDeductions: "கோரப்பட்ட கழிவுகள்",
+  contextTaxPaid: "டிடிஎஸ் / முன்கூட்டிய வரி செலுத்தியது",
+  contextNetPosition: "நிகர வரி நிலை",
+  contextRefundDue: "எதிர்பார்க்கப்படும் ரீஃபண்ட்",
+  contextTaxPayable: "செலுத்த வேண்டிய வரி",
+  manualInspectorNote: "முன்னேற்றம், வெளியீடுகள், ஆதாரங்கள் மற்றும் நேரடி சூழல் ஏஜென்டிக் உரையாடலுக்கு உரியவை. தற்போதைய உரையாடலுக்கு அவற்றைக் காண ஏஜென்டிக்கிற்கு மாறுங்கள்.",
   sourcesDocuments: "உங்கள் ஆவணங்கள்",
   sourcesAnswers: "நீங்கள் தந்த தகவல்",
   sourcesRules: "வரி விதிகள்",
