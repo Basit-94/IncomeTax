@@ -148,7 +148,7 @@ card but not the summary" (log 2026-09-02 and 2026-09-03 00:50).
   (`lib/return-sync-client.ts`; 409 → adopt) and pulls on arrival, so an agent filing shows on `/`.
   Filing (`lib/return/filing.ts`): accepted | failed (non-2xx → never "filed") | unreachable →
   explicit `simulatedFiling` (`SIM-…`, deterministic from the idempotency key).
-- **Agent runtime** — `lib/agentic/runtime.ts`: server-owned steps classify → plan → gather →
+- **Agent runtime — SUPERSEDED 2026-09-07 by §14 (the step machine, the intent classifier and the canned answers are gone; kept here as history):** `lib/agentic/runtime.ts`: server-owned steps classify → plan → gather →
   resolve → compute → review → confirm → act → outputs; events persisted before streaming; review
   cards bound to `{ revision, snapshotHash }` (stale → re-review); replay never re-executes; PAN /
   Aadhaar / mobile / email / IFSC / token redaction and injection stripping (`redact.ts`); Gemini
@@ -342,7 +342,7 @@ five years?"*
   `compareRegimes` as-is and at the ₹4.5L `DEDUCTION_CEILING`; `filingSection` by 31 July), the one form's answers
   (housing, extras, deductions, no-papers figures), `carriedFrom` for next April's defaults (`carryDefaults` —
   answers carry, documents never).
-- **Agentic** (`lib/agentic/runtime.ts`, `intake.ts`): opener → DigiLocker-first source card → consent → review
+- **Agentic** (`lib/agentic/runtime.ts`; `intake.ts` removed the same evening — see §14, the model now orders the journey itself): opener → DigiLocker-first source card → consent → review
   (facts spoken with provenance) → one form (`gapGroups`) → verdict; ITR-2/3 verdicts are said and left to the
   guard. **Manual** (`app/page.tsx` facts step): `YearPapersCard` (POST `/api/digilocker` → `import_document` +
   `record_year_intake`) and `YearGapForm` (→ `record_year_intake`, `declare_income`, `declare_claim`).
@@ -394,3 +394,71 @@ five years?"*
   `speakResult` phrases task results, RAG/smart answers and CA lines with every figure and table row kept;
   the recommendation is phrased around `recommendationText`; the task close is one sentence; receipts, review
   cards, badges and legal lines stay templates. `SayInput.shape` (`review`) tells the model to keep rows.
+
+## 14. Munshi ji thinks, the engine counts — the model-first agent (2026-09-07, evening)
+
+User direction, verbatim in spirit: "Why are we training it for only these few questions? I want it to be completely free of
+any gates… respond naturally, not templatized… guide them through the whole journey… it feels like an if-else chatbot…
+remove every single template." Approved as three phases in one go; all three landed.
+
+- **What went** — `lib/agentic/planner.ts` (intent regexes, capability inquiry, 9-step plan), `voice.ts` (small-talk
+  detector, canned replies, warm line), `response.ts` (recommendation template), `intake.ts` (the deterministic question
+  sequencer), `lib/knowledge/smart-answers.ts` (14 hand-written Q&A), `emitGreetingCapabilities` / `emitTaskCapabilitiesSummary`
+  (the seven-task menus), `handleChosenTask` (canned task results), `askTaxExpert` and `classify` on the model adapter,
+  50 dead template keys in `agenticStrings.ts` + `agentic/bn.ts`, and their tests (planner, voice, intake).
+- **What is** — `lib/agentic/brain.ts` `think()`: one turn = one bounded loop (≤ 8 hops) of Gemini **function calling**
+  (`model.ts` `converse`: `tools`, `functionCall` / `functionResponse`, raw parts echoed so thought signatures survive).
+  The system prompt is the character bible (`munshi-character.ts`) + operating rules + a **statutory facts block** for
+  FY 2025-26 + **the person's situation** (profile seed, the return with engine figures under both regimes, papers in the
+  vault with ids and consent state, the DigiLocker catalogue, staged changes, pending cards, what already happened, memory,
+  model budget left — never an identifier). The transcript (`RunWorkingState.transcript`, last 40 entries: user, assistant,
+  compact tool results) is replayed each turn.
+- **Tools** (all in `brain.ts` `TOOLS`, executed by `runCall` through `lib/agentic/actions.ts`): `get_return`,
+  `compute_tax` (what-ifs: extra claims / income / regime / smaller salary), `scan_opportunities`, `lookup_rules`
+  (BM25 retrieval, cited), `list_documents`, `read_document` (refused until consent), `request_consent` (digilocker |
+  documents — a yes/no card, STOP), `ask` (yes_no / choice / number / text / file — a card, STOP), `ask_year_form` (the gap
+  form, STOP), `stage_changes` (declare_income / declare_claim / correct_fact / choose_regime → `pendingCommands`),
+  `show_review` (filing | regime | corrections → review card, STOP; blocked: balance_due / already_filed / unsupported /
+  regime_election), `offer_payment` (challan card, STOP), `refund_status`, `notices`, `reconcile`, `remember`.
+  A model tool call is never a confirmation: every STOP tool leaves `waiting_for_input` / `waiting_for_review`, and the
+  runtime (`runtime.ts`) turns the answer into its consequence — the pull, the read, the staged form, the payment, the
+  applied commands (bound to `{revision, snapshotHash}`, stale → dropped, replay → no-op) — then hands the model a
+  `[what just happened]` note and lets it speak.
+- **Opportunities engine** — `lib/knowledge/opportunities.ts` `scanOpportunities(persona, {regime, intake})`: every
+  saving is `computeTax` twice, measured against the cheaper regime as things stand. Lanes: `claim_now` (80C headroom,
+  80CCD(1B), 80D self/parents, 80TTA on interest on record, 80GG when renting without HRA, 24(b) when own home, the regime
+  switch), `next_year` (employer NPS 80CCD(2) both regimes — priced at 10% of salary as an illustration, meal vouchers
+  ₹26,400 old regime only, LTA), `check` (housing unknown, 87A marginal relief in play). The "12 LPA food coupons" case
+  is answered honestly: nothing received this year is relabelled; the structure is arranged with the employer for next year.
+- **The check** — `say.ts` `whyRejected(text, {allowed, actionHappened})`: every digit sequence in a reply must exist in
+  what the model was shown this turn (system prompt, transcript, tool results, the person's words; numbers ≤ 31 pass as
+  dates/counts); no filed/paid claim unless it happened; no PAN/Aadhaar shape; no self-description. A refused reply gets
+  one `[check]` nudge, then `replyUnverified` is said and the refusal is recorded as `tool_outcome model.converse ok:false`.
+  Advice words are allowed — Munshi ji advises; the figures are still the engine's.
+- **Gates** — the reviewer gate (plan §5.7) is now a *disclosure*, not a stop: `actions.ts isSoftIssue` treats
+  `tax_review_required`, `facts_incomplete`, `claim_unverified`, `election_unverified`, `residency_unknown` and a
+  `deduction_unsupported` on a section the engine knows as things to say once; `capital_gains_unsupported`,
+  `income_head_unsupported`, `surcharge_unsupported`, `invalid_values`, `income_unknown`, `unsupported_period`,
+  `nonresident_calculation`, `aggregate_cap_unsupported` still block a card. The guard is re-run at confirmation.
+- **Templates that remain** (docs/VOICE.md): the challan receipt table, the filing receipt line, the review card and its
+  rows, the "simulated" badge, the consent/ form cards' fallback labels, legal lines (injection, budget, stale review,
+  error), and the two honest fallbacks `modelOffline` / `replyUnverified`. Activity lines for tool calls are English.
+- **Model** — `converse` only; `AGENT_MODEL_TIMEOUT_MS` default 20 000 (a thinking turn with tools). HTTP 429 handling
+  rebuilt the same evening: a `retry in Ns` ≤ 30 s is waited out once on the same key+model; otherwise the pair rests
+  until the hint (an hour without one); free-tier quotas are **per model**, so `AGENT_FALLBACK_MODEL` / `AGENT_SMALL_MODEL`
+  are tried on the same key before the next key (found live: 20 requests/day on gemini-3.5-flash, the lite model
+  untouched). `nullModel` → `modelOffline` in the interface language, no menu. `AGENT_MAX_MODEL_CALLS_PER_RUN` is per
+  chat; a turn costs 2–4 calls, so the example is now 120 and `budgetExhausted` says "start a new chat", not "tomorrow".
+- **Reply language** (user direction the same evening) — follows the person's latest message, not the interface:
+  Devanagari → Hindi, romanised Hindi (two or more Hindi function words) → Hinglish, anything else → English
+  (`say.ts detectReplyLanguage`, `RunWorkingState.replyLanguage`, set in `createRun` and on every message; the system
+  prompt says "Reply in …" and the character prompt is rendered for that language). Only these three for now; cards keep
+  the interface language's labels.
+- **UI** — unchanged except `app/app/page.tsx` collects every `model.*` outcome for the Progress panel notes; the
+  completed-run "Next Available Tasks" strip was removed earlier the same day; the empty-state chips post their label as
+  the opening sentence (`createRun` with `task`).
+- **Tests** — `lib/agentic/__tests__/runtime.test.ts` rewritten around a scripted model: end-to-end filing with consent →
+  form → card → confirm → outputs; replay; stale card; decline; the figure check (refuse, nudge, hold back; pass with a
+  ledger figure); consent gate on `read_document`; balance due → challan → card at ₹0; Rakesh blocked with the reason;
+  typed answers to cards; budget/cancel/redaction; model off; the system prompt's contents. `model.test.ts` (function
+  calls, raw parts, functionResponse mapping), `say.test.ts`, `knowledge/__tests__/opportunities.test.ts` new.

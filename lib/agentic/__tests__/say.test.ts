@@ -1,66 +1,41 @@
 import { describe, expect, it } from "vitest";
-import type { ModelAdapter } from "../model";
-import { detectRegister, say, validateSaid, type SayInput } from "../say";
+import { detectRegister, detectReplyLanguage, digitsOf, replyLanguageName, whyRejected } from "../say";
 
-const base: SayInput = { intent: "acknowledge", facts: ["Salaried, about ₹12,00,000 a year."], fallback: "You're salaried, about ₹12,00,000 a year." };
+const allowed = digitsOf("Salary ₹4,20,000; TDS ₹8,400; refund ₹8,400; standard deduction ₹75,000; slabs 4L 8L 12L; rebate 87A up to ₹12,00,000; sections 80C 80D 80CCD(1B) 24(b) 139(1) 2026-27");
 
-describe("the conversational check — what the model may and may not say (user direction 2026-09-06)", () => {
-  it("accepts a fresh sentence that only uses the brief's figures", () => {
-    expect(validateSaid("Salaried at roughly ₹12,00,000 for the year — let me see what's on record first.", base)).toBe(true);
+describe("the check on a reply — figures come from the tools, never from the model (2026-09-07)", () => {
+  it("accepts a reply whose every figure was in the facts, sections included", () => {
+    expect(whyRejected("Your salary is ₹4,20,000 and ₹8,400 was deducted; under the new regime you get the full ₹8,400 back — s.87A covers income up to ₹12,00,000.", { allowed, actionHappened: false })).toBeNull();
+    expect(whyRejected("Two things: 80C and 80D only work in the old regime; 80CCD(1B) too.", { allowed, actionHappened: false })).toBeNull();
   });
-  it("rejects any figure the brief did not contain", () => {
-    expect(validateSaid("Salaried at ₹12,00,000; you'll probably get ₹8,400 back.", base)).toBe(false);
-    expect(validateSaid("You were in India 200 days.", { ...base, facts: [] })).toBe(false);
+  it("refuses any figure the model was not given, in any script, and names it", () => {
+    expect(whyRejected("You'll probably get ₹9,999 back.", { allowed, actionHappened: false })).toMatch(/figure not in the facts \(9999\)/);
+    expect(whyRejected("आपको ८४,००० वापस मिलेंगे", { allowed, actionHappened: false })).toMatch(/figure not in the facts/);
   });
-  it("rejects self-description and meta-fluff — 'no jargon' is jargon", () => {
-    for (const t of ["Honestly, no jargon here: you're salaried.", "Think of me as the friend who happens to be a CA.", "In plain words, I'm here to help.", "No worries, you're salaried."]) {
-      expect(validateSaid(t, base), t).toBe(false);
-    }
+  it("lets small numbers through — dates, counts, list items", () => {
+    expect(whyRejected("File by 31 July; there are 3 steps and 2 documents.", { allowed, actionHappened: false })).toBeNull();
   });
-  it("rejects claims of filing or payment unless the brief states them", () => {
-    expect(validateSaid("Your return is filed.", base)).toBe(false);
-    expect(validateSaid("Your return is filed — receipt SIM-1.", { ...base, facts: ["Filed: simulated receipt SIM-1."] })).toBe(true);
+  it("refuses claims of filing or payment unless the action happened", () => {
+    expect(whyRejected("Your return has been filed.", { allowed, actionHappened: false })).toMatch(/action that did not happen/);
+    expect(whyRejected("Your return has been filed — simulated, receipt in the vault.", { allowed, actionHappened: true })).toBeNull();
   });
-  it("rejects advice words unless the turn is the recommendation", () => {
-    expect(validateSaid("I recommend the old regime.", base)).toBe(false);
-    expect(validateSaid("I recommend the old regime.", { ...base, allowAdvice: true })).toBe(true);
+  it("refuses an identifier and self-description", () => {
+    expect(whyRejected("Your PAN ABCDE1234F is on record.", { allowed, actionHappened: false })).toBe("identifier in reply");
+    expect(whyRejected("Honestly, no jargon here: you're salaried.", { allowed, actionHappened: false })).toMatch(/self-description/);
+    expect(whyRejected("", { allowed, actionHappened: false })).toBe("empty");
   });
-  it("keeps the terms a question must carry", () => {
-    const q: SayInput = { intent: "ask", fallback: "Do you have a Form 16?", mustContain: ["Form 16"] };
-    expect(validateSaid("Got your employer's yearly certificate handy?", q)).toBe(false);
-    expect(validateSaid("Got your Form 16 handy?", q)).toBe(true);
-  });
-  it("rejects a repeat of something already said", () => {
-    expect(validateSaid("Let me check what's on record.", { ...base, facts: [] }, ["let me check what's on record"])).toBe(false);
-  });
-  it("rejects over-long output", () => {
-    expect(validateSaid("word ".repeat(200), { ...base, maxWords: 40 })).toBe(false);
+  it("refuses an essay past the cap", () => {
+    expect(whyRejected("word ".repeat(800), { allowed, actionHappened: false, maxWords: 700 })).toMatch(/too long/);
   });
 });
 
-describe("say() — the model's sentence when it passes, the fallback otherwise, never both", () => {
-  const model = (reply: string | null): ModelAdapter => ({
-    name: "test",
-    async classify() { return null; },
-    async phrase() { return reply === null ? null : { text: reply, usage: { tokens: 7 } }; },
-  });
-  const ctx = (m: ModelAdapter, charged: number[]) => ({ model: m, lang: "en" as const, register: "plain" as const, name: "Sunita", recent: [], charge: async (t: number) => { charged.push(t); } });
-
-  it("uses a valid model sentence and charges the tokens", async () => {
-    const charged: number[] = [];
-    expect(await say(ctx(model("Salaried, around ₹12,00,000 — checking what's on record now, Sunita."), charged), base)).toMatch(/checking what's on record/);
-    expect(charged).toEqual([7]);
-  });
-  it("falls back when the model invents a figure, and still charges", async () => {
-    const charged: number[] = [];
-    expect(await say(ctx(model("You'll get ₹9,999 back."), charged), base)).toBe(base.fallback);
-    expect(charged).toEqual([7]);
-  });
-  it("falls back silently when the model is off or fails", async () => {
-    const charged: number[] = [];
-    expect(await say(ctx(model(null), charged), base)).toBe(base.fallback);
-    expect(await say(ctx({ ...model("anything"), name: "none" }, charged), base)).toBe(base.fallback);
-    expect(charged).toEqual([]);
+describe("reply language follows the person's latest message — English, Hindi or Hinglish, nothing else for now", () => {
+  it("Devanagari → Hindi, romanised Hindi → Hinglish, everything else → English", () => {
+    expect(detectReplyLanguage("80C क्या है?")).toBe("hi");
+    expect(detectReplyLanguage("80C kya hai bhai, mujhe batao")).toBe("hinglish");
+    expect(detectReplyLanguage("what is 80C")).toBe("en");
+    expect(detectReplyLanguage("80C என்றால் என்ன")).toBe("en"); // Tamil script: English for now
+    expect(replyLanguageName("hinglish")).toMatch(/Hinglish/);
   });
 });
 

@@ -81,21 +81,31 @@ model is off). The Agentic model (`model.ts`), the tax-expert prompt, the Manual
 every dictionary that carries a title. "aap kon h?", "who r u", "aapka naam kya hai" are heard as the question
 they are and get him introducing himself in one breath — never a menu.
 
-## Natural vs template — the policy
+## Natural vs template — the policy (rewritten 2026-09-07, evening)
 
-The user's correction (2026-09-07): "I just want agents to understand when to use templates and when to
-answer in a natural way." The rule, as code:
+The user's correction: "It is so templatized right now that I feel like we should remove every single template." So the
+policy inverted. **Everything conversational is the model's own words, decided by the model, from tools** — there is no
+brief to rephrase any more, no intent regex, no canned answer, no menu. What is still fixed is only what has to read
+exactly the same every time:
 
-| Natural — phrased by the model (`speak` / `speakResult`), template only as fallback | Template — identical every time |
+| Munshi ji writes it (`lib/agentic/brain.ts`, checked by `say.ts whyRejected`) | Fixed text |
 |---|---|
-| greetings, small talk, the who-am-I introduction | receipts and challan identifiers (BSR, CIN, serial) |
-| the year's opener, acknowledgements, "what I read from your papers" | the review card and its rows |
-| every question's wording (the terms it must keep come from the template) | the recommendation's figures and conclusion (`recommendationText` — they ride inside the brief and cannot change) |
-| the verdict (which form, where the regimes stand) | the "simulated — nothing was filed or paid" badge |
-| task results: the already-filed summary, regime comparison, reconciliation, challan lead-ins, notice status, refund tracker, vault inventory, CA review lines (`speakResult`: figures, sections, dates and table rows are facts he must keep; the prose is his) | legal and safety lines: the injection notice, budget exhausted, stale review, error |
-| tax answers from the stored RAG paraphrase and the smart answers (facts kept exactly, explanation in his words) | anything said while the model is off, out of quota or its reply failed the check |
-| the close of a task and the invitation to the next (`emitTaskCapabilitiesSummary`) | the task chips under the composer (UI, not prose) |
+| greetings, who-am-I, small talk, every answer to every tax question, tailored to the person's return | the review card and its rows (engine figures) |
+| the journey: what to pull, what to ask, what they are missing (`scan_opportunities`), the regime, the close | the challan receipt table (CIN, BSR, serial — identifiers must be exact) |
+| the wording of every consent card, question card and form lead-in (`request_consent`, `ask`, `ask_year_form` take his text) | the filing receipt line + the "simulated" badge |
+| what a document said, what came from DigiLocker, what a what-if shows — from the tool results | legal lines: injection notice, budget exhausted, stale review, error |
+| structuring advice: claim now vs restructure next year, in his words, priced by the engine | the two honest fallbacks: `modelOffline` (model off / out of quota / failed) and `replyUnverified` (a figure the tools never produced) |
 
-`speakResult` passes `shape: "review"` so the model is told to keep table rows verbatim, and `allowAdvice`
-because a comparison's recommendation is the recommendation turn. The check is unchanged: a reply with a
-figure not in the facts is refused and the template stands, recorded as `tool_outcome model.phrase ok:false`.
+The check is the only gate left, and it is about figures, not phrasing: every digit sequence in a reply must appear in
+what the model saw this turn — the situation, the statutory block, the tool results, the person's own words (numbers up to
+31 pass as dates and counts). A refused reply gets one nudge naming the figure; a second refusal is held back. Filed/paid
+claims are refused unless the action happened; a PAN or Aadhaar shape is refused outright; "no jargon"-style
+self-description is still refused. Advice words are no longer refused — advising is the job.
+
+Older sections above describe the brief-and-rephrase design that this replaced; they are kept as history.
+
+## Reply language (2026-09-07, evening)
+
+Munshi ji answers in the language of the person's latest message — English, Hindi (Devanagari) or Hinglish — and switches
+when they switch (`detectReplyLanguage`). Only these three for now; the interface language still labels the cards and the
+two fixed fallbacks. Hinglish is therefore a reply language as well as a register.

@@ -1,19 +1,18 @@
 /**
  * The agentic workflow's vocabulary (plan.md §5.1, §5.4).
  *
- * A Run is one task for one owner: a status the SERVER owns, an ordered event
- * log that is persisted before it is streamed, a plan of steps, and whatever
- * is currently blocking it — a question for the citizen or a review card
- * awaiting explicit confirmation. Replaying the events re-renders the run; it
- * never re-executes an action.
+ * A Run is one conversation for one owner: a status the SERVER owns, an ordered event
+ * log that is persisted before it is streamed, a plan of steps for the Progress panel, and
+ * whatever is currently blocking it — a question for the citizen or a review card awaiting
+ * explicit confirmation. Replaying the events re-renders the run; it never re-executes an action.
  */
 
 import type { Lang } from "../types";
 import type { ReturnCommand } from "../return/commands";
 import type { ApplicabilityResult } from "../knowledge/types";
 import type { AdviceAssessment } from "../knowledge/advice";
-import type { TaxAnswer } from "../knowledge/rag";
 
+/** Kept as the run's label for the sidebar and for the empty-state chips; the brain decides the work itself. */
 export type RunTask =
   | "prepare_salaried_return"
   | "compare_regimes"
@@ -147,6 +146,12 @@ export interface RunEvent {
   payload: RunEventPayload;
 }
 
+/** What the conversation remembers between turns — the model reads this back; never an identifier. */
+export interface TranscriptEntry {
+  role: "user" | "assistant" | "tool";
+  text: string;
+}
+
 /** The server's private working state for a run; checkpointed with it, never sent raw to the client. */
 export interface RunWorkingState {
   steps: PlanStep[];
@@ -162,24 +167,18 @@ export interface RunWorkingState {
   usage: { toolCalls: number; modelCalls: number; tokens: number };
   /** Set once an irreversible simulated action ran — replays must not run it again. */
   actionTaken?: { kind: "filing" | "payment"; id: string; at: string };
-  /** The last user message, for classification and phrasing. */
+  /** The last user message, redacted. */
   lastUserMessage?: string;
-  /** What the opening message said about the citizen's situation (deterministic parse, no identifiers). */
-  situation?: import("./intake").Situation;
-  /** Document types the vault already holds for the year, so the intake never asks for what it has. */
-  documentTypes?: string[];
-  /** Set when the opening message was small talk (hello, thanks…); answered warmly, no return work. */
-  smallTalk?: import("./voice").SmallTalk;
   /** How the person writes: romanised Hindi is answered in Hinglish. */
   register?: import("./say").Register;
-  /** Readable Form 16 documents already in the vault; read only after the citizen's consent. */
-  vaultForm16?: { id: string; title: string }[];
-  /** The last few assistant sentences, so the model does not repeat itself. */
-  recentSaid?: string[];
+  /** The language of the person's latest message — the reply follows it (English, Hindi or Hinglish). */
+  replyLanguage?: import("./say").ReplyLanguage;
+  /** The conversation the model reads back — user turns, Munshi ji's replies, compact tool results. */
+  transcript?: TranscriptEntry[];
+  /** Consents the person gave in this run: "digilocker", or a vault document id. */
+  consents?: Record<string, boolean>;
   /** Applicability results computed for this run. */
   applicability?: ApplicabilityResult[];
-  /** Exact retrieved evidence and guarded decision persisted for audit/replay. */
-  taxAnswer?: TaxAnswer;
   advice?: AdviceAssessment;
   /** Commands the run intends to apply once confirmed. */
   pendingCommands?: ReturnCommand[];
@@ -188,9 +187,6 @@ export interface RunWorkingState {
    * residency, whether DigiLocker is linked, the detail mode. Never a PAN, Aadhaar or address.
    */
   profile?: import("../onboarding").ProfileSeed;
-  /** The opener and the year's verdict are each said once per run. */
-  openerSaid?: boolean;
-  verdictSaid?: boolean;
 }
 
 export interface Run {

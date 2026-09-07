@@ -132,26 +132,7 @@ export interface AgenticStrings {
   intakeDocumentRecorded: string;
   intakeClaimSkipped: string;
   // Blank-return intake (2026-09-06): income source, residency, salary total; reviewer heads-up.
-  askIncomeSource: string;
-  askIncomeSourceWhy: string;
-  incomeSourceSalary: string;
-  incomeSourceBusiness: string;
-  incomeSourceOther: string;
-  askSalaryTotal: string;
-  askSalaryTotalWhy: string;
-  askResident: string;
-  askResidentWhy: string;
-  intakeOtherIncomeUnsupported: string;
-  noteReviewPending: string;
   // Document-first intake (2026-09-06): source card, consent cards, the one form.
-  askSource: string;
-  askSourceWhy: string;
-  sourceUpload: string;
-  sourceUploadDetail: string;
-  sourceDigiLocker: string;
-  sourceDigiLockerDetail: string;
-  sourceVault: string;
-  sourceManual: string;
   askDigiLockerConsent: string;
   askDigiLockerConsentWhy: string;
   askVaultConsent: string;
@@ -160,22 +141,14 @@ export interface AgenticStrings {
   askDetailsWhy: string;
   fieldSalary: string;
   fieldSalaryHint: string;
-  fieldPf: string;
-  fieldPfHint: string;
-  fieldHealth: string;
-  fieldHealthHint: string;
   fieldInterest: string;
   fieldInterestHint: string;
   fieldResident: string;
   detailsEntered: string;
   formSubmit: string;
   fetchedFromDigiLocker: string;
-  readFromVault: string;
   // Yearly intake (2026-09-07): the opener, the one form's groups, the verdict. Templates are fallbacks; the model phrases first.
   fetchingFromDigiLocker: string;
-  openerFallback: string;
-  openerFallbackNoAccount: string;
-  sourceDigiLockerLinked: string;
   askHousing: string;
   housingRent: string;
   housingOwnSelf: string;
@@ -206,32 +179,9 @@ export interface AgenticStrings {
   employerPsu: string;
   employerPensioner: string;
   employerOthers: string;
-  verdictItr1: string;
-  regimeNewLeads: string;
-  regimeOldLeads: string;
-  regimeOpen: string;
-  verdictOtherForm: string;
   carriedFromLastYear: string;
   inspectorModelNotes: string;
   // The voice (docs/VOICE.md, 2026-09-05): small talk, lead-ins, warmth around the facts
-  chatHello: string;
-  chatHelloAnon: string;
-  chatThanks: string;
-  chatWho: string;
-  chatHelp: string;
-  chatHowAreYou: string;
-  chatBye: string;
-  chatByeAnon: string;
-  leadFirst: string;
-  leadNext1: string;
-  leadNext2: string;
-  leadNext3: string;
-  leadDoc: string;
-  reviewIntro: string;
-  leadRecommendation: string;
-  cheerRefund: string;
-  cheerDue: string;
-  cheerNil: string;
   recommendRegime: string;
   regimesEqual: string;
   reviewFilingTitle: string;
@@ -250,6 +200,10 @@ export interface AgenticStrings {
   budgetExhausted: string;
   injectionNotice: string;
   errorGeneric: string;
+  /** The one honest line when the model is off, out of quota or failed (2026-09-07). */
+  modelOffline: string;
+  /** A reply held back because it carried a figure the tools never produced. */
+  replyUnverified: string;
   explainFallback: string;
   rowTaxableIncome: string;
   rowTotalTax: string;
@@ -370,25 +324,6 @@ const en: AgenticStrings = {
   uploadFailed: "That upload was refused. Try a PDF or an image under 5 MB.",
   intakeDocumentRecorded: "Stored in your vault and read.",
   intakeClaimSkipped: "No worries — without a record behind it I've left the {section} amount out of the comparison. You can always add it later.",
-  askIncomeSource: "First things first — where did your money come from this year?",
-  askIncomeSourceWhy: "It decides which return applies and what I need to check.",
-  incomeSourceSalary: "A salary from an employer",
-  incomeSourceBusiness: "Business or freelance work",
-  incomeSourceOther: "Something else — pension, interest, rent, or a mix",
-  askSalaryTotal: "Roughly how much salary did you receive this year in total, before any deductions? Your offer letter or Form 16 has the figure.",
-  askSalaryTotalWhy: "Nothing has been reported for you yet, so your figure is the starting point — I'll check it against Form 16 if you have one.",
-  askResident: "Were you in India for 182 days or more between April 2025 and March 2026?",
-  askResidentWhy: "It decides which rebates and exemptions apply to you.",
-  intakeOtherIncomeUnsupported: "Thanks for telling me. This release prepares salaried returns only — pension, interest, rent and mixed incomes need checks it does not make yet. I'm happy to answer questions about the rules, but I won't compute a return for that here.",
-  noteReviewPending: "This release hasn't been signed off by a tax reviewer yet, so I can gather your facts and explain the rules, but the final recommendation stays locked.",
-  askSource: "Where should I take your salary figures from? Form 16 is the quickest.",
-  askSourceWhy: "Your employer's own figures beat anything typed by hand.",
-  sourceUpload: "Upload my Form 16",
-  sourceUploadDetail: "PDF or image. The salary and tax-deducted figures are read from it.",
-  sourceDigiLocker: "Fetch from DigiLocker",
-  sourceDigiLockerDetail: "Mocked in this prototype. You'll see exactly what would be pulled before it happens.",
-  sourceVault: "Use the Form 16 already in my vault",
-  sourceManual: "I'll type the figures",
   askDigiLockerConsent: "I'll pull these from your DigiLocker. Go ahead?",
   askDigiLockerConsentWhy: "Nothing is fetched until you say yes.",
   askVaultConsent: "There's a Form 16 in your vault. Shall I read it for this return?",
@@ -397,21 +332,13 @@ const en: AgenticStrings = {
   askDetailsWhy: "These are the things nobody reports on your behalf.",
   fieldSalary: "Total salary for the year",
   fieldSalaryHint: "Before any deductions. Your offer letter or Form 16 has it.",
-  fieldPf: "PF deducted from your salary over the year",
-  fieldPfHint: "The 'PF' or 'EPF' line on your salary slips, added up.",
-  fieldHealth: "Health insurance premium paid",
-  fieldHealthHint: "For yourself, your family or your parents.",
   fieldInterest: "Interest earned on savings or deposits",
   fieldInterestHint: "From your bank statements or AIS. Rent, freelance or business income isn't handled in this release.",
   fieldResident: "In India for 182 days or more between April 2025 and March 2026?",
   detailsEntered: "Figures entered",
   formSubmit: "Save these",
   fetchedFromDigiLocker: "Fetched from DigiLocker:",
-  readFromVault: "Read from the Form 16 in your vault:",
   fetchingFromDigiLocker: "Fetching from DigiLocker:",
-  openerFallback: "Namaste {name}. This is the AY 2026-27 return. Refunds go to {account} — still right? First, this year's papers.",
-  openerFallbackNoAccount: "Namaste {name}. This is the AY 2026-27 return. First, this year's papers.",
-  sourceDigiLockerLinked: "Linked at onboarding — one tap for this year's Form 16 and AIS",
   askHousing: "Where did you live this year?",
   housingRent: "Rented",
   housingOwnSelf: "Own it and live in it",
@@ -442,31 +369,8 @@ const en: AgenticStrings = {
   employerPsu: "Public sector undertaking",
   employerPensioner: "Pension",
   employerOthers: "A company or anyone else",
-  verdictItr1: "ITR-1 fits: {heads}. {regime}",
-  regimeNewLeads: "The new regime leads by {saving}, and no deduction you could add closes that gap.",
-  regimeOldLeads: "The old regime leads by {saving} with what is on record.",
-  regimeOpen: "The two regimes are close; what you spent this year will decide it.",
-  verdictOtherForm: "This return needs {form}: {reasons}. ITR-1 stops here — a CA review takes everything read so far.",
   carriedFromLastYear: "Same as last year — tap to change",
   inspectorModelNotes: "Standard wording used on {n} turn(s) — why:",
-  chatHello: "Hi {name}. What's going on with your taxes this year?",
-  chatHelloAnon: "Hi. What's going on with your taxes this year?",
-  chatThanks: "Anytime. Anything else to look at?",
-  chatWho: "I'm Wapsi. I read what's already on record about you, ask for what's missing, show every figure with its source, and file nothing without your confirmation.",
-  chatHelp: "Right now I can prepare a salaried return, compare the old and new regimes, check the figures reported about you, or answer a tax question. Where do you want to start?",
-  chatHowAreYou: "All good here. What can I sort out for you?",
-  chatBye: "Bye, {name}. Your return stays exactly as it is.",
-  chatByeAnon: "Bye. Your return stays exactly as it is.",
-  leadFirst: "Quick one to start:",
-  leadNext1: "Thanks — that helps. Next:",
-  leadNext2: "Got it. One more:",
-  leadNext3: "Perfect. Now this:",
-  leadDoc: "This one's about a piece of paper —",
-  reviewIntro: "The figures are ready below. Nothing is applied until you confirm.",
-  leadRecommendation: "Right, the numbers are in.",
-  cheerRefund: "Good news: you paid {amount} more than you owed this year, and that comes back to you.",
-  cheerDue: "There's {amount} still to pay — no drama, we'll line it up before anything is filed.",
-  cheerNil: "You're square: nothing to pay, nothing coming back.",
   recommendRegime: "The {regime} regime works out cheaper for your figures — by {saving}.",
   regimesEqual: "Both regimes land on the same tax for your figures, so there's nothing to lose either way.",
   reviewFilingTitle: "Ready to file — confirm the figures",
@@ -482,9 +386,11 @@ const en: AgenticStrings = {
   staleReview: "Heads up: your return changed while I was preparing this, so I've redone the review with the latest figures.",
   alreadyFiled: "Good news — this return is already filed! I can walk you through it or compare the regimes, but there's nothing more to file.",
   unsupportedTask: "That one's outside what I can do here — I can prepare a salaried return, compare the two regimes, or check reported figures. For anything else, the manual portal has the tools.",
-  budgetExhausted: "We've hit today's limit for this account — nothing was changed. Let's pick this up tomorrow, or the manual portal is always open.",
+  budgetExhausted: "This chat has used up its model budget, so I have to stop here — nothing was changed. Start a new chat to carry on; the return and the vault are exactly as they were.",
   injectionNotice: "A document contained text that looked like instructions to me. I ignored it and treated the document as data only.",
   errorGeneric: "Something went wrong on my side. Your return is untouched; try again in a moment.",
+  modelOffline: "Munshi ji can't talk right now ({reason}). The engine still works — the figures on your return and the cards on screen stand; try again in a moment.",
+  replyUnverified: "That answer had a figure I couldn't stand behind, so I've held it back. Ask me again, or ask for the figures directly and I'll read them off the ledger.",
   explainFallback: "Here is what the engine computes for your return.",
   rowTaxableIncome: "Taxable income",
   rowTotalTax: "Total tax",
@@ -605,25 +511,6 @@ const hi: AgenticStrings = {
   uploadFailed: "यह अपलोड अस्वीकार हुआ। 5 MB से छोटी PDF या छवि आज़माएँ।",
   intakeDocumentRecorded: "वॉल्ट में रखा और पढ़ लिया।",
   intakeClaimSkipped: "कोई बात नहीं — बिना रिकॉर्ड के मैंने {section} की रकम तुलना से बाहर रखी है। बाद में कभी भी जोड़ सकते हैं।",
-  askIncomeSource: "सबसे पहले — इस साल आपकी कमाई कहाँ से आई?",
-  askIncomeSourceWhy: "इससे तय होता है कि कौन-सा रिटर्न लागू है और मुझे क्या जाँचना है।",
-  incomeSourceSalary: "किसी नियोक्ता से वेतन",
-  incomeSourceBusiness: "व्यवसाय या फ्रीलांस काम",
-  incomeSourceOther: "कुछ और — पेंशन, ब्याज, किराया, या मिला-जुला",
-  askSalaryTotal: "इस साल कुल मिलाकर, किसी कटौती से पहले, लगभग कितना वेतन मिला? ऑफर लेटर या फॉर्म 16 में यह आंकड़ा होता है।",
-  askSalaryTotalWhy: "आपके लिए अभी कुछ रिपोर्ट नहीं हुआ है, इसलिए आपका आंकड़ा शुरुआत है — फॉर्म 16 हो तो उससे मिला लूँगा।",
-  askResident: "अप्रैल 2025 से मार्च 2026 के बीच क्या आप 182 दिन या उससे ज़्यादा भारत में थे?",
-  askResidentWhy: "इससे तय होता है कि कौन-सी छूट और रियायतें आप पर लागू हैं।",
-  intakeOtherIncomeUnsupported: "बताने के लिए धन्यवाद। यह रिलीज़ केवल वेतन वाले रिटर्न तैयार करता है — पेंशन, ब्याज, किराया और मिली-जुली आय के लिए ऐसी जाँचें चाहिए जो अभी नहीं होतीं। नियमों के सवालों का जवाब ख़ुशी से दूँगा, पर यहाँ उसका रिटर्न नहीं बनाऊँगा।",
-  noteReviewPending: "इस रिलीज़ पर अभी कर समीक्षक की मुहर नहीं है, इसलिए तथ्य जुटा सकता हूँ और नियम बता सकता हूँ, पर अंतिम सिफ़ारिश बंद रहेगी।",
-  askSource: "आपके वेतन के आंकड़े कहाँ से लूँ? फॉर्म 16 सबसे तेज़ है।",
-  askSourceWhy: "नियोक्ता के अपने आंकड़े हाथ से लिखे आंकड़ों से बेहतर होते हैं।",
-  sourceUpload: "मेरा फॉर्म 16 अपलोड करें",
-  sourceUploadDetail: "PDF या फ़ोटो। वेतन और काटे गए कर के आंकड़े इससे पढ़े जाते हैं।",
-  sourceDigiLocker: "DigiLocker से लें",
-  sourceDigiLockerDetail: "इस प्रोटोटाइप में मॉक है। क्या लिया जाएगा, पहले दिखेगा।",
-  sourceVault: "वॉल्ट में मौजूद फॉर्म 16 इस्तेमाल करें",
-  sourceManual: "मैं आंकड़े लिख दूँगा",
   askDigiLockerConsent: "ये आपके DigiLocker से लूँगा। आगे बढ़ूँ?",
   askDigiLockerConsentWhy: "आपकी हाँ के बिना कुछ नहीं लिया जाता।",
   askVaultConsent: "आपके वॉल्ट में एक फॉर्म 16 है। इस रिटर्न के लिए पढ़ लूँ?",
@@ -632,21 +519,13 @@ const hi: AgenticStrings = {
   askDetailsWhy: "ये वे बातें हैं जो कोई आपकी तरफ़ से रिपोर्ट नहीं करता।",
   fieldSalary: "साल का कुल वेतन",
   fieldSalaryHint: "किसी कटौती से पहले। ऑफर लेटर या फॉर्म 16 में है।",
-  fieldPf: "साल भर में वेतन से कटा PF",
-  fieldPfHint: "सैलरी स्लिप की 'PF' या 'EPF' लाइन, जोड़कर।",
-  fieldHealth: "स्वास्थ्य बीमा प्रीमियम",
-  fieldHealthHint: "अपने, परिवार या माता-पिता के लिए।",
   fieldInterest: "बचत या जमा पर मिला ब्याज",
   fieldInterestHint: "बैंक स्टेटमेंट या AIS से। किराया, फ्रीलांस या व्यवसाय की आय इस रिलीज़ में नहीं है।",
   fieldResident: "अप्रैल 2025 से मार्च 2026 के बीच 182 दिन या ज़्यादा भारत में थे?",
   detailsEntered: "आंकड़े दर्ज",
   formSubmit: "सहेजें",
   fetchedFromDigiLocker: "DigiLocker से लिया:",
-  readFromVault: "वॉल्ट के फॉर्म 16 से पढ़ा:",
   fetchingFromDigiLocker: "DigiLocker से ला रहा हूँ:",
-  openerFallback: "नमस्ते {name}। यह AY 2026-27 का रिटर्न है। रिफंड {account} में जाएगा — सही है? पहले इस साल के कागज़।",
-  openerFallbackNoAccount: "नमस्ते {name}। यह AY 2026-27 का रिटर्न है। पहले इस साल के कागज़।",
-  sourceDigiLockerLinked: "ऑनबोर्डिंग में जोड़ा गया — इस साल का फॉर्म 16 और AIS एक टैप में",
   askHousing: "इस साल आप कहाँ रहे?",
   housingRent: "किराए पर",
   housingOwnSelf: "अपना घर, उसी में रहते हैं",
@@ -677,31 +556,8 @@ const hi: AgenticStrings = {
   employerPsu: "सार्वजनिक उपक्रम",
   employerPensioner: "पेंशन",
   employerOthers: "कंपनी या कोई और",
-  verdictItr1: "ITR-1 सही है: {heads}। {regime}",
-  regimeNewLeads: "नई व्यवस्था {saving} से आगे है, और कोई भी कटौती यह अंतर नहीं भरती।",
-  regimeOldLeads: "रिकॉर्ड के हिसाब से पुरानी व्यवस्था {saving} से आगे है।",
-  regimeOpen: "दोनों व्यवस्थाएँ करीब हैं; इस साल के खर्च तय करेंगे।",
-  verdictOtherForm: "इस रिटर्न के लिए {form} चाहिए: {reasons}। ITR-1 यहाँ रुकता है — CA समीक्षा में अब तक पढ़ा सब जाएगा।",
   carriedFromLastYear: "पिछले साल जैसा — बदलने के लिए टैप करें",
   inspectorModelNotes: "{n} बार मानक शब्द इस्तेमाल हुए — कारण:",
-  chatHello: "नमस्ते {name}। इस साल टैक्स में क्या चल रहा है?",
-  chatHelloAnon: "नमस्ते। इस साल टैक्स में क्या चल रहा है?",
-  chatThanks: "कभी भी। और कुछ देखना है?",
-  chatWho: "मैं वापसी हूँ। आपके रिकॉर्ड में जो है वह पढ़ता हूँ, जो छूटा है वह पूछता हूँ, हर आंकड़ा स्रोत के साथ दिखाता हूँ, और आपकी पुष्टि बिना कुछ दाखिल नहीं करता।",
-  chatHelp: "अभी मैं वेतन का रिटर्न तैयार कर सकता हूँ, पुरानी-नई व्यवस्था की तुलना कर सकता हूँ, रिपोर्ट किए आंकड़े जाँच सकता हूँ, या टैक्स का सवाल बता सकता हूँ। कहाँ से शुरू करें?",
-  chatHowAreYou: "सब ठीक। आपके लिए क्या करूँ?",
-  chatBye: "फिर मिलते हैं, {name}। आपका रिटर्न जैसा है वैसा ही रहेगा।",
-  chatByeAnon: "फिर मिलते हैं। आपका रिटर्न जैसा है वैसा ही रहेगा।",
-  leadFirst: "शुरुआत एक छोटे सवाल से:",
-  leadNext1: "शुक्रिया — इससे मदद मिली। अगला:",
-  leadNext2: "समझ गया। एक और:",
-  leadNext3: "बिल्कुल। अब यह:",
-  leadDoc: "यह एक कागज़ के बारे में है —",
-  reviewIntro: "आंकड़े नीचे तैयार हैं। आपकी पुष्टि तक कुछ लागू नहीं होता।",
-  leadRecommendation: "ठीक है, आंकड़े आ गए।",
-  cheerRefund: "अच्छी खबर: इस साल आपने {amount} ज़्यादा भरा, और वह आपको वापस मिलेगा।",
-  cheerDue: "अभी {amount} और भरना बाकी है — कोई हड़बड़ी नहीं, दाखिल करने से पहले इसे ठीक से लगा लेंगे।",
-  cheerNil: "आपका हिसाब बराबर है: न कुछ भरना, न कुछ वापस।",
   recommendRegime: "आपके आंकड़ों के लिए {regime} व्यवस्था सस्ती पड़ती है — {saving} से।",
   regimesEqual: "आपके आंकड़ों के लिए दोनों व्यवस्थाओं में एक ही कर बनता है, इसलिए किसी भी तरफ कोई नुकसान नहीं।",
   reviewFilingTitle: "दाखिल करने को तैयार — आंकड़े पुष्ट करें",
@@ -717,9 +573,11 @@ const hi: AgenticStrings = {
   staleReview: "एक बात: यह तैयार करते-करते आपका रिटर्न बदल गया, इसलिए नए आंकड़ों के साथ समीक्षा दोबारा बनाई है।",
   alreadyFiled: "अच्छी खबर — यह रिटर्न पहले ही दाखिल है! मैं इसे समझा सकता हूँ या व्यवस्थाओं की तुलना कर सकता हूँ, पर दाखिल करने को अब कुछ नहीं बचा।",
   unsupportedTask: "मैं वेतन रिटर्न तैयार कर सकता हूँ, दोनों व्यवस्थाओं की तुलना कर सकता हूँ, या रिपोर्ट किए आंकड़े जाँच सकता हूँ। बाकी के लिए मैनुअल पोर्टल में उपकरण हैं।",
-  budgetExhausted: "इस खाते की आज की सीमा पूरी हो गई। कुछ नहीं बदला। कृपया कल जारी रखें, या मैनुअल पोर्टल उपयोग करें।",
+  budgetExhausted: "इस चैट का मॉडल बजट पूरा हो गया, इसलिए यहाँ रुकना पड़ेगा — कुछ नहीं बदला। नई चैट शुरू करके आगे बढ़िए; रिटर्न और वॉल्ट जैसे थे वैसे ही हैं।",
   injectionNotice: "एक दस्तावेज़ में ऐसा पाठ था जो मुझे निर्देश जैसा लगा। मैंने उसे अनदेखा किया और दस्तावेज़ को केवल डेटा माना।",
   errorGeneric: "मेरी तरफ़ कुछ गड़बड़ हुई। आपका रिटर्न अछूता है; थोड़ी देर में फिर कोशिश करें।",
+  modelOffline: "मुंशी जी अभी बात नहीं कर पा रहे ({reason})। इंजन चल रहा है — आपके रिटर्न के आँकड़े और स्क्रीन के कार्ड वैसे ही हैं; थोड़ी देर में फिर कोशिश करें।",
+  replyUnverified: "उस जवाब में एक आँकड़ा था जिस पर मैं भरोसा नहीं कर सका, इसलिए उसे रोक दिया। फिर से पूछिए, या सीधे आँकड़े माँगिए — बही से पढ़कर बताता हूँ।",
   explainFallback: "आपके रिटर्न के लिए इंजन की गणना यह है।",
   rowTaxableIncome: "कर योग्य आय",
   rowTotalTax: "कुल कर",
@@ -840,25 +698,6 @@ const ta: AgenticStrings = {
   uploadFailed: "அந்தப் பதிவேற்றம் நிராகரிக்கப்பட்டது. 5 MB-க்குக் குறைவான PDF அல்லது படத்தை முயற்சிக்கவும்.",
   intakeDocumentRecorded: "வால்ட்டில் சேமித்துப் படித்தேன்.",
   intakeClaimSkipped: "கவலை வேண்டாம் — பின்னால் பதிவு இல்லாததால் {section} தொகையை ஒப்பீட்டிலிருந்து விட்டுவிட்டேன். பின்னர் எப்போதும் சேர்க்கலாம்.",
-  askIncomeSource: "முதலில் — இந்த ஆண்டு உங்கள் பணம் எங்கிருந்து வந்தது?",
-  askIncomeSourceWhy: "எந்த ரிட்டர்ன் பொருந்தும், நான் எதைச் சரிபார்க்க வேண்டும் என்பதை இது தீர்மானிக்கிறது.",
-  incomeSourceSalary: "ஒரு முதலாளியிடமிருந்து சம்பளம்",
-  incomeSourceBusiness: "வணிகம் அல்லது ஃப்ரீலான்ஸ் வேலை",
-  incomeSourceOther: "வேறு ஏதோ — ஓய்வூதியம், வட்டி, வாடகை, அல்லது கலவை",
-  askSalaryTotal: "இந்த ஆண்டு மொத்தமாக, எந்தக் கழிவும் இல்லாமல், சுமார் எவ்வளவு சம்பளம் பெற்றீர்கள்? ஆஃபர் லெட்டர் அல்லது படிவம் 16-இல் அந்த எண் இருக்கும்.",
-  askSalaryTotalWhy: "உங்களுக்காக இன்னும் எதுவும் அறிவிக்கப்படவில்லை, அதனால் உங்கள் எண்ணே தொடக்கம் — படிவம் 16 இருந்தால் அதனுடன் ஒப்பிடுவேன்.",
-  askResident: "ஏப்ரல் 2025 முதல் மார்ச் 2026 வரை 182 நாட்கள் அல்லது அதற்கு மேல் இந்தியாவில் இருந்தீர்களா?",
-  askResidentWhy: "எந்தத் தள்ளுபடிகளும் விலக்குகளும் உங்களுக்குப் பொருந்தும் என்பதை இது தீர்மானிக்கிறது.",
-  intakeOtherIncomeUnsupported: "சொன்னதற்கு நன்றி. இந்த வெளியீடு சம்பள ரிட்டர்ன்களை மட்டுமே தயாரிக்கிறது — ஓய்வூதியம், வட்டி, வாடகை மற்றும் கலப்பு வருமானங்களுக்கு இன்னும் செய்யப்படாத சரிபார்ப்புகள் தேவை. விதிகள் பற்றிய கேள்விகளுக்கு மகிழ்ச்சியாகப் பதிலளிப்பேன், ஆனால் இங்கே அதற்கான ரிட்டர்னைக் கணக்கிட மாட்டேன்.",
-  noteReviewPending: "இந்த வெளியீட்டுக்கு இன்னும் வரி மதிப்பாய்வாளர் ஒப்புதல் இல்லை; உண்மைகளைச் சேகரித்து விதிகளை விளக்க முடியும், ஆனால் இறுதிப் பரிந்துரை பூட்டியிருக்கும்.",
-  askSource: "உங்கள் சம்பள எண்களை எங்கிருந்து எடுக்க? படிவம் 16 வேகமானது.",
-  askSourceWhy: "முதலாளியின் எண்கள் கையால் எழுதியதை விடச் சிறந்தவை.",
-  sourceUpload: "என் படிவம் 16-ஐ பதிவேற்று",
-  sourceUploadDetail: "PDF அல்லது படம். சம்பளம் மற்றும் பிடித்த வரி எண்கள் அதிலிருந்து படிக்கப்படும்.",
-  sourceDigiLocker: "DigiLocker-இலிருந்து எடு",
-  sourceDigiLockerDetail: "இந்த முன்மாதிரியில் போலி. எது எடுக்கப்படும் என்பதை முன்பே பார்ப்பீர்கள்.",
-  sourceVault: "வால்ட்டில் உள்ள படிவம் 16-ஐப் பயன்படுத்து",
-  sourceManual: "நானே எண்களை எழுதுகிறேன்",
   askDigiLockerConsent: "இவற்றை உங்கள் DigiLocker-இலிருந்து எடுக்கிறேன். தொடரவா?",
   askDigiLockerConsentWhy: "நீங்கள் ஆம் என்று சொல்லும் வரை எதுவும் எடுக்கப்படாது.",
   askVaultConsent: "உங்கள் வால்ட்டில் ஒரு படிவம் 16 உள்ளது. இந்த ரிட்டர்னுக்காக அதைப் படிக்கவா?",
@@ -867,21 +706,13 @@ const ta: AgenticStrings = {
   askDetailsWhy: "இவற்றை உங்கள் சார்பாக யாரும் அறிவிப்பதில்லை.",
   fieldSalary: "ஆண்டின் மொத்த சம்பளம்",
   fieldSalaryHint: "எந்தக் கழிவும் இல்லாமல். ஆஃபர் லெட்டர் அல்லது படிவம் 16-இல் உள்ளது.",
-  fieldPf: "ஆண்டில் சம்பளத்திலிருந்து பிடித்த PF",
-  fieldPfHint: "சம்பளச் சீட்டுகளின் 'PF' அல்லது 'EPF' வரி, கூட்டி.",
-  fieldHealth: "செலுத்திய மருத்துவக் காப்பீட்டுப் பிரீமியம்",
-  fieldHealthHint: "உங்களுக்கு, குடும்பத்திற்கு அல்லது பெற்றோருக்கு.",
   fieldInterest: "சேமிப்பு அல்லது வைப்பில் கிடைத்த வட்டி",
   fieldInterestHint: "வங்கி அறிக்கை அல்லது AIS-இலிருந்து. வாடகை, ஃப்ரீலான்ஸ் அல்லது வணிக வருமானம் இந்த வெளியீட்டில் இல்லை.",
   fieldResident: "ஏப்ரல் 2025 – மார்ச் 2026-க்குள் 182 நாட்கள் அல்லது மேல் இந்தியாவில் இருந்தீர்களா?",
   detailsEntered: "எண்கள் பதிவானது",
   formSubmit: "சேமி",
   fetchedFromDigiLocker: "DigiLocker-இலிருந்து எடுத்தது:",
-  readFromVault: "வால்ட்டின் படிவம் 16-இலிருந்து படித்தது:",
   fetchingFromDigiLocker: "DigiLocker-இலிருந்து எடுக்கிறேன்:",
-  openerFallback: "வணக்கம் {name}. இது AY 2026-27 ரிட்டர்ன். ரீஃபண்ட் {account}-க்கு செல்லும் — சரியா? முதலில், இந்த ஆண்டின் ஆவணங்கள்.",
-  openerFallbackNoAccount: "வணக்கம் {name}. இது AY 2026-27 ரிட்டர்ன். முதலில், இந்த ஆண்டின் ஆவணங்கள்.",
-  sourceDigiLockerLinked: "ஆன்போர்டிங்கில் இணைக்கப்பட்டது — இந்த ஆண்டின் படிவம் 16 மற்றும் AIS ஒரே தட்டலில்",
   askHousing: "இந்த ஆண்டு நீங்கள் எங்கே வசித்தீர்கள்?",
   housingRent: "வாடகை வீடு",
   housingOwnSelf: "சொந்த வீடு, அதிலே வசிக்கிறேன்",
@@ -912,31 +743,8 @@ const ta: AgenticStrings = {
   employerPsu: "பொதுத்துறை நிறுவனம்",
   employerPensioner: "ஓய்வூதியம்",
   employerOthers: "நிறுவனம் அல்லது வேறு யாரும்",
-  verdictItr1: "ITR-1 பொருந்துகிறது: {heads}. {regime}",
-  regimeNewLeads: "புதிய முறை {saving} முன்னிலையில்; எந்தக் கழிவும் அந்த இடைவெளியை மூடாது.",
-  regimeOldLeads: "பதிவின்படி பழைய முறை {saving} முன்னிலையில்.",
-  regimeOpen: "இரு முறைகளும் நெருக்கமாக உள்ளன; இந்த ஆண்டின் செலவுகள் முடிவு செய்யும்.",
-  verdictOtherForm: "இந்த ரிட்டர்னுக்கு {form} தேவை: {reasons}. ITR-1 இங்கே நிற்கிறது — CA மதிப்பாய்வு இதுவரை படித்த எல்லாவற்றையும் எடுத்துச் செல்லும்.",
   carriedFromLastYear: "கடந்த ஆண்டு போலவே — மாற்ற தட்டுங்கள்",
   inspectorModelNotes: "{n} முறை நிலையான வார்த்தைகள் — காரணம்:",
-  chatHello: "வணக்கம் {name}. இந்த ஆண்டு வரியில் என்ன நடக்கிறது?",
-  chatHelloAnon: "வணக்கம். இந்த ஆண்டு வரியில் என்ன நடக்கிறது?",
-  chatThanks: "எப்போதும். வேறு ஏதும் பார்க்க வேண்டுமா?",
-  chatWho: "நான் வாப்சி. உங்கள் பதிவில் இருப்பதைப் படிக்கிறேன், விடுபட்டதைக் கேட்கிறேன், ஒவ்வொரு எண்ணையும் மூலத்துடன் காட்டுகிறேன், உங்கள் உறுதிப்படுத்தல் இல்லாமல் எதையும் தாக்கல் செய்வதில்லை.",
-  chatHelp: "இப்போது சம்பள ரிட்டர்ன் தயாரிக்கலாம், பழைய-புதிய முறைகளை ஒப்பிடலாம், உங்களைப் பற்றி அறிவிக்கப்பட்ட எண்களைச் சரிபார்க்கலாம், அல்லது வரிக் கேள்விக்குப் பதில் சொல்லலாம். எங்கே தொடங்க?",
-  chatHowAreYou: "இங்கே எல்லாம் நலம். உங்களுக்கு என்ன செய்ய?",
-  chatBye: "பிறகு பார்க்கலாம், {name}. உங்கள் ரிட்டர்ன் அப்படியே இருக்கும்.",
-  chatByeAnon: "பிறகு பார்க்கலாம். உங்கள் ரிட்டர்ன் அப்படியே இருக்கும்.",
-  leadFirst: "தொடங்க ஒரு சிறிய கேள்வி:",
-  leadNext1: "நன்றி — அது உதவியது. அடுத்தது:",
-  leadNext2: "புரிந்தது. இன்னொன்று:",
-  leadNext3: "சரி. இப்போது இது:",
-  leadDoc: "இது ஒரு ஆவணம் பற்றியது —",
-  reviewIntro: "எண்கள் கீழே தயார். நீங்கள் உறுதிப்படுத்தும் வரை எதுவும் பொருந்தாது.",
-  leadRecommendation: "சரி, எண்கள் வந்துவிட்டன.",
-  cheerRefund: "நல்ல செய்தி: இந்த ஆண்டு நீங்கள் {amount} அதிகமாகச் செலுத்தினீர்கள், அது உங்களுக்குத் திரும்ப வரும்.",
-  cheerDue: "இன்னும் {amount} செலுத்த வேண்டும் — பதற்றம் வேண்டாம், தாக்கல் செய்யும் முன் அதைச் சரியாக அமைப்போம்.",
-  cheerNil: "உங்கள் கணக்கு சமம்: செலுத்த எதுவும் இல்லை, திரும்ப வரவும் எதுவும் இல்லை.",
   recommendRegime: "உங்கள் எண்களுக்கு {regime} முறை குறைவாகிறது — {saving} அளவுக்கு.",
   regimesEqual: "உங்கள் எண்களுக்கு இரு முறைகளிலும் ஒரே வரி, எனவே எந்தப் பக்கமும் இழப்பு இல்லை.",
   reviewFilingTitle: "தாக்கல் செய்யத் தயார் — எண்களை உறுதிப்படுத்துங்கள்",
@@ -952,9 +760,11 @@ const ta: AgenticStrings = {
   staleReview: "ஒரு விஷயம்: இதைத் தயாரிக்கும்போது உங்கள் ரிட்டர்ன் மாறியது, எனவே புதிய எண்களுடன் மறுஆய்வை மீண்டும் செய்தேன்.",
   alreadyFiled: "நல்ல செய்தி — இந்த ரிட்டர்ன் ஏற்கனவே தாக்கல் ஆகிவிட்டது! விளக்கலாம் அல்லது முறைகளை ஒப்பிடலாம், ஆனால் தாக்கல் செய்ய இன்னும் எதுவும் இல்லை.",
   unsupportedTask: "சம்பள ரிட்டர்னைத் தயாரிக்கலாம், இரு முறைகளையும் ஒப்பிடலாம், அல்லது அறிவிக்கப்பட்ட எண்களைச் சரிபார்க்கலாம். மற்றவற்றுக்கு கைமுறைப் போர்ட்டலில் கருவிகள் உள்ளன.",
-  budgetExhausted: "இந்தக் கணக்கின் இன்றைய வரம்பு எட்டப்பட்டது. எதுவும் மாறவில்லை. நாளை தொடரவும், அல்லது கைமுறைப் போர்ட்டலைப் பயன்படுத்தவும்.",
+  budgetExhausted: "இந்த அரட்டையின் மாடல் வரவு தீர்ந்துவிட்டது, அதனால் இங்கே நிறுத்த வேண்டும் — எதுவும் மாறவில்லை. புதிய அரட்டையைத் தொடங்கி தொடருங்கள்; ரிட்டர்னும் வால்ட்டும் அப்படியே உள்ளன.",
   injectionNotice: "ஒரு ஆவணத்தில் எனக்கு அறிவுறுத்தல் போலத் தோன்றிய உரை இருந்தது. அதைப் புறக்கணித்து ஆவணத்தைத் தரவாக மட்டுமே கருதினேன்.",
   errorGeneric: "என் பக்கம் ஏதோ தவறு. உங்கள் ரிட்டர்ன் தொடப்படவில்லை; சிறிது நேரத்தில் மீண்டும் முயலுங்கள்.",
+  modelOffline: "முன்ஷி ஜி இப்போது பேச முடியவில்லை ({reason}). இயந்திரம் வேலை செய்கிறது — உங்கள் ரிட்டர்ன் எண்களும் திரையில் உள்ள கார்டுகளும் அப்படியே உள்ளன; சிறிது நேரத்தில் மீண்டும் முயலுங்கள்.",
+  replyUnverified: "அந்தப் பதிலில் நான் உறுதிப்படுத்த முடியாத ஒரு எண் இருந்தது, அதனால் அதை நிறுத்தி வைத்தேன். மீண்டும் கேளுங்கள், அல்லது எண்களை நேரடியாகக் கேளுங்கள்.",
   explainFallback: "உங்கள் ரிட்டர்னுக்கு இயந்திரம் கணக்கிடுவது இதுதான்.",
   rowTaxableIncome: "வரிக்குட்பட்ட வருமானம்",
   rowTotalTax: "மொத்த வரி",

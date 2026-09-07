@@ -380,7 +380,7 @@ function AgenticWorkspace() {
           sources: view.run?.sources ?? [],
           runId: view.run?.id ?? null,
           // Every turn where the model's wording was not used, with the reason — never silent (docs/VOICE.md).
-          modelNotes: view.events.flatMap((e) => (e.payload.type === "tool_outcome" && e.payload.tool === "model.phrase" && !e.payload.ok ? [e.payload.summary] : [])),
+          modelNotes: view.events.flatMap((e) => (e.payload.type === "tool_outcome" && e.payload.tool.startsWith("model.") && !e.payload.ok ? [e.payload.summary] : [])),
         }}
         notice={server && !server.durable ? s.notDurable : undefined}
       >

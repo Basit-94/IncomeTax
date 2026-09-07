@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { detectSmallTalk } from "../voice";
 import { MUNSHI_CHARACTER, MUNSHI_VOICE, characterPrompt, whoIsMunshi } from "../munshi-character";
 
 describe("Munshi ji — one character, every surface (2026-09-07)", () => {
@@ -26,13 +25,5 @@ describe("Munshi ji — one character, every surface (2026-09-07)", () => {
       expect(text).not.toMatch(/\d\./); // never a numbered menu
     }
     expect(whoIsMunshi("en", "hinglish", "Rahul")).toContain("Rahul ji");
-  });
-
-  it("hears 'who are you' the way people actually type it", () => {
-    for (const t of ["aap kon h?", "aap kaun ho", "tum kon ho", "who r u", "who are you?", "what's your name", "aapka naam kya hai", "kaun ho aap"]) {
-      expect(detectSmallTalk(t), t).toBe("who");
-    }
-    expect(detectSmallTalk("which regime is better for me?")).toBeNull();
-    expect(detectSmallTalk("kya kar sakte ho")).toBe("help");
   });
 });

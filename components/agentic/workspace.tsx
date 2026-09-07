@@ -170,46 +170,6 @@ export default function Workspace(props: WorkspaceProps) {
         </div>
       </div>
 
-      {run.status === "completed" && (
-        <div className="px-4 sm:px-6 py-2.5 border-t border-line/60 bg-paper-2/60 backdrop-blur-xs">
-          <div className="mx-auto w-full max-w-3xl space-y-1.5">
-            <div className="flex items-center justify-between gap-2 text-xs text-ink-3">
-              <span className="inline-flex items-center gap-1.5 font-medium text-ink-2">
-                <Sparkles size={12} className="text-money" aria-hidden="true" />
-                <span>{props.lang === "hi" ? "अगले 7 उपलब्ध कार्य (AY 2026-27):" : "Next Available Tasks (AY 2026-27):"}</span>
-              </span>
-              <span className="text-[11px] text-ink-3 font-mono">Select or type 1–7</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {[
-                { id: "1", label: "📄 Prepare Return", message: "1. Prepare & File Return" },
-                { id: "2", label: "⚖️ Compare Regimes", message: "2. Compare Tax Regimes" },
-                { id: "3", label: "🔍 Reconcile AIS", message: "3. Reconcile AIS & 26AS" },
-                { id: "4", label: "💳 Pay Tax / Challan 280", message: "4. Pay Tax / Challan 280" },
-                { id: "5", label: "🛡️ Defend Notice", message: "5. Defend Tax Notice" },
-                { id: "6", label: "⚡ Track Refund", message: "6. Track Refund Status" },
-                { id: "7", label: "🏛️ Citizen Tax Vault", message: "7. Citizen Tax Vault" },
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  disabled={props.loading}
-                  onClick={() => {
-                    if (item.id === "7" && props.onOpenVault) {
-                      props.onOpenVault();
-                    }
-                    props.onSend({ message: item.message });
-                  }}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-line bg-paper hover:bg-paper-2 hover:border-money/60 text-xs font-medium text-ink transition shadow-2xs hover:shadow-xs cursor-pointer disabled:opacity-50"
-                >
-                  <span>{item.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
       <Composer s={s} lang={props.lang} disabled={props.loading || run.status === "cancelled" || run.status === "failed"} onSubmit={(message) => props.onSend({ message })} />
     </div>
   );
