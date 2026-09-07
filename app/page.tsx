@@ -47,6 +47,10 @@ import {
 
 import Landing from "../components/landing";
 import OtpScreen from "../components/otp-screen";
+import Onboarding from "@/components/onboarding";
+import MobileTabBar, { type MobileTab } from "@/components/mobile/mobile-tab-bar";
+import { Grid as TabGridIcon, FileText as TabFileIcon, ShieldAlert as TabAlertIcon, ShieldCheck as TabVaultIcon } from "lucide-react";
+import { getPortalStrings as portalStringsFor } from "@/lib/i18n/portalTranslations";
 import PortalHeader from "../components/dashboard/portal-header";
 import ProfileStrip from "../components/dashboard/profile-strip";
 import TabBar, { type DashboardTab } from "../components/dashboard/tab-bar";
@@ -2506,7 +2510,7 @@ export default function WapsiPrototype() {
         />
 
         {/* --- MAIN BODY --- */}
-        <main id="main-content" className="flex-1 max-w-6xl mx-auto w-full px-4 pt-6 pb-20 sm:pb-28 md:px-6 md:pt-8 md:pb-32 relative">
+        <main id="main-content" className="flex-1 max-w-6xl mx-auto w-full px-4 pt-6 pb-32 sm:pb-28 md:px-6 md:pt-8 md:pb-32 relative">
           
           {/* Phase 6, wired LAST per user directive: the assistant floats over the
               finished dashboard. It acts through /api/agent and the same handlers
@@ -2615,6 +2619,13 @@ export default function WapsiPrototype() {
                   onOpenVault={() => setIsVaultOpen(true)}
                   onSignUpComplete={handleSignUpComplete}
                 />
+              </m.div>
+            )}
+
+            {/* QUICK SETUP: the onboarding questions (also re-entered from the profile strip) */}
+            {step === "onboarding" && (
+              <m.div key="onboarding" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.25 }}>
+                <Onboarding lang={lang} t={t} initialDraft={onboardingDraft} onLanguageChange={changeLang} onComplete={handleCompleteOnboarding} />
               </m.div>
             )}
 
@@ -2731,7 +2742,7 @@ export default function WapsiPrototype() {
                       <div className="flex justify-end pr-2 print:hidden -mt-2 mb-4">
                         <button
                           onClick={handleGlobalUndo}
-                          className="px-3.5 py-1.5 bg-rose-50 border border-rose-200 text-rose-800 hover:bg-rose-100 text-xs font-bold rounded-lg transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                          className="px-3.5 py-1.5 bg-bad-soft text-bad hover:opacity-90 text-xs font-bold rounded-[12px] transition flex items-center gap-1.5 cursor-pointer"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
@@ -2752,9 +2763,9 @@ export default function WapsiPrototype() {
                         <div className="space-y-6">
                           {/* If a Form 16 / AIS PDF has already been ingested, show confirmed card instead of blank dropzone */}
                           {ingestedDoc ? (
-                            <div className="rounded-2xl border border-emerald-300 bg-emerald-50/80 dark:border-emerald-800/80 dark:bg-emerald-950/30 p-4 text-start flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
+                            <div className="rounded-[24px] bg-ok-soft p-4 text-start flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
                               <div className="flex items-center gap-3">
-                                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
+                                <div className="flex size-9 shrink-0 items-center justify-center rounded-[12px] bg-ok text-white">
                                   <CheckCircle2 size={18} />
                                 </div>
                                 <div>
@@ -2774,7 +2785,7 @@ export default function WapsiPrototype() {
                                       <span>{isHindi ? "सकल वेतन:" : "Salary:"} <span className="font-mono font-bold text-ink">{formatMoney(ingestedDoc.extracted.grossSalary, lang)}</span> · </span>
                                     )}
                                     {ingestedDoc.extracted.tds !== undefined && (
-                                      <span>TDS: <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{formatMoney(ingestedDoc.extracted.tds, lang)}</span></span>
+                                      <span>TDS: <span className="font-mono font-bold text-ok-ink">{formatMoney(ingestedDoc.extracted.tds, lang)}</span></span>
                                     )}
                                   </p>
                                 </div>
@@ -2856,7 +2867,7 @@ export default function WapsiPrototype() {
                                 <button
                                   disabled={isContinueDisabled}
                                   onClick={() => setFlowStep("deductions")}
-                                  className="flex-[2] rounded-xl bg-navy px-6 py-3.5 text-sm font-bold text-white shadow-sm transition-colors hover:opacity-90 disabled:bg-slate-200 disabled:text-ink-3 cursor-pointer disabled:cursor-not-allowed"
+                                  className="btn-primary flex-[2] rounded-[14px] h-[50px] px-6 text-[14.5px] transition-opacity cursor-pointer disabled:bg-slate-200 disabled:text-ink-3 cursor-pointer disabled:cursor-not-allowed"
                                 >
                                   {t.common.continue}
                                 </button>
@@ -2877,19 +2888,21 @@ export default function WapsiPrototype() {
                             onRemoveClaim={handleRemoveClaim}
                             onClaimAmountChange={(id, amount) => handleClaimAmountChange(id, String(amount))}
                           />
-                          <div className="flex gap-3">
+                          <div className="flex gap-3 max-md:flex-col-reverse max-md:pb-24">
                             <button
                               onClick={() => setFlowStep("facts")}
-                              className="flex-1 border border-line text-ink-2 py-3 px-4 rounded-lg hover:bg-paper-2 transition-colors text-sm font-semibold"
+                              className="glass-flat flex-1 h-[46px] rounded-[14px] px-4 text-[14.5px] font-semibold text-ink-2 hover:text-ink transition-colors cursor-pointer max-md:h-11"
                             >
                               {t.common.back}
                             </button>
-                            <button
-                              onClick={() => setFlowStep("regime")}
-                              className="flex-[2] rounded-xl bg-navy px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:opacity-90"
-                            >
-                              {t.common.continue}
-                            </button>
+                            <div className="md:contents max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-30 max-md:px-4 max-md:pb-7 max-md:pt-2.5 max-md:bg-[linear-gradient(to_top,var(--color-paper)_70%,transparent)] flex-[2] flex">
+                              <button
+                                onClick={() => setFlowStep("regime")}
+                                className="btn-primary w-full md:flex-[2] h-[50px] rounded-[14px] px-4 text-[14.5px] transition-opacity cursor-pointer"
+                              >
+                                {t.common.continue} →
+                              </button>
+                            </div>
                           </div>
                         </div>
                       )}
@@ -2928,7 +2941,7 @@ export default function WapsiPrototype() {
                           <div className="flex gap-3">
                             <button
                               onClick={() => setFlowStep("regime")}
-                              className="flex-1 border border-line text-ink-2 py-3 px-4 rounded-lg hover:bg-paper-2 transition-colors text-sm font-semibold"
+                              className="glass-flat flex-1 h-[46px] rounded-[14px] px-4 text-[14.5px] font-semibold text-ink-2 hover:text-ink transition-colors cursor-pointer"
                             >
                               {t.common.back}
                             </button>
@@ -3046,6 +3059,27 @@ export default function WapsiPrototype() {
           </AnimatePresence>
 
         </main>
+        {/* Phones: the Manual tab bar (handoff 2, M5/M6) — Overview · Statement · Actions · Vault. */}
+        {persona && (step === "landing" || step === "dashboard") && !antigravityUi && (
+          <MobileTabBar
+            label={t.shell.productName}
+            active={step === "dashboard" ? activeTab : null}
+            items={[
+              { id: "overview", label: t.dashboard.userDashboard, icon: <TabGridIcon size={20} /> },
+              { id: "statement", label: t.dashboard.taxPrefills, icon: <TabFileIcon size={20} /> },
+              { id: "actions", label: t.dashboard.pendingActions, icon: <TabAlertIcon size={20} />, badge: persona.notices.length },
+              { id: "vault", label: portalStringsFor(lang).taxVault, icon: <TabVaultIcon size={20} /> },
+            ]}
+            onSelect={(id: MobileTab) => {
+              if (id === "vault") {
+                setIsVaultOpen(true);
+                return;
+              }
+              setActiveTab(id);
+              setStep("dashboard");
+            }}
+          />
+        )}
 
         {/* --- DYNAMIC DISPUTE MODAL (FRAMER MOTION) --- */}
         {activeDisputeId && isPreFilled ? (

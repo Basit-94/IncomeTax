@@ -45,10 +45,10 @@ export default function MarketingLanding({ t, lang, changeLang, theme, toggleThe
   return (
     <div className="min-h-dvh flex flex-col text-ink">
       <PrototypeBanner t={t} />
-      <header className="relative h-[76px] shrink-0 px-6 sm:px-12 flex items-center gap-7">
+      <header className="relative h-[76px] max-md:h-14 shrink-0 px-6 max-md:px-4 sm:px-12 flex items-center gap-7 max-md:gap-2.5">
         <a href="/" className="flex items-center gap-2.5 hover:opacity-80" aria-label={t.shell.productName}>
           <MunshiAvatar size={40} />
-          <span className="font-extrabold text-[26px] tracking-[-0.03em] text-ink-2">{t.shell.productName ?? LOGO_FALLBACK.name}</span>
+          <span className="font-extrabold text-[26px] max-md:text-[18px] tracking-[-0.03em] text-ink-2">{t.shell.productName ?? LOGO_FALLBACK.name}</span>
           <span className="text-sm font-medium text-ink-3">{t.shell.productNativeName ?? LOGO_FALLBACK.native}</span>
         </a>
         <div className="flex-1" />
@@ -61,12 +61,12 @@ export default function MarketingLanding({ t, lang, changeLang, theme, toggleThe
         <button type="button" onClick={toggleTheme} className="glass-flat size-[38px] rounded-full text-ink-2 hover:text-ink flex items-center justify-center cursor-pointer shrink-0" aria-label={theme === "dark" ? t.shell.light : t.shell.dark}>
           {theme === "dark" ? <Sun size={15} className="text-money" aria-hidden="true" /> : <Moon size={15} className="text-money" aria-hidden="true" />}
         </button>
-        <button type="button" onClick={onSignIn} className="glass h-11 rounded-full px-5 text-[15px] font-semibold text-ink-2 hover:text-ink cursor-pointer shrink-0">
+        <button type="button" onClick={onSignIn} className="glass h-11 rounded-full px-5 text-[15px] font-semibold text-ink-2 hover:text-ink cursor-pointer shrink-0 max-md:h-9 max-md:rounded-[14px] max-md:px-3.5 max-md:text-[13px] max-md:font-bold max-md:bg-ink-surface max-md:text-on-ink max-md:border-0">
           {L("Sign in")}
         </button>
       </header>
 
-      <main id="main-content" className="relative flex-1 px-6 sm:px-12 pt-10 sm:pt-16 text-center">
+      <main id="main-content" className="relative flex-1 px-6 max-md:px-5 sm:px-12 pt-10 max-md:pt-3 sm:pt-16 text-center max-md:text-start">
         {/* ---------------------------------------------------------------- hero -- */}
         <section id="meet" className="mx-auto max-w-5xl">
           <span className="glass inline-flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold text-ink-3">
@@ -80,11 +80,15 @@ export default function MarketingLanding({ t, lang, changeLang, theme, toggleThe
           </p>
 
           {/* The demo composer: Munshi ji peeks from behind it, a bubble above-left, the sentence types itself. */}
-          <div className="relative mx-auto mt-16 max-w-[720px]">
+          <div className="relative mx-auto mt-16 max-md:mt-[96px] max-w-[720px]">
             <div className="hidden lg:block absolute -left-[118px] -bottom-1.5 pointer-events-none" aria-hidden="true">
-              <Munshi size={150} />
+              <Munshi size={150} state="welcome" />
             </div>
-            <MunshiBubble className="absolute left-6 -top-[58px] !py-2.5 !px-4 text-sm font-semibold">
+            {/* M1: Munshi ji at 112 px over the composer, his line to the right. */}
+            <div className="md:hidden absolute -left-2 -top-[96px] pointer-events-none" aria-hidden="true">
+              <Munshi size={112} state="welcome" />
+            </div>
+            <MunshiBubble className="absolute left-6 -top-[58px] max-md:left-[104px] max-md:-top-[72px] !py-2.5 !px-4 text-sm max-md:text-[12.5px] font-semibold">
               {L("Just type it the way you'd tell a friend")} 👇
             </MunshiBubble>
             <button
@@ -98,11 +102,11 @@ export default function MarketingLanding({ t, lang, changeLang, theme, toggleThe
                 {typed}
                 <span className="inline-block w-0.5 h-5 align-[-3px] ms-0.5 bg-ink motion-safe:animate-[caret-blink_1s_steps(1)_infinite]" aria-hidden="true" />
               </span>
-              <span className="btn-primary h-[54px] shrink-0 rounded-2xl px-6 text-base flex items-center gap-2.5">
-                {L("Ask Munshi ji")} <ArrowRight size={16} aria-hidden="true" />
+              <span className="btn-primary h-[54px] max-md:size-[42px] max-md:px-0 max-md:justify-center max-md:rounded-[13px] shrink-0 rounded-2xl px-6 text-base flex items-center gap-2.5">
+                <span className="max-md:hidden">{L("Ask Munshi ji")}</span> <ArrowRight size={16} aria-hidden="true" />
               </span>
             </button>
-            <div className="mt-4 flex flex-wrap justify-center gap-2.5">
+            <div className="mt-4 flex flex-wrap justify-center max-md:justify-start gap-2.5 max-md:gap-2">
               {["What is Form 16?", "New regime or old?", "I pay rent", "मेरी सैलरी 5 लाख है"].map((chip) => (
                 <button key={chip} type="button" onClick={onSignIn} className="glass-flat rounded-full px-4 py-2 text-[13px] font-semibold text-ink-2 hover:text-ink hover:border-money/50 cursor-pointer">
                   {chip.startsWith("म") ? chip : L(chip)}

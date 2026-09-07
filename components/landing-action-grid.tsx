@@ -223,7 +223,7 @@ export default function LandingActionGrid({
           key={card1.id}
           glowColor="rgba(255, 122, 26, 0.35)"
           depth={26}
-          className="glass relative w-full flex flex-col justify-between rounded-3xl border-[1.5px] border-money p-6 sm:px-7 text-start"
+          className="glass relative w-full flex flex-col justify-between rounded-3xl border-[1.5px] border-money p-4 sm:p-6 sm:px-7 text-start"
         >
           <div>
             {/* Card Top: Number + Badges + Icon */}
@@ -383,7 +383,7 @@ export default function LandingActionGrid({
       </div>
 
       {/* 6-Card Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3">
         {otherCards.map((c) => {
           const conf = CARD_ICONS[c.id];
           let Icon = conf.icon;
@@ -426,7 +426,7 @@ export default function LandingActionGrid({
               <button
                 type="button"
                 onClick={() => handleCardClick(c.id)}
-                className="glass w-full h-full relative flex flex-col justify-between rounded-[20px] p-5 text-start transition-colors hover:border-money/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-money cursor-pointer"
+                className="glass w-full h-full relative flex flex-col justify-between rounded-[20px] max-sm:rounded-[16px] p-5 max-sm:p-3.5 text-start transition-colors hover:border-money/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-money cursor-pointer"
               >
                 <div>
                   {/* Card Top: Number + Badge + Icon */}

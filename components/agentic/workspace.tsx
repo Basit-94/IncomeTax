@@ -18,6 +18,8 @@ import { isSpeechSupported, startDictation, type Dictation } from "@/lib/speech"
 import type { Lang } from "@/lib/types";
 import { renderAssistantText } from "../agent/format";
 import { Munshi, MunshiAvatar } from "../brand/munshi";
+import type { MunshiState } from "../brand/munshi";
+import { agentReaction } from "@/lib/munshi-state";
 
 import type { CAReviewRecord } from "@/lib/ca/ca-store";
 import { computeForPersona } from "@/lib/return/compute";
@@ -68,7 +70,7 @@ export default function Workspace(props: WorkspaceProps) {
         <div className="flex-1 flex items-center justify-center px-4 py-10">
           <div className="w-full max-w-2xl text-center space-y-5">
             {/* Munshi ji greets the empty state (handoff: 96 px on empty states). */}
-            <Munshi size={96} className="mx-auto" />
+            <Munshi size={96} state="welcome" className="mx-auto" />
             <span className="glass-flat inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold text-ink-2">
               <span className="size-1.5 rounded-full bg-ok" aria-hidden="true" /> {s.simulatedBadge}
             </span>
@@ -100,6 +102,7 @@ export default function Workspace(props: WorkspaceProps) {
     <div className="flex-1 min-h-0 flex flex-col">
       {/* Status strip */}
       <div className="px-4 sm:px-6 pt-3 flex items-center gap-2 text-xs">
+        <MunshiAvatar size={34} state={agentReaction(run.status, props.loading, props.error)} />
         <span className={`inline-flex items-center gap-1.5 rounded-full border border-glass-edge px-2.5 py-1 font-mono font-semibold ${run.status === "waiting_for_input" || run.status === "waiting_for_review" ? "bg-amber-bg text-amber-ink" : run.status === "failed" ? "bg-alarm-soft text-alarm" : "bg-glass text-ink-2"}`}>
           <CircleDot size={11} aria-hidden="true" /> {s[STATUS_KEY[run.status]] as string}
         </span>
@@ -109,11 +112,11 @@ export default function Workspace(props: WorkspaceProps) {
       {/* CA Review Complete Banner */}
       {props.activeCAReview?.status === "reviewed" && (
         <div className="px-4 sm:px-6 pt-2">
-          <div className="mx-auto w-full max-w-3xl p-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-between gap-3 shadow-xs">
+          <div className="mx-auto w-full max-w-3xl p-3.5 bg-ok-soft rounded-[18px] flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="size-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <MunshiAvatar size={28} state="happy" />
               <div className="min-w-0">
-                <span className="text-xs font-bold text-emerald-900 dark:text-emerald-200 block truncate">
+                <span className="text-xs font-bold text-ok-ink block truncate">
                   🎖️ CA Review Complete from {props.activeCAReview.caDetails?.name || "Chartered Accountant"}!
                 </span>
                 <span className="text-[11px] text-ink-3 block truncate">
@@ -125,7 +128,7 @@ export default function Workspace(props: WorkspaceProps) {
               <button
                 type="button"
                 onClick={props.onOpenComparison}
-                className="px-3 py-1.5 bg-teal-800 hover:bg-teal-900 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer shrink-0"
+                className="ink-surface h-[34px] px-3.5 hover:opacity-90 text-xs font-bold rounded-[12px] transition cursor-pointer shrink-0"
               >
                 View Diff →
               </button>
@@ -154,8 +157,11 @@ export default function Workspace(props: WorkspaceProps) {
           {run.pendingCard && !confirmedIds.has(run.pendingCard.id) && (
             <ReviewCardView card={run.pendingCard} s={s} disabled={props.loading} onReviewWithCA={props.onReviewWithCA} onDecide={(accepted) => props.onSend({ confirm: { cardId: run.pendingCard!.id, accepted } })} />
           )}
-          {props.loading && (
-            <p className="text-xs text-ink-3 font-mono animate-pulse px-1">{s.statusRunning}…</p>
+          {(props.loading || run.status === "running") && !props.error && (
+            <div className="flex items-center gap-3 px-1" role="status">
+              <Munshi size={72} state="working" />
+              <p className="text-xs text-ink-3 font-mono">{s.statusRunning}…</p>
+            </div>
           )}
           {props.error && (
             <p className="text-xs font-semibold text-alarm bg-alarm-soft border border-alarm/30 rounded-lg px-3 py-2">{props.error}</p>
@@ -168,7 +174,7 @@ export default function Workspace(props: WorkspaceProps) {
           <div className="mx-auto w-full max-w-3xl space-y-1.5">
             <div className="flex items-center justify-between gap-2 text-xs text-ink-3">
               <span className="inline-flex items-center gap-1.5 font-medium text-ink-2">
-                <Sparkles size={12} className="text-amber-500" aria-hidden="true" />
+                <Sparkles size={12} className="text-money" aria-hidden="true" />
                 <span>{props.lang === "hi" ? "अगले 7 उपलब्ध कार्य (AY 2026-27):" : "Next Available Tasks (AY 2026-27):"}</span>
               </span>
               <span className="text-[11px] text-ink-3 font-mono">Select or type 1–7</span>
@@ -228,13 +234,13 @@ function EventRow({ event, s, answered, confirmed, questions, runId, onOpenVault
         </div>
       ) : (
         <div className="flex items-start gap-3">
-          <Avatar />
-          <div className="munshi-bubble min-w-0 max-w-[78%]">{renderAssistantText(p.text)}</div>
+          <Avatar state="explaining" />
+          <div className="munshi-bubble min-w-0 max-w-[78%] max-md:max-w-[86%]">{renderAssistantText(p.text)}</div>
         </div>
       );
     case "activity":
       return (
-        <p className="flex items-center gap-2 ps-11 text-[11.5px] font-mono text-ink-3">
+        <p className="flex items-center gap-2 ps-11 max-md:ps-9 text-[11.5px] font-mono text-ink-3">
           <span className="size-1.5 rounded-full bg-money shrink-0" aria-hidden="true" /> {p.text}
         </p>
       );
@@ -267,15 +273,15 @@ function EventRow({ event, s, answered, confirmed, questions, runId, onOpenVault
     case "output": {
       const isPdf = p.output.mimeType === "application/pdf" || p.output.kind === "itrv_acknowledgement_pdf";
       return (
-        <div className="px-11 my-2">
+        <div className="px-11 max-md:px-9 my-2">
           {isPdf ? (
-            <div className="rounded-2xl border-2 border-teal-700/30 bg-teal-500/5 p-4 space-y-3 max-w-md shadow-xs">
+            <div className="glass rounded-[18px] border-[1.5px] border-ok p-4 space-y-3 max-w-md">
               <div className="flex items-start gap-3">
-                <div className="size-9 rounded-xl bg-teal-800 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <div className="size-9 rounded-[12px] ink-surface flex items-center justify-center shrink-0">
                   <FileText size={18} aria-hidden="true" />
                 </div>
                 <div className="min-w-0">
-                  <span className="inline-flex items-center gap-1 rounded-md bg-teal-800/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-teal-900 dark:text-teal-200">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-ok-soft px-2.5 py-0.5 text-[10.5px] font-bold uppercase tracking-wider text-ok-ink">
                     Official CBDT Form ITR-V
                   </span>
                   <p className="text-sm font-bold text-ink mt-0.5">{p.output.title}</p>
@@ -289,7 +295,7 @@ function EventRow({ event, s, answered, confirmed, questions, runId, onOpenVault
                   <a
                     href={`/api/runs/${runId}/outputs/${p.output.id}`}
                     download
-                    className="inline-flex items-center gap-2 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-bold text-xs px-4 py-2.5 shadow-xs transition cursor-pointer"
+                    className="inline-flex items-center gap-2 rounded-[14px] ink-surface hover:opacity-90 font-bold text-[13px] h-[38px] px-4 transition cursor-pointer"
                   >
                     <Download size={14} aria-hidden="true" /> Download Form ITR-V (PDF)
                   </a>
@@ -298,9 +304,9 @@ function EventRow({ event, s, answered, confirmed, questions, runId, onOpenVault
                   <button
                     type="button"
                     onClick={onOpenVault}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-teal-700/30 bg-paper px-3.5 py-2 text-xs font-semibold text-ink hover:bg-paper-3 transition cursor-pointer"
+                    className="glass-flat inline-flex items-center gap-1.5 rounded-[14px] h-[38px] px-3.5 text-[13px] font-semibold text-ink hover:border-money/60 transition cursor-pointer"
                   >
-                    <ShieldCheck size={14} className="text-amber-500" aria-hidden="true" />
+                    <ShieldCheck size={14} className="text-money" aria-hidden="true" />
                     <span>Open in Citizen Tax Vault</span>
                   </button>
                 )}
@@ -318,7 +324,7 @@ function EventRow({ event, s, answered, confirmed, questions, runId, onOpenVault
     case "status":
       if (p.status === "failed") {
         return (
-          <p className="flex items-center gap-2 px-11 text-xs text-alarm">
+          <p className="flex items-center gap-2 px-11 max-md:px-9 text-xs text-alarm">
             <ShieldAlert size={12} aria-hidden="true" /> {s.statusFailed}
           </p>
         );
@@ -329,9 +335,9 @@ function EventRow({ event, s, answered, confirmed, questions, runId, onOpenVault
   }
 }
 
-function Avatar() {
+function Avatar({ state = "idle" }: { state?: MunshiState }) {
   return (
-    <MunshiAvatar size={34} className="mt-0.5" />
+    <MunshiAvatar size={34} state={state} className="mt-0.5" />
   );
 }
 
@@ -387,8 +393,8 @@ function QuestionCard({
 
   return (
     <div className="flex items-start gap-3">
-      <Avatar />
-      <div className="glass w-full max-w-[82%] rounded-[18px] rounded-tl-[4px] border-[1.5px] border-soft px-[18px] py-4 space-y-2.5">
+      <Avatar state={uploadError ? "error" : uploading || disabled ? "uploading" : q.expects === "yes_no" && q.items ? "secure" : "listening"} />
+      <div className="glass w-full min-w-0 max-w-[82%] max-md:max-w-none rounded-[18px] rounded-tl-[4px] border-[1.5px] border-soft px-[18px] max-md:px-3.5 py-4 space-y-2.5">
         {q.lead && <p className="text-sm text-ink-2 leading-relaxed">{q.lead}</p>}
         <p className="text-[15px] text-ink leading-relaxed">{q.text}</p>
         {q.docHint && <p className="text-sm text-ink-2 leading-relaxed">{q.docHint}</p>}
@@ -402,13 +408,13 @@ function QuestionCard({
           <div className="space-y-2.5 my-2">
             {/* Prominent CA Review Banner for Balance Tax Due */}
             {hasReviewedCA ? (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 dark:bg-emerald-950/30">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-[14px] bg-ok-soft">
                 <div className="space-y-0.5 min-w-0">
-                  <div className="flex items-center gap-1.5 font-bold text-sm text-emerald-900 dark:text-emerald-200">
-                    <Award size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <div className="flex items-center gap-1.5 font-bold text-sm text-ok-ink">
+                    <Award size={16} className="text-ok shrink-0" />
                     <span>🎖️ CA Audit Complete from {activeCAReview.caDetails?.name || "Chartered Accountant"}</span>
                   </div>
-                  <p className="text-xs text-emerald-800/80 dark:text-emerald-300/80">
+                  <p className="text-xs text-ok-ink/80">
                     {caDue === 0
                       ? `Your CA audited deductions and eliminated your balance tax! (Eligible Refund: ${formatMoney(caB?.refundOrDue || 0, lang)})`
                       : `Your CA revised your balance tax due to ${formatMoney(caDue, lang)} under the ${caRegime === "old" ? "Old Regime" : "New Regime"}.`}
@@ -418,27 +424,27 @@ function QuestionCard({
                   <button
                     type="button"
                     onClick={onOpenComparison}
-                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-800 hover:bg-teal-900 text-white text-xs font-bold shrink-0 shadow-xs transition cursor-pointer"
+                    className="inline-flex items-center justify-center gap-1.5 h-[34px] px-3.5 rounded-[12px] ink-surface hover:opacity-90 text-xs font-bold shrink-0 transition cursor-pointer"
                   >
                     <span>View Diff →</span>
                   </button>
                 )}
               </div>
             ) : onReviewWithCA ? (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-teal-600/30 bg-teal-500/10 dark:bg-teal-950/30">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-[14px] bg-amber-bg">
                 <div className="space-y-0.5 min-w-0">
-                  <div className="flex items-center gap-1.5 font-bold text-sm text-teal-900 dark:text-teal-200">
-                    <Award size={16} className="text-teal-600 dark:text-teal-400 shrink-0" />
+                  <div className="flex items-center gap-1.5 font-bold text-sm text-amber-ink">
+                    <Award size={16} className="text-money shrink-0" />
                     <span>Have Balance Tax Due? Review with a CA First</span>
                   </div>
-                  <p className="text-xs text-teal-800/80 dark:text-teal-300/80">
+                  <p className="text-xs text-amber-ink/80">
                     A CA can audit eligible deductions (80C, 80D, 80CCD, HRA, 24b) to help reduce or eliminate your payable tax before paying.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={onReviewWithCA}
-                  className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold shrink-0 shadow-xs transition cursor-pointer"
+                  className="inline-flex items-center justify-center gap-1.5 h-[34px] px-3.5 rounded-[12px] ink-surface hover:opacity-90 text-xs font-bold shrink-0 transition cursor-pointer"
                 >
                   <Award size={14} />
                   <span>🎖️ Review with CA</span>
@@ -446,13 +452,13 @@ function QuestionCard({
               </div>
             ) : null}
 
-            <div className="flex flex-col sm:flex-row items-center gap-4 p-3.5 bg-paper rounded-xl border border-line">
-              <div className="p-2 bg-white rounded-lg shadow-xs border border-slate-200 shrink-0">
+            <div className="glass-flat flex flex-col sm:flex-row items-center gap-4 p-3.5 rounded-[14px]">
+              <div className="p-2 bg-white rounded-[12px] border border-line shrink-0">
                 <QRCodeSVG value="upi://pay?pa=epaytax.cbdt@sbi&pn=Income%20Tax%20Department&cu=INR" size={105} />
               </div>
               <div className="text-xs space-y-1 text-ink-2">
                 <div className="font-bold text-ink text-sm flex items-center gap-1.5">
-                  <span className="size-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
+                  <span className="size-2 rounded-full bg-ok inline-block" />
                   e-Pay Tax · Official CBDT Payment Gateway
                 </div>
                 <p className="text-ink-3">Payee UPI VPA: <span className="font-mono text-ink font-semibold">epaytax.cbdt@sbi</span></p>
@@ -539,17 +545,17 @@ function QuestionCard({
                     }
                     onAnswer(c.value);
                   }}
-                  className={`rounded-lg border px-3.5 py-2 text-sm font-medium transition-all disabled:opacity-50 cursor-pointer ${
+                  className={`rounded-[14px] border h-[38px] px-3.5 text-[13px] font-medium transition-all disabled:opacity-50 cursor-pointer ${
                     isCAAction
-                      ? "bg-teal-700/10 border-teal-700/40 text-teal-950 dark:text-teal-200 font-bold hover:bg-teal-700/20 shadow-xs flex items-center gap-1.5"
+                      ? "bg-amber-bg border-money/40 text-amber-ink font-bold hover:opacity-90 flex items-center gap-1.5"
                       : isChallanAction && hasReviewedCA && caDue === 0
-                      ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-800 dark:text-emerald-200 font-semibold shadow-xs hover:bg-emerald-500/20"
+                      ? "bg-ok-soft border-ok/40 text-ok-ink font-semibold hover:opacity-90"
                       : isChallanAction
-                      ? "bg-money/10 border-money/40 text-money font-semibold shadow-xs hover:bg-money/20"
-                      : "border-line bg-paper text-ink hover:bg-paper-3"
+                      ? "bg-amber-bg border-money/40 text-amber-ink font-semibold hover:opacity-90"
+                      : "glass-flat text-ink hover:border-money/60"
                   }`}
                 >
-                  {isCAAction && <Award size={14} className="text-teal-600 shrink-0" />}
+                  {isCAAction && <Award size={14} className="text-money shrink-0" />}
                   {label}
                 </button>
               );
@@ -569,11 +575,11 @@ function QuestionCard({
               inputMode={q.expects === "number" ? "numeric" : "text"}
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink font-mono tabular-nums focus:outline-none focus:ring-2 focus:ring-money/40"
+              className="flex-1 h-[46px] rounded-[14px] border-[1.5px] border-glass-edge bg-white/80 dark:bg-white/10 px-4 text-sm text-ink font-mono tabular-nums focus:outline-none focus:border-money"
               aria-label={q.text}
               disabled={disabled}
             />
-            <button type="submit" disabled={disabled || !value.trim()} className="rounded-lg bg-ink text-paper px-4 py-2 text-sm font-semibold hover:opacity-90 disabled:opacity-50 cursor-pointer">{s.answer}</button>
+            <button type="submit" disabled={disabled || !value.trim()} className="ink-surface rounded-[14px] h-[46px] px-5 text-[14.5px] font-bold hover:opacity-90 disabled:opacity-45 cursor-pointer">{s.answer}</button>
           </form>
         )}
       </div>
@@ -632,8 +638,8 @@ function FormFields({ q, s, disabled, onAnswer }: { q: Question; s: AgenticStrin
 function ReviewCardView({ card, s, disabled, inert = false, onDecide, onReviewWithCA }: { card: ReviewCard; s: AgenticStrings; disabled: boolean; inert?: boolean; onDecide?: (accepted: boolean) => void; onReviewWithCA?: () => void }) {
   return (
     <div className="flex items-start gap-3">
-      <Avatar />
-      <div className={`glass w-full max-w-[82%] rounded-[18px] rounded-tl-[4px] p-[18px] space-y-3 ${inert ? "" : "border-[1.5px] border-money"}`}>
+      <Avatar state={disabled ? "working" : "reading"} />
+      <div className={`glass w-full min-w-0 max-w-[82%] max-md:max-w-none rounded-[18px] rounded-tl-[4px] p-[18px] max-md:p-3.5 space-y-3 ${inert ? "" : "border-[1.5px] border-money"}`}>
         <p className="font-sans text-[15px] font-extrabold text-ink tracking-[-0.01em]">{card.title}</p>
         <dl className="space-y-1.5">
           {card.rows.map((r) => (
@@ -645,15 +651,15 @@ function ReviewCardView({ card, s, disabled, inert = false, onDecide, onReviewWi
         </dl>
         <p className="font-mono text-[10px] text-ink-3">rev {card.boundTo.revision} · {card.boundTo.snapshotHash.slice(0, 10)} · {s.simulatedBadge}</p>
         {!inert && (
-          <div className="flex flex-wrap gap-2 pt-1">
+          <div className="flex flex-wrap gap-2 pt-1 max-md:flex-col">
             <button type="button" disabled={disabled} onClick={() => onDecide?.(true)} className="btn-primary flex-1 rounded-[14px] h-[46px] px-5 text-[14.5px] disabled:opacity-45 cursor-pointer">{card.confirmLabel}</button>
             {card.kind === "filing" && onReviewWithCA && (
-              <button type="button" onClick={onReviewWithCA} className="rounded-lg border border-teal-700/40 bg-teal-500/10 hover:bg-teal-500/20 text-teal-950 dark:text-teal-200 px-3 py-2.5 text-xs font-bold transition cursor-pointer flex items-center gap-1.5">
-                <Award size={14} className="text-teal-600" />
+              <button type="button" onClick={onReviewWithCA} className="glass-flat rounded-[14px] h-[46px] px-4 text-[14.5px] font-semibold text-ink-2 hover:text-ink transition cursor-pointer flex items-center gap-1.5 max-md:w-full max-md:justify-center">
+                <Award size={14} className="text-money" />
                 <span>Review with CA</span>
               </button>
             )}
-            <button type="button" disabled={disabled} onClick={() => onDecide?.(false)} className="glass-flat rounded-[14px] h-[46px] px-4 text-[14.5px] font-semibold text-ink-2 hover:text-ink disabled:opacity-50 cursor-pointer">{card.cancelLabel}</button>
+            <button type="button" disabled={disabled} onClick={() => onDecide?.(false)} className="glass-flat max-md:w-full rounded-[14px] h-[46px] px-4 text-[14.5px] font-semibold text-ink-2 hover:text-ink disabled:opacity-50 cursor-pointer">{card.cancelLabel}</button>
           </div>
         )}
       </div>
@@ -696,9 +702,9 @@ export function Composer({ s, lang, disabled, onSubmit, variant = "chat", placeh
   };
 
   return (
-    <div className={ask ? "shrink-0 pt-2" : "shrink-0 px-4 sm:px-6 pb-4 pt-2"}>
+    <div className={ask ? "shrink-0 pt-2" : "shrink-0 px-4 sm:px-6 pb-4 pt-2 max-md:pb-7 max-md:bg-[linear-gradient(to_top,var(--color-paper)_70%,transparent)]"}>
       <form
-        className={`glass mx-auto w-full flex items-end gap-2.5 p-2 ps-5 rounded-[20px] focus-within:border-money/60 ${ask ? "max-w-[720px]" : "max-w-3xl"}`}
+        className={`glass mx-auto w-full flex items-end gap-2.5 p-2 ps-5 max-md:p-1.5 max-md:ps-3.5 rounded-[20px] max-md:rounded-[18px] focus-within:border-money/60 ${ask ? "max-w-[720px]" : "max-w-3xl"}`}
         onSubmit={(e) => {
           e.preventDefault();
           submit();
@@ -726,11 +732,11 @@ export function Composer({ s, lang, disabled, onSubmit, variant = "chat", placeh
           </button>
         )}
         {ask ? (
-          <button type="submit" disabled={disabled || !text.trim()} className="btn-primary h-[46px] shrink-0 rounded-[14px] px-5 flex items-center gap-2 text-[14.5px] disabled:opacity-45 cursor-pointer">
-            {s.ask} <ArrowRight size={15} aria-hidden="true" />
+          <button type="submit" disabled={disabled || !text.trim()} className="btn-primary h-[46px] max-md:size-[42px] max-md:mb-[2px] max-md:px-0 max-md:justify-center max-md:rounded-[13px] shrink-0 rounded-[14px] px-5 flex items-center gap-2 text-[14.5px] disabled:opacity-45 cursor-pointer" aria-label={s.ask}>
+            <span className="max-md:hidden">{s.ask}</span> <ArrowRight size={15} aria-hidden="true" />
           </button>
         ) : (
-          <button type="submit" disabled={disabled || !text.trim()} className="btn-primary h-[46px] shrink-0 rounded-[14px] px-5 flex items-center gap-2 text-[14.5px] disabled:opacity-45 cursor-pointer">
+          <button type="submit" disabled={disabled || !text.trim()} className="btn-primary h-[46px] max-md:size-[42px] max-md:mb-[2px] max-md:px-0 max-md:justify-center max-md:rounded-[13px] shrink-0 rounded-[14px] px-5 flex items-center gap-2 text-[14.5px] disabled:opacity-45 cursor-pointer" aria-label={s.send}>
             <Send size={15} aria-hidden="true" /> <span className="hidden sm:inline">{s.send}</span>
           </button>
         )}

@@ -12,6 +12,7 @@
 import { Activity, Check, Circle, Download, FileText, Loader2, MinusCircle, Package, Scale, ShieldAlert, UserRound } from "lucide-react";
 import type { OutputRef, PlanStep, SourceRef } from "@/lib/agentic/types";
 import type { AgenticStrings } from "@/lib/i18n/agenticStrings";
+import BottomSheet from "../mobile/bottom-sheet";
 
 export type InspectorTab = "progress" | "outputs" | "sources";
 
@@ -27,6 +28,8 @@ export interface InspectorProps {
   manualNote?: string;
   /** Turns where the model's wording was not used, with the reason (quota, rejected reply, budget). */
   modelNotes?: string[];
+  /** Phones/tablets: the panel is a bottom sheet; this closes it. */
+  onClose?: () => void;
 }
 
 export function InspectorControls({ s, open, onToggle, steps, outputs, sources }: Pick<InspectorProps, "s" | "open" | "onToggle" | "steps" | "outputs" | "sources">) {
@@ -37,6 +40,16 @@ export function InspectorControls({ s, open, onToggle, steps, outputs, sources }
   ];
   return (
     <div className="flex items-center gap-1 shrink-0" role="tablist" aria-label={`${s.progress} · ${s.outputs} · ${s.sources}`}>
+      {/* Phones: one 36 px square opens the inspector sheet on Progress (handoff 2, M4). */}
+      <button
+        type="button"
+        onClick={() => onToggle(open ?? "progress")}
+        aria-pressed={open !== null}
+        aria-label={s.progress}
+        className={`md:hidden size-9 rounded-[12px] flex items-center justify-center cursor-pointer ${open ? "bg-amber-bg border border-money text-amber-ink" : "glass-flat text-ink"}`}
+      >
+        <Activity size={16} aria-hidden="true" />
+      </button>
       {items.map(({ id, label, count, Icon }) => (
         <button
           key={id}
@@ -44,7 +57,7 @@ export function InspectorControls({ s, open, onToggle, steps, outputs, sources }
           role="tab"
           aria-selected={open === id}
           onClick={() => onToggle(id)}
-          className={`h-[38px] px-3 rounded-lg border text-xs font-sans font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+          className={`max-md:hidden h-[38px] px-3 rounded-lg border text-xs font-sans font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
             open === id ? "border-money bg-money-soft text-money" : "border-line bg-paper-2 text-ink-2 hover:text-ink"
           }`}
         >
@@ -65,11 +78,11 @@ function StepIcon({ state }: { state: PlanStep["state"] }) {
   return <Circle size={14} className="text-ink-3" aria-hidden="true" />;
 }
 
-export function InspectorPanel({ s, open, steps, outputs, sources, runId, manualNote, modelNotes = [] }: InspectorProps) {
+export function InspectorPanel({ s, open, onToggle, onClose, steps, outputs, sources, runId, manualNote, modelNotes = [] }: InspectorProps) {
   if (!open) return null;
-  return (
-    <aside className="w-full lg:w-[320px] shrink-0 border-l border-line bg-paper-2/60 overflow-y-auto" aria-label={open === "progress" ? s.progress : open === "outputs" ? s.outputs : s.sources}>
-      <div className="p-4 space-y-3">
+  const label = open === "progress" ? s.progress : open === "outputs" ? s.outputs : s.sources;
+  const body = (
+      <div className="p-4 max-lg:p-0 space-y-3">
         {manualNote && <p className="text-xs text-ink-2 leading-relaxed rounded-lg border border-line bg-paper p-3">{manualNote}</p>}
 
         {open === "progress" && (
@@ -111,7 +124,7 @@ export function InspectorPanel({ s, open, steps, outputs, sources, runId, manual
                       <div className="flex items-center gap-1.5">
                         <p className="text-sm font-semibold text-ink truncate">{o.title}</p>
                         {(o.mimeType === "application/pdf" || o.kind === "itrv_acknowledgement_pdf") && (
-                          <span className="rounded bg-teal-800/10 px-1.5 py-0.5 text-[9px] font-bold text-teal-800 dark:text-teal-300 uppercase shrink-0">
+                          <span className="rounded-full bg-ok-soft px-1.5 py-0.5 text-[9px] font-bold text-ok-ink uppercase shrink-0">
                             PDF
                           </span>
                         )}
@@ -119,7 +132,7 @@ export function InspectorPanel({ s, open, steps, outputs, sources, runId, manual
                       <p className="font-mono text-[10px] text-ink-3">rev {o.snapshotRevision} · {o.snapshotHash.slice(0, 10)}</p>
                     </div>
                   </div>
-                  <p className="text-[11px] text-amber-700 dark:text-amber-300">{s.simulatedBadge}</p>
+                  <p className="text-[11px] text-amber-ink">{s.simulatedBadge}</p>
                   {runId && (
                     <a href={`/api/runs/${runId}/outputs/${o.id}`} className="inline-flex items-center gap-1.5 text-xs font-semibold text-money hover:underline" download>
                       <Download size={12} aria-hidden="true" /> {o.mimeType === "application/pdf" || o.kind === "itrv_acknowledgement_pdf" ? `${s.download} (PDF)` : s.download}
@@ -173,6 +186,22 @@ export function InspectorPanel({ s, open, steps, outputs, sources, runId, manual
           )
         )}
       </div>
-    </aside>
+  );
+  return (
+    <>
+      <aside className="hidden lg:block w-[320px] shrink-0 border-l border-line bg-paper-2/60 overflow-y-auto" aria-label={label}>
+        {body}
+      </aside>
+      <BottomSheet open onClose={() => onClose?.()} title={label} subtitle={`${s.progress} · ${s.outputs} · ${s.sources}`} icon={<Activity size={18} aria-hidden="true" />} closeLabel={s.cancel}>
+        <div className="mb-3.5 flex gap-[3px] rounded-[14px] border border-glass-edge bg-white/50 dark:bg-white/[0.06] p-[3px] text-[12.5px] font-bold" role="tablist">
+          {(["progress", "outputs", "sources"] as const).map((tab) => (
+            <button key={tab} type="button" role="tab" aria-selected={open === tab} onClick={() => onToggle(tab)} className={`flex-1 h-9 rounded-[11px] cursor-pointer ${open === tab ? "ink-surface" : "text-ink-3"}`}>
+              {tab === "progress" ? s.progress : tab === "outputs" ? s.outputs : s.sources}
+            </button>
+          ))}
+        </div>
+        {body}
+      </BottomSheet>
+    </>
   );
 }

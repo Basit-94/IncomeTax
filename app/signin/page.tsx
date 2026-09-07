@@ -12,7 +12,10 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowRight, Bot, CheckCircle2, LayoutDashboard, Moon, ShieldCheck, Sliders, Sparkles, Sun, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, LayoutDashboard, Moon, ShieldCheck, Sliders, Sparkles, Sun, Zap } from "lucide-react";
+import { MunshiAvatar } from "@/components/brand/munshi";
+import Onboarding from "@/components/onboarding";
+import { loadOnboardingDraft, loadOnboardingProfile, saveOnboardingProfile, type OnboardingProfile } from "@/lib/onboarding";
 import type { IngestedDocument } from "@/context/TaxReturnContext";
 import { clearSession, loadSession, saveSession, type SessionInfo } from "@/lib/auth-client";
 import { ensureServerSession } from "@/lib/session-client";
@@ -94,11 +97,28 @@ function SignIn() {
   const [authNote, setAuthNote] = useState<string | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
   const [showModeSelect, setShowModeSelect] = useState(false);
+  // New here: the quick setup (language, intent, situation, mode, focus) runs once before the mode choice (user, 2026-09-07).
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const arrive = useCallback(() => {
     setPending(null);
-    setShowModeSelect(true);
+    if (loadOnboardingProfile()) setShowModeSelect(true);
+    else setShowOnboarding(true);
   }, []);
+
+  const finishOnboarding = (profile: OnboardingProfile) => {
+    saveOnboardingProfile(profile);
+    if (profile.lang !== lang) {
+      setLang(profile.lang);
+      localStorage.setItem("wapsi_lang", profile.lang);
+      window.dispatchEvent(new Event("wapsi_lang_change"));
+    }
+    try {
+      localStorage.setItem("wapsi_user_mode", profile.mode === "full" ? "manual" : "agentic");
+    } catch {}
+    setShowOnboarding(false);
+    setShowModeSelect(true);
+  };
 
   const onPanChange = (val: string) => {
     const clean = val.toUpperCase().trim();
@@ -342,11 +362,18 @@ function SignIn() {
   return (
     <div className="min-h-dvh flex flex-col bg-paper text-ink">
       <PrototypeBanner t={t} />
-      <header className="h-[64px] shrink-0 px-6 flex items-center gap-3.5">
-        <a href="/" className="flex items-center shrink-0 hover:opacity-80" aria-label={t.shell.productName}>
+      <header className="h-[64px] max-md:h-[56px] shrink-0 px-6 max-md:px-4 flex items-center gap-3.5 max-md:gap-2.5">
+        <a href="/" className="hidden md:flex items-center shrink-0 hover:opacity-80" aria-label={t.shell.productName}>
           <BrandBox t={t} />
         </a>
-        <div className="flex-1" />
+        {/* M2: a back circle and the screen title instead of the brand box */}
+        <a href="/" className="md:hidden glass-flat size-9 rounded-full flex items-center justify-center text-ink shrink-0" aria-label={localize("Back to home", lang)}>
+          <ArrowLeft size={16} aria-hidden="true" />
+        </a>
+        <span className="md:hidden flex-1 min-w-0 truncate text-[16px] font-extrabold text-ink">
+          {showOnboarding ? t.onboarding.eyebrow : pending ? t.login.portalHeading : localize("Sign in", lang)}
+        </span>
+        <div className="hidden md:block flex-1" />
         <LanguageMenu lang={lang} onChange={changeLang} label={t.shell.language} className="shrink-0" />
         <button type="button" onClick={toggleTheme} className="glass-flat size-[38px] rounded-full text-ink-2 hover:text-ink flex items-center justify-center cursor-pointer shrink-0" aria-label={theme === "dark" ? t.shell.light : t.shell.dark}>
           {theme === "dark" ? <Sun size={15} className="text-money" aria-hidden="true" /> : <Moon size={15} className="text-money" aria-hidden="true" />}
@@ -358,12 +385,14 @@ function SignIn() {
 
       <main id="main-content" className="flex-1 px-4 py-6 sm:py-10">
         <div className="mx-auto w-full max-w-5xl">
-          {showModeSelect ? (
+          {showOnboarding ? (
+            <Onboarding lang={lang} t={t} initialDraft={loadOnboardingDraft()} onLanguageChange={changeLang} onComplete={finishOnboarding} />
+          ) : showModeSelect ? (
             <div className="mx-auto w-full max-w-4xl text-center py-6 sm:py-12 space-y-9 animate-in fade-in zoom-in-95 duration-200">
               {/* Header block with status pill and rich typography */}
               <div className="space-y-3.5 max-w-2xl mx-auto">
-                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 shadow-xs">
-                  <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold bg-ok-soft text-ok-ink shadow-xs">
+                  <span className="size-2 rounded-full bg-ok" />
                   <span>Session Authenticated · AY 2026-27</span>
                 </div>
                 <h1 className="font-serif text-3xl sm:text-5xl text-ink font-normal tracking-tight text-balance">
@@ -382,19 +411,19 @@ function SignIn() {
                     try { localStorage.setItem("wapsi_user_mode", "agentic"); } catch {}
                     router.replace("/app");
                   }}
-                  className="group relative flex flex-col justify-between p-7 sm:p-8 rounded-3xl border-2 border-amber-500/40 hover:border-money bg-paper shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden"
+                  className="group relative flex flex-col justify-between p-7 sm:p-8 rounded-[26px] border-2 border-money/40 hover:border-money glass hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden"
                 >
                   {/* Subtle decorative aura */}
-                  <div className="absolute -top-16 -right-16 size-36 bg-amber-500/10 rounded-full blur-2xl pointer-events-none group-hover:bg-amber-500/15 transition-all" />
+                  <div className="absolute -top-16 -right-16 size-36 bg-money/10 rounded-full blur-2xl pointer-events-none group-hover:bg-money/15 transition-all" />
 
                   <div className="space-y-6 relative">
                     {/* Top Row: Icon + Badge */}
                     <div className="flex items-center justify-between">
-                      <div className="size-13 rounded-2xl bg-amber-bg border border-amber-500/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
-                        <Bot size={26} aria-hidden="true" />
+                      <div className="group-hover:scale-105 transition-transform">
+                        <MunshiAvatar size={52} state="explaining" />
                       </div>
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-bg text-amber-800 dark:text-amber-200 border border-amber-500/30">
-                        <Sparkles size={12} className="text-amber-500" />
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-bg text-amber-ink">
+                        <Sparkles size={12} className="text-money" />
                         <span>Recommended · AI Autonomous</span>
                       </span>
                     </div>
@@ -412,19 +441,19 @@ function SignIn() {
                     {/* Feature Pillars */}
                     <div className="space-y-2.5 pt-1">
                       <div className="flex items-start gap-2 text-xs text-ink-2">
-                        <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                        <CheckCircle2 size={15} className="text-ok shrink-0 mt-0.5" />
                         <span><strong>Zero Data Entry:</strong> Auto-reads PDF & DigiLocker Form 16 in seconds</span>
                       </div>
                       <div className="flex items-start gap-2 text-xs text-ink-2">
-                        <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                        <CheckCircle2 size={15} className="text-ok shrink-0 mt-0.5" />
                         <span><strong>AIS/26AS Audit:</strong> Detects mismatches & auto-stages CBDT feedback</span>
                       </div>
                       <div className="flex items-start gap-2 text-xs text-ink-2">
-                        <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                        <CheckCircle2 size={15} className="text-ok shrink-0 mt-0.5" />
                         <span><strong>Regime Optimizer:</strong> Computes exact rupee delta between New & Old</span>
                       </div>
                       <div className="flex items-start gap-2 text-xs text-ink-2">
-                        <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                        <CheckCircle2 size={15} className="text-ok shrink-0 mt-0.5" />
                         <span><strong>CA Collaboration:</strong> 1-click review sharing with your trusted CA</span>
                       </div>
                     </div>
@@ -434,7 +463,7 @@ function SignIn() {
                   <div className="mt-8 pt-5 border-t border-line/70">
                     <button
                       type="button"
-                      className="w-full py-3.5 px-5 rounded-2xl bg-ink text-paper group-hover:bg-money group-hover:text-white font-semibold text-sm flex items-center justify-between transition-all duration-200 shadow-sm cursor-pointer"
+                      className="w-full h-[50px] px-5 rounded-[14px] ink-surface group-hover:opacity-90 font-bold text-[14.5px] flex items-center justify-between transition-all duration-200 shadow-sm cursor-pointer"
                     >
                       <span>Launch Agentic Copilot</span>
                       <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
@@ -448,12 +477,12 @@ function SignIn() {
                     try { localStorage.setItem("wapsi_user_mode", "manual"); } catch {}
                     router.replace("/");
                   }}
-                  className="group relative flex flex-col justify-between p-7 sm:p-8 rounded-3xl border-2 border-line hover:border-ink-2 bg-paper shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden"
+                  className="group relative flex flex-col justify-between p-7 sm:p-8 rounded-[26px] border-2 border-glass-edge hover:border-ink-2 glass hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden"
                 >
                   <div className="space-y-6 relative">
                     {/* Top Row: Icon + Badge */}
                     <div className="flex items-center justify-between">
-                      <div className="size-13 rounded-2xl bg-paper-3 border border-line text-ink flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+                      <div className="size-[52px] rounded-[14px] glass-flat text-ink flex items-center justify-center group-hover:scale-105 transition-transform">
                         <LayoutDashboard size={26} aria-hidden="true" />
                       </div>
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-paper-3 text-ink-2 border border-line">
@@ -497,7 +526,7 @@ function SignIn() {
                   <div className="mt-8 pt-5 border-t border-line/70">
                     <button
                       type="button"
-                      className="w-full py-3.5 px-5 rounded-2xl border-2 border-line bg-paper-2 group-hover:border-ink-2 text-ink font-semibold text-sm flex items-center justify-between transition-all duration-200 shadow-xs cursor-pointer"
+                      className="w-full h-[50px] px-5 rounded-[14px] glass-flat group-hover:border-ink-2 text-ink font-bold text-[14.5px] flex items-center justify-between transition-all duration-200 shadow-xs cursor-pointer"
                     >
                       <span>Enter Manual Dashboard</span>
                       <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
@@ -549,17 +578,6 @@ function SignIn() {
               authBusy={authBusy}
             />
           )}
-
-          {/* Chartered Accountant Entry Link */}
-          <div className="mt-8 text-center">
-            <a
-              href="/ca"
-              className="inline-flex items-center gap-2 text-xs font-semibold text-ink-3 hover:text-teal-700 dark:hover:text-teal-400 transition"
-            >
-              <span>Are you a Chartered Accountant or Tax Professional?</span>
-              <span className="font-bold underline">Access Client Review Portal →</span>
-            </a>
-          </div>
         </div>
       </main>
     </div>

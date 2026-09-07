@@ -62,6 +62,7 @@ import { AnimatedAmount } from "./ui/animated-amount";
 import { MockField, MockFill, MOCK } from "@/components/dev/mock-fill";
 import { LogoLink } from "./brand/logo";
 import { MunshiAvatar } from "./brand/munshi";
+import { regimeReaction } from "@/lib/munshi-state";
 
 interface InteractiveTaxDashboardProps {
   onLogOut?: () => void;
@@ -274,6 +275,12 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
 
   const t = TRANSLATIONS[lang];
   const activeRegime = state.selectedRegime;
+  const [regimeTouched, setRegimeTouched] = useState(false);
+  const chooseRegime = (regime: "NEW" | "OLD") => { setRegimeTouched(true); dispatch({ type: "SET_REGIME", regime }); };
+  const mascotReaction = regimeReaction(regimeTouched ? activeRegime === "NEW" ? "new" : "old" : null, {
+    new: -computation.newRegime.totalTaxLiability,
+    old: -computation.oldRegime.totalTaxLiability,
+  });
 
   /**
    * Three positions, not two. A cleared challan lands the return on exactly nil,
@@ -338,12 +345,12 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
   const answered = progress.confirmed + progress.disputed;
 
   return (
-    <div className="min-h-screen pb-16 text-ink font-sans selection:bg-amber-bg antialiased">
+    <div className="min-h-screen pb-16 max-lg:pb-28 text-ink font-sans selection:bg-amber-bg antialiased">
       {/* Sticky top header */}
       <header className="sticky top-0 z-40 bg-paper/80 backdrop-blur-md border-b border-glass-edge px-6 py-4 print:hidden">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-start gap-3">
-            <MunshiAvatar size={44} className="shrink-0 mt-1" />
+            <MunshiAvatar key={`${activeRegime}-${mascotReaction}`} size={44} state={mascotReaction} className="shrink-0 mt-1" />
             <div className="space-y-1">
               <LogoLink size="sm" className="mb-1" />
               <span className="text-[10px] font-bold tracking-widest text-money uppercase block">
@@ -372,7 +379,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
               {(["NEW", "OLD"] as const).map((regime) => (
                 <button
                   key={regime}
-                  onClick={() => dispatch({ type: "SET_REGIME", regime })}
+                  onClick={() => chooseRegime(regime)}
                   className={`px-3.5 py-1 text-xs font-bold rounded-[10px] transition-colors cursor-pointer flex items-center gap-1.5 ${
                     activeRegime === regime ? "ink-surface text-white" : "text-ink-3 hover:text-ink"
                   }`}
@@ -745,7 +752,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
               </div>
 
               {/* Live rail */}
-              <aside className="space-y-4 lg:sticky lg:top-[140px]">
+              <aside className="space-y-4 lg:sticky lg:top-[140px] max-lg:order-first">
                 <div className="ink-surface rounded-[24px] p-5 text-white">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-soft">Live · both regimes</span>
                   <div className="mt-3 grid grid-cols-2 gap-2.5">
@@ -756,7 +763,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                         <button
                           key={regime}
                           type="button"
-                          onClick={() => dispatch({ type: "SET_REGIME", regime })}
+                          onClick={() => chooseRegime(regime)}
                           aria-pressed={activeRegime === regime}
                           className={`text-start rounded-[14px] p-3 border transition cursor-pointer ${
                             best ? "border-money bg-white/[0.16]" : "border-white/10 bg-white/[0.08] hover:bg-white/[0.12]"
@@ -799,7 +806,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                     <button
                       key="pay"
                       onClick={() => setChallanOpen(true)}
-                      className="btn-primary mt-4 w-full h-11 rounded-[14px] text-[14px] flex items-center justify-center gap-2 cursor-pointer"
+                      className="btn-primary mt-4 w-full h-11 rounded-[14px] text-[14px] flex items-center justify-center gap-2 cursor-pointer max-lg:hidden"
                     >
                       <Banknote size={14} />
                       {t.payNow}
@@ -808,7 +815,7 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                     <button
                       key="file"
                       onClick={() => setShowItrV(true)}
-                      className="btn-primary mt-4 w-full h-11 rounded-[14px] text-[14px] flex items-center justify-center gap-2 cursor-pointer"
+                      className="btn-primary mt-4 w-full h-11 rounded-[14px] text-[14px] flex items-center justify-center gap-2 cursor-pointer max-lg:hidden"
                     >
                       {t.continueToFile}
                       <ArrowRight size={14} />
@@ -829,13 +836,27 @@ export default function InteractiveTaxDashboard({ onLogOut }: InteractiveTaxDash
                 </div>
 
                 <div className="glass rounded-[24px] p-5 flex gap-3">
-                  <MunshiAvatar size={36} className="shrink-0" />
+                  <MunshiAvatar key={`${activeRegime}-${mascotReaction}`} size={36} state={mascotReaction} className="shrink-0" />
                   <p className="text-[13px] text-ink-2">
                     <span className="font-bold text-ink">Munshi ji:</span> “{t.flag}” doesn&apos;t fight the department — it
                     tells them which of four things is wrong, so the right party fixes it.
                   </p>
                 </div>
               </aside>
+            </div>
+            {/* Phones: the file / pay action pinned above the home indicator (M8a). */}
+            <div className="lg:hidden fixed inset-x-0 bottom-0 z-30 px-4 pb-7 pt-2.5 bg-[linear-gradient(to_top,var(--color-paper)_70%,transparent)]">
+              {isPayable ? (
+                <button onClick={() => setChallanOpen(true)} className="btn-primary w-full h-[50px] rounded-[14px] text-[14.5px] flex items-center justify-center gap-2 cursor-pointer">
+                  <Banknote size={14} />
+                  {t.payNow}
+                </button>
+              ) : (
+                <button onClick={() => setShowItrV(true)} className="btn-primary w-full h-[50px] rounded-[14px] text-[14.5px] flex items-center justify-center gap-2 cursor-pointer">
+                  {t.continueToFile}
+                  <ArrowRight size={14} />
+                </button>
+              )}
             </div>
           </m.div>
         )}

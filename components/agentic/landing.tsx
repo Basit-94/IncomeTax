@@ -54,7 +54,7 @@ export default function AgenticLanding(props: AgenticLandingProps) {
     <div className="min-h-dvh flex flex-col bg-paper text-ink">
       <PrototypeBanner t={t} />
       <header className="shrink-0" data-testid="landing-header">
-      <HeaderBar t={t} s={s} mode="agentic" onModeChange={props.onModeChange} busy={props.busy}>
+      <HeaderBar t={t} s={s} mode="agentic" onModeChange={props.onModeChange} busy={props.busy} mobileSwitchBelow>
         <nav className="hidden lg:flex items-center gap-1.5 shrink-0" aria-label={t.shell.productName}>
           <button type="button" onClick={props.onMyReturn} className="glass-flat h-[38px] whitespace-nowrap rounded-[14px] px-4 text-[13px] font-semibold text-ink-2 hover:text-ink hover:border-money/60 cursor-pointer">
             {s.myReturn}
@@ -69,11 +69,11 @@ export default function AgenticLanding(props: AgenticLandingProps) {
           {props.theme === "dark" ? <Sun size={15} className="text-money" aria-hidden="true" /> : <Moon size={15} className="text-money" aria-hidden="true" />}
         </button>
         {citizen && (
-          <div className="glass-flat hidden sm:flex items-center gap-2 h-[38px] rounded-full ps-1 pe-3 min-w-0">
+          <div className="glass-flat flex items-center gap-2 h-[38px] max-md:h-9 rounded-full ps-1 pe-3 min-w-0">
             <span className="size-[30px] shrink-0 rounded-full bg-amber-bg text-amber-ink font-sans font-extrabold text-[11px] flex items-center justify-center" aria-hidden="true">
               {citizen.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
             </span>
-            <span className="text-sm font-semibold text-ink truncate max-w-[10rem]">{citizen.name}</span>
+            <span className="text-sm max-md:text-[13px] font-semibold text-ink truncate max-w-[10rem] max-sm:max-w-[6.5rem]">{citizen.name}</span>
             {props.onSignOut && (
               <button type="button" onClick={props.onSignOut} className="size-7 flex items-center justify-center rounded-full text-ink-3 hover:text-ink cursor-pointer" aria-label={s.signOut} title={s.signOut}>
                 <LogOut size={14} aria-hidden="true" />
@@ -84,8 +84,8 @@ export default function AgenticLanding(props: AgenticLandingProps) {
       </HeaderBar>
       </header>
 
-      <main id="main-content" className="flex-1 flex flex-col items-center justify-center px-4 py-10">
-        <div className="w-full max-w-3xl text-center space-y-[22px]">
+      <main id="main-content" className="flex-1 flex flex-col items-center justify-center px-4 py-10 max-md:justify-start max-md:pt-3 max-md:pb-0 max-md:px-4">
+        <div className="w-full max-w-3xl text-center space-y-[22px] max-md:flex max-md:flex-col max-md:flex-1 max-md:space-y-4">
           <span className="glass-flat inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold text-ink-2">
             <span className="size-1.5 rounded-full bg-ok" aria-hidden="true" /> {s.simulatedBadge}
           </span>
@@ -97,24 +97,28 @@ export default function AgenticLanding(props: AgenticLandingProps) {
           {props.signIn ?? (
             <>
               {/* Munshi ji peeks from behind the composer with one line of encouragement (handoff §3 landing). */}
-              <div className="relative mx-auto w-full max-w-[720px] mt-16">
+              <div className="relative mx-auto w-full max-w-[720px] mt-16 max-md:order-last max-md:mt-auto max-md:pt-[104px] max-md:pb-6 max-md:bg-[linear-gradient(to_top,var(--color-paper)_70%,transparent)]">
                 <div className="hidden lg:block absolute -left-[118px] -bottom-1 pointer-events-none" aria-hidden="true">
-                  <Munshi size={150} />
+                  <Munshi size={150} state={props.busy ? "working" : "welcome"} />
                 </div>
-                <MunshiBubble className="absolute left-[30px] -top-[52px] !py-2 !px-3.5 text-[13.5px] font-semibold rounded-[16px_16px_16px_4px]">
+                {/* M4a: Munshi ji at 112 px peeks over the pinned composer; the bubble sits to his right. */}
+                <div className="md:hidden absolute -left-2 top-0 pointer-events-none" aria-hidden="true">
+                  <Munshi size={112} state={props.busy ? "working" : "welcome"} />
+                </div>
+                <MunshiBubble className="absolute left-[30px] -top-[52px] max-md:left-[104px] max-md:top-6 !py-2 !px-3.5 text-[13.5px] max-md:text-[12.5px] font-semibold rounded-[16px_16px_16px_4px]">
                   {localize("Type it the way you'd tell a friend", props.lang)} 👇
                 </MunshiBubble>
                 <Composer s={s} lang={props.lang} disabled={!!props.busy} onSubmit={(message) => props.onStart({ message })} variant="ask" placeholder={s.landingPlaceholder} />
               </div>
-              <div className="flex flex-wrap justify-center gap-7 pt-1">
+              <div className="flex flex-wrap justify-center gap-7 pt-1 max-md:gap-2 max-md:pt-0">
                 {shortcuts.map((sc) => (
                   <button
                     key={sc.task}
                     type="button"
                     onClick={() => (sc.task === "vault" ? props.onOpenVault() : props.onStart({ task: sc.task }))}
-                    className="group flex flex-col items-center gap-2.5 w-[120px] text-[13.5px] font-semibold text-ink-2 leading-tight cursor-pointer"
+                    className="group flex flex-col items-center gap-2.5 w-[120px] text-[13.5px] font-semibold text-ink-2 leading-tight cursor-pointer max-md:bg-glass max-md:border max-md:border-glass-edge max-md:flex-row max-md:w-auto max-md:rounded-full max-md:px-[11px] max-md:py-1.5 max-md:text-[12px] max-md:font-bold max-md:gap-1.5"
                   >
-                    <span className="glass size-16 rounded-full flex items-center justify-center text-ink group-hover:border-money/60 transition">
+                    <span className="glass size-16 rounded-full flex items-center justify-center text-ink group-hover:border-money/60 transition max-md:hidden">
                       {sc.icon}
                     </span>
                     <span>{sc.label}</span>

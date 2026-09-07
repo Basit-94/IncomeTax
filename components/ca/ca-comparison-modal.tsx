@@ -66,22 +66,22 @@ export default function CAComparisonModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col bg-paper border border-line rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col bg-paper border border-line rounded-3xl shadow-glass overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="bg-gradient-to-r from-teal-900 via-slate-900 to-indigo-950 px-6 py-5 text-white shrink-0">
+        <div className="bg-gradient-to-r px-6 py-5 text-white shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-2xl bg-teal-500/20 border border-teal-400/30 text-teal-300">
+              <div className="p-2.5 rounded-2xl bg-amber-bg border border-money/40 text-money">
                 <Award size={22} />
               </div>
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-lg font-bold tracking-tight">CA Audit Reconciliation</h3>
-                  <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-bold uppercase tracking-wider border border-emerald-400/30">
+                  <span className="px-2 py-0.5 rounded-md bg-ok-soft text-ok text-[10px] font-bold uppercase tracking-wider border border-ok/40">
                     Verified
                   </span>
                 </div>
-                <p className="text-xs text-teal-200/80 mt-0.5">
+                <p className="text-xs text-money/80 mt-0.5">
                   Reviewed by {record.caDetails?.name || "Chartered Accountant"}{" "}
                   {record.caDetails?.membershipNo && `(ICAI Mem: ${record.caDetails.membershipNo})`}
                 </p>
@@ -101,17 +101,17 @@ export default function CAComparisonModal({
         <div className="p-6 overflow-y-auto space-y-6 flex-1">
           {/* Benefit Banner */}
           {refundDelta > 0 ? (
-            <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center gap-4">
-              <div className="p-2.5 rounded-xl bg-emerald-600 text-white shrink-0 shadow-xs">
+            <div className="p-4 bg-ok-soft border border-ok/40 rounded-2xl flex items-center gap-4">
+              <div className="p-2.5 rounded-xl bg-ok text-white shrink-0 shadow-xs">
                 <TrendingUp size={22} />
               </div>
               <div className="min-w-0">
-                <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider block">
+                <span className="text-xs font-bold text-ok-ink uppercase tracking-wider block">
                   Taxpayer Value Unlocked
                 </span>
                 <p className="text-sm text-ink font-semibold mt-0.5">
                   CA recommendations unlock an additional{" "}
-                  <strong className="text-emerald-600 dark:text-emerald-400 font-mono text-base">
+                  <strong className="text-ok-ink font-mono text-base">
                     +{formatMoney(refundDelta, lang)}
                   </strong>{" "}
                   in net refund / reduced tax liability.
@@ -129,8 +129,8 @@ export default function CAComparisonModal({
 
           {/* CA Advisory Notes Card */}
           {record.caNotes && (
-            <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl space-y-1.5">
-              <div className="flex items-center gap-2 text-xs font-bold text-amber-800 dark:text-amber-300">
+            <div className="p-4 bg-amber-bg border border-money/40 rounded-2xl space-y-1.5">
+              <div className="flex items-center gap-2 text-xs font-bold text-amber-ink">
                 <FileText size={14} />
                 <span>CA Professional Advisory & Audit Remarks</span>
               </div>
@@ -151,7 +151,7 @@ export default function CAComparisonModal({
                   <tr>
                     <th className="p-3">Fact / Computation Item</th>
                     <th className="p-3 text-right">Original Draft</th>
-                    <th className="p-3 text-right text-teal-800 dark:text-teal-300 bg-teal-500/5">
+                    <th className="p-3 text-right text-money bg-amber-bg">
                       CA Version
                     </th>
                     <th className="p-3 text-right">Tax Impact</th>
@@ -163,7 +163,7 @@ export default function CAComparisonModal({
                     <td className="p-3 text-right text-ink-2">
                       {formatMoney(originalB.grossIncome, lang)}
                     </td>
-                    <td className="p-3 text-right font-bold text-ink bg-teal-500/5">
+                    <td className="p-3 text-right font-bold text-ink bg-amber-bg">
                       {formatMoney(caB.grossIncome, lang)}
                     </td>
                     <td className="p-3 text-right text-ink-3 font-sans">
@@ -175,12 +175,12 @@ export default function CAComparisonModal({
                     <td className="p-3 text-right text-ink-2">
                       {formatMoney(originalB.totalDeductions, lang)}
                     </td>
-                    <td className="p-3 text-right font-bold text-emerald-600 dark:text-emerald-400 bg-teal-500/5">
+                    <td className="p-3 text-right font-bold text-ok-ink bg-amber-bg">
                       {formatMoney(caB.totalDeductions, lang)}
                     </td>
                     <td className="p-3 text-right font-sans">
                       {caB.totalDeductions > originalB.totalDeductions ? (
-                        <span className="text-emerald-600 font-bold">
+                        <span className="text-ok-ink font-bold">
                           +{formatMoney(caB.totalDeductions - originalB.totalDeductions, lang)}
                         </span>
                       ) : (
@@ -193,7 +193,7 @@ export default function CAComparisonModal({
                     <td className="p-3 text-right text-ink-2">
                       {formatMoney(originalB.taxableIncome, lang)}
                     </td>
-                    <td className="p-3 text-right font-bold text-ink bg-teal-500/5">
+                    <td className="p-3 text-right font-bold text-ink bg-amber-bg">
                       {formatMoney(caB.taxableIncome, lang)}
                     </td>
                     <td className="p-3 text-right font-sans text-ink-3">
@@ -207,7 +207,7 @@ export default function CAComparisonModal({
                     <td className="p-3 text-right font-sans font-semibold text-ink-2">
                       {originalRegime === "new" ? "New Regime" : "Old Regime"}
                     </td>
-                    <td className="p-3 text-right font-sans font-bold text-teal-800 dark:text-teal-300 bg-teal-500/5">
+                    <td className="p-3 text-right font-sans font-bold text-money bg-amber-bg">
                       {caRegime === "new" ? "New Regime" : "Old Regime"}
                     </td>
                     <td className="p-3 text-right font-sans text-ink-3">
@@ -219,12 +219,12 @@ export default function CAComparisonModal({
                     <td className="p-3 text-right text-ink-2">
                       {formatMoney(originalB.totalTax, lang)}
                     </td>
-                    <td className="p-3 text-right font-bold text-ink bg-teal-500/5">
+                    <td className="p-3 text-right font-bold text-ink bg-amber-bg">
                       {formatMoney(caB.totalTax, lang)}
                     </td>
                     <td className="p-3 text-right font-sans">
                       {originalB.totalTax - caB.totalTax > 0 ? (
-                        <span className="text-emerald-600 font-bold">
+                        <span className="text-ok-ink font-bold">
                           Saved {formatMoney(originalB.totalTax - caB.totalTax, lang)}
                         </span>
                       ) : (
@@ -236,15 +236,15 @@ export default function CAComparisonModal({
                     <td className="p-3 font-sans text-ink">Net Refund / (Tax Payable)</td>
                     <td
                       className={`p-3 text-right ${
-                        originalB.refundOrDue >= 0 ? "text-money" : "text-alarm"
+ originalB.refundOrDue >= 0 ?"text-money" : "text-alarm"
                       }`}
                     >
                       {originalB.refundOrDue >= 0 ? "+" : "-"}
                       {formatMoney(Math.abs(originalB.refundOrDue), lang)}
                     </td>
                     <td
-                      className={`p-3 text-right bg-teal-500/10 ${
-                        caB.refundOrDue >= 0 ? "text-money" : "text-alarm"
+                      className={`p-3 text-right bg-amber-bg ${
+ caB.refundOrDue >= 0 ?"text-money" : "text-alarm"
                       }`}
                     >
                       {caB.refundOrDue >= 0 ? "+" : "-"}
@@ -252,7 +252,7 @@ export default function CAComparisonModal({
                     </td>
                     <td className="p-3 text-right">
                       {refundDelta > 0 ? (
-                        <span className="text-emerald-600 font-extrabold text-xs">
+                        <span className="text-ok-ink font-extrabold text-xs">
                           +{formatMoney(refundDelta, lang)} Gain
                         </span>
                       ) : (
@@ -279,7 +279,7 @@ export default function CAComparisonModal({
             type="button"
             onClick={handleAdopt}
             disabled={isAdopting}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-6 py-2.5 bg-teal-800 hover:bg-teal-900 text-white text-xs font-bold rounded-xl shadow-md transition cursor-pointer"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-6 py-2.5 ink-surface hover:ink-surface text-white text-xs font-bold rounded-xl shadow-md transition cursor-pointer"
           >
             <Sparkles size={15} />
             <span>Adopt CA Recommendations & Proceed to File</span>

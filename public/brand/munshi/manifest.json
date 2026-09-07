@@ -1,0 +1,35 @@
+{
+  "name": "Munshi ji",
+  "source": "components/brand/munshi-art.tsx",
+  "animationCss": "components/brand/munshi.css",
+  "states": [
+    "idle",
+    "welcome",
+    "listening",
+    "explaining",
+    "working",
+    "reading",
+    "uploading",
+    "happy",
+    "concerned",
+    "success",
+    "error",
+    "waiting",
+    "secure"
+  ],
+  "avatarPngSizes": [
+    20,
+    24,
+    34,
+    38,
+    56,
+    72,
+    96,
+    120,
+    150,
+    256,
+    512
+  ],
+  "identityMaster": "Munsi ji/Munshi ji.png",
+  "generatedAt": "2026-09-06T22:02:01.454Z"
+}

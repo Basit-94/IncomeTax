@@ -27,7 +27,7 @@ export default function FlowStepper({ t, current, onJump }: FlowStepperProps) {
   const n = currentIndex + 1;
 
   return (
-    <div className="surface-panel space-y-3 p-4">
+    <div className="glass rounded-[20px] space-y-3 p-4 max-md:bg-transparent max-md:border-0 max-md:shadow-none max-md:p-0 max-md:pb-1 max-md:space-y-1.5">
       <div className="flex items-center justify-between gap-4">
         <span className="text-[11.5px] text-ink-2">
           {t.flow.stepOf(n, FLOW_STEPS.length)}
@@ -42,7 +42,7 @@ export default function FlowStepper({ t, current, onJump }: FlowStepperProps) {
             onClick={() => i <= currentIndex && onJump(name)}
             disabled={i > currentIndex}
             aria-current={name === current ? "step" : undefined}
-            className={`h-[7px] flex-1 rounded transition-colors ${
+            className={`h-[7px] max-md:h-[5px] flex-1 rounded-[3px] transition-colors ${
               i < currentIndex
                 ? "bg-money cursor-pointer"
                 : i === currentIndex

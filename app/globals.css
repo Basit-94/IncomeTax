@@ -1,11 +1,15 @@
 @import "tailwindcss";
 @import "./d13.css";
+@import "../components/brand/munshi.css";
 
 /* Redesign 2026-09-07: the marketing and agentic headers use a bare <nav>. d13.css styles the
    element itself (sticky bar, 2px rule, blue links), which boxed those links and wrapped them
    word by word. Unlayered like d13, later in the cascade, so it wins. */
 header > nav{position:static;background:none;border-bottom:0;backdrop-filter:none;flex-shrink:0;white-space:nowrap}
 header > nav a{color:inherit}
+/* d13.css also styles the bare <main> (1080 px, auto margins, 24 px gutters). Auto margins stop a column-flex item
+   from stretching, so the Agentic shell's transcript column grew to its max-content width on phones. */
+main.shell-main{max-width:none;margin:0;padding:0}
 
 /* Redesign 2026-09-06: d13.css keeps its verbatim classes, but its palette variables are
    remapped here (unlayered, later in source order) onto the new tokens, so the dashboard,
@@ -796,3 +800,11 @@ h1.title{font-weight:800;letter-spacing:-.03em}
     0 20px 50px -15px rgba(59, 130, 246, 0.35);
 }
 
+/* Handoff 2 (2026-09-07): phones. Fact cards sit flat with tighter padding (M6c/d); a modal panel with
+   `.sheet-m` becomes a bottom sheet — 28 px top corners, a 44×5 grab handle — while the overlay aligns
+   it to the bottom (see the modals' `max-md:items-end`). Unlayered, after d13's .card, so it wins. */
+@media (max-width: 767px) {
+  .card { --tilt: 0deg; padding: 14px 16px 12px; }
+  .sheet-m { border-radius: 28px 28px 0 0 !important; width: 100%; max-height: 86vh; }
+  .sheet-m::before { content: ""; display: block; flex: none; width: 44px; height: 5px; margin: 10px auto 0; border-radius: 3px; background: var(--color-line); }
+}

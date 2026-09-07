@@ -39,7 +39,7 @@ import {
 } from "@/lib/ca/ca-store";
 import { PERSONAS } from "@/lib/personas";
 import LanguageMenu from "@/components/ui/language-menu";
-import { MunshiAvatar } from "@/components/brand/munshi";
+import { Munshi, MunshiAvatar } from "@/components/brand/munshi";
 
 const REVIEW_STEPS = ["Income", "Deductions", "Regime", "Notes & send"] as const;
 const SHEET_COLS = "grid grid-cols-[minmax(0,1fr)_92px_112px_136px_96px] gap-3";
@@ -81,9 +81,9 @@ function Worksheet({
         <h4 className="text-[15px] font-extrabold text-ink">{title}</h4>
         <span className="text-[11px] text-ink-3">{meta}</span>
       </header>
-      <div className="mt-3 overflow-x-auto">
-        <div className="min-w-[560px]">
-          <div className={`${SHEET_COLS} pb-2 text-[10.5px] font-bold uppercase tracking-wider text-ink-3`}>
+      <div className="mt-3 md:overflow-x-auto">
+        <div className="md:min-w-[560px]">
+          <div className={`${SHEET_COLS} max-md:hidden pb-2 text-[10.5px] font-bold uppercase tracking-wider text-ink-3`}>
             <span>Line</span>
             <span>Section</span>
             <span>Client filed</span>
@@ -94,9 +94,33 @@ function Worksheet({
             const delta = row.revised - row.filed;
             const blank = row.filed === 0 && row.revised === 0;
             return (
+              <React.Fragment key={row.key}>
+              {/* Phones (M8c): line + section pill, then "Client · value" against a 130 px editable CA input. */}
+              <div className="md:hidden py-2.5 border-b border-dashed border-glass-edge last:border-b-0">
+                <div className="flex items-center justify-between gap-2 text-[13.5px]">
+                  <span className={`font-semibold ${blank ? "text-ink-3" : "text-ink"}`}>{row.line}</span>
+                  <span className="glass-flat inline-flex shrink-0 rounded-full px-[11px] py-1 font-mono text-[12px] font-medium tracking-[.04em] text-ink-3">{row.section}</span>
+                </div>
+                <div className="mt-1.5 flex items-center justify-between gap-3">
+                  <span className="text-[12px] text-ink-3">
+                    Client <span className="font-mono tabular-nums">{formatAmount(row.filed, lang)}</span>
+                    {delta !== 0 && <span className={`ms-2 font-mono tabular-nums font-bold ${delta > 0 ? "text-ok-ink" : "text-warn"}`}>{delta > 0 ? "+" : "−"}{formatAmount(Math.abs(delta), lang)}</span>}
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    aria-label={`${row.line} — CA revised`}
+                    value={row.revised ? row.revised : ""}
+                    onChange={(e) => onInput(e.target.value, row.onChange)}
+                    className={`h-[34px] w-[130px] rounded-[14px] border-[1.5px] px-3 text-end font-mono text-[13px] font-bold tabular-nums focus:outline-none focus:ring-2 focus:ring-money/40 ${
+                      delta !== 0 ? "bg-ok-soft border-ok text-ok-ink" : "bg-white/80 dark:bg-white/10 border-glass-edge text-ink"
+                    }`}
+                  />
+                </div>
+              </div>
               <div
-                key={row.key}
-                className={`${SHEET_COLS} items-center py-2.5 border-b border-dashed border-glass-edge last:border-b-0`}
+                className={`${SHEET_COLS} max-md:hidden items-center py-2.5 border-b border-dashed border-glass-edge last:border-b-0`}
               >
                 <span className={`text-[13.5px] font-semibold ${blank ? "text-ink-3" : "text-ink"}`}>{row.line}</span>
                 <span>
@@ -131,6 +155,7 @@ function Worksheet({
                   )}
                 </span>
               </div>
+              </React.Fragment>
             );
           })}
         </div>
@@ -192,19 +217,20 @@ function CAPortalContent() {
   };
 
   // Handle Login / Verification
-  const handleVerify = async (e?: React.FormEvent) => {
+  const handleVerify = async (e?: React.FormEvent, override?: { code: string; pin: string }) => {
     if (e) e.preventDefault();
     setAuthError(null);
     setIsVerifying(true);
+    const pinValue = (override?.pin ?? pin).trim();
 
     try {
-      const cleanCode = code.toUpperCase().trim();
+      const cleanCode = (override?.code ?? code).toUpperCase().trim();
       if (!cleanCode) {
         setAuthError("Please enter the citizen's Access Code");
         setIsVerifying(false);
         return;
       }
-      if (!pin.trim()) {
+      if (!pinValue) {
         setAuthError("Please enter the Security PIN set by the citizen");
         setIsVerifying(false);
         return;
@@ -217,7 +243,7 @@ function CAPortalContent() {
         return;
       }
 
-      const isValid = await verifyPin(rec, pin.trim());
+      const isValid = await verifyPin(rec, pinValue);
       if (!isValid) {
         setAuthError("Incorrect Security PIN. Please ask the taxpayer for their secret PIN.");
         setIsVerifying(false);
@@ -242,6 +268,25 @@ function CAPortalContent() {
       setIsVerifying(false);
     }
   };
+
+  // The Citizen page's CA tab verified the code and PIN already and handed them over (read once).
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("wapsi_ca_handoff");
+      if (!raw) return;
+      sessionStorage.removeItem("wapsi_ca_handoff");
+      const h = JSON.parse(raw) as { code?: string; pin?: string; name?: string; membershipNo?: string };
+      if (!h.code || !h.pin) return;
+      setCode(h.code);
+      setPin(h.pin);
+      if (h.name) setCaName(h.name);
+      if (h.membershipNo) setMembershipNo(h.membershipNo);
+      void handleVerify(undefined, { code: h.code, pin: h.pin });
+    } catch {
+      // no handoff: the login card below asks for the code and PIN
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Launch Demo with Sunita Rao
   const handleLaunchDemo = async () => {
@@ -546,9 +591,7 @@ function CAPortalContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="size-9 rounded-xl bg-gradient-to-br flex items-center justify-center text-white font-serif font-black text-lg shadow-sm">
-                W
-              </div>
+              <MunshiAvatar size={38} />
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-extrabold text-base tracking-tight text-ink-2">
@@ -587,115 +630,112 @@ function CAPortalContent() {
       {/* Main View Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
         {!record ? (
-          /* Login Screen */
-          <div className="max-w-xl mx-auto py-8 sm:py-12 space-y-6 animate-in fade-in zoom-in-95 duration-200">
-            <div className="text-center space-y-2">
-              <div className="inline-flex p-3 rounded-2xl bg-amber-bg text-money border border-money/40 mb-2">
-                <Award size={32} />
+          /* Login Screen (handoff 1c / m8b) */
+          <div className="mx-auto w-full max-w-[560px] py-4 sm:py-10 animate-in fade-in zoom-in-95 duration-200 max-md:pb-28">
+            <div className="glass rounded-[28px] px-5 py-6 sm:px-7 sm:py-7 flex flex-col gap-[18px]">
+              <div className="flex items-start gap-3.5">
+                <Munshi size={56} state={authError ? "concerned" : isVerifying ? "working" : "secure"} />
+                <div className="min-w-0">
+                  <h2 className="text-[22px] font-extrabold tracking-[-0.02em] text-ink">Open a client's return</h2>
+                  <p className="mt-1 text-[13.5px] text-ink-2 leading-[1.55]">
+                    Enter the Access Code and secret PIN your client shared to inspect and optimise their draft.
+                  </p>
+                </div>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink-2">
-                Taxpayer Audit & Review Access
-              </h2>
-              <p className="text-sm text-ink-2 max-w-md mx-auto">
-                Enter the shareable Access Code and secret Security PIN provided by your client to inspect and optimize their draft return.
-              </p>
-            </div>
 
-            <div className="bg-paper-3 border border-line rounded-3xl p-6 sm:p-8 shadow-glass space-y-6">
-              <form onSubmit={handleVerify} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-ink-2">
-                    Client Review Code
-                  </label>
+              <form onSubmit={handleVerify} className="flex flex-col gap-[18px]">
+                <div>
+                  <label htmlFor="ca-page-code" className="block text-[12.5px] font-bold text-ink-2 mb-1.5">Client review code</label>
                   <input
+                    id="ca-page-code"
                     type="text"
-                    placeholder="e.g. CA-7842-91"
+                    placeholder="CA-7842-91"
                     value={code}
                     onChange={(e) => setCode(e.target.value.toUpperCase())}
-                    className="w-full text-center tracking-widest text-xl font-mono font-bold p-3.5 bg-paper-3 border border-line rounded-xl focus:ring-2 focus:ring-money/40 focus:outline-none"
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="w-full h-[54px] rounded-[14px] bg-white/80 dark:bg-white/10 border-[1.5px] border-glass-edge px-4 text-center font-mono text-[20px] font-semibold uppercase tracking-[.14em] text-ink outline-none focus:border-money focus:shadow-[0_0_0_3px_rgba(255,122,26,.18)]"
                     autoFocus
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-ink-2">
-                    Taxpayer Security PIN
-                  </label>
+                <div>
+                  <label htmlFor="ca-page-pin" className="block text-[12.5px] font-bold text-ink-2 mb-1.5">Taxpayer security PIN</label>
                   <input
+                    id="ca-page-pin"
                     type="password"
+                    inputMode="numeric"
                     maxLength={6}
-                    placeholder="4 to 6 digit secret PIN"
+                    placeholder="••••"
                     value={pin}
                     onChange={(e) => setPin(e.target.value)}
-                    className="w-full text-center tracking-widest text-xl font-mono font-bold p-3.5 bg-paper-3 border border-line rounded-xl focus:ring-2 focus:ring-money/40 focus:outline-none"
+                    className="w-full h-[54px] rounded-[14px] bg-white/80 dark:bg-white/10 border-[1.5px] border-glass-edge px-4 text-center font-mono text-[20px] font-semibold tracking-[.14em] text-ink outline-none focus:border-money focus:shadow-[0_0_0_3px_rgba(255,122,26,.18)]"
                   />
                 </div>
 
-                <div className="border-t border-line pt-4 space-y-3">
-                  <span className="block text-xs font-bold uppercase tracking-wider text-ink-3">
-                    Reviewing Professional Stamp (Optional)
-                  </span>
-                  <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <span className="block text-[12px] font-bold uppercase tracking-[.08em] text-ink-3">Your stamp (optional)</span>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
                     <input
                       type="text"
-                      placeholder="CA Full Name"
+                      placeholder="CA Rajesh Sharma, FCA"
+                      aria-label="CA name"
                       value={caName}
                       onChange={(e) => setCaName(e.target.value)}
-                      className="text-xs p-2.5 bg-paper-3 border border-line rounded-lg focus:outline-none focus:ring-1 focus:ring-money/40"
+                      className="h-[42px] rounded-[14px] bg-white/80 dark:bg-white/10 border-[1.5px] border-glass-edge px-4 text-[13.5px] text-ink outline-none focus:border-money"
                     />
                     <input
                       type="text"
-                      placeholder="ICAI Membership No."
+                      placeholder="084920"
+                      aria-label="ICAI membership number"
                       value={membershipNo}
                       onChange={(e) => setMembershipNo(e.target.value)}
-                      className="text-xs p-2.5 bg-paper-3 border border-line rounded-lg focus:outline-none focus:ring-1 focus:ring-money/40"
+                      className="h-[42px] rounded-[14px] bg-white/80 dark:bg-white/10 border-[1.5px] border-glass-edge px-4 text-center font-mono text-[13.5px] font-semibold uppercase tracking-[.14em] text-ink outline-none focus:border-money"
                     />
                   </div>
                 </div>
 
                 {authError && (
-                  <div className="p-3 bg-bad-soft border border-bad/40 rounded-xl text-xs font-semibold text-bad flex items-center gap-2">
-                    <AlertCircle size={15} className="shrink-0" />
+                  <p role="alert" className="flex items-center gap-2 rounded-[14px] bg-bad-soft px-3.5 py-3 text-[13px] font-semibold text-bad">
+                    <AlertCircle size={16} className="shrink-0" />
                     <span>{authError}</span>
-                  </div>
+                  </p>
                 )}
 
-                <button
-                  type="submit"
-                  disabled={isVerifying || !code.trim() || !pin.trim()}
-                  className="w-full py-3.5 px-4 ink-surface hover:ink-surface disabled:opacity-50 text-white font-bold text-sm rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Lock size={16} />
-                  <span>{isVerifying ? "Verifying Access..." : "Access Client Return Draft"}</span>
-                  <ArrowRight size={16} />
-                </button>
+                <div className="md:contents max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-30 max-md:px-4 max-md:pb-7 max-md:pt-2.5 max-md:bg-[linear-gradient(to_top,var(--color-paper)_70%,transparent)]">
+                  <button
+                    type="submit"
+                    disabled={isVerifying || !code.trim() || !pin.trim()}
+                    className="btn-primary flex h-[50px] w-full items-center justify-center gap-2 rounded-[14px] px-5 text-[14.5px] cursor-pointer disabled:cursor-not-allowed disabled:opacity-45"
+                  >
+                    <Lock size={16} />
+                    <span>{isVerifying ? "Checking the code…" : "Open client return →"}</span>
+                  </button>
+                </div>
+
+                <p className="text-center text-[13px] text-ink-3">
+                  No code?{" "}
+                  <button type="button" onClick={handleLaunchDemo} disabled={isVerifying} className="font-bold text-money hover:underline cursor-pointer disabled:opacity-60">
+                    Load a demo review
+                  </button>
+                </p>
               </form>
 
-              {/* Demo Section for Evaluators/Judges */}
-              <div className="p-4 bg-amber-bg border border-money/40 rounded-2xl text-center space-y-2">
-                <span className="text-xs font-bold text-money block">
-                  Testing Without a Citizen Draft?
+              <div className="flex items-center justify-between font-mono text-[11px] text-ink-3">
+                <span className="flex items-center gap-1.5 text-ok">
+                  <Lock size={12} />
+                  <span>Bank-grade encryption</span>
                 </span>
-                <p className="text-xs text-ink-3">
-                  Instantly load a pre-configured sample client (Sunita Rao - Salaried IT Professional) to test the CA audit & reconciliation interface.
-                </p>
-                <button
-                  type="button"
-                  onClick={handleLaunchDemo}
-                  disabled={isVerifying}
-                  className="px-4 py-2 bg-paper-3 hover:bg-paper-3 border border-money/40 text-money text-xs font-bold rounded-xl shadow-xs transition inline-flex items-center gap-2 cursor-pointer"
-                >
-                  <Sparkles size={14} />
-                  <span>Launch Demo Client Audit</span>
-                </button>
+                <span>Authorised users only</span>
               </div>
             </div>
           </div>
         ) : (
           /* CA Audit Workspace */
-          <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="space-y-6 animate-in fade-in duration-300 max-md:pb-24">
             {/* Sticky client strip: who, PIN state, before → after, save. */}
-            <div className="sticky top-[64px] z-30 rounded-[20px] bg-paper/90 backdrop-blur-xl border border-glass-edge shadow-glass px-5 py-3.5 flex flex-wrap items-center gap-4">
+            <div className="sticky top-[64px] z-30 rounded-[20px] bg-paper/90 backdrop-blur-xl border border-glass-edge shadow-glass px-5 py-3.5 flex flex-wrap items-center gap-4 max-md:static max-md:px-4 max-md:py-3 max-md:gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="size-11 rounded-[14px] ink-surface text-white grid place-items-center font-extrabold text-sm shrink-0">
                   {initials}
@@ -752,7 +792,7 @@ function CAPortalContent() {
                   type="button"
                   onClick={handleSaveReview}
                   disabled={isSaving}
-                  className="btn-primary h-10 px-4 rounded-[14px] text-[13px] flex items-center gap-2 cursor-pointer disabled:opacity-60"
+                  className="btn-primary h-10 px-4 rounded-[14px] text-[13px] flex items-center gap-2 cursor-pointer disabled:opacity-60 max-md:hidden"
                 >
                   {saveSuccess ? (
                     <>
@@ -868,6 +908,18 @@ function CAPortalContent() {
 
               {/* Sticky rail */}
               <aside className="space-y-4 lg:sticky lg:top-[148px]">
+                {/* Phones (M8c): Send review pinned above the home indicator. */}
+                <div className="md:contents max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-30 max-md:px-4 max-md:pb-7 max-md:pt-2.5 max-md:bg-[linear-gradient(to_top,var(--color-paper)_70%,transparent)]">
+                  <button
+                    type="button"
+                    onClick={handleSaveReview}
+                    disabled={isSaving}
+                    className="btn-primary md:hidden h-[50px] w-full rounded-[14px] text-[14.5px] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  >
+                    {saveSuccess ? <Check size={16} /> : <Save size={16} />}
+                    <span>{saveSuccess ? `Sent to ${firstName}` : isSaving ? "Sending…" : "Send review to client"}</span>
+                  </button>
+                </div>
                 <div className="ink-surface rounded-[24px] p-5 text-white">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-soft">Recommend a regime</span>
                   <div className="mt-3 grid grid-cols-2 gap-1 p-1 rounded-[12px] bg-white/10">

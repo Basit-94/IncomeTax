@@ -177,7 +177,7 @@ export default function Landing({
             </span>
             <span className="text-[11px] text-ink-3">{t.shell.taxYear}</span>
           </div>
-          <h1 className="font-sans text-4xl font-extrabold leading-[1.05] tracking-[-0.03em] text-ink sm:text-5xl lg:text-[50px]">
+          <h1 className="font-sans text-[36px] font-extrabold leading-[1.05] tracking-[-0.03em] text-ink sm:text-5xl lg:text-[50px]">
             {t.landing.brandTitle}
           </h1>
           <h2 className="max-w-[34ch] font-sans text-[22px] font-bold leading-tight tracking-[-0.01em] text-ink-2">
@@ -185,8 +185,9 @@ export default function Landing({
           </h2>
           <p className="max-w-[60ch] text-[15px] leading-relaxed text-ink-2">{t.landing.subtext}</p>
         </div>
-        <div className="hidden md:block shrink-0 pt-2" aria-hidden="true">
-          <Munshi size={120} />
+        <div className="shrink-0 pt-2 max-md:pt-1" aria-hidden="true">
+          <span className="max-md:hidden"><Munshi size={120} state="welcome" /></span>
+          <span className="md:hidden"><Munshi size={72} state="welcome" /></span>
         </div>
       </header>
 
@@ -251,7 +252,7 @@ export default function Landing({
                     <button
                       type="button"
                       onClick={onResumeReturn}
-                      className="btn-primary flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-[14px] h-[46px] px-5 text-[14.5px] transition cursor-pointer"
+                      className="btn-primary max-sm:w-full max-sm:justify-center flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-[14px] h-[46px] px-5 text-[14.5px] transition cursor-pointer"
                     >
                       <span>{ps.continueFiling}</span>
                       <ChevronRight size={15} />
@@ -278,7 +279,7 @@ export default function Landing({
               <button
                 type="button"
                 onClick={onNavigateToAuth}
-                className="btn-primary shrink-0 flex items-center gap-2 rounded-[14px] h-[46px] px-5 text-[14.5px] transition cursor-pointer"
+                className="btn-primary max-sm:w-full max-sm:justify-center shrink-0 flex items-center gap-2 rounded-[14px] h-[46px] px-5 text-[14.5px] transition cursor-pointer"
               >
                 <span>{ps.signInOrRegister}</span>
                 <ChevronRight size={15} />

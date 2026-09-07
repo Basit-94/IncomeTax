@@ -442,30 +442,30 @@ export default function MatchRecordsModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="match-records-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-2 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(27,17,64,.55)] p-2 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200 max-md:items-end max-md:p-0"
     >
-      <div className="surface-panel relative w-full max-w-4xl h-[88vh] flex flex-col rounded-3xl bg-paper shadow-glass border border-tertiary/40 text-start overflow-hidden">
+      <div className="relative w-full max-w-4xl h-[88vh] flex flex-col sheet-m rounded-[26px] bg-paper shadow-[0_40px_80px_-30px_rgba(0,0,0,.6)] text-start overflow-hidden">
         {/* Fixed Header */}
-        <div className="shrink-0 flex items-start justify-between border-b border-line p-5 sm:p-6 bg-paper">
+        <div className="shrink-0 flex items-start justify-between ink-surface text-on-ink px-6 py-[18px]">
           <div className="flex items-center gap-3.5">
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-tertiary text-white shadow-md shadow-blue-600/30 shrink-0">
+            <div className="flex size-[42px] items-center justify-center rounded-[14px] bg-white/10 text-on-ink shrink-0">
               <FileCheck2 size={24} />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 id="match-records-title" className="font-sans text-xl md:text-2xl font-bold text-ink">
+                <h2 id="match-records-title" className="text-[17px] font-extrabold text-on-ink">
                   {isHindi ? "सरकारी रिकॉर्ड का मिलान (AIS · 26AS · TDS)" : "Match Official Records (AIS · 26AS · Form 16)"}
                 </h2>
                 <span className="rounded-full bg-tertiary/15 border border-tertiary/40 px-2.5 py-0.5 text-[11px] font-mono font-bold text-tertiary uppercase tracking-wider">
                   Card 02
                 </span>
               </div>
-              <p className="text-xs text-ink-2 mt-0.5">
+              <p className="text-[12.5px] text-[#CDBDFF]">
                 {activeCitizen ? (
                   <span>
                     {isHindi ? "सक्रिय करदाता सत्र:" : "Active Session:"}{" "}
-                    <span className="font-bold text-ink">{activeCitizen.name}</span> (PAN:{" "}
-                    <span className="font-mono font-bold text-ink">{activeCitizen.pan}</span>)
+                    <span className="font-bold text-on-ink">{activeCitizen.name}</span> (PAN:{" "}
+                    <span className="font-mono font-bold text-on-ink">{activeCitizen.pan}</span>)
                   </span>
                 ) : (
                   <span>
@@ -481,7 +481,7 @@ export default function MatchRecordsModal({
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="rounded-xl p-2 text-ink-3 hover:bg-paper-3 hover:text-ink transition cursor-pointer"
+            className="rounded-[10px] p-2 text-on-ink/70 hover:bg-white/10 hover:text-on-ink transition cursor-pointer"
           >
             <X size={20} />
           </button>

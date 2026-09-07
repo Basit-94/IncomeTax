@@ -123,7 +123,7 @@ export default function LanguageMenu({
       {open && (
         <>
           <div
-            className="fixed inset-0 z-[100] flex flex-col justify-end bg-black/65 backdrop-blur-xs sm:hidden animate-in fade-in duration-200"
+            className="fixed inset-0 z-[100] flex flex-col justify-end bg-[rgba(27,17,64,.55)] backdrop-blur-xs sm:hidden animate-in fade-in duration-200"
             onClick={() => {
               setOpen(false);
               setSearchQuery("");
@@ -133,18 +133,18 @@ export default function LanguageMenu({
             aria-label={label}
           >
             <div
-              className="w-full max-h-[85vh] rounded-t-3xl border-t border-line bg-paper shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-200"
+              className="w-full max-h-[86vh] rounded-t-[28px] bg-paper flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-[260ms]"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Drag Handle Bar */}
               <div className="pt-3 pb-1 flex justify-center">
-                <div className="h-1.5 w-12 rounded-full bg-line/80" />
+                <div className="h-[5px] w-11 rounded-[3px] bg-line" />
               </div>
 
               {/* Sheet Header */}
               <div className="flex items-center justify-between px-5 py-3 border-b border-line">
                 <div className="flex items-center gap-2.5">
-                  <div className="size-8 rounded-lg bg-money-soft text-money flex items-center justify-center">
+                  <div className="size-10 rounded-[13px] ink-surface flex items-center justify-center">
                     <Globe size={18} />
                   </div>
                   <div>

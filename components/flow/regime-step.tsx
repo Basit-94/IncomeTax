@@ -9,6 +9,7 @@ import { getPersonalization } from "../../lib/onboarding";
 import { formatMoney } from "../../lib/money";
 import { compareForPersona } from "../../lib/return/compute";
 import { MunshiAvatar } from "../brand/munshi";
+import { regimeReaction } from "../../lib/munshi-state";
 
 interface RegimeStepProps {
   persona: Persona;
@@ -27,6 +28,9 @@ interface RegimeStepProps {
  */
 export default function RegimeStep({ persona, t, lang, regime, onboardingProfile, onChoose }: RegimeStepProps) {
   const both = compareForPersona(persona);
+  const [interacted, setInteracted] = React.useState(false);
+  const choose = (which: "new" | "old") => { setInteracted(true); onChoose(which); };
+  const reaction = regimeReaction(interacted ? regime : null, { new: both.new.refundOrDue, old: both.old.refundOrDue });
   const personalization = onboardingProfile ? getPersonalization(onboardingProfile) : null;
   const recommended = both.new.refundOrDue >= both.old.refundOrDue ? "new" : "old";
   const savings = Math.abs(both[recommended].refundOrDue - both[recommended === "new" ? "old" : "new"].refundOrDue);
@@ -46,7 +50,7 @@ export default function RegimeStep({ persona, t, lang, regime, onboardingProfile
     return (
       <button
         key={which}
-        onClick={() => onChoose(which)}
+        onClick={() => choose(which)}
         aria-pressed={isSelected}
         className={`text-left w-full rounded-[22px] border-2 p-[22px] space-y-3 transition-colors cursor-pointer ${
           isSelected
@@ -100,7 +104,7 @@ export default function RegimeStep({ persona, t, lang, regime, onboardingProfile
 
       {savings > 0 && (
         <p className="recovery-callout flex items-start gap-2.5 px-[18px] py-3.5 text-sm font-medium leading-relaxed text-amber-ink">
-          <MunshiAvatar size={28} />
+          <MunshiAvatar key={`${regime}-${reaction}`} size={28} state={reaction} />
           <span>{reasoning}</span>
         </p>
       )}
@@ -123,13 +127,15 @@ export default function RegimeStep({ persona, t, lang, regime, onboardingProfile
         {card("old")}
       </div>
 
-      <div className="space-y-3">
-        <button
-          onClick={() => onChoose(recommended)}
-          className="btn-primary w-full rounded-[14px] h-[50px] px-6 text-[14.5px] transition-colors cursor-pointer"
-        >
-          {t.regime.acceptRecommendation}
-        </button>
+      <div className="space-y-3 max-md:pb-24">
+        <div className="md:contents max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-30 max-md:px-4 max-md:pb-7 max-md:pt-2.5 max-md:bg-[linear-gradient(to_top,var(--color-paper)_70%,transparent)]">
+          <button
+            onClick={() => choose(recommended)}
+            className="btn-primary w-full rounded-[14px] h-[50px] px-6 text-[14.5px] transition-colors cursor-pointer"
+          >
+            {t.regime.acceptRecommendation}
+          </button>
+        </div>
         <p className="text-xs text-ink-3 text-center leading-relaxed">
           {t.regime.overrideNote}
         </p>

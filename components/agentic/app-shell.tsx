@@ -15,7 +15,7 @@
  */
 
 import { useEffect, useState, type ReactNode } from "react";
-import { Brain, ChevronDown, ChevronUp, FileText, History, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Plus, Search, ShieldCheck, Sun, Trash2, X } from "lucide-react";
+import { Brain, ChevronDown, ChevronUp, FileText, History, LogOut, Menu, Moon, PanelLeftClose, PanelLeftOpen, Plus, Search, ShieldCheck, Sun, Trash2, X } from "lucide-react";
 import type { Dict } from "@/lib/i18n";
 import type { AgenticStrings } from "@/lib/i18n/agenticStrings";
 import type { Lang } from "@/lib/types";
@@ -24,7 +24,8 @@ import type { OutputRef, PlanStep, SourceRef } from "@/lib/agentic/types";
 import LanguageMenu from "../ui/language-menu";
 import { HeaderBar, PrototypeBanner } from "./header-frame";
 import { InspectorControls, InspectorPanel, type InspectorTab } from "./inspector";
-import type { WorkMode } from "./mode-switch";
+import ModeSwitch, { type WorkMode } from "./mode-switch";
+import MobileDrawer from "../mobile/mobile-drawer";
 
 export interface ShellCitizen {
   name: string;
@@ -93,7 +94,7 @@ export default function AppShell(props: AppShellProps) {
   const withSidebar = mode === "agentic";
 
   const sidebar = (
-    <nav aria-label="Wapsi" className="flex h-full flex-col bg-paper-2 border-e border-line">
+    <nav aria-label="Wapsi" className="flex h-full flex-col bg-paper-2 border-e border-line max-lg:bg-paper max-lg:border-e-0 max-lg:pt-3">
       {/* The brand lives in the shared header bar above; this row only holds the collapse / close control. */}
       <div className="flex items-center justify-end px-3 pt-3 pb-1">
         <button type="button" onClick={() => (drawer ? setDrawer(false) : toggleCollapsed())} className="hidden lg:flex size-8 items-center justify-center rounded-lg text-ink-3 hover:text-ink hover:bg-paper-3 cursor-pointer" aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}>
@@ -120,7 +121,7 @@ export default function AppShell(props: AppShellProps) {
         <ul className="space-y-0.5">
           <li>
             <button type="button" onClick={() => { props.onOpenVault(); setDrawer(false); }} className="w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-ink hover:bg-paper-3 cursor-pointer text-start">
-              <ShieldCheck size={15} className="text-amber-500 shrink-0" aria-hidden="true" /> <span>{s.taxVault}</span>
+              <ShieldCheck size={15} className="text-money shrink-0" aria-hidden="true" /> <span>{s.taxVault}</span>
             </button>
           </li>
           <li>
@@ -154,7 +155,7 @@ export default function AppShell(props: AppShellProps) {
                       type="button"
                       onClick={() => { props.onSelectRun(r.id); setDrawer(false); }}
                       aria-current={active ? "page" : undefined}
-                      className={`flex-1 min-w-0 flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-start cursor-pointer ${active ? "bg-amber-bg border border-amber-500/40 text-ink" : "text-ink-2 hover:bg-paper-3 hover:text-ink"}`}
+                      className={`flex-1 min-w-0 flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-start cursor-pointer ${active ? "bg-amber-bg text-amber-ink font-semibold" : "text-ink-2 hover:bg-paper-3 hover:text-ink"}`}
                     >
                       <FileText size={13} className="shrink-0 text-ink-3" aria-hidden="true" />
                       <span className="truncate">{r.title}</span>
@@ -183,12 +184,19 @@ export default function AppShell(props: AppShellProps) {
         )}
       </div>
 
+      {/* Mode — the drawer carries the Agentic|Manual switch, full width, with one line on what Manual is (M4g). */}
+      <div className="lg:hidden border-t border-line px-3 pt-3 pb-1">
+        <p className="cap px-1 mb-2">{s.modeLabel}</p>
+        <ModeSwitch mode={mode} onChange={(m) => { setDrawer(false); props.onModeChange(m); }} s={s} busy={props.modeBusy} fullWidth />
+        <p className="mt-1.5 px-1 text-[11.5px] text-ink-3 leading-snug">{s.manualInspectorNote}</p>
+      </div>
+
       {/* Account / settings */}
       <div className="border-t border-line p-3 space-y-2">
         {citizen ? (
           <div className="rounded-xl border border-line bg-paper px-3 py-2.5">
             <div className="flex items-center gap-2.5 min-w-0">
-              <span className="size-8 shrink-0 rounded-full bg-amber-bg border border-amber-500/40 text-amber-700 dark:text-amber-300 font-sans font-bold text-xs flex items-center justify-center" aria-hidden="true">
+              <span className="size-8 shrink-0 rounded-full bg-amber-bg text-amber-ink font-sans font-extrabold text-xs flex items-center justify-center" aria-hidden="true">
                 {citizen.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
               </span>
               <div className="min-w-0 flex-1">
@@ -205,6 +213,9 @@ export default function AppShell(props: AppShellProps) {
         ) : (
           <p className="text-xs text-ink-3 px-1">{s.signInPrompt}</p>
         )}
+        <div className="lg:hidden">
+          <LanguageMenu lang={props.lang} onChange={props.changeLang} label={t.shell.language} className="w-full" />
+        </div>
         <div className="flex items-center gap-1.5">
           <button type="button" onClick={props.toggleTheme} className="h-[34px] flex-1 rounded-lg border border-line bg-paper text-ink-2 hover:text-ink flex items-center justify-center gap-1.5 text-xs font-mono cursor-pointer shrink-0" aria-label={props.theme === "dark" ? t.shell.light : t.shell.dark}>
             {props.theme === "dark" ? <Sun size={13} className="text-money" aria-hidden="true" /> : <Moon size={13} className="text-money" aria-hidden="true" />}
@@ -217,7 +228,7 @@ export default function AppShell(props: AppShellProps) {
           )}
         </div>
         <p className="flex items-center gap-1.5 text-[10px] font-mono text-ink-3 px-1">
-          <span className="size-1.5 rounded-full bg-amber-500 shrink-0" aria-hidden="true" />
+          <span className="size-1.5 rounded-full bg-money shrink-0" aria-hidden="true" />
           <span className="truncate">{props.notice ?? t.shell.independent}</span>
         </p>
       </div>
@@ -236,12 +247,20 @@ export default function AppShell(props: AppShellProps) {
           mode={mode}
           onModeChange={props.onModeChange}
           busy={props.modeBusy}
+          leading={
+            withSidebar ? (
+              <button type="button" onClick={() => setDrawer(true)} className="glass-flat size-9 rounded-full flex items-center justify-center text-ink cursor-pointer" aria-label={s.recentChats}>
+                <Menu size={16} aria-hidden="true" />
+              </button>
+            ) : undefined
+          }
+          mobileTitle={withSidebar ? runs.find((r) => r.id === props.activeRunId)?.title ?? s.newChat : undefined}
           after={
             withSidebar ? (
               <button
                 type="button"
                 onClick={() => (window.matchMedia("(min-width: 1024px)").matches ? toggleCollapsed() : setDrawer(true))}
-                className={`size-9 flex items-center justify-center rounded-lg border border-line bg-paper text-ink-2 hover:text-ink hover:border-money/60 transition cursor-pointer shrink-0 ${collapsed ? "text-money border-money/40 shadow-xs" : ""}`}
+                className={`max-md:hidden size-9 flex items-center justify-center rounded-lg border border-line bg-paper text-ink-2 hover:text-ink hover:border-money/60 transition cursor-pointer shrink-0 ${collapsed ? "text-money border-money/40 shadow-xs" : ""}`}
                 title={collapsed ? "Expand sidebar (chats & tools)" : "Collapse sidebar"}
                 aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
@@ -252,7 +271,8 @@ export default function AppShell(props: AppShellProps) {
         >
           <div className="flex items-center gap-2 sm:gap-3">
             {withSidebar && <InspectorControls s={s} open={inspectorTab} onToggle={(tab) => setInspectorTab((cur) => (cur === tab ? null : tab))} steps={inspector.steps} outputs={inspector.outputs} sources={inspector.sources} />}
-            <div className="relative z-[60]">
+            {/* Phones in Agentic: the title and the compact pill need the width; the language menu lives in the drawer (M4g). */}
+            <div className={`relative z-[60] ${withSidebar ? "max-md:hidden" : ""}`}>
               <LanguageMenu lang={props.lang} onChange={props.changeLang} label={t.shell.language} className="shrink-0" />
             </div>
           </div>
@@ -276,16 +296,15 @@ export default function AppShell(props: AppShellProps) {
 
         {/* Sidebar: fixed column on large screens, drawer below */}
         {withSidebar && <div className={`hidden lg:block shrink-0 transition-[width] duration-200 ${collapsed ? "w-0 overflow-hidden" : "w-[272px]"}`}>{sidebar}</div>}
-        {withSidebar && drawer && (
-          <div className="lg:hidden fixed inset-0 z-50 flex" role="dialog" aria-modal="true">
-            <div className="w-[272px] max-w-[85vw] h-full">{sidebar}</div>
-            <button type="button" className="flex-1 bg-black/40" aria-label={s.cancel} onClick={() => setDrawer(false)} />
-          </div>
+        {withSidebar && (
+          <MobileDrawer open={drawer} onClose={() => setDrawer(false)} closeLabel={s.cancel}>
+            {sidebar}
+          </MobileDrawer>
         )}
 
         <div className="flex-1 min-w-0 min-h-0 flex flex-col lg:flex-row">
-          <main id="main-content" className="flex-1 min-w-0 min-h-0 flex flex-col overflow-y-auto">{props.children}</main>
-          {withSidebar && <InspectorPanel s={s} open={inspectorTab} onToggle={(tab) => setInspectorTab(tab)} steps={inspector.steps} outputs={inspector.outputs} sources={inspector.sources} runId={inspector.runId} manualNote={inspector.manualNote} modelNotes={inspector.modelNotes} />}
+          <main id="main-content" className="shell-main flex-1 min-w-0 min-h-0 flex flex-col overflow-y-auto">{props.children}</main>
+          {withSidebar && <InspectorPanel s={s} open={inspectorTab} onToggle={(tab) => setInspectorTab(tab)} onClose={() => setInspectorTab(null)} steps={inspector.steps} outputs={inspector.outputs} sources={inspector.sources} runId={inspector.runId} manualNote={inspector.manualNote} modelNotes={inspector.modelNotes} />}
         </div>
       </div>
     </div>

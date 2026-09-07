@@ -1,0 +1,51 @@
+/* Embedded into downloadable SVGs too. No external animation runtime. */
+.munshi-svg { display:inline-block; overflow:visible; vertical-align:middle; contain:layout style; }
+.munshi-svg .mj-body { transform-origin:140px 240px; }
+.munshi-svg .mj-eyes { transform-origin:135px 107px; }
+.munshi-svg .mj-brows { transform-origin:138px 86px; }
+.munshi-svg .mj-wave-arm,.munshi-svg .mj-rest-arm,.munshi-svg .mj-adjust-arm { transform-origin:63px 171px; }
+.munshi-svg .mj-rest-arm,.munshi-svg .mj-adjust-arm { transform:rotate(-64deg); }
+.munshi-svg .mj-touch-hand { opacity:0; }
+.munshi-svg .mj-document { transform:translate(0,-13px) rotate(-4deg); transform-origin:174px 224px; }
+.munshi-svg[data-state="reading"] .mj-pupils { transform:translateY(5px); }
+.munshi-svg[data-state="listening"] .mj-body { transform:rotate(-3deg); }
+.munshi-svg[data-state="concerned"] .mj-body,.munshi-svg[data-state="error"] .mj-body { transform:rotate(2deg); }
+.munshi-svg[data-animated="true"] .mj-eyes { animation:mj-blink 4.5s infinite; }
+.munshi-svg[data-animated="true"][data-state="idle"]:not([data-compact="true"]) .mj-body { animation:mj-breathe 5s ease-in-out infinite; }
+.munshi-svg[data-animated="true"][data-state="welcome"] .mj-wave-arm { animation:mj-wave 2.6s ease-in-out 2; }
+.munshi-svg[data-animated="true"][data-state="explaining"] .mj-wave-arm { animation:mj-explain 2.2s ease-in-out 2; }
+.munshi-svg[data-animated="true"][data-state="explaining"] .mj-mouth { animation:mj-talk .65s ease-in-out 5; transform-origin:140px 143px; }
+.munshi-svg[data-animated="true"][data-state="working"] .mj-document,.munshi-svg[data-animated="true"][data-state="uploading"] .mj-document { animation:mj-page 6s ease-in-out infinite; }
+.munshi-svg[data-animated="true"][data-state="working"] .mj-pupils,.munshi-svg[data-animated="true"][data-state="uploading"] .mj-pupils { animation:mj-read 6s ease-in-out infinite; }
+.munshi-svg[data-animated="true"][data-state="working"] .mj-glasses,.munshi-svg[data-animated="true"][data-state="uploading"] .mj-glasses { animation:mj-glasses 6s ease-in-out infinite; }
+.munshi-svg[data-animated="true"][data-state="working"] .mj-touch-hand,.munshi-svg[data-animated="true"][data-state="uploading"] .mj-touch-hand { animation:mj-touch 6s ease-in-out infinite; }
+.munshi-svg[data-animated="true"][data-state="working"] .mj-adjust-arm,.munshi-svg[data-animated="true"][data-state="uploading"] .mj-adjust-arm { animation:mj-arm-away 6s ease-in-out infinite; }
+.munshi-svg[data-animated="true"][data-state="happy"] .mj-body,.munshi-svg[data-animated="true"][data-state="success"] .mj-body { animation:mj-pleased 1.5s ease-in-out 1; }
+.munshi-svg[data-animated="true"][data-state="concerned"] .mj-body,.munshi-svg[data-animated="true"][data-state="error"] .mj-body { animation:mj-concern 1.5s ease-in-out 1; }
+.munshi-svg[data-animated="true"][data-state="waiting"] .mj-pupils { animation:mj-wait 7s ease-in-out infinite; }
+.munshi-svg[data-state="secure"] .mj-eyes { transform:scaleY(.1); animation:none; }
+.munshi-svg[data-animated="true"]:hover .mj-brows { animation:mj-brow-lift .8s ease-in-out 1; }
+@keyframes mj-blink { 0%,91%,96%,100% { transform:scaleY(1); } 93%,94% { transform:scaleY(.08); } }
+@keyframes mj-breathe { 0%,100% { transform:rotate(-1deg); } 50% { transform:rotate(1deg); } }
+@keyframes mj-wave { 0%,100% { transform:rotate(0); } 25% { transform:rotate(14deg); } 50% { transform:rotate(-10deg); } 75% { transform:rotate(9deg); } }
+@keyframes mj-explain { 0%,100% { transform:rotate(-10deg); } 50% { transform:rotate(12deg); } }
+@keyframes mj-talk { 0%,100% { transform:scaleY(1); } 50% { transform:scaleY(1.18); } }
+/* Retrieve 0–20%, read 20–55%, adjust 55–75%, return 85–100%. */
+@keyframes mj-page { 0%,100% { transform:translate(28px,25px) rotate(16deg); opacity:0; } 10% { opacity:1; } 22%,82% { transform:translate(0,-13px) rotate(-4deg); opacity:1; } 93% { opacity:1; } }
+@keyframes mj-read { 0%,12%,90%,100% { transform:translate(0,0); } 24%,35% { transform:translate(-2px,5px); } 45%,54% { transform:translate(3px,5px); } 60%,72% { transform:translate(0,0); } 78%,84% { transform:translate(1px,5px); } }
+@keyframes mj-glasses { 0%,54%,80%,100% { transform:translateY(0); } 62% { transform:translateY(-3px); } 70% { transform:translateY(-1px); } }
+@keyframes mj-touch { 0%,51%,82%,100% { opacity:0; transform:translate(-30px,45px); } 58%,73% { opacity:1; transform:translate(0,0); } 63% { opacity:1; transform:translateY(-3px); } }
+@keyframes mj-arm-away { 0%,51%,82%,100% { opacity:1; transform:rotate(-64deg); } 57%,75% { opacity:0; transform:rotate(8deg); } }
+@keyframes mj-pleased { 0%,100% { transform:translateY(0) rotate(0); } 30% { transform:translateY(-3px) rotate(-4deg); } 65% { transform:translateY(0) rotate(3deg); } }
+@keyframes mj-concern { 0%,100% { transform:rotate(2deg); } 35% { transform:translateY(2px) rotate(-3deg); } 65% { transform:translateY(2px) rotate(3deg); } }
+@keyframes mj-wait { 0%,30%,100% { transform:translateX(0); } 45%,60% { transform:translateX(-3px); } }
+@keyframes mj-brow-lift { 0%,100% { transform:translateY(0); } 40% { transform:translateY(-3px); } }
+.munshi-svg[data-animated="false"] *,.munshi-svg[data-animated="false"]:hover * { animation:none !important; }
+@media (prefers-reduced-motion:reduce) {
+  .munshi-svg *,.munshi-svg:hover * { animation:none !important; transition:none !important; }
+  .munshi-svg .mj-body,.munshi-svg .mj-eyes,.munshi-svg .mj-pupils,.munshi-svg .mj-glasses { transform:none !important; }
+  .munshi-svg .mj-wave-arm { transform:rotate(-64deg); }
+  .munshi-svg .mj-touch-hand { opacity:0; }
+  .munshi-svg .mj-adjust-arm { opacity:1; transform:rotate(-64deg); }
+}
+@media print { .munshi-svg * { animation:none !important; } }

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import {
   X,
-  Bot,
   Sparkles,
   ArrowRight,
   ShieldCheck,
@@ -16,6 +15,7 @@ import {
   CornerDownRight,
   Lock,
 } from "lucide-react";
+import { MunshiAvatar } from "../brand/munshi";
 import type { Lang } from "@/lib/types";
 
 interface AgenticModeModalProps {
@@ -107,28 +107,28 @@ export default function AgenticModeModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="agentic-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(27,17,64,.55)] p-4 backdrop-blur-md animate-in fade-in duration-200 max-md:items-end max-md:p-0"
     >
-      <div className="surface-panel relative w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-3xl bg-paper p-6 md:p-8 shadow-glass border border-tertiary/40 text-start">
+      <div className="relative w-full max-w-4xl max-h-[92vh] overflow-y-auto sheet-m rounded-[26px] bg-paper p-6 md:p-8 shadow-[0_40px_80px_-30px_rgba(0,0,0,.6)] text-start">
         {/* Glow Header */}
-        <div className="flex items-start justify-between border-b border-line pb-5">
+        <div className="flex items-start justify-between ink-surface text-on-ink -mx-6 -mt-6 md:-mx-8 md:-mt-8 px-6 md:px-8 py-[18px] rounded-t-[26px]">
           <div className="flex items-center gap-3.5">
-            <div className="relative flex size-12 items-center justify-center rounded-2xl bg-gradient-to-tr text-white shadow-glass shadow-indigo-600/30">
-              <Bot size={26} />
+            <div className="flex size-[42px] items-center justify-center rounded-[14px] bg-white/10 text-on-ink shrink-0">
+              <MunshiAvatar size={36} state="explaining" />
               <span className="absolute -bottom-1 -right-1 flex size-3.5 items-center justify-center rounded-full bg-paper">
                 <span className="size-2 rounded-full bg-tertiary animate-pulse" />
               </span>
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 id="agentic-modal-title" className="font-sans text-xl md:text-2xl font-black text-ink">
+                <h2 id="agentic-modal-title" className="text-[17px] font-extrabold text-on-ink">
                   {isHindi ? "एजेंटिक मोड — स्वायत्त टैक्स सह-पायलट" : "Agentic Mode — Autonomous Tax Copilot"}
                 </h2>
                 <span className="rounded-full bg-tertiary/15 border border-tertiary/40 px-2.5 py-0.5 text-[11px] font-mono font-bold text-tertiary uppercase tracking-wider">
                   Next-Gen AI Filing
                 </span>
               </div>
-              <p className="text-xs text-ink-2 mt-1">
+              <p className="text-[12.5px] text-[#CDBDFF]">
                 {isHindi
                   ? "सामान्य भाषा में बातचीत द्वारा शून्य-फॉर्म, स्वचालित तथ्य-सत्यापन और सुरक्षित रिटर्न दाखिल।"
                   : "Zero-form, natural language tax preparation, AIS cross-reconciliation, and compliant filing."}
@@ -139,7 +139,7 @@ export default function AgenticModeModal({
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="rounded-xl p-2 text-ink-3 hover:bg-paper-3 hover:text-ink transition cursor-pointer"
+            className="rounded-[10px] p-2 text-on-ink/70 hover:bg-white/10 hover:text-on-ink transition cursor-pointer"
           >
             <X size={22} />
           </button>
@@ -233,9 +233,7 @@ export default function AgenticModeModal({
 
             {/* Agent Message */}
             <div className="flex items-start gap-2.5">
-              <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-ok-soft text-ok-ink mt-1">
-                <Bot size={15} />
-              </div>
+              <MunshiAvatar size={28} state="explaining" className="mt-1" />
               <div className="max-w-[88%] rounded-2xl rounded-tl-sm border border-line bg-paper-2 p-3.5 shadow-sm">
                 <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                   <span className="font-bold text-ink">Wapsi Autonomous Tax Agent</span>

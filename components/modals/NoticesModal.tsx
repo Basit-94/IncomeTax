@@ -243,27 +243,27 @@ export default function NoticesModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="notices-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-3 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(27,17,64,.55)] p-3 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200 max-md:items-end max-md:p-0"
     >
-      <div className="surface-panel relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl bg-paper shadow-glass border border-line overflow-hidden">
+      <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col sheet-m rounded-[26px] bg-paper shadow-[0_40px_80px_-30px_rgba(0,0,0,.6)] overflow-hidden">
         {/* ========================================================================= */}
         {/* MODAL HEADER                                                              */}
         {/* ========================================================================= */}
-        <div className="shrink-0 flex items-start justify-between border-b border-line p-5 sm:px-6 sm:py-4 bg-paper-2">
+        <div className="shrink-0 flex items-start justify-between ink-surface text-on-ink px-6 py-[18px]">
           <div className="flex items-center gap-3">
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-bad-soft text-bad shadow-xs">
+            <div className="flex size-[42px] items-center justify-center rounded-[14px] bg-white/10 text-on-ink shrink-0">
               <ShieldAlert size={22} aria-hidden="true" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 id="notices-modal-title" className="font-sans text-lg sm:text-xl font-black text-ink">
+                <h2 id="notices-modal-title" className="text-[17px] font-extrabold text-on-ink">
                   {isHindi ? "नोटिस और त्रुटि निवारण केंद्र" : "Notices & Defect Resolver"}
                 </h2>
                 <span className="hidden sm:inline-flex rounded-full bg-bad-soft px-2.5 py-0.5 text-[10px] font-mono font-bold text-bad border border-bad/40">
                   Sec 143(1)(a) & 139(9)
                 </span>
               </div>
-              <p className="text-xs text-ink-2">
+              <p className="text-[12.5px] text-[#CDBDFF]">
                 {isHindi
                   ? "सीपीसी बेंगलूरु के नोटिसों का सत्यापन, 15-दिवसीय समय सीमा और कानूनी उत्तर ड्राफ्टर।"
                   : "CBDT DIN verification, statutory 15-day defect timeline & AI legal defense drafter."}
@@ -275,7 +275,7 @@ export default function NoticesModal({
             type="button"
             onClick={onClose}
             aria-label={isHindi ? "संवाद बंद करें" : "Close dialog"}
-            className="rounded-xl p-2 text-ink-3 hover:bg-paper-3 hover:text-ink transition cursor-pointer"
+            className="rounded-[10px] p-2 text-on-ink/70 hover:bg-white/10 hover:text-on-ink transition cursor-pointer"
           >
             <X size={20} />
           </button>

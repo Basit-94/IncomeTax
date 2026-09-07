@@ -141,17 +141,17 @@ export default function CAShareModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-paper border border-line rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-lg bg-paper border border-line rounded-3xl shadow-glass overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="relative bg-gradient-to-r from-teal-950 via-slate-900 to-indigo-950 px-6 py-5 text-white">
+        <div className="relative bg-gradient-to-r px-6 py-5 text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-teal-500/20 border border-teal-400/30 text-teal-300">
+              <div className="p-2 rounded-xl bg-amber-bg border border-money/40 text-money">
                 <ShieldCheck size={20} />
               </div>
               <div>
                 <h3 className="text-lg font-bold tracking-tight">Review with Chartered Accountant</h3>
-                <p className="text-xs text-teal-200/80">
+                <p className="text-xs text-money/80">
                   Peer-to-peer verification with your trusted tax professional
                 </p>
               </div>
@@ -170,8 +170,8 @@ export default function CAShareModal({
         <div className="p-6 space-y-5">
           {step === "pin" ? (
             <form onSubmit={handleGenerate} className="space-y-4">
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 text-xs text-ink-2 space-y-1">
-                <div className="flex items-center gap-1.5 font-bold text-amber-700 dark:text-amber-400">
+              <div className="bg-amber-bg border border-money/40 rounded-2xl p-4 text-xs text-ink-2 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-amber-ink">
                   <Lock size={14} />
                   <span>Zero-Knowledge Taxpayer Privacy</span>
                 </div>
@@ -188,7 +188,7 @@ export default function CAShareModal({
                 </div>
                 <div className="text-right">
                   <span className="text-ink-3 block">Draft Liability</span>
-                  <span className={`font-mono font-bold ${b.refundOrDue >= 0 ? "text-money" : "text-alarm"}`}>
+                  <span className={`font-mono font-bold ${b.refundOrDue >= 0 ?"text-money" : "text-alarm"}`}>
                     {b.refundOrDue >= 0 ? "Refund: " : "Due: "}
                     {formatMoney(Math.abs(b.refundOrDue), lang)}
                   </span>
@@ -204,7 +204,7 @@ export default function CAShareModal({
                     placeholder="e.g. 2468"
                     value={pin}
                     onChange={(e) => setPin(e.target.value)}
-                    className="w-full text-center tracking-widest text-lg font-mono font-bold p-3 bg-paper border border-line rounded-xl focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                    className="w-full text-center tracking-widest text-lg font-mono font-bold p-3 bg-paper border border-line rounded-xl focus:ring-2 focus:ring-money/40 focus:outline-none"
                     autoFocus
                   />
                 </div>
@@ -216,7 +216,7 @@ export default function CAShareModal({
                     placeholder="Repeat PIN"
                     value={confirmPin}
                     onChange={(e) => setConfirmPin(e.target.value)}
-                    className="w-full text-center tracking-widest text-lg font-mono font-bold p-3 bg-paper border border-line rounded-xl focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                    className="w-full text-center tracking-widest text-lg font-mono font-bold p-3 bg-paper border border-line rounded-xl focus:ring-2 focus:ring-money/40 focus:outline-none"
                   />
                 </div>
               </div>
@@ -230,7 +230,7 @@ export default function CAShareModal({
               <button
                 type="submit"
                 disabled={isGenerating || pin.length < 4}
-                className="w-full py-3.5 px-4 bg-teal-800 hover:bg-teal-900 disabled:opacity-50 text-white font-bold text-sm rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3.5 px-4 ink-surface hover:ink-surface disabled:opacity-50 text-white font-bold text-sm rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
               >
                 {isGenerating ? (
                   <>
@@ -249,8 +249,8 @@ export default function CAShareModal({
           ) : (
             <div className="space-y-5">
               {/* Generated Code Display */}
-              <div className="text-center p-5 bg-gradient-to-b from-teal-500/10 to-indigo-500/10 border-2 border-dashed border-teal-500/40 rounded-2xl space-y-2">
-                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-teal-800 dark:text-teal-300">
+              <div className="text-center p-5 bg-gradient-to-b border-2 border-dashed border-money/40 rounded-2xl space-y-2">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-money">
                   Your CA Access Code
                 </span>
                 <div className="flex items-center justify-center gap-3">
@@ -276,7 +276,7 @@ export default function CAShareModal({
                   href={whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 p-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow-xs cursor-pointer"
+                  className="flex items-center justify-center gap-2 p-3 bg-ok hover:opacity-90 text-white text-xs font-bold rounded-xl transition shadow-xs cursor-pointer"
                 >
                   <MessageCircle size={16} />
                   <span>Share on WhatsApp</span>
@@ -294,7 +294,7 @@ export default function CAShareModal({
               {/* Live Listening Status */}
               <div className="p-3.5 bg-paper-2 border border-line rounded-2xl flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2.5">
-                  <div className="size-2.5 rounded-full bg-amber-500 animate-ping" />
+                  <div className="size-2.5 rounded-full bg-money animate-ping" />
                   <div className="text-left">
                     <span className="font-bold text-ink block">Waiting for CA Audit</span>
                     <span className="text-ink-3 text-[11px]">

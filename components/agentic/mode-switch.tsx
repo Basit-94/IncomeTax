@@ -26,12 +26,14 @@ export interface ModeSwitchProps {
   s: AgenticStrings;
   /** Set while a confirmed agent action is still committing; the switch waits (plan §6). */
   busy?: boolean;
+  /** The drawer's Mode section (handoff 2, M4g): the pill stretches and its segments share the width. */
+  fullWidth?: boolean;
 }
 
-export default function ModeSwitch({ mode, onChange, s, busy = false }: ModeSwitchProps) {
+export default function ModeSwitch({ mode, onChange, s, busy = false, fullWidth = false }: ModeSwitchProps) {
   return (
     <div
-      className="glass-flat h-[38px] shrink-0 flex items-center p-1 rounded-full text-[13px] font-bold"
+      className={`glass-flat h-[38px] max-md:h-9 shrink-0 flex items-center p-1 rounded-full text-[13px] max-md:text-[11.5px] font-bold ${fullWidth ? "w-full h-10 max-md:h-10 text-[13px] max-md:text-[13px]" : ""}`}
       role="group"
       aria-label={s.modeLabel}
       data-testid="mode-switch"
@@ -46,7 +48,7 @@ export default function ModeSwitch({ mode, onChange, s, busy = false }: ModeSwit
             aria-pressed={selected}
             disabled={busy}
             onClick={() => !selected && onChange(m)}
-            className={`h-[30px] min-w-[104px] px-3.5 rounded-full flex items-center justify-center gap-1.5 transition-colors disabled:cursor-wait cursor-pointer ${selected ? "ink-surface" : "text-ink-3 hover:text-ink"}`}
+            className={`h-[30px] min-w-[104px] max-md:min-w-0 px-3.5 max-md:px-2.5 rounded-full flex items-center justify-center gap-1.5 transition-colors disabled:cursor-wait cursor-pointer ${fullWidth ? "flex-1 h-8" : ""} ${selected ? "ink-surface" : "text-ink-3 hover:text-ink"}`}
             data-mode={m}
           >
             {m === "agentic" && <MunshiAvatar size={20} />}

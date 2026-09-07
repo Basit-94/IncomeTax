@@ -12,13 +12,14 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { MessageCircle, Send, X, Wrench } from "lucide-react";
+import { Send, X, Wrench } from "lucide-react";
 
 import type { Dict } from "../../lib/i18n";
 import type { Lang, Persona } from "../../lib/types";
 import { formatMoney } from "../../lib/money";
 import { MockFill } from "../dev/mock-fill";
 import { renderAssistantText } from "./format";
+import { Munshi, MunshiAvatar } from "../brand/munshi";
 
 /** Mirrors AGENT_MAX_QUESTIONS_PER_SESSION in app/api/agent/route.ts — the server is authoritative. */
 const MAX_QUESTIONS_PER_SESSION = 4;
@@ -188,18 +189,18 @@ export default function AgentPanel({
         onClick={() => setOpen(true)}
         aria-label={t.agent.open}
         title={t.agent.open}
-        className="fixed bottom-5 right-5 z-50 rounded-full bg-navy text-white p-3.5 shadow-xl hover:scale-105 transition-transform"
+        className="fixed bottom-5 max-md:bottom-[104px] right-5 z-50 rounded-full ink-surface text-white p-3.5 shadow-glass hover:scale-105 transition-transform"
       >
-        <MessageCircle size={22} />
+        <MunshiAvatar size={32} state={error ? "error" : busy ? "working" : "welcome"} />
       </button>
     );
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 w-[380px] max-w-[92vw] h-[560px] max-h-[78vh] flex flex-col bg-paper border border-line rounded-2xl shadow-2xl overflow-hidden">
+    <div className="fixed bottom-5 max-md:bottom-[104px] right-5 z-50 w-[380px] max-w-[92vw] h-[560px] max-h-[78vh] flex flex-col bg-paper border border-line rounded-2xl shadow-glass overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-navy text-white shrink-0">
-        <span className="font-bold text-sm">{t.agent.title}</span>
+      <div className="flex items-center justify-between px-4 py-3 ink-surface text-white shrink-0">
+        <span className="flex items-center gap-2 font-bold text-sm"><MunshiAvatar size={30} state={error ? "error" : busy ? "working" : "idle"} />{t.agent.title}</span>
         <button
           type="button"
           onClick={() => setOpen(false)}
@@ -216,11 +217,12 @@ export default function AgentPanel({
           {t.agent.intro}
         </p>
         {messages.map((m, i) => (
-          <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
+          <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start gap-2"}>
+            {m.role === "model" && <MunshiAvatar size={34} state="explaining" className="mt-0.5" />}
             <div
               className={
                 m.role === "user"
-                  ? "max-w-[85%] rounded-2xl rounded-br-sm bg-navy text-white text-sm px-3.5 py-2.5"
+                  ? "max-w-[85%] rounded-2xl rounded-br-sm ink-surface text-white text-sm px-3.5 py-2.5"
                   : "max-w-[85%] rounded-2xl rounded-bl-sm bg-paper-2 border border-line text-ink text-sm px-3.5 py-2.5"
               }
             >
@@ -244,7 +246,7 @@ export default function AgentPanel({
             </div>
           </div>
         ))}
-        {busy && <p className="text-xs text-ink-3 animate-pulse">{t.agent.thinking}</p>}
+        {busy && <div className="flex items-center gap-2" role="status"><Munshi size={64} state="working" /><p className="text-xs text-ink-3">{t.agent.thinking}</p></div>}
         {error && (
           <p className="text-xs font-semibold text-alarm bg-alarm/5 border border-alarm/30 rounded-lg px-3 py-2">
             {error}
@@ -253,8 +255,8 @@ export default function AgentPanel({
 
         {/* The filing confirmation card — the only path from "prepared" to "filed". */}
         {pendingFiling && (
-          <div className="border-2 border-navy rounded-xl p-3.5 space-y-2 bg-paper-2">
-            <p className="text-sm font-bold text-navy dark:text-ink">{t.agent.confirmTitle}</p>
+          <div className="border-2 border-ink-surface rounded-xl p-3.5 space-y-2 bg-paper-2">
+            <p className="text-sm font-bold text-ink dark:text-ink">{t.agent.confirmTitle}</p>
             <p className="text-xs text-ink-2">{t.agent.confirmBody}</p>
             <div className="space-y-1 text-xs">
               <div className="flex justify-between">
@@ -282,7 +284,7 @@ export default function AgentPanel({
               <button
                 type="button"
                 onClick={confirmFiling}
-                className="flex-1 rounded-lg bg-navy text-white text-xs font-bold py-2 hover:opacity-90"
+                className="flex-1 rounded-lg ink-surface text-white text-xs font-bold py-2 hover:opacity-90"
               >
                 {t.agent.confirmButton}
               </button>
@@ -322,13 +324,13 @@ export default function AgentPanel({
             onChange={(e) => setInput(e.target.value)}
             placeholder={t.agent.placeholder}
             disabled={atLimit}
-            className="flex-1 rounded-xl border border-line bg-paper-2 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-navy/40 disabled:opacity-50"
+            className="flex-1 rounded-xl border border-line bg-paper-2 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-money/40 disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={busy || atLimit || !input.trim()}
             aria-label={t.agent.send}
-            className="rounded-xl bg-navy text-white p-2.5 disabled:opacity-40"
+            className="rounded-xl ink-surface text-white p-2.5 disabled:opacity-40"
           >
             <Send size={16} />
           </button>

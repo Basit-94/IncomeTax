@@ -19,7 +19,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { m, AnimatePresence } from "motion/react";
 import { QRCodeSVG } from "qrcode.react";
-import { Banknote, Building2, Check, Loader2, QrCode, ShieldAlert, X } from "lucide-react";
+import { Banknote, Building2, Check, Loader2, QrCode, X } from "lucide-react";
+import { MunshiAvatar } from "./brand/munshi";
 import { useTax } from "../context/TaxReturnContext";
 import type { SelfAssessmentPayment } from "../context/TaxReturnContext";
 import { Rupees } from "./Rupees";
@@ -137,6 +138,9 @@ export function Challan280Modal({ open, onClose, onPaid, amount }: Challan280Mod
 
   if (!open) return null;
 
+  const payee = new URLSearchParams(deepLink.split("?")[1] ?? "").get("pa") ?? "";
+  const canPay = stage === "select" && amountDue > 0 && !(method === "UPI" && secondsLeft <= 0);
+
   return (
     <AnimatePresence>
       <m.div
@@ -144,7 +148,7 @@ export function Challan280Modal({ open, onClose, onPaid, amount }: Challan280Mod
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 backdrop-blur-sm p-0 sm:items-center sm:p-6 print:hidden"
+        className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(27,17,64,.55)] backdrop-blur-sm p-0 sm:items-center sm:p-6 print:hidden"
         onClick={onClose}
         role="presentation"
       >
@@ -159,162 +163,83 @@ export function Challan280Modal({ open, onClose, onPaid, amount }: Challan280Mod
           role="dialog"
           aria-modal="true"
           aria-label="Challan 280 — pay self-assessment tax"
-          className="w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800"
+          className="w-full max-w-[720px] max-h-[92vh] overflow-y-auto rounded-t-[26px] sm:sheet-m rounded-[26px] bg-paper text-ink shadow-[0_40px_80px_-30px_rgba(0,0,0,.6)]"
         >
           {/* Header */}
-          <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur px-6 py-5">
-            <div className="space-y-1">
-              <span className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 font-mono">
-                e-Pay Tax · {CHALLAN_TYPE}
-              </span>
-              <h2 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
-                Pay outstanding tax — Challan 280
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Self-assessment tax u/s 140A. A return filed with tax outstanding is
-                defective u/s 139(9), so this is paid before filing.
-              </p>
+          <div className="sticky top-0 z-10 flex items-center gap-3.5 ink-surface text-on-ink px-6 py-[18px]">
+            <span className="size-[42px] rounded-[14px] bg-white/10 flex items-center justify-center shrink-0">
+              <Banknote size={20} />
+            </span>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-[17px] font-extrabold leading-tight">Pay tax · Challan 280</h2>
+              <p className="text-[12.5px] text-[#CDBDFF] truncate">Balance payable before filing · {state.name}</p>
             </div>
             <button
               onClick={onClose}
               aria-label="Close"
-              className="shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 cursor-pointer"
+              className="shrink-0 rounded-[10px] p-2 text-on-ink/70 transition hover:bg-white/10 hover:text-on-ink cursor-pointer"
             >
               <X size={18} />
             </button>
           </div>
 
-          {/* Mock disclosure — first thing inside the panel, not a footnote. */}
-          <div className="mx-6 mt-5 flex gap-2.5 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-4 py-3">
-            <ShieldAlert size={16} className="mt-0.5 shrink-0 text-amber-700" />
-            <p className="text-xs leading-relaxed text-amber-900 dark:text-amber-200">
-              <strong className="font-bold">Nothing is paid here.</strong> No bank, UPI
-              app or department system is contacted. The QR encodes a real UPI intent
-              string but raises no collect request, and the BSR code and challan serial
-              produced below are generated locally and are synthetic.
-            </p>
-          </div>
+          <div className="px-6 py-[22px] space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              {/* Challan face — the fields a real ITNS 280 carries. */}
+              <section className="space-y-2.5">
+                <span className="block text-[12px] font-bold uppercase tracking-[.08em] text-ink-3">
+                  {CHALLAN_TYPE} · self-assessment
+                </span>
+                {(
+                  [
+                    ["Major head", CHALLAN_MAJOR_HEAD_LABEL],
+                    ["Minor head", CHALLAN_MINOR_HEAD_LABEL],
+                    ["Assessment year", ASSESSMENT_YEAR],
+                    ["Financial year", FINANCIAL_YEAR],
+                    ["PAN", state.pan],
+                  ] as const
+                ).map(([label, value]) => (
+                  <div key={label} className="glass-flat flex items-center justify-between gap-3 rounded-[14px] px-3.5 py-3 text-[13.5px]">
+                    <span className="text-ink-3">{label}</span>
+                    <span className="font-mono font-bold text-ink text-end">{value}</span>
+                  </div>
+                ))}
+                <div className="rounded-[14px] bg-amber-bg p-3.5">
+                  <div className="flex items-center justify-between gap-2 text-[12px] text-amber-ink">
+                    <span className="font-bold">Amount payable</span>
+                    <span className="font-mono">
+                      tax <Rupees value={baseTax} /> + cess <Rupees value={cess} />
+                    </span>
+                  </div>
+                  <Rupees
+                    value={amountDue}
+                    className="mt-1 block text-[30px] leading-none font-extrabold tracking-[-.03em] text-amber-ink"
+                  />
+                </div>
+              </section>
 
-          <div className="space-y-6 p-6">
-            {/* Challan face — the fields a real ITNS 280 carries. */}
-            <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60 p-5">
-              <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-                <div>
-                  <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 font-mono">
-                    Assessment year
-                  </dt>
-                  <dd className="text-sm font-bold text-slate-900 dark:text-ink font-mono tabular-nums">
-                    AY {ASSESSMENT_YEAR}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 font-mono">
-                    Financial year
-                  </dt>
-                  <dd className="text-sm font-bold text-slate-900 dark:text-ink font-mono tabular-nums">
-                    FY {FINANCIAL_YEAR}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 font-mono">
-                    PAN
-                  </dt>
-                  <dd className="text-sm font-bold text-slate-900 dark:text-ink font-mono">{state.pan}</dd>
-                </div>
-                <div>
-                  <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 font-mono">
-                    Assessee
-                  </dt>
-                  <dd className="text-sm font-bold text-slate-900 dark:text-ink">{state.name}</dd>
-                </div>
-                <div>
-                  <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 font-mono">
-                    Major head
-                  </dt>
-                  <dd className="text-sm font-semibold text-slate-800 dark:text-ink-2">
-                    {CHALLAN_MAJOR_HEAD_LABEL}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 font-mono">
-                    Minor head
-                  </dt>
-                  <dd className="text-sm font-semibold text-slate-800 dark:text-ink-2">
-                    {CHALLAN_MINOR_HEAD_LABEL}
-                  </dd>
-                </div>
-              </dl>
-
-              <div className="mt-5 space-y-2 border-t border-slate-200 dark:border-slate-800 pt-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-600 dark:text-slate-400">Tax</span>
-                  <Rupees value={baseTax} className="font-semibold text-slate-900 dark:text-ink" />
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-600 dark:text-slate-400">Health &amp; education cess @ 4%</span>
-                  <Rupees value={cess} className="font-semibold text-slate-900 dark:text-ink" />
-                </div>
-                <div className="flex items-center justify-between border-t border-slate-300 dark:border-slate-800 pt-2.5">
-                  <span className="text-sm font-bold text-slate-900 dark:text-ink">Total payable</span>
-                  <Rupees value={amountDue} className="text-xl font-extrabold text-slate-950 dark:text-white" />
-                </div>
-              </div>
-            </section>
-
-            {/* Payment method */}
-            {stage === "select" && (
-              <section className="space-y-4">
-                <div className="flex gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 p-1">
-                  {(
-                    [
-                      { id: "UPI" as const, label: "UPI", icon: QrCode },
-                      { id: "NET_BANKING" as const, label: "Net banking", icon: Building2 },
-                    ]
-                  ).map(({ id, label, icon: Icon }) => (
-                    <button
-                      key={id}
-                      onClick={() => setMethod(id)}
-                      className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-xs font-bold transition cursor-pointer ${
-                        method === id
-                          ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm"
-                          : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
-                      }`}
-                    >
-                      <Icon size={14} />
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                {/*
-                  A plain conditional, not AnimatePresence. `mode="wait"` keeps
-                  the outgoing panel mounted until its exit animation finishes,
-                  so if the frame loop is stalled — a backgrounded tab, a
-                  throttled client, a motion feature bundle that never loads —
-                  `method` flips to NET_BANKING while the UPI QR stays on screen.
-                  The pay button is live throughout, so the payment would be
-                  recorded against a bank the citizen never chose while they were
-                  looking at a QR code. What a payment record says must match what
-                  was on screen when it was made.
-                */}
-                {method === "UPI" ? (
-                  <m.div
-                    key="upi"
-                    layout
-                    transition={spring}
-                    className="flex flex-col items-center gap-4 rounded-2xl border border-slate-200 dark:border-slate-800 p-6"
-                  >
-                    <div className="rounded-xl border-4 border-slate-900 bg-white p-3">
-                      <QRCodeSVG value={deepLink} size={168} level="M" />
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        Scan with any UPI app to pay{" "}
-                        <Rupees value={amountDue} className="font-bold" />
-                      </p>
+              {/* Payment */}
+              {stage === "select" && (
+                <section className="glass-flat flex flex-col items-center gap-2.5 rounded-[18px] p-4">
+                  {/*
+                    A plain conditional, not AnimatePresence: with `mode="wait"` a stalled frame
+                    loop would leave the UPI QR on screen after `method` flipped to net banking,
+                    and the pay button is live throughout. What a payment record says must match
+                    what was on screen when it was made.
+                  */}
+                  {method === "UPI" ? (
+                    <m.div key="upi" layout transition={spring} className="flex w-full flex-col items-center gap-2.5">
+                      <span className="size-[150px] rounded-[12px] bg-white border border-line flex items-center justify-center">
+                        <QRCodeSVG value={deepLink} size={126} level="M" />
+                      </span>
+                      <span className="flex items-center gap-1.5 text-[13px] font-bold text-ink">
+                        <span className="size-[7px] rounded-full bg-ok" />
+                        e-Pay Tax · UPI (simulated)
+                      </span>
+                      <span className="font-mono text-[12px] text-ink tracking-[.02em]">{payee}</span>
                       <p
-                        className={`mt-1 text-xs font-mono tabular-nums ${
-                          secondsLeft <= 30 ? "text-rose-600 font-bold" : "text-slate-500 dark:text-slate-400"
+                        className={`text-[11.5px] font-mono tabular-nums ${
+                          secondsLeft <= 30 ? "text-bad font-bold" : "text-ink-3"
                         }`}
                         role="timer"
                         aria-live="off"
@@ -323,117 +248,143 @@ export function Challan280Modal({ open, onClose, onPaid, amount }: Challan280Mod
                           ? `Request valid for ${mmss(secondsLeft)}`
                           : "Request expired — reopen to generate a new one"}
                       </p>
-                    </div>
-                  </m.div>
-                ) : (
-                  <m.div
-                    key="netbanking"
-                    layout
-                    transition={spring}
-                    className="space-y-2 rounded-2xl border border-slate-200 dark:border-slate-800 p-6"
-                  >
-                    <label
-                      htmlFor="challan-bank"
-                      className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400"
-                    >
-                      Select your bank
-                    </label>
-                    <select
-                      id="challan-bank"
-                      value={bank}
-                      onChange={(e) => setBank(e.target.value)}
-                      className="w-full cursor-pointer rounded-xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-800 px-4 py-3 text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-700"
-                    >
-                      {NET_BANKING_BANKS.map((b) => (
-                        <option key={b.code} value={b.code}>
-                          {b.name}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="pt-1 text-xs text-slate-500 dark:text-slate-400">
-                      You would be redirected to your bank&apos;s net-banking login. No
-                      redirect happens in this prototype.
-                    </p>
-                  </m.div>
-                )}
+                    </m.div>
+                  ) : (
+                    <m.div key="netbanking" layout transition={spring} className="w-full space-y-2">
+                      <label htmlFor="challan-bank" className="block text-[12.5px] font-bold text-ink-2">
+                        Select your bank
+                      </label>
+                      <select
+                        id="challan-bank"
+                        value={bank}
+                        onChange={(e) => setBank(e.target.value)}
+                        className="w-full cursor-pointer rounded-[14px] border-[1.5px] border-glass-edge bg-white/80 dark:bg-white/10 px-4 h-11 text-sm font-semibold text-ink focus:border-money focus:outline-none"
+                      >
+                        {NET_BANKING_BANKS.map((b) => (
+                          <option key={b.code} value={b.code}>
+                            {b.name}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[11.5px] text-ink-3">
+                        You would be redirected to your bank&apos;s net-banking login. No redirect
+                        happens in this prototype.
+                      </p>
+                    </m.div>
+                  )}
+                  <div className="flex flex-wrap justify-center gap-1.5 pt-1">
+                    {(
+                      [
+                        { id: "UPI" as const, label: "UPI", icon: QrCode },
+                        { id: "NET_BANKING" as const, label: "Net banking", icon: Building2 },
+                      ]
+                    ).map(({ id, label, icon: Icon }) => (
+                      <button
+                        key={id}
+                        onClick={() => setMethod(id)}
+                        aria-pressed={method === id}
+                        className={`inline-flex items-center gap-1.5 px-[11px] py-1 rounded-full text-[12px] font-bold transition cursor-pointer ${
+                          method === id
+                            ? "ink-surface text-on-ink"
+                            : "bg-white/60 dark:bg-white/10 border border-glass-edge text-ink-2 hover:border-money/50"
+                        }`}
+                      >
+                        <Icon size={12} />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
 
-                <button
-                  onClick={simulateSuccess}
-                  // An expired UPI request cannot be paid; the citizen reopens
-                  // the drawer for a fresh one rather than paying into a dead
-                  // collect request.
-                  disabled={amountDue <= 0 || (method === "UPI" && secondsLeft <= 0)}
-                  className="w-full rounded-xl bg-teal-800 px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-teal-900 disabled:cursor-not-allowed disabled:bg-slate-300 cursor-pointer"
+              {stage === "processing" && (
+                <section className="glass-flat flex flex-col items-center justify-center gap-3 rounded-[18px] p-6">
+                  <Loader2 size={28} className="animate-spin text-money" />
+                  <p className="text-sm font-semibold text-ink-2 text-center">
+                    Awaiting confirmation from the collecting bank…
+                  </p>
+                </section>
+              )}
+
+              {stage === "done" && receipt && (
+                <m.section
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={spring}
+                  className="space-y-3 rounded-[18px] bg-ok-soft p-4"
                 >
-                  Simulate payment success
-                </button>
-              </section>
-            )}
+                  <div className="flex items-center gap-2.5">
+                    <span className="rounded-full bg-ok p-1.5 text-white">
+                      <Check size={14} strokeWidth={3} />
+                    </span>
+                    <h3 className="text-sm font-extrabold text-ok-ink">Challan 280 paid — credit applied to this return</h3>
+                  </div>
+                  <dl className="space-y-1.5 text-[12.5px] text-ok-ink">
+                    {(
+                      [
+                        ["BSR code", receipt.bsrCode],
+                        ["Challan serial", receipt.challanNo],
+                      ] as const
+                    ).map(([label, value]) => (
+                      <div key={label} className="flex items-center justify-between gap-3">
+                        <dt>{label}</dt>
+                        <dd className="font-mono font-bold tabular-nums">{value}</dd>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between gap-3">
+                      <dt>Amount</dt>
+                      <dd>
+                        <Rupees value={amountDue} className="font-bold" />
+                      </dd>
+                    </div>
+                  </dl>
+                  <p className="text-[11.5px] leading-relaxed text-ok-ink">
+                    These three fields — BSR code, serial and date — are what the return carries as
+                    proof of payment. Your outstanding liability is now nil.
+                  </p>
+                </m.section>
+              )}
+            </div>
 
-            {stage === "processing" && (
-              <div className="flex flex-col items-center gap-3 py-10">
-                <Loader2 size={28} className="animate-spin text-teal-700" />
-                <p className="text-sm font-semibold text-slate-700">
-                  Awaiting confirmation from the collecting bank…
-                </p>
-              </div>
-            )}
+            {/* Munshi ji's one line: the mock boundary, on the surface and not in a footnote. */}
+            <p className="flex items-start gap-2.5 text-[12.5px] leading-relaxed text-ink-2">
+              <MunshiAvatar size={26} />
+              <span>
+                Nothing is paid to anyone. No bank, UPI app or department system is contacted; the QR
+                is a real UPI intent string that raises no collect request, and the BSR code and
+                serial are generated locally. Paying here credits a simulated challan against your
+                return so filing is no longer defective.
+              </span>
+            </p>
 
-            {stage === "done" && receipt && (
-              <m.section
-                layout
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={spring}
-                className="space-y-4 rounded-2xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/40 p-6"
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="rounded-full bg-emerald-600 p-1.5 text-white">
-                    <Check size={14} strokeWidth={3} />
-                  </span>
-                  <h3 className="text-sm font-extrabold text-emerald-900 dark:text-emerald-100">
-                    Challan 280 paid — credit applied to this return
-                  </h3>
-                </div>
-                <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-3">
-                  <div>
-                    <dt className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 font-mono">
-                      BSR code
-                    </dt>
-                    <dd className="text-sm font-bold text-emerald-950 dark:text-emerald-50 font-mono tabular-nums">
-                      {receipt.bsrCode}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 font-mono">
-                      Challan serial
-                    </dt>
-                    <dd className="text-sm font-bold text-emerald-950 dark:text-emerald-50 font-mono tabular-nums">
-                      {receipt.challanNo}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 font-mono">
-                      Amount
-                    </dt>
-                    <dd>
-                      <Rupees value={amountDue} className="text-sm font-bold text-emerald-950 dark:text-emerald-50" />
-                    </dd>
-                  </div>
-                </dl>
-                <p className="flex items-start gap-2 text-xs leading-relaxed text-emerald-900 dark:text-emerald-200">
-                  <Banknote size={14} className="mt-0.5 shrink-0" />
-                  These three fields — BSR code, serial and date — are what the return
-                  carries as proof of payment. Your outstanding liability is now nil.
-                </p>
+            <div className="flex justify-end gap-2">
+              {stage === "done" ? (
                 <button
                   onClick={onClose}
-                  className="w-full rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-800 cursor-pointer"
+                  className="btn-primary h-[46px] px-5 rounded-[14px] text-[14.5px] cursor-pointer"
                 >
                   Back to the return
                 </button>
-              </m.section>
-            )}
+              ) : (
+                <>
+                  <button onClick={onClose} className="h-[46px] px-5 rounded-[14px] bg-white/60 dark:bg-white/10 border border-glass-edge text-[14.5px] font-semibold text-ink hover:border-money/50 transition cursor-pointer">
+                    Cancel
+                  </button>
+                  <button
+                    onClick={simulateSuccess}
+                    // An expired UPI request cannot be paid; the citizen reopens the drawer for a
+                    // fresh one rather than paying into a dead collect request.
+                    disabled={!canPay}
+                    className="btn-primary h-[46px] px-5 rounded-[14px] text-[14.5px] inline-flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span>Simulate payment of</span>
+                    <Rupees value={amountDue} />
+                    <span aria-hidden="true">→</span>
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </m.div>
       </m.div>

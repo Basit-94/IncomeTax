@@ -177,25 +177,25 @@ export default function FileReturnModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="file-return-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(27,17,64,.55)] p-2 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200 max-md:items-end max-md:p-0"
     >
-      <div className="surface-panel relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl bg-paper p-4 sm:p-6 shadow-glass border border-line text-start">
+      <div className="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto sheet-m rounded-[26px] bg-paper p-4 sm:p-6 shadow-[0_40px_80px_-30px_rgba(0,0,0,.6)] text-start">
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-line pb-4">
+        <div className="flex items-start justify-between ink-surface text-on-ink -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 px-6 py-[18px] rounded-t-[26px]">
           <div className="flex items-center gap-2.5 sm:gap-3">
-            <div className="flex size-9 sm:size-10 items-center justify-center rounded-xl bg-ok-soft text-ok-ink shrink-0">
+            <div className="flex size-[42px] items-center justify-center rounded-[14px] bg-white/10 text-on-ink shrink-0">
               <FileText size={20} aria-hidden="true" />
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <h2 id="file-return-title" className="font-sans text-lg sm:text-xl font-bold text-ink">
+                <h2 id="file-return-title" className="text-[17px] font-extrabold text-on-ink">
                   {ps.fileReturnModalTitle}
                 </h2>
-                <span className="rounded-md border border-line bg-paper-3 px-1.5 py-0.5 text-[10px] sm:text-[11px] font-mono font-semibold text-ok-ink">
+                <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] sm:text-[11px] font-mono font-semibold text-on-ink/80">
                   ITR-1 / Form 16
                 </span>
               </div>
-              <p className="text-xs text-ink-2 mt-0.5">
+              <p className="text-[12.5px] text-[#CDBDFF]">
                 {ps.fileReturnModalSub}
               </p>
             </div>
@@ -204,7 +204,7 @@ export default function FileReturnModal({
             type="button"
             onClick={onClose}
             aria-label={ps.closeDialog}
-            className="rounded-lg p-1.5 text-ink-3 hover:bg-paper-3 hover:text-ink transition shrink-0 cursor-pointer"
+            className="rounded-[10px] p-2 text-on-ink/70 hover:bg-white/10 hover:text-on-ink transition shrink-0 cursor-pointer"
           >
             <X size={20} />
           </button>

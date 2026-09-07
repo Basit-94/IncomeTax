@@ -60,7 +60,111 @@ export interface PortalCoreStrings {
   signUpSub: string;
 }
 
-export type PortalUIStrings = PortalCoreStrings & PortalExtendedStrings;
+/** The rebuilt sign-in (handoff 2, 2026-09-07): two tabs, sub-views, the CA login on the Citizen page. */
+export interface PortalSignInStrings {
+  citizenTab: string;
+  caTab: string;
+  munshiIntroTitle: string;
+  munshiIntroSub: string;
+  threeChecksTitle: string;
+  newHere: string;
+  createAccountLink: string;
+  orLabel: string;
+  docRowTitle: string;
+  docRowSub: string;
+  backToSignIn: string;
+  signInWithDocTitle: string;
+  signInWithDocSub: string;
+  docDropNow: string;
+  docFormats: string;
+  noPanFound: string;
+  caLoginTitle: string;
+  caLoginSub: string;
+  caCodeLabel: string;
+  caPinLabel: string;
+  caStampLabel: string;
+  caNamePlaceholder: string;
+  caMembershipPlaceholder: string;
+  caOpenBtn: string;
+  caVerifying: string;
+  caNoCode: string;
+  caDemoLink: string;
+  caEnterBoth: string;
+  caNoDraft: string;
+  caWrongPin: string;
+  onboardingIntro: string;
+}
+
+export const SIGNIN_TRANSLATIONS: Partial<Record<Lang, PortalSignInStrings>> & { en: PortalSignInStrings } = {
+  en: {
+    citizenTab: "Citizen",
+    caTab: "Chartered Accountant",
+    munshiIntroTitle: "Namaste, I'm Munshi ji.",
+    munshiIntroSub: "Your friendly CA. Let's get your money back.",
+    threeChecksTitle: "Three things I check first",
+    newHere: "New here?",
+    createAccountLink: "Create your account with your PAN",
+    orLabel: "OR",
+    docRowTitle: "Or sign in with a document",
+    docRowSub: "Munshi ji reads the PAN off your Form 16 or AIS — no typing.",
+    backToSignIn: "Back to sign in",
+    signInWithDocTitle: "Sign in with a tax document",
+    signInWithDocSub: "Munshi ji reads the PAN off your Form 16 or AIS and opens your vault — no typing.",
+    docDropNow: "Drop your file here now",
+    docFormats: "Form 16 Part A/B · AIS / TIS · Form 26AS · PAN scan (.pdf .png .jpg .txt)",
+    noPanFound: "The file was read but no PAN was found in it. Type your PAN below and we'll attach the document to it.",
+    caLoginTitle: "Open a client's return",
+    caLoginSub: "Enter the Access Code and secret PIN your client shared to inspect and optimise their draft.",
+    caCodeLabel: "Client review code",
+    caPinLabel: "Taxpayer security PIN",
+    caStampLabel: "Your stamp (optional)",
+    caNamePlaceholder: "CA Rajesh Sharma, FCA",
+    caMembershipPlaceholder: "084920",
+    caOpenBtn: "Open client return",
+    caVerifying: "Checking the code…",
+    caNoCode: "No code?",
+    caDemoLink: "Load a demo review",
+    caEnterBoth: "Enter the review code and the PIN your client shared.",
+    caNoDraft: "No draft found for that code. Check it with your client, or load the demo review.",
+    caWrongPin: "That PIN isn't right. Ask the taxpayer for the PIN they set.",
+    onboardingIntro: "A few quick questions so Munshi ji can tailor this to you.",
+  },
+  hi: {
+    citizenTab: "नागरिक",
+    caTab: "चार्टर्ड अकाउंटेंट",
+    munshiIntroTitle: "नमस्ते, मैं मुंशी जी हूँ।",
+    munshiIntroSub: "आपका दोस्ताना CA। चलिए आपका पैसा वापस लाते हैं।",
+    threeChecksTitle: "तीन चीज़ें जो मैं पहले जाँचता हूँ",
+    newHere: "नए हैं?",
+    createAccountLink: "अपने PAN से खाता बनाएँ",
+    orLabel: "या",
+    docRowTitle: "या किसी दस्तावेज़ से साइन इन करें",
+    docRowSub: "मुंशी जी आपके Form 16 या AIS से PAN पढ़ लेते हैं — टाइप करने की ज़रूरत नहीं।",
+    backToSignIn: "साइन इन पर वापस",
+    signInWithDocTitle: "कर दस्तावेज़ से साइन इन करें",
+    signInWithDocSub: "मुंशी जी आपके Form 16 या AIS से PAN पढ़कर आपकी तिजोरी खोल देते हैं — टाइप करने की ज़रूरत नहीं।",
+    docDropNow: "फ़ाइल यहाँ छोड़ें",
+    docFormats: "Form 16 Part A/B · AIS / TIS · Form 26AS · PAN स्कैन (.pdf .png .jpg .txt)",
+    noPanFound: "फ़ाइल पढ़ी गई, पर उसमें PAN नहीं मिला। नीचे अपना PAN लिखें और हम दस्तावेज़ उससे जोड़ देंगे।",
+    caLoginTitle: "क्लाइंट का रिटर्न खोलें",
+    caLoginSub: "क्लाइंट द्वारा साझा किया गया Access Code और गुप्त PIN दर्ज करें।",
+    caCodeLabel: "क्लाइंट रिव्यू कोड",
+    caPinLabel: "करदाता सुरक्षा PIN",
+    caStampLabel: "आपकी मुहर (वैकल्पिक)",
+    caNamePlaceholder: "CA राजेश शर्मा, FCA",
+    caMembershipPlaceholder: "084920",
+    caOpenBtn: "क्लाइंट रिटर्न खोलें",
+    caVerifying: "कोड जाँचा जा रहा है…",
+    caNoCode: "कोड नहीं है?",
+    caDemoLink: "डेमो रिव्यू लोड करें",
+    caEnterBoth: "रिव्यू कोड और क्लाइंट का PIN दोनों दर्ज करें।",
+    caNoDraft: "इस कोड का कोई ड्राफ्ट नहीं मिला। क्लाइंट से जाँचें, या डेमो रिव्यू लोड करें।",
+    caWrongPin: "यह PIN सही नहीं है। करदाता से उनका PIN पूछें।",
+    onboardingIntro: "कुछ छोटे सवाल, ताकि मुंशी जी इसे आपके हिसाब से बना सकें।",
+  },
+};
+
+export type PortalUIStrings = PortalCoreStrings & PortalExtendedStrings & PortalSignInStrings;
 
 export const PORTAL_TRANSLATIONS: Record<Lang, PortalCoreStrings> = {
   en: {
@@ -1152,7 +1256,9 @@ export function getPortalStrings(lang: Lang): PortalUIStrings {
   return {
     ...PORTAL_TRANSLATIONS.en,
     ...EXTENDED_TRANSLATIONS.en,
+    ...SIGNIN_TRANSLATIONS.en,
     ...base,
     ...ext,
+    ...(SIGNIN_TRANSLATIONS[lang] ?? {}),
   };
 }

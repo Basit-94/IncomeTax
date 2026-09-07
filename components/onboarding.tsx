@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, ShieldCheck } from "lucide-react";
+import { Munshi, MunshiBubble } from "./brand/munshi";
 import { LANGS, LANG_NATIVE, type Dict } from "../lib/i18n";
 import type { Lang } from "../lib/types";
 import {
@@ -185,9 +186,9 @@ export default function Onboarding({
     : "";
 
   return (
-    <div className="mx-auto max-w-3xl py-2 sm:py-5">
-      <div className="surface-panel overflow-hidden">
-        <div className="border-b border-line px-5 py-3.5 sm:px-7">
+    <div className="mx-auto max-w-[760px] py-2 sm:py-5 max-md:pb-24">
+      <div className="glass rounded-[24px] overflow-hidden max-md:bg-transparent max-md:border-0 max-md:shadow-none max-md:rounded-none max-md:overflow-visible max-md:backdrop-blur-none">
+        <div className="border-b border-line px-1 py-2 md:px-7 md:py-3.5">
           <div className="flex items-center justify-between gap-4">
             <span className="text-xs font-bold text-money">
               {t.onboarding.eyebrow}
@@ -199,22 +200,40 @@ export default function Onboarding({
             )}
           </div>
           {screen !== "language" && screen !== "ready" && (
-            <div className="mt-3 flex gap-1.5" aria-hidden="true">
+            <div className="mt-3 max-md:mt-2 flex gap-1.5 max-md:gap-1" aria-hidden="true">
               {[1, 2, 3, 4].map((item) => (
                 <span
                   key={item}
-                  className={`h-1.5 flex-1 rounded-[3px] ${item <= questionNumber ? "bg-money" : "bg-ink-2/15"}`}
+                  className={`h-1.5 max-md:h-[5px] flex-1 rounded-[3px] ${item <= questionNumber ? "bg-money" : "bg-ink-2/15"}`}
                 />
               ))}
             </div>
           )}
         </div>
 
-        <div className="space-y-6 px-5 py-6 sm:px-8 sm:py-7">
+        <div className="space-y-6 px-1 py-4 md:px-8 md:py-7">
+          {/* Munshi ji asks the question in a bubble (handoff §2 / M3); the heading below repeats it for the eye. */}
+          <div className="flex items-start gap-3">
+            <span className="max-md:hidden shrink-0"><Munshi size={64} state={screen === "ready" ? "happy" : "listening"} /></span>
+            <span className="md:hidden shrink-0"><Munshi size={52} state={screen === "ready" ? "happy" : "listening"} /></span>
+            <MunshiBubble className="!py-2 !px-3.5 text-[15px] max-md:text-[13.5px] rounded-[14px_14px_14px_4px]">
+              {screen === "language"
+                ? t.onboarding.languageQuestion
+                : screen === "intent"
+                  ? t.onboarding.intentQuestion
+                  : screen === "situation"
+                    ? t.onboarding.situationQuestion
+                    : screen === "mode"
+                      ? t.onboarding.modeQuestion
+                      : screen === "focus"
+                        ? t.onboarding.focusQuestion
+                        : t.onboarding.readyTitle}
+            </MunshiBubble>
+          </div>
           {screen === "language" && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <h1 className="text-[28px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink sm:text-[32px]">
+                <h1 className="text-[26px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink md:text-[32px]">
                   {t.onboarding.languageQuestion}
                 </h1>
                 <p className="max-w-xl text-sm leading-relaxed text-ink-2">{t.onboarding.languageHelp}</p>
@@ -236,7 +255,7 @@ export default function Onboarding({
           {screen === "intent" && (
             <div className="space-y-6">
               <div className="space-y-2">
-                <h1 className="text-[28px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink sm:text-[32px]">
+                <h1 className="text-[26px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink md:text-[32px]">
                   {t.onboarding.intentQuestion}
                 </h1>
                 <p className="text-sm leading-relaxed text-ink-2">{t.onboarding.intentHelp}</p>
@@ -259,7 +278,7 @@ export default function Onboarding({
           {screen === "situation" && (
             <div className="space-y-7">
               <div className="space-y-2">
-                <h1 className="text-[28px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink sm:text-[32px]">
+                <h1 className="text-[26px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink md:text-[32px]">
                   {t.onboarding.situationQuestion}
                 </h1>
                 <p className="text-sm leading-relaxed text-ink-2">{t.onboarding.situationHelp}</p>
@@ -298,7 +317,7 @@ export default function Onboarding({
           {screen === "mode" && (
             <div className="space-y-6">
               <div className="space-y-2">
-                <h1 className="text-[28px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink sm:text-[32px]">
+                <h1 className="text-[26px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink md:text-[32px]">
                   {t.onboarding.modeQuestion}
                 </h1>
                 <p className="text-sm leading-relaxed text-ink-2">{t.onboarding.modeHelp}</p>
@@ -321,7 +340,7 @@ export default function Onboarding({
           {screen === "focus" && (
             <div className="space-y-6">
               <div className="space-y-2">
-                <h1 className="text-[28px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink sm:text-[32px]">
+                <h1 className="text-[26px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink md:text-[32px]">
                   {t.onboarding.focusQuestion}
                 </h1>
                 <p className="text-sm leading-relaxed text-ink-2">{t.onboarding.focusHelp}</p>
@@ -352,7 +371,7 @@ export default function Onboarding({
                     {t.onboarding.tailoredBadge}
                   </span>
                 </div>
-                <h1 className="text-[28px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink sm:text-[32px]">
+                <h1 className="text-[26px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink md:text-[32px]">
                   {t.onboarding.readyTitle}
                 </h1>
                 <p className="text-sm leading-relaxed text-ink-2">{t.onboarding.readyBody}</p>
@@ -384,6 +403,17 @@ export default function Onboarding({
           <p className="text-xs leading-relaxed text-ink-3">{t.onboarding.savedLocally}</p>
 
           <div className="flex flex-col-reverse gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="md:contents max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-30 max-md:px-4 max-md:pb-7 max-md:pt-2.5 max-md:bg-[linear-gradient(to_top,var(--color-paper)_70%,transparent)]">
+              <button
+                type="button"
+                onClick={next}
+                disabled={!canContinue}
+                className="btn-primary md:hidden inline-flex h-[50px] w-full items-center justify-center gap-2 rounded-[14px] px-5 text-[14.5px] transition-colors disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer"
+              >
+                {screen === "ready" ? t.onboarding.startPath : t.common.continue}
+                <ChevronRight size={16} />
+              </button>
+            </div>
             {screen !== "language" ? (
               <button
                 type="button"
@@ -400,7 +430,7 @@ export default function Onboarding({
               type="button"
               onClick={next}
               disabled={!canContinue}
-              className="btn-primary inline-flex h-[46px] items-center justify-center gap-2 rounded-[14px] px-5 text-[14.5px] transition-colors disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer"
+              className="btn-primary max-md:hidden inline-flex h-[46px] items-center justify-center gap-2 rounded-[14px] px-5 text-[14.5px] transition-colors disabled:cursor-not-allowed disabled:opacity-45 cursor-pointer"
             >
               {screen === "ready" ? t.onboarding.startPath : t.common.continue}
               <ChevronRight size={16} />

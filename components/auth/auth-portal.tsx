@@ -1,22 +1,24 @@
 "use client";
 
+/**
+ * The sign-in card (handoff 2, 2026-09-07 — desktop 1a–1p, mobile M2). Two tabs only: Citizen and
+ * Chartered Accountant. Sign-up and document sign-in are sub-views reached from links under the PAN
+ * box and left with "Back to sign in"; the demo citizens (1p) open from the landing's "Try a demo".
+ * Every handler below the state block is the one the old four-tab card used, unchanged.
+ */
+
 import React, { useState, useRef, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   ShieldCheck,
   ChevronRight,
-  UserPlus,
-  LogIn,
-  Users,
-  Sparkles,
+  ChevronLeft,
+  UserRound,
   Lock,
   ArrowRight,
-  FileCheck,
-  Building2,
-  TrendingDown,
   AlertCircle,
   CheckCircle2,
   FileUp,
-  FileText,
   Loader2,
   HelpCircle,
   KeyRound,
@@ -34,7 +36,9 @@ import {
   type VaultDocument,
 } from "@/lib/vault/vault-store";
 import { extractFieldsFromPdf, detectDocumentKind, isEmptyExtraction, decodeLatin1 } from "@/lib/compliance/pdfExtract";
+import { createDemoReview, fetchReviewRecord, verifyPin } from "@/lib/ca/ca-store";
 import type { IngestedDocument } from "@/context/TaxReturnContext";
+import { Munshi } from "../brand/munshi";
 
 interface AuthPortalProps {
   t: Dict;
@@ -46,10 +50,30 @@ interface AuthPortalProps {
   onLaunchPersona?: (personaId: PersonaId | "custom", directToDashboard?: boolean) => void;
   onSignUpComplete?: (user: CitizenVaultUser) => void;
   onLaunchWithForm16?: (doc: IngestedDocument) => void;
-  /** Which tab opens first; the dedicated /signin page uses this for "Try a demo citizen" links. */
+  /** Which view opens first; the dedicated /signin page uses this for "Try a demo citizen" links. */
   initialTab?: "signin" | "signup" | "document" | "personas";
   authBusy?: boolean;
 }
+
+/** Citizen and CA are the tabs; sign-up, document and the demo list are sub-views with a Back link. */
+type AuthView = "citizen" | "ca" | "signup" | "doc" | "personas";
+
+const VIEW_FOR_TAB: Record<NonNullable<AuthPortalProps["initialTab"]>, AuthView> = {
+  signin: "citizen",
+  signup: "signup",
+  document: "doc",
+  personas: "personas",
+};
+
+/** The handoff's inputs: 54 px, white .8 fill, 1.5 px glass border; PAN/code fields mono 20 px centred. */
+const FIELD = "w-full rounded-[14px] bg-white/80 dark:bg-white/10 border-[1.5px] text-ink outline-none transition-[border-color,box-shadow]";
+const FIELD_OK = "border-glass-edge focus:border-money focus:shadow-[0_0_0_3px_rgba(255,122,26,.18)]";
+const FIELD_BAD = "border-bad shadow-[0_0_0_3px_rgba(217,64,58,.15)]";
+const MONO_FIELD = `${FIELD} h-[54px] max-md:h-[52px] px-4 text-center font-mono text-[20px] max-md:text-[18px] font-semibold uppercase tracking-[.14em]`;
+const LABEL = "block text-[12.5px] font-bold text-ink-2 mb-1.5";
+const PRIMARY = "btn-primary flex h-[50px] w-full items-center justify-center gap-2 rounded-[14px] px-5 text-[14.5px] cursor-pointer disabled:cursor-not-allowed disabled:opacity-45";
+/** On phones the primary action is pinned above the home indicator in a paper fade (M2); a no-op wrapper from `md`. */
+const PINNED = "md:contents max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-30 max-md:px-4 max-md:pb-7 max-md:pt-2.5 max-md:bg-[linear-gradient(to_top,var(--color-paper)_70%,transparent)]";
 
 export default function AuthPortal({
   t,
@@ -63,12 +87,69 @@ export default function AuthPortal({
   onLaunchWithForm16,
   initialTab,
 }: AuthPortalProps) {
-  const [activeTab, setActiveTab] = useState<"signin" | "signup" | "document" | "personas">(initialTab ?? "signin");
+  const router = useRouter();
+  const [view, setView] = useState<AuthView>(initialTab ? VIEW_FOR_TAB[initialTab] : "citizen");
   const ps = getPortalStrings(lang || "en");
 
   useEffect(() => {
-    if (initialTab) setActiveTab(initialTab);
+    if (initialTab) setView(VIEW_FOR_TAB[initialTab]);
   }, [initialTab]);
+
+  // --- Chartered Accountant tab: code + PIN, verified here, then handed to /ca (sessionStorage, read once) ---
+  const [caCode, setCaCode] = useState("");
+  const [caPin, setCaPin] = useState("");
+  const [caName, setCaName] = useState("");
+  const [caMembership, setCaMembership] = useState("");
+  const [caError, setCaError] = useState<string | null>(null);
+  const [caBusy, setCaBusy] = useState(false);
+
+  const openCaReview = (code: string, pin: string) => {
+    try {
+      sessionStorage.setItem("wapsi_ca_handoff", JSON.stringify({ code, pin, name: caName.trim(), membershipNo: caMembership.trim() }));
+    } catch {
+      // the /ca page still shows its own login when the handoff cannot be stored
+    }
+    router.push(`/ca?code=${encodeURIComponent(code)}`);
+  };
+
+  const handleCaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = caCode.trim().toUpperCase();
+    const pin = caPin.trim();
+    if (!code || !pin) {
+      setCaError(ps.caEnterBoth);
+      return;
+    }
+    setCaBusy(true);
+    setCaError(null);
+    try {
+      const rec = await fetchReviewRecord(code);
+      if (!rec) {
+        setCaError(ps.caNoDraft);
+        return;
+      }
+      if (!(await verifyPin(rec, pin))) {
+        setCaError(ps.caWrongPin);
+        return;
+      }
+      openCaReview(code, pin);
+    } catch {
+      setCaError(ps.docError);
+    } finally {
+      setCaBusy(false);
+    }
+  };
+
+  const handleCaDemo = async () => {
+    setCaBusy(true);
+    setCaError(null);
+    try {
+      const rec = await createDemoReview(PERSONAS.sunita);
+      openCaReview(rec.code, "1234");
+    } finally {
+      setCaBusy(false);
+    }
+  };
 
   // --- Sign Up Form State (Strictly PAN-only per directive) ---
   const [signUpPan, setSignUpPan] = useState("");
@@ -361,526 +442,484 @@ export default function AuthPortal({
     }
   };
 
+  const footer = (
+    <div className="mt-auto flex items-center justify-between pt-1.5 font-mono text-[11px] text-ink-3">
+      <span className="flex items-center gap-1.5 text-ok">
+        <Lock size={12} />
+        <span>{ps.bankGrade}</span>
+      </span>
+      <span>{ps.authorizedOnly}</span>
+    </div>
+  );
+
+  const backLink = (
+    <button type="button" onClick={() => setView("citizen")} className="inline-flex items-center gap-2 self-start text-[13.5px] font-semibold text-ink-2 hover:text-ink cursor-pointer">
+      <ChevronLeft size={16} aria-hidden="true" />
+      <span>{ps.backToSignIn}</span>
+    </button>
+  );
+
+  const checks = [
+    { dot: "bg-money", title: ps.disc1Title, desc: ps.disc1Desc },
+    { dot: "bg-tertiary", title: ps.disc2Title, desc: ps.disc2Desc },
+    { dot: "bg-ok", title: ps.disc3Title, desc: ps.disc3Desc },
+  ];
+
   return (
-    <div className="glass w-full max-w-5xl mx-auto rounded-[28px] overflow-hidden transition-all duration-300">
-      <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[600px]">
+    <div className="glass w-full max-w-[1040px] mx-auto rounded-[28px] overflow-hidden transition-all duration-300 max-md:bg-transparent max-md:border-0 max-md:shadow-none max-md:rounded-none max-md:overflow-visible max-md:backdrop-blur-none">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_1.05fr] md:min-h-[600px] gap-3.5 md:gap-0">
         {/* =================================================================== */}
-        {/* LEFT COLUMN: Wapsi Philosophy & Tax Discrepancy Storytelling       */}
+        {/* LEFT: Munshi ji's ink story — on phones it compresses to a strip (M2) */}
         {/* =================================================================== */}
-        <div className="ink-surface lg:col-span-6 p-6 sm:p-8 lg:p-9 flex flex-col justify-between relative overflow-hidden border-t lg:border-t-0 lg:border-r border-white/10">
-          {/* The tangerine blob behind the story (redesign 1a) */}
-          <div className="absolute -top-[200px] -right-[180px] size-[420px] rounded-full opacity-55 blur-[2px] pointer-events-none" style={{ background: "radial-gradient(circle at 35% 30%, #FFE3C9, var(--primary-accent) 60%, transparent 72%)" }} aria-hidden="true" />
+        <div className="ink-surface rounded-[24px] md:rounded-none p-4 md:p-9 flex flex-col justify-between relative overflow-hidden text-on-ink">
+          <div className="absolute -top-[200px] -right-[180px] size-[420px] rounded-full opacity-55 blur-[2px] pointer-events-none" style={{ background: "radial-gradient(circle at 35% 30%, #FFE3C9, #FF7A1A 60%, transparent 72%)" }} aria-hidden="true" />
 
-          <div className="space-y-6 relative z-10">
-            {/* Stamp Badge */}
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-bg px-3 py-1 text-xs font-bold text-amber-ink">
-                <Sparkles size={13} className="animate-pulse" />
-                <span>{ps.sovereignPortal}</span>
-              </span>
+          <div className="relative flex flex-col gap-[18px]">
+            <span className="hidden md:inline-flex self-start items-center gap-1.5 rounded-full bg-amber-bg px-[11px] py-1 text-[12px] font-bold text-amber-ink">
+              {ps.sovereignPortal}
+            </span>
+            <div className="flex items-center gap-3 md:items-start md:flex-col md:gap-2">
+              <span className="md:hidden shrink-0"><Munshi size={56} state="welcome" /></span>
+              <div className="text-start">
+                <h1 className="text-[17px] md:text-[30px] font-extrabold tracking-[-0.03em] leading-[1.05]">{ps.munshiIntroTitle}</h1>
+                <p className="text-soft text-[12.5px] md:text-[17px] font-semibold leading-snug md:mt-2">{ps.munshiIntroSub}</p>
+              </div>
             </div>
 
-            {/* Brand Headline */}
-            <div className="space-y-2 text-start">
-              <h1 className="font-sans text-[30px] font-extrabold tracking-[-0.03em] leading-[1.05] text-on-ink">
-                Wapsi (वापसी)
-              </h1>
-              <p className="text-soft font-sans text-[17px] font-semibold leading-snug">
-                {ps.tagline}
-              </p>
-            </div>
-
-            {/* Tax Discrepancy Questions & Core Value Propositions */}
-            <div className="space-y-3.5 pt-1 text-start">
-              <h2 className="text-[12px] uppercase tracking-[.08em] text-soft font-bold">
-                {ps.discrepanciesTitle}
-              </h2>
-
-              <div className="space-y-3">
-                {/* 1. Excess TDS */}
-                <div className="flex items-start gap-3 rounded-[16px] bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.14] p-3.5 transition duration-200">
-                  <TrendingDown size={20} className="text-money shrink-0 mt-0.5" />
-                  <div className="space-y-0.5 text-xs">
-                    <strong className="text-on-ink font-sans text-sm block font-bold">
-                      {ps.disc1Title}
-                    </strong>
-                    <p className="text-on-ink/75 leading-relaxed text-[12.5px]">
-                      {ps.disc1Desc}
-                    </p>
+            <div className="hidden md:block text-start">
+              <h2 className="text-[12px] uppercase tracking-[.08em] text-soft font-bold">{ps.threeChecksTitle}</h2>
+              <div className="mt-2.5 flex flex-col gap-2.5">
+                {checks.map((c) => (
+                  <div key={c.title} className="flex items-start gap-3 rounded-[16px] bg-white/[0.08] border border-white/[0.14] px-3.5 py-3">
+                    <span className={`mt-1.5 size-2.5 rounded-full shrink-0 ${c.dot}`} aria-hidden="true" />
+                    <div>
+                      <strong className="block text-sm font-bold">{c.title}</strong>
+                      <p className="text-[12.5px] text-[#CDBDFF] leading-[1.45]">{c.desc}</p>
+                    </div>
                   </div>
-                </div>
-
-                {/* 2. AIS / 26AS Mismatch */}
-                <div className="flex items-start gap-3 rounded-[16px] bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.14] p-3.5 transition duration-200">
-                  <Building2 size={20} className="text-tertiary shrink-0 mt-0.5" />
-                  <div className="space-y-0.5 text-xs">
-                    <strong className="text-on-ink font-sans text-sm block font-bold">
-                      {ps.disc2Title}
-                    </strong>
-                    <p className="text-on-ink/75 leading-relaxed text-[12.5px]">
-                      {ps.disc2Desc}
-                    </p>
-                  </div>
-                </div>
-
-                {/* 3. Old vs New Regime */}
-                <div className="flex items-start gap-3 rounded-[16px] bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.14] p-3.5 transition duration-200">
-                  <FileCheck size={20} className="text-ok shrink-0 mt-0.5" />
-                  <div className="space-y-0.5 text-xs">
-                    <strong className="text-on-ink font-sans text-sm block font-bold">
-                      {ps.disc3Title}
-                    </strong>
-                    <p className="text-on-ink/75 leading-relaxed text-[12.5px]">
-                      {ps.disc3Desc}
-                    </p>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* Bottom Trust Badge - Cleaned: Removed raw port number */}
-          <div className="pt-4 border-t border-white/[0.14] mt-6 flex items-center justify-between text-xs text-on-ink/75 font-mono">
-            <span className="flex items-center gap-2 font-sans font-semibold text-on-ink">
-              <ShieldCheck size={16} className="text-ok shrink-0" />
-              <span>{ps.vaultBadge}</span>
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-bg px-2.5 py-0.5 text-[12px] font-bold text-amber-ink">
-              AY 2026-27
-            </span>
+          <div className="hidden md:block relative">
+            <div className="mt-5 flex items-end justify-between">
+              <span className="flex items-center gap-2 text-[12.5px] font-semibold">
+                <ShieldCheck size={16} className="text-ok shrink-0" />
+                <span>{ps.vaultBadge}</span>
+              </span>
+              <Munshi size={72} state="welcome" />
+            </div>
+            <div className="mt-2.5 flex items-center justify-between border-t border-white/[0.14] pt-3.5">
+              <span className="font-mono text-[11px] text-[#CDBDFF] tracking-[.02em]">{t.shell.independent}</span>
+              <span className="inline-flex items-center rounded-full bg-amber-bg px-[11px] py-1 text-[12px] font-bold text-amber-ink">AY 2026-27</span>
+            </div>
           </div>
         </div>
 
         {/* =================================================================== */}
-        {/* RIGHT COLUMN: Interactive Sign In, Sign Up, Document, Personas     */}
+        {/* RIGHT: the tabs and their views                                       */}
         {/* =================================================================== */}
-        <div className="order-first lg:order-none lg:col-span-6 p-6 sm:p-7 flex flex-col justify-between">
-          <div>
-            {/* Segmented Tabs Bar */}
-            <div className="flex rounded-[16px] border border-glass-edge bg-white/50 dark:bg-white/[0.06] p-1 gap-1 text-xs font-bold mb-6">
-              <button
-                type="button"
-                onClick={() => setActiveTab("signin")}
-                className={`flex-1 flex items-center justify-center gap-1 py-2.5 rounded-xl transition-all cursor-pointer text-[11px] sm:text-xs ${
-                  activeTab === "signin"
-                    ? "ink-surface font-bold"
-                    : "text-ink-3 hover:text-ink font-bold"
-                }`}
-              >
-                <LogIn size={14} />
-                <span>{ps.signInTab}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab("signup")}
-                className={`flex-1 flex items-center justify-center gap-1 py-2.5 rounded-xl transition-all cursor-pointer text-[11px] sm:text-xs ${
-                  activeTab === "signup"
-                    ? "bg-paper text-money shadow-xs border border-line font-bold"
-                    : "text-ink-3 hover:text-ink font-bold"
-                }`}
-              >
-                <UserPlus size={14} />
-                <span>{ps.signUpTab}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab("document")}
-                className={`flex-1 flex items-center justify-center gap-1 py-2.5 rounded-xl transition-all cursor-pointer text-[11px] sm:text-xs ${
-                  activeTab === "document"
-                    ? "bg-paper text-indigo-600 dark:text-indigo-400 shadow-xs border border-line font-bold"
-                    : "text-ink-3 hover:text-ink font-bold"
-                }`}
-              >
-                <FileUp size={14} />
-                <span>{ps.docTab}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab("personas")}
-                className={`flex-1 flex items-center justify-center gap-1 py-2.5 rounded-xl transition-all cursor-pointer text-[11px] sm:text-xs ${
-                  activeTab === "personas"
-                    ? "bg-paper text-amber-600 shadow-xs border border-line font-bold"
-                    : "text-ink-3 hover:text-ink font-bold"
-                }`}
-              >
-                <Users size={14} />
-                <span>{ps.demoTab}</span>
-              </button>
-            </div>
-
-            {/* TAB 1: SIGN IN (PAN ONLY) */}
-            {activeTab === "signin" && (
-              <form onSubmit={onPanSubmit} className="space-y-5 animate-in fade-in">
-                <div className="text-start">
-                  <h3 className="font-sans text-xl font-bold text-ink">
-                    {ps.panOnlyLabel}
-                  </h3>
-                  <p className="text-xs text-ink-2 mt-1">
-                    {ps.panOnlySub}
-                  </p>
-                </div>
-
-                <div className="space-y-2 text-start">
-                  <label htmlFor="auth-pan-input" className="block font-mono text-xs font-semibold uppercase text-ink-2">
-                    {t.landing.panLabel}
-                  </label>
-                  <input
-                    id="auth-pan-input"
-                    type="text"
-                    value={panInput}
-                    onChange={(e) => onPanChange(e.target.value.toUpperCase())}
-                    maxLength={10}
-                    placeholder="DEMPS1234F"
-                    autoCapitalize="characters"
-                    autoComplete="off"
-                    spellCheck={false}
-                    className={`h-[54px] w-full rounded-[14px] border-[1.5px] bg-paper-3 px-4 text-center font-mono text-xl font-semibold uppercase tracking-[.14em] text-ink transition-colors focus:outline-none focus:border-money focus:ring-[3px] focus:ring-money/20 ${
-                      panInputError ? "border-alarm ring-1 ring-alarm" : "border-line focus:border-money focus:ring-2 focus:ring-money/20"
-                    }`}
-                  />
-                  {panInputError && (
-                    <p role="alert" className="text-xs font-semibold text-alarm mt-1 flex items-center gap-1">
-                      <AlertCircle size={14} className="shrink-0" />
-                      <span>{panInputError}</span>
-                    </p>
-                  )}
-                  <p className="text-[11px] text-ink-3 font-mono">
-                    {ps.testOtpCode}
-                  </p>
-                </div>
-
+        <div className="flex flex-col gap-[18px] px-0 pb-2 md:px-7 md:pt-7 md:pb-6 max-md:pb-28">
+          {view === "citizen" || view === "ca" ? (
+            <div className="flex gap-1 p-1 rounded-[16px] max-md:rounded-[14px] bg-white/50 dark:bg-white/[0.06] border border-glass-edge text-[13.5px] max-md:text-[13px] font-bold" role="tablist" aria-label={`${ps.citizenTab} · ${ps.caTab}`}>
+              {(
+                [
+                  ["citizen", ps.citizenTab, UserRound],
+                  ["ca", ps.caTab, Award],
+                ] as const
+              ).map(([id, label, Icon]) => (
                 <button
-                  type="submit"
-                  className="btn-primary flex h-[50px] w-full items-center justify-center gap-2 rounded-[14px] px-4 font-sans text-[14.5px] transition cursor-pointer"
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={view === id}
+                  onClick={() => setView(id)}
+                  className={`flex-1 h-10 max-md:h-[38px] rounded-[12px] max-md:rounded-[11px] flex items-center justify-center gap-[7px] transition-colors cursor-pointer ${
+                    view === id ? "ink-surface" : "text-ink-3 hover:text-ink"
+                  }`}
                 >
-                  <KeyRound size={16} />
+                  <Icon size={15} aria-hidden="true" />
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            backLink
+          )}
+
+          {/* ---- Citizen: PAN → sign-up link → OR → document row → quick demo PANs (1a/1b, m2a/m2b) ---- */}
+          {view === "citizen" && (
+            <form onSubmit={onPanSubmit} className="flex flex-col gap-[18px] animate-in fade-in text-start">
+              <div>
+                <h3 className="text-[22px] max-md:text-[19px] font-extrabold tracking-[-0.02em] text-ink">{ps.panOnlyLabel}</h3>
+                <p className="mt-1 text-[13.5px] max-md:text-[13px] text-ink-2 leading-[1.55]">{ps.panOnlySub}</p>
+              </div>
+              <div>
+                <label htmlFor="auth-pan-input" className={LABEL}>{ps.panInputLabel}</label>
+                <input
+                  id="auth-pan-input"
+                  type="text"
+                  value={panInput}
+                  onChange={(e) => onPanChange(e.target.value.toUpperCase())}
+                  maxLength={10}
+                  placeholder="DEMPS4417K"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  spellCheck={false}
+                  className={`${MONO_FIELD} ${panInputError ? FIELD_BAD : FIELD_OK}`}
+                />
+                {panInputError ? (
+                  <p role="alert" className="mt-2 flex items-center gap-1.5 text-[12.5px] font-semibold text-bad">
+                    <AlertCircle size={14} className="shrink-0" />
+                    <span>{panInputError}</span>
+                  </p>
+                ) : (
+                  <p className="mt-2 font-mono text-[11px] text-ink-3 tracking-[.02em]">{ps.testOtpCode}</p>
+                )}
+              </div>
+              <div className={PINNED}>
+                <button type="submit" className={PRIMARY}>
+                  <KeyRound size={16} aria-hidden="true" />
                   <span>{ps.signInBtn} →</span>
                 </button>
-
-                {/* Quick Persona Fill Buttons */}
-                <div className="pt-3 border-t border-line/50 text-start">
-                  <span className="text-[11px] text-ink-3 font-mono uppercase block mb-2">
-                    {ps.quickDemoPan}
-                  </span>
-                  <div className="flex flex-wrap gap-2">
+              </div>
+              <p className="text-center text-[13.5px] max-md:text-[13px] text-ink-2">
+                {ps.newHere}{" "}
+                <button type="button" onClick={() => setView("signup")} className="font-bold text-money underline underline-offset-[3px] cursor-pointer">
+                  {ps.createAccountLink}
+                </button>
+              </p>
+              <div className="flex items-center gap-3" aria-hidden="true">
+                <span className="h-px flex-1 bg-line" />
+                <span className="font-mono text-[11px] text-ink-3 tracking-[.02em]">{ps.orLabel}</span>
+                <span className="h-px flex-1 bg-line" />
+              </div>
+              <button
+                type="button"
+                onClick={() => setView("doc")}
+                className="flex items-center gap-3 rounded-[16px] max-md:rounded-[14px] border-[1.5px] border-dashed border-ink-3 bg-white/55 dark:bg-white/[0.06] px-4 py-3.5 max-md:px-3.5 max-md:py-3 text-start transition hover:border-money cursor-pointer"
+              >
+                <span className="size-10 max-md:size-9 rounded-[12px] max-md:rounded-[11px] ink-surface flex items-center justify-center shrink-0">
+                  <FileUp size={18} aria-hidden="true" />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[14px] max-md:text-[13.5px] font-bold text-ink">{ps.docRowTitle}</span>
+                  <span className="block text-[12.5px] max-md:text-[12px] text-ink-3">{ps.docRowSub}</span>
+                </span>
+                <ChevronRight size={18} className="shrink-0 text-money" aria-hidden="true" />
+              </button>
+              <div className="border-t border-line pt-3.5">
+                <span className="block font-mono text-[10.5px] uppercase tracking-[.02em] text-ink-3">{ps.quickDemoPan}</span>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(["sunita", "rakesh", "priya"] as const).map((id) => (
                     <button
+                      key={id}
                       type="button"
-                      onClick={() => onPanChange(PERSONAS.sunita.pan)}
-                      className="glass-flat px-2.5 py-1 text-xs rounded-full hover:border-money/60 font-mono text-ink-3 hover:text-ink transition cursor-pointer"
+                      onClick={() => onPanChange(PERSONAS[id].pan)}
+                      className="glass-flat inline-flex items-center rounded-full px-[11px] py-1 font-mono text-[12px] font-medium tracking-[.04em] text-ink-3 hover:border-money/60 hover:text-ink transition cursor-pointer"
                     >
-                      Sunita ({PERSONAS.sunita.pan})
+                      {PERSONAS[id].name.split(" ")[0]} ({PERSONAS[id].pan})
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => onPanChange(PERSONAS.rakesh.pan)}
-                      className="glass-flat px-2.5 py-1 text-xs rounded-full hover:border-money/60 font-mono text-ink-3 hover:text-ink transition cursor-pointer"
-                    >
-                      Rakesh ({PERSONAS.rakesh.pan})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onPanChange(PERSONAS.priya.pan)}
-                      className="glass-flat px-2.5 py-1 text-xs rounded-full hover:border-money/60 font-mono text-ink-3 hover:text-ink transition cursor-pointer"
-                    >
-                      Priya ({PERSONAS.priya.pan})
-                    </button>
-                  </div>
+                  ))}
                 </div>
-              </form>
-            )}
+              </div>
+              {footer}
+            </form>
+          )}
 
-            {/* TAB 2: SIGN UP (PAN ONLY per user instruction) */}
-            {activeTab === "signup" && (
-              <form onSubmit={handleSignUpSubmit} className="space-y-5 animate-in fade-in">
-                <div className="text-start">
-                  <h3 className="font-sans text-xl font-bold text-ink">
-                    {ps.signUpTitle}
-                  </h3>
-                  <p className="text-xs text-ink-2 mt-1">
-                    {ps.signUpSub}
-                  </p>
-                </div>
-
-                {signUpError && (
-                  <div className="p-3 rounded-xl border border-alarm/30 bg-alarm/10 text-xs text-alarm flex items-center gap-2 text-start">
-                    <AlertCircle size={15} className="shrink-0" />
-                    <span>{signUpError}</span>
-                  </div>
-                )}
-
-                <div className="space-y-2 text-start">
-                  <label htmlFor="signup-pan-input" className="block font-mono text-xs font-semibold uppercase text-ink-2">
-                    {ps.panInputLabel}
-                  </label>
+          {/* ---- Chartered Accountant: code + PIN + optional stamp (1c, m2c) ---- */}
+          {view === "ca" && (
+            <form onSubmit={handleCaSubmit} className="flex flex-col gap-[18px] animate-in fade-in text-start">
+              <div>
+                <h3 className="text-[22px] max-md:text-[19px] font-extrabold tracking-[-0.02em] text-ink">{ps.caLoginTitle}</h3>
+                <p className="mt-1 text-[13.5px] max-md:text-[13px] text-ink-2 leading-[1.55]">{ps.caLoginSub}</p>
+              </div>
+              <div>
+                <label htmlFor="ca-code-input" className={LABEL}>{ps.caCodeLabel}</label>
+                <input
+                  id="ca-code-input"
+                  type="text"
+                  value={caCode}
+                  onChange={(e) => {
+                    setCaCode(e.target.value.toUpperCase());
+                    setCaError(null);
+                  }}
+                  placeholder="CA-7842-91"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  spellCheck={false}
+                  className={`${MONO_FIELD} ${caError ? FIELD_BAD : FIELD_OK}`}
+                />
+              </div>
+              <div>
+                <label htmlFor="ca-pin-input" className={LABEL}>{ps.caPinLabel}</label>
+                <input
+                  id="ca-pin-input"
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={caPin}
+                  onChange={(e) => {
+                    setCaPin(e.target.value);
+                    setCaError(null);
+                  }}
+                  placeholder="••••"
+                  autoComplete="off"
+                  className={`${MONO_FIELD} ${FIELD_OK}`}
+                />
+              </div>
+              <div>
+                <span className="block text-[12px] font-bold uppercase tracking-[.08em] text-ink-3">{ps.caStampLabel}</span>
+                <div className="mt-2 grid grid-cols-2 gap-2">
                   <input
-                    id="signup-pan-input"
                     type="text"
-                    required
-                    value={signUpPan}
-                    onChange={(e) => {
-                      setSignUpPan(e.target.value.toUpperCase());
-                      setSignUpError(null);
-                    }}
-                    maxLength={10}
-                    placeholder="ABCDE1234F"
-                    autoCapitalize="characters"
-                    autoComplete="off"
-                    spellCheck={false}
-                    className="h-[54px] w-full rounded-[14px] border-[1.5px] border-glass-edge focus:outline-none focus:border-money focus:ring-[3px] focus:ring-money/20 bg-paper-3 px-4 text-center font-mono text-xl font-semibold uppercase tracking-[.14em] text-ink transition-colors"
+                    value={caName}
+                    onChange={(e) => setCaName(e.target.value)}
+                    placeholder={ps.caNamePlaceholder}
+                    aria-label={ps.caStampLabel}
+                    className={`${FIELD} ${FIELD_OK} h-[42px] px-4 text-[13.5px]`}
                   />
-                  <div className="rounded-xl border border-line/60 bg-paper-2 p-3.5 text-[11px] text-ink-2 space-y-1 text-start">
-                    <div className="flex items-center gap-1.5 font-bold text-ink">
-                      <Lock size={12} className="text-emerald-500" />
-                      <span>{ps.instantVaultTitle}</span>
-                    </div>
-                    <p className="leading-relaxed">
-                      {ps.instantVaultDesc}
-                    </p>
-                  </div>
+                  <input
+                    type="text"
+                    value={caMembership}
+                    onChange={(e) => setCaMembership(e.target.value)}
+                    placeholder={ps.caMembershipPlaceholder}
+                    aria-label={ps.caMembershipPlaceholder}
+                    className={`${FIELD} ${FIELD_OK} h-[42px] px-4 text-center font-mono text-[13.5px] font-semibold uppercase tracking-[.14em]`}
+                  />
                 </div>
+              </div>
+              {caError && (
+                <p role="alert" className="flex items-center gap-2 rounded-[14px] bg-bad-soft px-3.5 py-3 text-[13px] font-semibold text-bad">
+                  <AlertCircle size={16} className="shrink-0" />
+                  <span>{caError}</span>
+                </p>
+              )}
+              <div className={PINNED}>
+                <button type="submit" disabled={caBusy} className={PRIMARY}>
+                  {caBusy ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Lock size={16} aria-hidden="true" />}
+                  <span>{caBusy ? ps.caVerifying : `${ps.caOpenBtn} →`}</span>
+                </button>
+              </div>
+              <p className="text-center text-[13px] text-ink-3">
+                {ps.caNoCode}{" "}
+                <button type="button" onClick={() => void handleCaDemo()} disabled={caBusy} className="font-bold text-money hover:underline cursor-pointer disabled:opacity-60">
+                  {ps.caDemoLink}
+                </button>
+              </p>
+              {footer}
+            </form>
+          )}
 
-                <button
-                  type="submit"
-                  disabled={isSubmittingSignUp}
-                  className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-money px-4 py-3 font-sans text-sm font-bold text-white dark:text-paper shadow-md hover:opacity-90 transition cursor-pointer disabled:opacity-50"
-                >
+          {/* ---- Create account (1d–1f, m2d) ---- */}
+          {view === "signup" && (
+            <form onSubmit={handleSignUpSubmit} className="flex flex-col gap-[18px] animate-in fade-in text-start">
+              <div>
+                <h3 className="text-[22px] max-md:text-[19px] font-extrabold tracking-[-0.02em] text-ink">{ps.signUpTitle}</h3>
+                <p className="mt-1 text-[13.5px] max-md:text-[13px] text-ink-2 leading-[1.55]">{ps.signUpSub}</p>
+              </div>
+              {signUpError && (
+                <p role="alert" className="flex items-center gap-2 rounded-[14px] bg-bad-soft px-3.5 py-3 text-[13px] font-semibold text-bad">
+                  <AlertCircle size={16} className="shrink-0" />
+                  <span>{signUpError}</span>
+                </p>
+              )}
+              <div>
+                <label htmlFor="signup-pan-input" className={LABEL}>{ps.panInputLabel}</label>
+                <input
+                  id="signup-pan-input"
+                  type="text"
+                  required
+                  value={signUpPan}
+                  onChange={(e) => {
+                    setSignUpPan(e.target.value.toUpperCase());
+                    setSignUpError(null);
+                  }}
+                  maxLength={10}
+                  placeholder="ABCDE1234F"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  spellCheck={false}
+                  className={`${MONO_FIELD} ${signUpError ? FIELD_BAD : FIELD_OK}`}
+                />
+                <div className="mt-2.5 rounded-[14px] bg-white/55 dark:bg-white/[0.06] border border-glass-edge px-3.5 py-3 text-[12.5px] text-ink-2">
+                  <div className="flex items-center gap-1.5 font-bold text-ink">
+                    <Lock size={13} className="text-ok" aria-hidden="true" />
+                    <span>{ps.instantVaultTitle}</span>
+                  </div>
+                  <p className="leading-relaxed">{ps.instantVaultDesc}</p>
+                </div>
+              </div>
+              <div className={PINNED}>
+                <button type="submit" disabled={isSubmittingSignUp} className={PRIMARY}>
                   {isSubmittingSignUp ? (
                     <>
-                      <Loader2 size={16} className="animate-spin" />
+                      <Loader2 size={16} className="animate-spin" aria-hidden="true" />
                       <span>{ps.readingDoc}</span>
                     </>
                   ) : (
                     <>
                       <span>{ps.signUpBtnText}</span>
-                      <ChevronRight size={16} />
+                      <ArrowRight size={16} aria-hidden="true" />
                     </>
                   )}
                 </button>
-              </form>
-            )}
+              </div>
+              {footer}
+            </form>
+          )}
 
-            {/* TAB 3: SIGN IN WITH TAX DOCUMENT (Form 16 / AIS / PAN Scan) */}
-            {activeTab === "document" && (
-              <div className="space-y-5 animate-in fade-in text-start">
-                <div>
-                  <h3 className="font-sans text-xl font-bold text-ink">
-                    {ps.docSignInTitle}
-                  </h3>
-                  <p className="text-xs text-ink-2 mt-1">
-                    {ps.docSignInDesc}
-                  </p>
-                </div>
+          {/* ---- Sign in with a document (1g–1k, 1o; m2e/m2f) ---- */}
+          {view === "doc" && (
+            <div className="flex flex-col gap-[18px] animate-in fade-in text-start">
+              <div>
+                <h3 className="text-[22px] max-md:text-[19px] font-extrabold tracking-[-0.02em] text-ink">{ps.signInWithDocTitle}</h3>
+                <p className="mt-1 text-[13.5px] max-md:text-[13px] text-ink-2 leading-[1.55]">{ps.signInWithDocSub}</p>
+              </div>
 
-                {/* Dropzone with full-area invisible native input: 100% native reliable clicks with exact original UI */}
-                <div
-                  onDragEnter={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    dragCounter.current += 1;
-                    setIsDragging(true);
-                  }}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.dataTransfer.dropEffect = "copy";
-                    setIsDragging(true);
-                  }}
-                  onDragLeave={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    dragCounter.current -= 1;
-                    if (dragCounter.current <= 0) {
-                      dragCounter.current = 0;
-                      setIsDragging(false);
-                    }
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
+              <div
+                onDragEnter={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  dragCounter.current += 1;
+                  setIsDragging(true);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.dataTransfer.dropEffect = "copy";
+                  setIsDragging(true);
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  dragCounter.current -= 1;
+                  if (dragCounter.current <= 0) {
                     dragCounter.current = 0;
                     setIsDragging(false);
-                    const file = e.dataTransfer.files?.[0];
+                  }
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  dragCounter.current = 0;
+                  setIsDragging(false);
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) void processDocument(file);
+                }}
+                className={`relative flex flex-col items-center justify-center gap-2.5 rounded-[22px] border-2 border-dashed p-[26px] text-center transition-all cursor-pointer ${
+                  isDragging
+                    ? "border-money bg-amber-bg shadow-[0_0_0_5px_rgba(255,122,26,.18)] scale-[1.01]"
+                    : "border-ink-3 bg-white/45 dark:bg-white/[0.05] hover:border-money"
+                }`}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg,.txt,.json"
+                  className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+                  aria-label={ps.dropzoneTitle}
+                  onClick={(e) => {
+                    (e.target as HTMLInputElement).value = "";
+                  }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
                     if (file) void processDocument(file);
                   }}
-                  className={`relative border-2 border-dashed rounded-2xl p-6 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-3 ${
-                    isDragging
-                      ? "border-indigo-500 bg-indigo-500/10 ring-4 ring-indigo-500/20 scale-[1.01]"
-                      : "border-line hover:border-money hover:bg-paper-2 bg-paper-3"
+                />
+                <div className="pointer-events-none flex flex-col items-center gap-2.5">
+                  <span className={`size-[50px] rounded-[16px] flex items-center justify-center text-white ${isDragging ? "bg-money" : "ink-surface"}`}>
+                    {docPhase === "reading" ? <Loader2 size={22} className="animate-spin" aria-hidden="true" /> : <FileUp size={22} aria-hidden="true" />}
+                  </span>
+                  <p className="text-[14.5px] font-bold text-ink">{isDragging ? ps.docDropNow : ps.dropzoneTitle}</p>
+                  <span className="font-mono text-[11px] text-ink-3 tracking-[.02em]">{ps.docFormats}</span>
+                  <span className="inline-flex items-center rounded-full bg-ok-soft px-[11px] py-1 text-[12px] font-bold text-ok-ink">{ps.clientSideOnly}</span>
+                </div>
+              </div>
+
+              {docStatusMsg && (
+                <div
+                  role="status"
+                  className={`flex items-start gap-2.5 rounded-[14px] px-3.5 py-3 text-[13px] ${
+                    docPhase === "error"
+                      ? "bg-bad-soft text-bad font-semibold"
+                      : docPhase === "success"
+                        ? "bg-ok-soft text-ok-ink"
+                        : "glass-flat text-ink"
                   }`}
                 >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.png,.jpg,.jpeg,.txt,.json"
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    onClick={(e) => {
-                      // Reset value so selecting the SAME file fires onChange
-                      (e.target as HTMLInputElement).value = "";
-                    }}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) void processDocument(file);
-                    }}
-                  />
+                  {docPhase === "reading" && <Loader2 size={16} className="mt-0.5 shrink-0 animate-spin" aria-hidden="true" />}
+                  {docPhase === "success" && <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-ok" aria-hidden="true" />}
+                  {docPhase === "error" && <AlertCircle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />}
+                  {docPhase === "manual_pan" && <HelpCircle size={16} className="mt-0.5 shrink-0 text-tertiary" aria-hidden="true" />}
+                  <span>{docPhase === "manual_pan" ? ps.noPanFound : docStatusMsg}</span>
+                </div>
+              )}
 
-                  <div className="pointer-events-none flex flex-col items-center gap-3">
-                    <div className={`size-12 rounded-2xl flex items-center justify-center shadow-xs transition-transform ${
-                      isDragging
-                        ? "bg-indigo-600 text-white scale-110"
-                        : "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400"
-                    }`}>
-                      {docPhase === "reading" ? <Loader2 size={24} className="animate-spin" /> : <FileUp size={24} />}
-                    </div>
-
-                    <div className="space-y-1">
-                      <p className="font-sans font-bold text-sm text-ink">
-                        {isDragging ? "Drop your file here now" : ps.dropzoneTitle}
-                      </p>
-                      <p className="font-mono text-xs text-ink-3">
-                        Form 16 Part A/B · AIS / TIS · Form 26AS · PAN scan (.pdf, .png, .jpg, .txt)
-                      </p>
-                    </div>
-
-                    <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2.5 py-1 rounded-full border border-emerald-300 dark:border-emerald-800">
-                      {ps.clientSideOnly}
-                    </span>
+              {docPhase === "manual_pan" && (
+                <form onSubmit={handleManualPanForDocSubmit} className="animate-in fade-in">
+                  <label htmlFor="doc-pan-input" className={LABEL}>{ps.panInputLabel}</label>
+                  <div className="flex gap-2">
+                    <input
+                      id="doc-pan-input"
+                      type="text"
+                      required
+                      value={manualPanForDoc}
+                      onChange={(e) => setManualPanForDoc(e.target.value.toUpperCase())}
+                      maxLength={10}
+                      placeholder="DEMPS9052M"
+                      autoCapitalize="characters"
+                      className={`${FIELD} ${FIELD_OK} h-[46px] flex-1 px-4 text-center font-mono text-[16px] font-semibold uppercase tracking-[.14em]`}
+                    />
+                    <button type="submit" className="ink-surface h-[46px] rounded-[14px] px-5 text-[14.5px] font-bold hover:opacity-90 transition cursor-pointer">
+                      {ps.signInBtn}
+                    </button>
                   </div>
-                </div>
-
-                {/* Status Messages */}
-                {docStatusMsg && (
-                  <div
-                    className={`p-3 rounded-xl border text-xs flex items-start gap-2 ${
-                      docPhase === "error"
-                        ? "border-alarm/30 bg-alarm/10 text-alarm"
-                        : docPhase === "success"
-                        ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300"
-                        : "border-line bg-paper-2 text-ink"
-                    }`}
-                  >
-                    {docPhase === "reading" && <Loader2 size={15} className="animate-spin shrink-0 mt-0.5" />}
-                    {docPhase === "success" && <CheckCircle2 size={15} className="text-emerald-600 shrink-0 mt-0.5" />}
-                    {docPhase === "error" && <AlertCircle size={15} className="text-alarm shrink-0 mt-0.5" />}
-                    {docPhase === "manual_pan" && <HelpCircle size={15} className="text-indigo-600 shrink-0 mt-0.5" />}
-                    <span>{docStatusMsg}</span>
-                  </div>
-                )}
-
-                {/* Fallback Manual PAN if document had no readable text */}
-                {docPhase === "manual_pan" && (
-                  <form onSubmit={handleManualPanForDocSubmit} className="space-y-3 pt-1 animate-in fade-in">
-                    <label className="block text-xs font-mono uppercase font-semibold text-ink-2">
-                      {ps.panInputLabel}:
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        required
-                        value={manualPanForDoc}
-                        onChange={(e) => setManualPanForDoc(e.target.value.toUpperCase())}
-                        maxLength={10}
-                        placeholder="DEMPS9052M"
-                        className="flex-1 min-h-11 rounded-xl border border-line px-3 font-mono uppercase text-center text-ink"
-                      />
-                      <button
-                        type="submit"
-                        className="px-4 py-2.5 rounded-xl bg-navy text-white text-xs font-bold hover:opacity-90 transition cursor-pointer"
-                      >
-                        {ps.signInBtn}
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            )}
-
-            {/* TAB 4: DEMO PERSONAS */}
-            {activeTab === "personas" && (
-              <div className="space-y-4 animate-in fade-in text-start">
-                <div>
-                  <h3 className="font-sans text-xl font-bold text-ink">
-                    {ps.demoTitle}
-                  </h3>
-                  <p className="text-xs text-ink-2 mt-1">
-                    {ps.demoSub}
-                  </p>
-                </div>
-
-                <div className="space-y-2.5">
-                  {(["sunita", "rakesh", "priya"] as const).map((id) => {
-                    const person = PERSONAS[id];
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        onClick={() => {
-                          onPanChange(person.pan);
-                          if (onLaunchPersona) onLaunchPersona(id, true);
-                        }}
-                        className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-line bg-paper-2 hover:bg-paper-3 hover:border-money transition text-start cursor-pointer group"
-                      >
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2">
-                            <span className="font-sans font-bold text-sm text-ink">{person.name}</span>
-                            <span className="font-mono text-[10px] bg-paper px-2 py-0.5 rounded border border-line text-ink-2">
-                              {person.pan}
-                            </span>
-                          </div>
-                          <p className="text-xs text-ink-2">{t.personas[id].phase} · {t.personas[id].action}</p>
-                        </div>
-                        <ArrowRight size={16} className="text-ink-3 group-hover:text-money group-hover:translate-x-1 transition" />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* --- CHARTERED ACCOUNTANT / TAX EXPERT WORKSPACE SECTION --- */}
-          <div className="mt-6 pt-4 border-t border-line/70">
-            <div className="p-3.5 bg-gradient-to-r from-teal-500/10 via-slate-50 dark:via-slate-900/40 to-indigo-500/10 border border-teal-500/30 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="size-9 rounded-xl bg-teal-800 text-white flex items-center justify-center shrink-0 shadow-xs">
-                  <Award size={18} className="text-teal-200" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-xs text-ink uppercase tracking-wider">
-                      Are you a Chartered Accountant?
-                    </span>
-                    <span className="px-1.5 py-0.2 rounded bg-teal-800/10 text-teal-800 dark:text-teal-300 text-[9px] font-bold font-mono">
-                      ICAI AUDIT
-                    </span>
-                  </div>
-                  <p className="text-xs text-ink-2 mt-0.5">
-                    Review and audit client return drafts using their Access Code & PIN.
-                  </p>
-                </div>
-              </div>
-              <a
-                href="/ca"
-                className="px-3.5 py-2 bg-teal-800 hover:bg-teal-900 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 shrink-0 whitespace-nowrap"
-              >
-                <span>Enter CA Portal</span>
-                <ArrowRight size={13} />
-              </a>
+                </form>
+              )}
+              {footer}
             </div>
-          </div>
+          )}
 
-          {/* Bottom Security Reassurance - Cleaned: Removed guest exploration per strict security directive */}
-          <div className="pt-4 border-t border-line/60 mt-4 flex items-center justify-between text-xs text-ink-3">
-            <span className="flex items-center gap-1.5 font-mono text-[11px] text-emerald-600 dark:text-emerald-400">
-              <Lock size={12} />
-              <span>{ps.bankGrade}</span>
-            </span>
-            <span className="font-mono text-[11px] text-ink-3">
-              {ps.authorizedOnly}
-            </span>
-          </div>
+          {/* ---- Demo citizens (1p) — reached from the landing's "Try a demo citizen" ---- */}
+          {view === "personas" && (
+            <div className="flex flex-col gap-[18px] animate-in fade-in text-start">
+              <div>
+                <h3 className="text-[22px] max-md:text-[19px] font-extrabold tracking-[-0.02em] text-ink">{ps.demoTitle}</h3>
+                <p className="mt-1 text-[13.5px] max-md:text-[13px] text-ink-2 leading-[1.55]">{ps.demoSub}</p>
+              </div>
+              <div className="flex flex-col gap-2.5">
+                {(["sunita", "rakesh", "priya"] as const).map((id) => {
+                  const person = PERSONAS[id];
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => {
+                        onPanChange(person.pan);
+                        if (onLaunchPersona) onLaunchPersona(id, true);
+                      }}
+                      className="group flex w-full items-center gap-3.5 rounded-[18px] bg-white/55 dark:bg-white/[0.06] border border-glass-edge px-4 py-3.5 text-start transition hover:border-money cursor-pointer"
+                    >
+                      <span className="size-10 shrink-0 rounded-full bg-amber-bg text-amber-ink flex items-center justify-center text-[12px] font-extrabold" aria-hidden="true">
+                        {person.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="flex items-center gap-2 flex-wrap font-bold text-ink">
+                          {person.name}
+                          <span className="glass-flat inline-flex rounded-full px-[11px] py-1 font-mono text-[12px] font-medium tracking-[.04em] text-ink-3">{person.pan}</span>
+                        </span>
+                        <span className="block text-[12.5px] text-ink-3">{t.personas[id].phase} · {t.personas[id].action}</span>
+                      </span>
+                      <ArrowRight size={16} className="shrink-0 text-ink-3 transition group-hover:translate-x-1 group-hover:text-money" aria-hidden="true" />
+                    </button>
+                  );
+                })}
+              </div>
+              {footer}
+            </div>
+          )}
         </div>
       </div>
     </div>

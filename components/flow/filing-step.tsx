@@ -109,7 +109,7 @@ export default function FilingStep({
     return (
       <div className="max-w-md mx-auto space-y-6 py-8 text-center">
         <m.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex justify-center">
-          <Munshi size={96} />
+          <Munshi size={96} state="success" />
         </m.div>
         {/* WCAG 4.1.3: the success screen replaces the form, so the outcome is
             announced rather than left to the user to discover. */}
@@ -162,7 +162,7 @@ export default function FilingStep({
           : ""}
       </p>
       <div className="space-y-1">
-        <div className="flex items-center gap-3 pb-1"><MunshiAvatar size={36} /><p className="text-xs font-bold uppercase tracking-[.08em] text-money">{t.flow.file}</p></div>
+        <div className="flex items-center gap-3 pb-1"><MunshiAvatar size={36} state={busy ? "working" : stage === "error" ? "error" : "reading"} /><p className="text-xs font-bold uppercase tracking-[.08em] text-money">{t.flow.file}</p></div>
         <h2 className="text-[26px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink">{t.filing.heading}</h2>
         <p className="text-sm text-ink-2 leading-relaxed">{t.filing.sub}</p>
       </div>
@@ -302,22 +302,26 @@ export default function FilingStep({
               </button>
             )}
             {mustPayFirst ? (
-              <button
-                onClick={onPayOutstanding}
-                data-action="pay-outstanding"
-                className="flex-[2] flex items-center justify-center gap-2 rounded-[14px] bg-bad h-[46px] px-4 text-[14.5px] font-bold text-white transition-opacity hover:opacity-90 cursor-pointer"
-              >
-                <Banknote size={16} />
-                <span>{localize("Pay outstanding tax (Challan 280)", lang)}</span>
-              </button>
+              <div className="md:contents max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-30 max-md:px-4 max-md:pb-7 max-md:pt-2.5 max-md:bg-[linear-gradient(to_top,var(--color-paper)_70%,transparent)] md:flex-[2] md:flex">
+                <button
+                  onClick={onPayOutstanding}
+                  data-action="pay-outstanding"
+                  className="w-full flex items-center justify-center gap-2 rounded-[14px] bg-bad h-[50px] md:h-[46px] px-4 text-[14.5px] font-bold text-white transition-opacity hover:opacity-90 cursor-pointer"
+                >
+                  <Banknote size={16} />
+                  <span>{localize("Pay outstanding tax (Challan 280)", lang)}</span>
+                </button>
+              </div>
             ) : (
-              <button
-                onClick={beginFiling}
-                className="btn-primary flex-[2] flex items-center justify-center gap-2 rounded-[14px] h-[46px] px-4 text-[14.5px] transition-opacity cursor-pointer"
-              >
-                <FileCheck size={16} />
-                <span>{t.file.confirmAndFile}</span>
-              </button>
+              <div className="md:contents max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-30 max-md:px-4 max-md:pb-7 max-md:pt-2.5 max-md:bg-[linear-gradient(to_top,var(--color-paper)_70%,transparent)] md:flex-[2] md:flex">
+                <button
+                  onClick={beginFiling}
+                  className="btn-primary w-full flex items-center justify-center gap-2 rounded-[14px] h-[50px] md:h-[46px] px-4 text-[14.5px] transition-opacity cursor-pointer"
+                >
+                  <FileCheck size={16} />
+                  <span>{t.file.confirmAndFile}</span>
+                </button>
+              </div>
             )}
           </div>
         </div>

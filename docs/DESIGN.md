@@ -60,6 +60,40 @@ every page now starts dark (`dark dark-mode` on `<html>`, state defaults, `/reco
 (sticky bar, 2 px rule, blue links), which boxed and word-wrapped the marketing header links; `header > nav`
 is reset unlayered right after the d13 import in `globals.css`.
 
+**Fifth pass (2026-09-07) — Tax Vault and every modal to the handoff (artboards 9v-a…e, 9c–9f).** The
+modals share one frame: overlay `rgba(27,17,64,.55)`, panel 26 px on `paper` with the 40/80 drop shadow, an
+ink header (42 px `bg-white/10` icon tile, 17/800 title, 12.5 px `#CDBDFF` subtitle, close button on the
+ink), lilac body, 46 px ghost + primary buttons, and Munshi ji's one-line honesty note where the handoff has
+one. `citizen-vault-modal.tsx`: 22 px panel, gradient ink header with the soft shield tile, ok-soft SECURED
+pill, mint Sovereign-Cloud pill, four underline tabs (accent active, ink-3 rest), PAN card on the
+`#1B1140 → #3B2B7A` gradient with lilac labels and the soft PAN, tricolour Aadhaar card, glass contact /
+bank / document / database panels, Munshi ji on the documents note and in the footer. `Challan280Modal.tsx`
+(9c): two columns — challan face as glass rows with the accent-soft Amount payable tile, UPI panel with the
+150 px QR, payee VPA and countdown, UPI / Net banking pills — Munshi ji's mock-boundary line, Cancel +
+"Simulate payment of ₹x →". `dispute-modal.tsx` (9f): ink header, Munshi ji 34 px intro ("What's wrong
+with this figure?" + reporter and amount), accent-bordered amount input, the four CBDT choices as radio rows.
+The eight `components/modals/*` and the small dashboard modals (bank IFSC, notice reply, edit income, quick
+edit) take the frame through their shells only; bodies keep the tokens from pass 3.
+
+**Sixth pass (2026-09-07) — handoff 2: the rebuilt sign-in, onboarding for new users, the mobile UI, the last
+of the old palette, the mascot audit.** `auth-portal.tsx` (1a–1p): two tabs Citizen · Chartered Accountant
+(40 px segmented, ink active), Munshi ji's ink story on the left ("Namaste, I'm Munshi ji.", three checks with
+accent/tertiary/ok dots, vault badge, AY pill; on phones a 56 px mascot strip), Citizen = PAN (mono 20 px,
+54 px, accent focus ring) → primary → "New here? Create your account with your PAN" → OR → dashed document
+row → QUICK DEMO PAN pills → footer; CA = code + PIN mono, stamp 2-col, "Open client return →", "No code?
+Load a demo review"; sub-views Create account (1d–1f), document (1g–1k/1o: dashed 22 px dropzone, accent +
+ring while dragging, ok-soft success, glass no-PAN note + manual PAN), demo citizens (1p). `otp-screen.tsx`
+(1l–1n): glass 24 px card, Munshi ji 96, 48×56 mono boxes (accent focus, bad ring on error), glass prototype
+note, ghost Back + ink Verify. `/ca` login (1c/m8b) on the same card. Onboarding (§2): Munshi ji 64 asks in a
+bubble, h1 26/32, 5 px bars and a pinned Continue on phones; it now runs for new users on `/signin` and on the
+manual page's onboarding step. Mobile (M1–M10): see docs/CONTEXT.md §12 — 56 px headers, compact pill,
+drawer, inspector sheet, bottom tab bar, pinned CTAs, composer fade with a 42 px send square, bottom-sheet
+modals, untilted fact cards, compact CA worksheet rows, ink live-regime strip first on reconcile. Palette
+leftovers retokened: workspace (CA banner, ITR-V output card, challan block, choices), inspector, shell
+sidebar, `AuditRiskRadar`, `DefectiveNoticeCard`, the manual page's wizard CTAs, `agent-panel.tsx`, the CA
+comparison/share modals, the mode-select cards. Mascot: every robot/monogram placeholder is Munshi ji
+(mode-select card, Agentic-mode modal ×2, CA header, CA login, onboarding, dashboard hero on phones).
+
 | Token | Light (5a) | Dark (P5) |
 |---|---|---|
 | bg / paper | `#F3EEFF` | `#0B1424` |

@@ -8,7 +8,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "export:munshi": "node scripts/export-munshi.cjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",

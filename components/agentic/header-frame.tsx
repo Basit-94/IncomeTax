@@ -58,32 +58,48 @@ export interface HeaderBarProps {
   after?: ReactNode;
   /** The right-hand cluster. */
   children?: ReactNode;
+  /** Phones only: a back circle or hamburger before the title (handoff 2, mobile header). */
+  leading?: ReactNode;
+  /** Phones only: replaces the brand box with a 16/800 title (workspace, dashboard, wizard…). */
+  mobileTitle?: string;
+  /** Phones only: the Agentic|Manual pill moves to a centred row under the bar (home, hub). */
+  mobileSwitchBelow?: boolean;
 }
 
 /** Brand box width + gap are the constants that pin the switch's x. */
-export const BRAND_BOX_CLASS = "w-[150px] shrink-0 flex items-center";
+export const BRAND_BOX_CLASS = "w-[150px] max-md:w-auto shrink-0 flex items-center";
 /** The bar's height; the switch's y follows from the banner (28 px) + this. */
-export const HEADER_BAR_CLASS = "h-[64px] shrink-0 px-6 flex items-center gap-3.5 text-ink";
+export const HEADER_BAR_CLASS = "h-[64px] max-md:h-[56px] shrink-0 px-6 max-md:px-4 flex items-center gap-3.5 max-md:gap-2.5 text-ink";
 
-export function HeaderBar({ t, s, mode, onModeChange, busy, onBrandClick, after, children }: HeaderBarProps) {
+export function HeaderBar({ t, s, mode, onModeChange, busy, onBrandClick, after, children, leading, mobileTitle, mobileSwitchBelow }: HeaderBarProps) {
   const brand = <BrandBox t={t} />;
+  const brandClass = `${BRAND_BOX_CLASS} ${mobileTitle ? "max-md:hidden" : ""}`;
   return (
-    <div className={HEADER_BAR_CLASS} data-testid="header-bar">
-      {onBrandClick ? (
-        <button type="button" onClick={onBrandClick} className={`${BRAND_BOX_CLASS} hover:opacity-80 transition-opacity cursor-pointer bg-transparent border-0 p-0 text-left`} aria-label={t.shell.productName}>
-          {brand}
-        </button>
-      ) : (
-        <a href="/" className={`${BRAND_BOX_CLASS} hover:opacity-80 transition-opacity`} aria-label={t.shell.productName}>
-          {brand}
-        </a>
-      )}
-      <div className="shrink-0" data-testid="mode-slot">
-        <ModeSwitch mode={mode} onChange={onModeChange} s={s} busy={busy} />
+    <>
+      <div className={HEADER_BAR_CLASS} data-testid="header-bar">
+        {leading && <div className="md:hidden shrink-0 flex items-center">{leading}</div>}
+        {onBrandClick ? (
+          <button type="button" onClick={onBrandClick} className={`${brandClass} hover:opacity-80 transition-opacity cursor-pointer bg-transparent border-0 p-0 text-left`} aria-label={t.shell.productName}>
+            {brand}
+          </button>
+        ) : (
+          <a href="/" className={`${brandClass} hover:opacity-80 transition-opacity`} aria-label={t.shell.productName}>
+            {brand}
+          </a>
+        )}
+        {mobileTitle && <span className="md:hidden flex-1 min-w-0 truncate text-[16px] font-extrabold text-ink">{mobileTitle}</span>}
+        <div className={`shrink-0 ${mobileSwitchBelow ? "max-md:hidden" : ""}`} data-testid="mode-slot">
+          <ModeSwitch mode={mode} onChange={onModeChange} s={s} busy={busy} />
+        </div>
+        {after}
+        <div className="flex-1 min-w-0" />
+        {children}
       </div>
-      {after}
-      <div className="flex-1 min-w-0" />
-      {children}
-    </div>
+      {mobileSwitchBelow && (
+        <div className="md:hidden flex justify-center px-4 pt-1.5 pb-1">
+          <ModeSwitch mode={mode} onChange={onModeChange} s={s} busy={busy} />
+        </div>
+      )}
+    </>
   );
 }

@@ -283,27 +283,23 @@ PAN: ${selectedPan}`;
       role="dialog"
       aria-modal="true"
       aria-labelledby="pay-tax-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-3 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(27,17,64,.55)] p-3 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200 max-md:items-end max-md:p-0"
     >
-      <div className="surface-panel relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl bg-paper shadow-glass border border-line overflow-hidden">
+      <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col sheet-m rounded-[26px] bg-paper shadow-[0_40px_80px_-30px_rgba(0,0,0,.6)] overflow-hidden">
         {/* ========================================================================= */}
         {/* MODAL HEADER                                                              */}
         {/* ========================================================================= */}
-        <div className="shrink-0 flex items-start justify-between border-b border-line p-5 sm:px-6 sm:py-4 bg-paper-2">
+        <div className="shrink-0 flex items-start justify-between ink-surface text-on-ink px-6 py-[18px]">
           <div className="flex items-center gap-3">
-            <div className={`flex size-11 items-center justify-center rounded-2xl ${
- isCleared
- ? "bg-ok-soft text-ok-ink  "
-                : "bg-tertiary/15 text-tertiary  "
-            } shadow-xs`}>
+            <div className="flex size-[42px] items-center justify-center rounded-[14px] bg-white/10 text-on-ink shrink-0">
               {isCleared ? <ShieldCheck size={22} /> : <CreditCard size={22} />}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 id="pay-tax-title" className="font-sans text-lg sm:text-xl font-black text-ink">
+                <h2 id="pay-tax-title" className="text-[17px] font-extrabold text-on-ink">
                   {isHindi ? "ई-पे टैक्स · चालान 280 (ITNS 280)" : "e-Pay Tax · Challan 280 (ITNS 280)"}
                 </h2>
-                <span className="hidden sm:inline-flex rounded-full bg-paper-3 px-2.5 py-0.5 text-[10px] font-mono font-bold text-ink-2 border border-line">
+                <span className="hidden sm:inline-flex rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-mono font-bold text-on-ink/80">
                   AY {ASSESSMENT_YEAR}
                 </span>
                 {isCleared ? (
@@ -318,7 +314,7 @@ PAN: ${selectedPan}`;
                   </span>
                 )}
               </div>
-              <p className="text-xs text-ink-2">
+              <p className="text-[12.5px] text-[#CDBDFF]">
                 {isHindi
                   ? "धारा 140A स्व-निर्धारण कर का आधिकारिक समाधान व CBDT रसीद केंद्र।"
                   : "CBDT statutory self-assessment tax settlement & official compliance counterfoil."}
@@ -330,7 +326,7 @@ PAN: ${selectedPan}`;
             type="button"
             onClick={onClose}
             aria-label={isHindi ? "संवाद बंद करें" : "Close dialog"}
-            className="rounded-xl p-2 text-ink-3 hover:bg-paper-3 hover:text-ink transition cursor-pointer"
+            className="rounded-[10px] p-2 text-on-ink/70 hover:bg-white/10 hover:text-on-ink transition cursor-pointer"
           >
             <X size={20} />
           </button>

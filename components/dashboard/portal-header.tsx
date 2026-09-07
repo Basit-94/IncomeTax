@@ -140,6 +140,8 @@ export default function PortalHeader({
         mode={workMode}
         onModeChange={(m) => onModeChange?.(m)}
         onBrandClick={onLogoClick}
+        mobileSwitchBelow
+        mobileTitle={currentView === "dashboard" ? ps.myReturn : undefined}
         after={
           <div className="hidden md:flex items-center gap-3 min-w-0">
             <div className="h-6 w-[1px] bg-line" />

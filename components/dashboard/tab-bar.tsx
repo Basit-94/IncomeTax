@@ -14,7 +14,7 @@ interface TabBarProps {
 
 export default function TabBar({ t, activeTab, setActiveTab, noticeCount }: TabBarProps) {
   return (
-    <div className="glass-flat inline-flex items-center gap-1.5 rounded-[18px] p-[5px] text-sm font-bold text-ink-3 print:hidden">
+    <div className="glass-flat hidden md:inline-flex items-center gap-1.5 rounded-[18px] p-[5px] text-sm font-bold text-ink-3 print:hidden">
       <button 
         onClick={() => setActiveTab("overview")}
         className={`h-10 px-4 rounded-[13px] transition-colors flex items-center gap-2 cursor-pointer ${
