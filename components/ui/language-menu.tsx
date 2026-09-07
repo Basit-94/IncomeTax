@@ -104,16 +104,17 @@ export default function LanguageMenu({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={`${label}: ${current.english}`}
-        className="flex min-h-[38px] sm:min-h-[42px] cursor-pointer items-center gap-1.5 rounded-full border border-line bg-paper-2 px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-paper shadow-xs"
+        className="flex min-h-[38px] sm:min-h-[42px] cursor-pointer items-center gap-1.5 rounded-full border border-line bg-paper-2 px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-paper shadow-xs max-sm:size-9 max-sm:min-h-0 max-sm:justify-center max-sm:px-0 max-sm:py-0"
       >
-        <Globe size={14} className="text-money shrink-0" aria-hidden="true" />
-        <span dir={isRtl(current.code) ? "rtl" : "ltr"} className="font-semibold">
+        {/* Phones (handoff 2, M1/M2 headers): a globe circle; the language name and caret need the width the title needs. */}
+        <Globe size={14} className="text-money shrink-0 max-sm:size-4" aria-hidden="true" />
+        <span dir={isRtl(current.code) ? "rtl" : "ltr"} className="font-semibold max-sm:hidden">
           {current.native}
         </span>
         <ChevronDown
           size={13}
           aria-hidden="true"
-          className={`text-ink-2 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          className={`text-ink-2 transition-transform duration-200 max-sm:hidden ${open ? "rotate-180" : ""}`}
         />
       </button>
 

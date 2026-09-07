@@ -49,7 +49,7 @@ export default function MarketingLanding({ t, lang, changeLang, theme, toggleThe
         <a href="/" className="flex items-center gap-2.5 hover:opacity-80" aria-label={t.shell.productName}>
           <MunshiAvatar size={40} />
           <span className="font-extrabold text-[26px] max-md:text-[18px] tracking-[-0.03em] text-ink-2">{t.shell.productName ?? LOGO_FALLBACK.name}</span>
-          <span className="text-sm font-medium text-ink-3">{t.shell.productNativeName ?? LOGO_FALLBACK.native}</span>
+          <span className="text-sm max-md:text-[11px] font-medium text-ink-3">{t.shell.productNativeName ?? LOGO_FALLBACK.native}</span>
         </a>
         <div className="flex-1" />
         <nav className="hidden md:flex gap-6 text-[15px] font-medium text-ink-2" aria-label={t.shell.productName}>
@@ -66,16 +66,16 @@ export default function MarketingLanding({ t, lang, changeLang, theme, toggleThe
         </button>
       </header>
 
-      <main id="main-content" className="relative flex-1 px-6 max-md:px-5 sm:px-12 pt-10 max-md:pt-3 sm:pt-16 text-center max-md:text-start">
+      <main id="main-content" className="own-width relative flex-1 px-6 max-md:px-5 sm:px-12 pt-10 max-md:pt-3 sm:pt-16 text-center max-md:text-start">
         {/* ---------------------------------------------------------------- hero -- */}
         <section id="meet" className="mx-auto max-w-5xl">
-          <span className="glass inline-flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold text-ink-3">
+          <span className="glass inline-flex items-center gap-2 rounded-full px-4 py-2 max-md:px-3 max-md:py-1.5 text-[13px] max-md:text-[12px] font-semibold text-ink-3">
             <span className="size-2 rounded-full bg-money" aria-hidden="true" /> {L("Your friendly CA, for your first salary")}
           </span>
-          <h1 className="mx-auto mt-6 max-w-[15ch] text-[44px] sm:text-[64px] lg:text-[84px] font-extrabold leading-[1] tracking-[-0.04em] text-ink text-balance">
+          <h1 className="mx-auto mt-6 max-md:mt-4 max-w-[15ch] max-md:max-w-none text-[44px] sm:text-[64px] lg:text-[84px] font-extrabold leading-[1] max-md:leading-[1.05] tracking-[-0.04em] max-md:tracking-[-0.03em] text-ink text-balance">
             {L("Namaste, I'm Munshi ji. Let's file your taxes.")}
           </h1>
-          <p className="mx-auto mt-6 max-w-[46ch] text-lg sm:text-xl text-ink-2 leading-relaxed">
+          <p className="mx-auto mt-6 max-md:mt-4 max-w-[46ch] text-lg max-md:text-[15px] sm:text-xl text-ink-2 leading-relaxed">
             {L("Tell me what's going on. I'll read what your employer and bank already reported, ask only what I can't find, and show you exactly what comes back.")}
           </p>
 
@@ -117,7 +117,7 @@ export default function MarketingLanding({ t, lang, changeLang, theme, toggleThe
         </section>
 
         {/* ---------------------------------------------- how a conversation goes -- */}
-        <section id="how" className="mx-auto mt-24 max-w-[1080px] grid gap-5 lg:grid-cols-3 lg:items-start text-start">
+        <section id="how" className="mx-auto mt-24 max-md:mt-14 max-w-[1080px] grid gap-5 max-md:gap-3.5 lg:grid-cols-3 lg:items-start text-start">
           <div className="glass rounded-[28px] p-6 motion-safe:animate-[floaty_8s_ease-in-out_infinite] lg:mt-8">
             <div className="flex items-center gap-2.5">
               <MunshiAvatar size={36} />

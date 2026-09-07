@@ -84,7 +84,7 @@ export default function AgenticLanding(props: AgenticLandingProps) {
       </HeaderBar>
       </header>
 
-      <main id="main-content" className="flex-1 flex flex-col items-center justify-center px-4 py-10 max-md:justify-start max-md:pt-3 max-md:pb-0 max-md:px-4">
+      <main id="main-content" className="own-width flex-1 flex flex-col items-center justify-center px-4 py-10 max-md:justify-start max-md:pt-3 max-md:pb-0 max-md:px-4">
         <div className="w-full max-w-3xl text-center space-y-[22px] max-md:flex max-md:flex-col max-md:flex-1 max-md:space-y-4">
           <span className="glass-flat inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold text-ink-2">
             <span className="size-1.5 rounded-full bg-ok" aria-hidden="true" /> {s.simulatedBadge}

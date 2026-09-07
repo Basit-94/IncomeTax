@@ -10,6 +10,9 @@ header > nav a{color:inherit}
 /* d13.css also styles the bare <main> (1080 px, auto margins, 24 px gutters). Auto margins stop a column-flex item
    from stretching, so the Agentic shell's transcript column grew to its max-content width on phones. */
 main.shell-main{max-width:none;margin:0;padding:0}
+/* Pages whose <main> is a flex-column item and sizes itself with Tailwind: d13's `margin:0 auto` would turn it into a
+   fit-content box that grows with its widest line (the landing's typewriter made the phone page expand to the right). */
+main.own-width{max-width:none;margin:0}
 
 /* Redesign 2026-09-06: d13.css keeps its verbatim classes, but its palette variables are
    remapped here (unlayered, later in source order) onto the new tokens, so the dashboard,

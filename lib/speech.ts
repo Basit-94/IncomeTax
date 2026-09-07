@@ -1,187 +1,222 @@
 /**
- * A thin wrapper over the browser's own speech recognition.
+ * Dictation for the composer: record a phrase with the browser's MediaRecorder, then transcribe it
+ * with faster-whisper through /api/transcribe (scripts/transcribe_worker.py on this machine).
  *
- * Why the platform API rather than a hosted model: no key, no billing, no
- * server of ours in the path, and it works on Chrome for Android, which is the
- * device this product is designed for.
+ * Why not the browser's SpeechRecognition any more (2026-09-07, user: "the transcribe feature is not
+ * working, use fastwhisper"): Chrome's recognizer is server-based and needs Google's service behind it,
+ * so it failed here without a word of explanation, and it never covered most of the 23 languages. Whisper
+ * runs locally, covers fifteen of them by name and detects the rest, and the audio never leaves the
+ * machine.
  *
- * What it is honestly not: an offline feature. Chrome's implementation is
- * server-based — audio is sent away for recognition — so this is a
- * zero-dependency choice, not a low-bandwidth one. Global support is roughly
- * 88% partial and 0% full, so `isSupported()` is not a formality: Firefox for
- * Android and Opera Mini have nothing here, and the caller must degrade
- * visibly rather than present a dead button.
- *
- * Types are declared locally and reached through a cast rather than relying on
- * `lib.dom`, because `webkitSpeechRecognition` is unprefixed nowhere and typed
- * inconsistently across TypeScript versions.
+ * Shape kept from the old wrapper: `isSpeechSupported()` gates the mic button, `startDictation()`
+ * returns a handle whose `stop()` ends the recording (tap the mic again) and sends it off. Recording also
+ * ends by itself after 1.6 s of silence once something was heard, or at 45 s.
  */
 
 import type { Lang } from "./types";
 
 /**
- * BCP-47 tags. Indian English rather than en-US — the vocabulary differs.
- * Chrome's recognizer covers the bigger languages here (bn, te, mr, gu, kn,
- * ml, pa, ur, …); for the ones it doesn't, the tag is still the correct
- * request and the engine degrades to an error the caller already shows.
+ * Whisper's language codes for the 23 languages. `null` = let the model detect: Whisper was not trained on
+ * Odia, Maithili, Santali, Kashmiri, Konkani, Dogri, Manipuri or Bodo, and a wrong forced language is worse
+ * than detection.
  */
-const RECOGNITION_LOCALE: Record<Lang, string> = {
-  en: "en-IN",
-  hi: "hi-IN",
-  ta: "ta-IN",
-  as: "as-IN",
-  bn: "bn-IN",
-  brx: "brx-IN",
-  doi: "doi-IN",
-  gu: "gu-IN",
-  kn: "kn-IN",
-  ks: "ks-IN",
-  kok: "kok-IN",
-  mai: "mai-IN",
-  ml: "ml-IN",
-  mni: "mni-IN",
-  mr: "mr-IN",
-  ne: "ne-NP",
-  or: "or-IN",
-  pa: "pa-IN",
-  sa: "sa-IN",
-  sat: "sat-IN",
-  sd: "sd-IN",
-  te: "te-IN",
-  ur: "ur-IN",
+export const WHISPER_LANGUAGE: Record<Lang, string | null> = {
+  en: "en",
+  hi: "hi",
+  ta: "ta",
+  as: "as",
+  bn: "bn",
+  brx: null,
+  doi: null,
+  gu: "gu",
+  kn: "kn",
+  ks: null,
+  kok: null,
+  mai: null,
+  ml: "ml",
+  mni: null,
+  mr: "mr",
+  ne: "ne",
+  or: null,
+  pa: "pa",
+  sa: "sa",
+  sat: null,
+  sd: "sd",
+  te: "te",
+  ur: "ur",
 };
 
-/* -- minimal structural types for the bit of the API we touch -------------- */
-
-type ResultEvent = {
-  resultIndex: number;
-  results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }>;
-};
-
-type ErrorEvent = { error: string };
-
-type Recognizer = {
-  lang: string;
-  continuous: boolean;
-  interimResults: boolean;
-  maxAlternatives: number;
-  start(): void;
-  stop(): void;
-  abort(): void;
-  onresult: ((e: ResultEvent) => void) | null;
-  onerror: ((e: ErrorEvent) => void) | null;
-  onend: (() => void) | null;
-};
-
-type RecognizerConstructor = new () => Recognizer;
-
-function getConstructor(): RecognizerConstructor | null {
-  if (typeof window === "undefined") return null;
-  const w = window as unknown as {
-    SpeechRecognition?: RecognizerConstructor;
-    webkitSpeechRecognition?: RecognizerConstructor;
-  };
-  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+export function whisperLanguageFor(lang: Lang): string | null {
+  return WHISPER_LANGUAGE[lang] ?? null;
 }
 
+/** Stop after this much silence once speech was heard; never record longer than MAX_MS. */
+const SILENCE_MS = 1600;
+const MAX_MS = 45_000;
+/** Below this RMS (0–1) a frame counts as silence. Room noise on a laptop mic sits around 0.005–0.01. */
+const SPEECH_RMS = 0.02;
+
 /**
- * Must only be called from an effect or an event handler. Calling it during
- * render would disagree with the server-rendered HTML and produce a hydration
- * mismatch.
+ * Must only be called from an effect or an event handler. Calling it during render would disagree with the
+ * server-rendered HTML and produce a hydration mismatch.
  */
 export function isSpeechSupported(): boolean {
-  return getConstructor() !== null;
+  if (typeof window === "undefined") return false;
+  return typeof MediaRecorder !== "undefined" && typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
 }
 
 /* ------------------------------------------------------------------------- */
 
 export type Dictation = {
-  /** Idempotent. Safe to call after the engine has already stopped. */
+  /** Ends the recording and sends it for transcription. Idempotent. */
   stop(): void;
 };
 
 type DictationOptions = {
   lang: Lang;
-  /** Fires repeatedly as the phrase forms, so the user can see it working. */
+  /** Kept for callers; the recorder has no interim words to offer, so this never fires. */
   onPartial(text: string): void;
-  /** Fires once with the settled phrase. */
+  /** Fires once with the transcribed phrase. */
   onFinal(text: string): void;
-  /** Permission refused, no network, nothing audible. */
+  /** `not-allowed`, `no-speech`, `network`, `transcriber_unavailable`, `timeout`, `transcribe_failed`. */
   onError(reason: string): void;
   /** Always fires last, whether the run succeeded or not. */
   onEnd(): void;
 };
 
+function pickMimeType(): string | undefined {
+  const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"];
+  return candidates.find((m) => MediaRecorder.isTypeSupported(m));
+}
+
+function extensionFor(mime: string): string {
+  if (mime.includes("ogg")) return "ogg";
+  if (mime.includes("mp4")) return "m4a";
+  return "webm";
+}
+
 /**
- * Starts one utterance and returns a handle to cancel it. Returns `null` if the
- * browser has no recognition at all — the caller is expected to check
- * `isSpeechSupported()` first and say so in the interface, but returning `null`
- * means a missed check degrades to nothing happening rather than to a throw.
+ * Starts one recording and returns a handle to stop it. Returns `null` when the browser cannot record —
+ * the caller is expected to check `isSpeechSupported()` first and say so in the interface.
  */
 export function startDictation(opts: DictationOptions): Dictation | null {
-  const Ctor = getConstructor();
-  if (!Ctor) return null;
+  if (!isSpeechSupported()) return null;
 
-  let settled = false;
-  let recognizer: Recognizer;
+  let stopped = false;
+  let heardSpeech = false;
+  let meterAvailable = false;
+  let recorder: MediaRecorder | null = null;
+  let stream: MediaStream | null = null;
+  let audioCtx: AudioContext | null = null;
+  let frame = 0;
+  let capTimer: ReturnType<typeof setTimeout> | null = null;
+  const chunks: Blob[] = [];
 
-  try {
-    recognizer = new Ctor();
-  } catch {
-    return null;
-  }
-
-  recognizer.lang = RECOGNITION_LOCALE[opts.lang];
-  // One phrase, not an open microphone. A dispute reason is a sentence or two,
-  // and an indefinitely open mic on a metered connection is a poor trade.
-  recognizer.continuous = false;
-  recognizer.interimResults = true;
-  recognizer.maxAlternatives = 1;
-
-  recognizer.onresult = (event) => {
-    let interim = "";
-    let final = "";
-    for (let i = event.resultIndex; i < event.results.length; i += 1) {
-      const result = event.results[i];
-      const text = result[0]?.transcript ?? "";
-      if (result.isFinal) final += text;
-      else interim += text;
-    }
-    if (final.trim()) {
-      settled = true;
-      opts.onFinal(final.trim());
-    } else if (interim.trim()) {
-      opts.onPartial(interim.trim());
-    }
+  const cleanup = () => {
+    if (frame) cancelAnimationFrame(frame);
+    if (capTimer) clearTimeout(capTimer);
+    stream?.getTracks().forEach((t) => t.stop());
+    void audioCtx?.close().catch(() => {});
   };
 
-  recognizer.onerror = (event) => {
-    settled = true;
-    opts.onError(event.error || "unknown");
-  };
-
-  recognizer.onend = () => {
-    // Chrome ends the session on silence without ever producing a result. That
-    // is a failed attempt from the user's point of view, so report it as one.
-    if (!settled) opts.onError("no-speech");
+  const send = async () => {
+    cleanup();
+    const mime = recorder?.mimeType || "audio/webm";
+    const blob = new Blob(chunks, { type: mime });
+    // A meter that never saw speech, or a clip too short to hold a word: say so instead of transcribing air.
+    if (blob.size < 1_000 || (meterAvailable && !heardSpeech)) {
+      opts.onError("no-speech");
+      opts.onEnd();
+      return;
+    }
+    try {
+      const form = new FormData();
+      form.append("audio", blob, `clip.${extensionFor(mime)}`);
+      const language = whisperLanguageFor(opts.lang);
+      if (language) form.append("language", language);
+      const res = await fetch("/api/transcribe", { method: "POST", credentials: "same-origin", body: form });
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; text?: string; error?: string };
+      if (!res.ok || !body.ok) opts.onError(body.error ?? "transcribe_failed");
+      else if (!String(body.text ?? "").trim()) opts.onError("no-speech");
+      else opts.onFinal(String(body.text).trim());
+    } catch {
+      opts.onError("network");
+    }
     opts.onEnd();
   };
 
-  try {
-    recognizer.start();
-  } catch {
-    opts.onError("start-failed");
-    opts.onEnd();
-    return null;
-  }
+  const stopRecording = () => {
+    if (stopped) return;
+    stopped = true;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop(); // onstop → send()
+    } else {
+      cleanup();
+      opts.onEnd();
+    }
+  };
+
+  navigator.mediaDevices
+    .getUserMedia({ audio: true })
+    .then((s) => {
+      if (stopped) {
+        s.getTracks().forEach((t) => t.stop());
+        return;
+      }
+      stream = s;
+      const mimeType = pickMimeType();
+      recorder = new MediaRecorder(s, mimeType ? { mimeType } : undefined);
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+      recorder.onstop = () => void send();
+      recorder.start(250);
+      capTimer = setTimeout(stopRecording, MAX_MS);
+
+      // Silence detection: end the phrase on its own, the way the old recognizer did.
+      try {
+        audioCtx = new AudioContext();
+        const source = audioCtx.createMediaStreamSource(s);
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 1024;
+        source.connect(analyser);
+        const buf = new Uint8Array(analyser.fftSize);
+        meterAvailable = true;
+        let lastLoud = performance.now();
+        const tick = () => {
+          if (stopped) return;
+          analyser.getByteTimeDomainData(buf);
+          let sum = 0;
+          for (let i = 0; i < buf.length; i += 1) {
+            const d = (buf[i] - 128) / 128;
+            sum += d * d;
+          }
+          const rms = Math.sqrt(sum / buf.length);
+          const now = performance.now();
+          if (rms > SPEECH_RMS) {
+            lastLoud = now;
+            heardSpeech = true;
+          }
+          if (heardSpeech && now - lastLoud > SILENCE_MS) {
+            stopRecording();
+            return;
+          }
+          frame = requestAnimationFrame(tick);
+        };
+        frame = requestAnimationFrame(tick);
+      } catch {
+        // No Web Audio: the cap timer and the user's tap end the recording.
+      }
+    })
+    .catch(() => {
+      stopped = true;
+      opts.onError("not-allowed");
+      opts.onEnd();
+    });
 
   return {
     stop() {
-      try {
-        recognizer.abort();
-      } catch {
-        /* already finished; nothing to abort */
-      }
+      stopRecording();
     },
   };
 }

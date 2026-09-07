@@ -97,13 +97,14 @@ function SignIn() {
   const [authNote, setAuthNote] = useState<string | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
   const [showModeSelect, setShowModeSelect] = useState(false);
-  // New here: the quick setup (language, intent, situation, mode, focus) runs once before the mode choice (user, 2026-09-07).
+  // The quick setup (language, intent, situation, mode, focus) runs once, only when an account is created
+  // here — never on a returning sign-in (user, 2026-09-07). "Change answers" on the dashboard reopens it later.
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  const arrive = useCallback(() => {
+  const arrive = useCallback((opts?: { newAccount?: boolean }) => {
     setPending(null);
-    if (loadOnboardingProfile()) setShowModeSelect(true);
-    else setShowOnboarding(true);
+    if (opts?.newAccount && !loadOnboardingProfile()) setShowOnboarding(true);
+    else setShowModeSelect(true);
   }, []);
 
   const finishOnboarding = (profile: OnboardingProfile) => {
@@ -221,7 +222,7 @@ function SignIn() {
     setAuthBusy(true);
     const server = await persistSignIn(sessionForVaultUser(user), blankPersona(user.pan, user.fullName ?? "", lang), lang);
     setAuthBusy(false);
-    if (server.ok) return arrive();
+    if (server.ok) return arrive({ newAccount: true });
     clearSession();
     setAuthNote(t.login.authUnreachable);
   };
@@ -383,7 +384,7 @@ function SignIn() {
         </a>
       </header>
 
-      <main id="main-content" className="flex-1 px-4 py-6 sm:py-10">
+      <main id="main-content" className="own-width flex-1 px-4 py-6 sm:py-10">
         <div className="mx-auto w-full max-w-5xl">
           {showOnboarding ? (
             <Onboarding lang={lang} t={t} initialDraft={loadOnboardingDraft()} onLanguageChange={changeLang} onComplete={finishOnboarding} />
