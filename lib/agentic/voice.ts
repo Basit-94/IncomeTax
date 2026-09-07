@@ -26,7 +26,8 @@ const PATTERNS: [SmallTalk, RegExp][] = [
   ["thanks", /^(thanks?( you| a lot| so much)?|thank u|thx|ty|cheers|dhanyavaad|dhanyawad|shukriya|nandri|much appreciated)\b[\s!.]*$/i],
   ["bye", /^(bye|goodbye|see you|see ya|take care|good night|ok bye|that'?s all|done for now|chalo bye|theek hai bye|alvida|phir milte hain|shubh ratri)\b[\s!.]*$/i],
   ["howAreYou", /^(how are you|how'?s it going|how do you do|kaise ho|kaise hain|what'?s up|sup)\b[\s?!.]*$/i],
-  ["who", /^(who are you|what are you|are you (a )?(bot|human|real|ai)|what is wapsi|who is this|introduce yourself|tum kaun ho|aap kaun ho|tu kaun hai|wapsi kya hai)\b[\s?!.]*$/i],
+  // "aap kon h?" (2026-09-07): the romanised spellings people actually type, plus "who r u" and the name question.
+  ["who", /^(who (are|r) (you|u)|what are you|are you (a )?(bot|human|real|ai)|what is wapsi|who is this|introduce yourself|what'?s your name|your name\??|(aap|tum|tu|app)\s*(kaun|kon|koun)\s*(ho|hai|h|hain|he)?|kaun ho( aap| tum)?|(aapka|tumhara|tera|apka) naam( kya hai| kya h|\?)?|wapsi kya hai)\b[\s?!.]*$/i],
   ["help", /^(help|what can you do|what do you do|how can you help( me)?|what are my options|show me what you can do|menu|madad|kya kar sakte ho|kya kar sakta hai|tum kya karte ho|aap kya karte hain)\b[\s?!.]*$/i],
   ["hello", /^(hi+|hello+|hey+|hiya|yo|namaste|namaskar|namaskaram|vanakkam|sat sri akal|salaam|as-?salamu alaikum|good (morning|afternoon|evening)|hola)\b[\s,!.]*(wapsi|there|friend|bhai|ji)?[\s!.]*$/i],
 ];

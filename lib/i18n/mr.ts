@@ -624,7 +624,7 @@ export const mr: Dict = {
   },
 
   agent: {
-    title: "वापसी सहायक",
+    title: "मुंशी जी",
     open: "सहायक उघडा",
     close: "बंद करा",
     placeholder: "तपासायला, समजावायला किंवा फाइल करायला सांगा…",

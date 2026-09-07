@@ -332,6 +332,22 @@ h1.title{font-weight:800;letter-spacing:-.03em}
      The scoped overrides pin every remapped token back to its light value. */
   .printable-sheet {
     background-color: #ffffff !important;
+    --text-color: #2A1B4A;
+    --muted-color: #4A3580;
+    --subtle-color: #7562A8;
+    --border-color: rgba(74, 53, 128, 0.16);
+    --surface-color: rgba(255, 255, 255, 0.62);
+    --input-color: rgba(255, 255, 255, 0.8);
+    /* The --color-* theme aliases (Tailwind's text-ink-2/text-ink-3 etc.) are
+       declared once at :root and inherit their already-resolved value from
+       there - redeclaring --subtle-color etc. above does not make them
+       re-substitute for a descendant. Pin the aliases themselves too. */
+    --color-ink: var(--text-color);
+    --color-ink-2: var(--muted-color);
+    --color-ink-3: var(--subtle-color);
+    --color-line: var(--border-color);
+    --color-paper-2: var(--surface-color);
+    --color-paper-3: var(--input-color);
     --white-override: #ffffff;
     --slate-50-override: #f7fafb;
     --slate-100-override: #eef4f5;

@@ -1,64 +1,73 @@
-import type { Lang } from "./types";
+import type { BankAccount, Lang } from "./types";
 
 export const ONBOARDING_PROFILE_KEY = "wapsi_onboarding_profile";
 export const ONBOARDING_DRAFT_KEY = "wapsi_onboarding_draft";
-export const ONBOARDING_VERSION = 2;
+export const ONBOARDING_VERSION = 3;
 
+/**
+ * v3 (2026-09-07, user direction: "only mention those questions that can be exactly the same every
+ * year… if something gets updated every year, add it in the agentic mode"). The profile holds what
+ * never changes about a person — identity, contact, residency, refund account, how much detail they
+ * like, and whether DigiLocker is linked. Everything with a tax year attached (intent, employer, salary,
+ * housing, deductions, regime) lives on the year's return as a `YearIntake` (lib/return/year-intake.ts).
+ */
+
+/** Why the person came — asked every visit in the Agentic opener; kept here as the shared vocabulary. */
 export type OnboardingIntent =
   | "file_return"
   | "check_refund"
   | "understand_notice"
   | "correct_prefill";
 
-export type OnboardingProfession =
-  | "salaried"
-  | "self_employed"
-  | "business_owner"
-  | "student"
-  | "retired"
-  | "investor"
-  | "other";
-
-export type OnboardingIncomeBand =
-  | "none"
-  | "under_4"
-  | "4_to_8"
-  | "8_to_12"
-  | "12_to_25"
-  | "over_25";
-
-export type OnboardingFilingHistory = "never" | "once" | "every_year";
-
 /**
  * The Simple / Full-detail split, chosen explicitly and early. This is the product's central
- * seam (PLAN.md §3.2): two coherent experiences, not a density slider. Asked as its own
- * question because inferring it from proxies guesses at the one thing the user can state.
+ * seam (PLAN.md §3.2): two coherent experiences, not a density slider.
  */
 export type OnboardingMode = "simple" | "full";
 
-export type OnboardingFocus =
-  | "salary"
-  | "freelance"
-  | "business"
-  | "rent"
-  | "interest"
-  | "investments"
-  | "deductions"
-  | "not_sure";
+export type Residency = "resident" | "nri" | "rnor";
+
+export interface OnboardingIdentity {
+  /** As on the PAN record; locked in the interface. */
+  name: string;
+  pan: string;
+  /** ISO date. */
+  dob?: string;
+  aadhaarLast4?: string;
+}
+
+export interface OnboardingContact {
+  mobile?: string;
+  email?: string;
+  /** One line, as the Aadhaar record carries it; editable. */
+  address?: string;
+}
+
+/** The two rare standing facts — off by default, never asked yearly. */
+export interface OnboardingStanding {
+  representative?: { name: string; capacity: string };
+  disability?: "40_79" | "80_plus";
+}
 
 export interface OnboardingProfile {
   version: typeof ONBOARDING_VERSION;
   lang: Lang;
-  intent: OnboardingIntent;
-  profession: OnboardingProfession;
   mode: OnboardingMode;
-  filingHistory: OnboardingFilingHistory;
-  focuses: OnboardingFocus[];
+  identity: OnboardingIdentity;
+  contact: OnboardingContact;
+  residency: Residency;
+  banks: BankAccount[];
+  refundAccountId?: string;
+  standing?: OnboardingStanding;
+  /** A permission, not data: the yearly fetch still shows its own consent card. */
+  connections: { digilocker: { linked: boolean; linkedAt?: string } };
   completedAt: string;
+  /** Rebuilt from a v1/v2 record: identity may be blank until the person confirms it on the dashboard. */
+  migratedFrom?: 1 | 2;
 }
 
 export type OnboardingDraft = Partial<
-  Omit<OnboardingProfile, "version" | "completedAt">
+  Omit<OnboardingProfile, "version" | "completedAt" | "migratedFrom">
 >;
 
 export interface Personalization {
@@ -74,97 +83,86 @@ const INTENTS: OnboardingIntent[] = [
   "understand_notice",
   "correct_prefill",
 ];
-const PROFESSIONS: OnboardingProfession[] = [
-  "salaried",
-  "self_employed",
-  "business_owner",
-  "student",
-  "retired",
-  "investor",
-  "other",
-];
-const INCOME_BANDS: OnboardingIncomeBand[] = [
-  "none",
-  "under_4",
-  "4_to_8",
-  "8_to_12",
-  "12_to_25",
-  "over_25",
-];
-const FILING_HISTORY: OnboardingFilingHistory[] = ["never", "once", "every_year"];
 const MODES: OnboardingMode[] = ["simple", "full"];
-const FOCUSES: OnboardingFocus[] = [
-  "salary",
-  "freelance",
-  "business",
-  "rent",
-  "interest",
-  "investments",
-  "deductions",
-  "not_sure",
-];
+const RESIDENCIES: Residency[] = ["resident", "nri", "rnor"];
+const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 
 function isOneOf<T extends string>(value: unknown, values: readonly T[]): value is T {
   return typeof value === "string" && values.includes(value as T);
+}
+
+export function isOnboardingIntent(value: unknown): value is OnboardingIntent {
+  return isOneOf(value, INTENTS);
 }
 
 export function createOnboardingProfile(
   draft: OnboardingDraft,
   lang: Lang,
 ): OnboardingProfile | null {
+  const identity = draft.identity;
   if (
-    !isOneOf(draft.intent, INTENTS) ||
-    !isOneOf(draft.profession, PROFESSIONS) ||
-    !isOneOf(draft.mode, MODES) ||
-    !isOneOf(draft.filingHistory, FILING_HISTORY) ||
-    !Array.isArray(draft.focuses) ||
-    draft.focuses.length === 0 ||
-    draft.focuses.some((focus) => !isOneOf(focus, FOCUSES))
+    !identity ||
+    typeof identity.pan !== "string" ||
+    !PAN_RE.test(identity.pan) ||
+    typeof identity.name !== "string" ||
+    identity.name.trim().length === 0 ||
+    !isOneOf(draft.mode, MODES)
   ) {
     return null;
   }
+  const banks = Array.isArray(draft.banks) ? draft.banks : [];
+  const refundAccountId =
+    draft.refundAccountId && banks.some((b) => b.id === draft.refundAccountId)
+      ? draft.refundAccountId
+      : banks.find((b) => b.nominatedForRefund)?.id ?? banks[0]?.id;
 
   return {
     version: ONBOARDING_VERSION,
     lang,
-    intent: draft.intent,
-    profession: draft.profession,
     mode: draft.mode,
-    filingHistory: draft.filingHistory,
-    focuses: Array.from(new Set(draft.focuses)),
+    identity: { ...identity, name: identity.name.trim() },
+    contact: draft.contact ?? {},
+    residency: isOneOf(draft.residency, RESIDENCIES) ? draft.residency : "resident",
+    banks,
+    refundAccountId,
+    standing: draft.standing,
+    connections: draft.connections ?? { digilocker: { linked: false } },
     completedAt: new Date().toISOString(),
   };
 }
 
-export function getPersonalization(profile: OnboardingProfile): Personalization {
-  // The user's explicit choice IS the guidance level; the old heuristic survives only as the
-  // migration default for v1 profiles that never answered the question.
-  const guided = profile.mode === "simple";
-  const hasDeductionSignals =
-    profile.focuses.includes("rent") ||
-    profile.focuses.includes("deductions") ||
-    profile.profession === "self_employed" ||
-    profile.profession === "business_owner";
+/** A migrated profile with no PAN still needs the identity screen once. */
+export function isProfileComplete(profile: OnboardingProfile): boolean {
+  return PAN_RE.test(profile.identity.pan) && profile.identity.name.length > 0;
+}
 
+/**
+ * The person's explicit choice IS the guidance level. The regime lens comes from the year's intake:
+ * an open regime (deductions could still flip it) means the claims are checked first.
+ */
+export function getPersonalization(
+  profile: OnboardingProfile,
+  regimeLean: "new" | "old" | "open" = "new",
+): Personalization {
   return {
-    guided,
-    regimeLens: hasDeductionSignals ? "check_claims" : "compare_both",
+    guided: profile.mode === "simple",
+    regimeLens: regimeLean === "open" ? "check_claims" : "compare_both",
   };
 }
 
 /**
- * Choose the first useful dashboard surface from the user's stated intent.
+ * Choose the first useful dashboard surface from the year's stated intent.
  * An unfiled return always starts with facts because every later calculation
  * depends on information the user confirms, even when their stated goal is a
  * refund check or a notice explanation.
  */
 export function getDashboardDestination(
-  profile: OnboardingProfile,
+  intent: OnboardingIntent | null | undefined,
   hasFiled: boolean,
 ): DashboardDestination {
   if (!hasFiled) return "facts";
 
-  switch (profile.intent) {
+  switch (intent) {
     case "understand_notice":
       return "actions";
     case "correct_prefill":
@@ -177,21 +175,45 @@ export function getDashboardDestination(
 }
 
 /**
- * v1 profiles carried an income band (asked, then never used — deleted in v2) and no mode.
- * They are migrated, not invalidated: bumping people back through onboarding to re-answer
- * questions we already have answers to is the exact annoyance Phase 3 exists to remove.
+ * v1 (intent, profession, incomeBand, filingHistory, focuses) and v2 (+ mode) carried nothing that
+ * survives a year unchanged except language and mode. Both migrate to v3 with a blank identity and
+ * DigiLocker unlinked; the person is never sent back through onboarding — the dashboard offers to
+ * complete the profile instead (same reasoning as the v1→v2 migration this replaces).
  */
-function migrateV1(value: Record<string, unknown>): OnboardingDraft {
-  const focuses = Array.isArray(value.focuses) ? (value.focuses as OnboardingFocus[]) : [];
-  const guided = value.filingHistory === "never" || focuses.includes("not_sure");
+function migrateLegacy(value: Record<string, unknown>): OnboardingProfile {
+  const version = value.version === 1 ? 1 : 2;
+  let mode: OnboardingMode = "simple";
+  if (isOneOf(value.mode, MODES)) mode = value.mode;
+  else if (version === 1) {
+    const focuses = Array.isArray(value.focuses) ? (value.focuses as string[]) : [];
+    mode = value.filingHistory === "never" || focuses.includes("not_sure") ? "simple" : "full";
+  }
   return {
+    version: ONBOARDING_VERSION,
     lang: value.lang as Lang,
-    intent: value.intent as OnboardingIntent,
-    profession: value.profession as OnboardingProfession,
-    mode: guided ? "simple" : "full",
-    filingHistory: value.filingHistory as OnboardingFilingHistory,
-    focuses,
+    mode,
+    identity: { name: "", pan: "" },
+    contact: {},
+    residency: "resident",
+    banks: [],
+    connections: { digilocker: { linked: false } },
+    completedAt: typeof value.completedAt === "string" ? value.completedAt : new Date().toISOString(),
+    migratedFrom: version,
   };
+}
+
+function isV3(value: Record<string, unknown>): value is OnboardingProfile & Record<string, unknown> {
+  const identity = value.identity as Record<string, unknown> | undefined;
+  return (
+    value.version === ONBOARDING_VERSION &&
+    typeof value.lang === "string" &&
+    isOneOf(value.mode, MODES) &&
+    !!identity &&
+    typeof identity.pan === "string" &&
+    typeof identity.name === "string" &&
+    Array.isArray(value.banks) &&
+    typeof value.completedAt === "string"
+  );
 }
 
 export function loadOnboardingProfile(): OnboardingProfile | null {
@@ -202,14 +224,18 @@ export function loadOnboardingProfile(): OnboardingProfile | null {
     );
     if (!value || typeof value !== "object") return null;
     const record = value as Record<string, unknown>;
-    if (record.version === 1) {
-      const migrated = createOnboardingProfile(migrateV1(record), record.lang as Lang);
-      if (migrated) saveOnboardingProfile(migrated);
+    if (record.version === 1 || record.version === 2) {
+      const migrated = migrateLegacy(record);
+      saveOnboardingProfile(migrated);
       return migrated;
     }
-    if (record.version !== ONBOARDING_VERSION) return null;
-    const profile = value as OnboardingProfile;
-    return createOnboardingProfile(profile, profile.lang);
+    if (!isV3(record)) return null;
+    return {
+      ...record,
+      contact: record.contact ?? {},
+      residency: isOneOf(record.residency, RESIDENCIES) ? record.residency : "resident",
+      connections: record.connections ?? { digilocker: { linked: false } },
+    };
   } catch {
     return null;
   }
@@ -236,4 +262,51 @@ export function saveOnboardingProfile(profile: OnboardingProfile): void {
   if (typeof globalThis.localStorage === "undefined") return;
   globalThis.localStorage.setItem(ONBOARDING_PROFILE_KEY, JSON.stringify(profile));
   globalThis.localStorage.removeItem(ONBOARDING_DRAFT_KEY);
+}
+
+/**
+ * What the profile knows about the person, written onto a blank or placeholder persona (2026-09-07): the
+ * name from the PAN record replaces "Citizen 1982", the city/state come from the address, the mobile and
+ * the pre-validated banks fill in where the persona had none. Seeded figures are never touched.
+ */
+export function applyProfileToPersona<T extends { name: string; city: string; state: string; mobile: string; banks: BankAccount[] }>(persona: T, profile: OnboardingProfile): T {
+  const placeholderName = !persona.name || /^Citizen\s+\d{4}$/i.test(persona.name) || /^Real User$/i.test(persona.name);
+  const parts = (profile.contact.address ?? "").split(",").map((p) => p.trim()).filter(Boolean);
+  const city = parts.length >= 2 ? parts[parts.length - 2] : "";
+  const state = parts.length >= 1 ? parts[parts.length - 1].replace(/\s+\d{6}.*$/, "").replace(/\s*\(DigiLocker mock, sample\)$/, "") : "";
+  return {
+    ...persona,
+    name: placeholderName && profile.identity.name ? profile.identity.name : persona.name,
+    city: persona.city || city,
+    state: persona.state || state,
+    mobile: persona.mobile || profile.contact.mobile || "",
+    banks: persona.banks.length ? persona.banks : profile.banks,
+  };
+}
+
+/**
+ * The part of the profile the Agentic runtime may see (plan.md §5.5: identifiers stay out of the
+ * model's reach). First name, a masked refund account, residency, the DigiLocker link and the mode —
+ * no PAN, no Aadhaar, no address.
+ */
+export interface ProfileSeed {
+  firstName?: string;
+  refundAccount?: string;
+  residency: Residency;
+  digilockerLinked: boolean;
+  mode: OnboardingMode;
+}
+
+export function profileSeed(profile: OnboardingProfile): ProfileSeed {
+  const refund = profile.banks.find((b) => b.id === profile.refundAccountId);
+  const first = profile.identity.name.trim().split(/\s+/)[0];
+  // "Citizen 1982" is the sign-up placeholder, not a name to greet with.
+  const greetable = first && !/^citizen$/i.test(first) && !/^real$/i.test(first);
+  return {
+    firstName: greetable ? first : undefined,
+    refundAccount: refund ? `${refund.bank} ${refund.maskedNumber}` : undefined,
+    residency: profile.residency,
+    digilockerLinked: profile.connections.digilocker.linked,
+    mode: profile.mode,
+  };
 }

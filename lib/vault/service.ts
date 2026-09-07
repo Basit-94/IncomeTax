@@ -174,10 +174,12 @@ export class VaultService {
    * `synthetic`, with its fields as an extraction so the agent reads it the
    * same way it reads an upload. Idempotent per owner/type/year.
    */
-  async importIssued(input: { owner: Owner; assessmentYear: string; docType: VaultDocType; title: string; issuer: string; fields: ExtractedFields; actor?: AccessAuditEntry["actor"]; runId?: string }): Promise<StoredDocumentMeta> {
+  async importIssued(input: { owner: Owner; assessmentYear: string; docType: VaultDocType; title: string; issuer: string; fields: ExtractedFields; actor?: AccessAuditEntry["actor"]; runId?: string; uri?: string }): Promise<StoredDocumentMeta> {
     const actor = input.actor ?? "agent";
+    // Two identity cards share a docType (OTHER); the DigiLocker URI keeps their ids apart (2026-09-07).
+    const suffix = input.uri ? input.uri.toLowerCase().replace(/[^a-z0-9]+/g, "_") : `${input.docType.toLowerCase()}_${input.assessmentYear.replace("-", "")}_${input.owner.pan.toLowerCase()}`;
     const meta: StoredDocumentMeta = {
-      id: `doc_issued_${input.docType.toLowerCase()}_${input.assessmentYear.replace("-", "")}_${input.owner.pan.toLowerCase()}`,
+      id: `doc_issued_${suffix}`,
       ownerPan: input.owner.pan,
       ownerKind: input.owner.kind,
       assessmentYear: input.assessmentYear,

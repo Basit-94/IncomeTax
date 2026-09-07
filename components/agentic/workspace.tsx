@@ -590,9 +590,22 @@ function QuestionCard({
 
 /** The one form: several small figures answered together, sent as one JSON object (user direction 2026-09-06). */
 function FormFields({ q, s, disabled, onAnswer }: { q: Question; s: AgenticStrings; disabled: boolean; onAnswer: (v: string) => void }) {
-  const [values, setValues] = useState<Record<string, string | boolean>>({});
   const fields = q.fields ?? [];
+  // Values carried from an earlier year arrive pre-selected (2026-09-07) and are tagged "same as last year".
+  const [values, setValues] = useState<Record<string, string | boolean>>(() => {
+    const init: Record<string, string | boolean> = {};
+    for (const f of fields) if (f.defaultValue !== undefined) init[f.key] = typeof f.defaultValue === "boolean" ? f.defaultValue : String(f.defaultValue);
+    return init;
+  });
   const complete = fields.every((f) => f.type !== "yes_no" || typeof values[f.key] === "boolean");
+  const toggleMulti = (key: string, value: string) => {
+    setValues((v) => {
+      const current = String(v[key] ?? "").split(",").filter(Boolean);
+      // "none" clears the rest, and any real chip clears "none".
+      const next = value === "none" ? (current.includes("none") ? [] : ["none"]) : current.includes(value) ? current.filter((x) => x !== value) : [...current.filter((x) => x !== "none"), value];
+      return { ...v, [key]: next.join(",") };
+    });
+  };
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const out: Record<string, number | boolean | string> = {};
@@ -608,11 +621,26 @@ function FormFields({ q, s, disabled, onAnswer }: { q: Question; s: AgenticStrin
     <form className="space-y-3" onSubmit={submit}>
       {fields.map((f) => {
         const id = `${q.id}-${f.key}`;
+        const carried = f.defaultValue !== undefined && String(values[f.key] ?? "") === String(f.defaultValue);
         return (
           <div key={f.key} className="space-y-1">
-            <label className="block text-sm font-semibold text-ink" htmlFor={id}>{f.label}</label>
+            <label className="block text-sm font-semibold text-ink" htmlFor={id}>
+              {f.label}
+              {carried && <span className="ms-2 inline-block rounded-full bg-amber-bg px-2 py-0.5 text-[10.5px] font-semibold text-amber-ink align-middle">{s.carriedFromLastYear}</span>}
+            </label>
             {f.hint && <p className="text-xs text-ink-3">{f.hint}</p>}
-            {f.type === "number" ? (
+            {f.type === "multi" || (f.type === "choice" && (f.choices?.length ?? 0) <= 5) ? (
+              <div className="flex flex-wrap gap-2" role="group" aria-label={f.label}>
+                {f.choices?.map((c) => {
+                  const on = f.type === "multi" ? String(values[f.key] ?? "").split(",").includes(c.value) : values[f.key] === c.value;
+                  return (
+                    <button key={c.value} type="button" disabled={disabled} aria-pressed={on} onClick={() => (f.type === "multi" ? toggleMulti(f.key, c.value) : setValues((v) => ({ ...v, [f.key]: c.value })))} className={`rounded-full h-[34px] px-3.5 text-[12.5px] font-semibold cursor-pointer disabled:opacity-50 border-[1.5px] transition-colors ${on ? "border-money bg-amber-bg text-amber-ink" : "border-glass-edge glass-flat text-ink-2 hover:text-ink"}`}>
+                      {c.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : f.type === "number" ? (
               <input id={id} inputMode="numeric" placeholder="0" value={String(values[f.key] ?? "")} onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))} disabled={disabled} className="w-full h-[46px] rounded-[14px] border-[1.5px] border-glass-edge bg-paper-3 px-4 text-[15px] text-ink font-mono tabular-nums focus:outline-none focus:border-money focus:ring-[3px] focus:ring-money/20" />
             ) : f.type === "yes_no" ? (
               <div className="flex gap-2" role="group" aria-label={f.label}>

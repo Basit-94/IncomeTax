@@ -60,6 +60,8 @@ export interface SayInput {
   maxWords?: number;
   /** Only the recommendation turn may use advice words. */
   allowAdvice?: boolean;
+  /** `chat` (default) for a turn; `review` for a result that carries a table of figures the model must keep. */
+  shape?: "chat" | "review" | "explanation";
 }
 
 const META = /\b(no (jargon|fluff|nonsense)|jargon|plain (words|english|language)|honest(ly)?( speaking)?|friend who|happens to be an? (ca|chartered)|say-so|i'?m here to help|as an? (ai|assistant|friend)|i promise|rest assured|don'?t worry|no worries)\b/i;
@@ -105,6 +107,7 @@ export async function say(ctx: SayContext, input: SayInput): Promise<string> {
     `Intent: ${input.intent}`,
     input.facts?.length ? `Facts you may state, figures exactly as written:\n${input.facts.map((f) => `- ${f}`).join("\n")}` : "State no figures, dates or amounts.",
     input.mustContain?.length ? `Must mention: ${input.mustContain.join("; ")}.` : "",
+    input.shape === "review" ? "If the facts include a markdown table, keep the table rows exactly as given and say the rest in your own words around it." : "",
     ctx.name ? `The person's first name is ${ctx.name}; use it at most once, only if natural.` : "No name is known; do not invent one.",
     ctx.recent.length ? `Already said in this conversation (do not repeat the wording):\n${ctx.recent.map((r) => `- ${r.slice(0, 160)}`).join("\n")}` : "",
     `At most ${input.maxWords ?? 60} words.`,
@@ -114,7 +117,7 @@ export async function say(ctx: SayContext, input: SayInput): Promise<string> {
   ]
     .filter(Boolean)
     .join("\n");
-  const out = await ctx.model.phrase({ brief, lang: ctx.lang, langEnglishName: languageOption(ctx.lang).english, shape: "chat" });
+  const out = await ctx.model.phrase({ brief, lang: ctx.lang, langEnglishName: languageOption(ctx.lang).english, shape: input.shape ?? "chat" });
   if (!out) {
     await ctx.onFallback?.(ctx.model.lastFailure?.() ?? "no reply");
     return input.fallback;

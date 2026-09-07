@@ -40,9 +40,15 @@ import type { VaultService } from "../vault/service";
 import { KNOWLEDGE_RELEASE } from "./flags";
 import { hasIntakeSignal, intakeAcknowledgement, isDocumentAnswer, nextIntakeQuestion, parseSituation } from "./intake";
 import { nullModel, type ModelAdapter } from "./model";
-import { detectSmallTalk, firstName, smallTalkReply, warmLine } from "./voice";
+import { detectSmallTalk, firstName, smallTalkReply } from "./voice";
 import { detectRegister, say, type SayInput } from "./say";
 import { consentItems, fetchedFacts, listIssuedDocuments } from "./digilocker";
+import { DEDUCTION_FIELDS, yearAnswersFrom } from "./intake";
+import { MUNSHI_CHARACTER, whoIsMunshi } from "./munshi-character";
+import type { DigiLockerProvider } from "../digilocker/types";
+import type { ProfileSeed } from "../onboarding";
+import type { ExtractedFields } from "../compliance/pdfExtract";
+import { carryDefaults, emptyYearIntake, gapGroups, inferForm, regimeLean } from "../return/year-intake";
 import { buildPlan, classifyByRules, isCapabilityInquiry, isPaymentInquiry, isTaxInformationQuestion, nextStep, setStep, taskTitle, type PlanningFacts } from "./planner";
 import { CHALLAN_MAJOR_HEAD_LABEL, CHALLAN_MINOR_HEAD_LABEL, splitTaxAndCess, syntheticChallanIdentifiers } from "../compliance/challan280";
 import type { SelfAssessmentPayment } from "../../context/TaxReturnContext";
@@ -58,6 +64,8 @@ export interface RuntimeDeps {
   returns: ReturnSnapshotStore;
   vault: VaultService | null;
   model: ModelAdapter;
+  /** The DigiLocker mock's record store (2026-09-07); absent in tests, where the PAN-seeded record is rebuilt in-process. */
+  locker?: DigiLockerProvider;
   budget: ReturnType<typeof runBudget>;
   clock: () => string;
   /** Today's date for provenance/filing stamps; injected so tests are stable. */
@@ -75,7 +83,7 @@ const MAX_STEPS_PER_CALL = 25;
 
 /* ----------------------------------------------------------------- create -- */
 
-export async function createRun(deps: RuntimeDeps, owner: Owner, opts: { message?: string; task?: RunTask; lang: Lang }): Promise<Run> {
+export async function createRun(deps: RuntimeDeps, owner: Owner, opts: { message?: string; task?: RunTask; lang: Lang; profile?: ProfileSeed }): Promise<Run> {
   const s = strings(opts.lang);
   const task: RunTask = opts.task ?? "explain";
   const run: Run = {
@@ -94,6 +102,7 @@ export async function createRun(deps: RuntimeDeps, owner: Owner, opts: { message
       sources: [],
       usage: { toolCalls: 0, modelCalls: 0, tokens: 0 },
       lastUserMessage: opts.message ? redactText(opts.message).text : undefined,
+      profile: opts.profile,
     },
     createdAt: deps.clock(),
     updatedAt: deps.clock(),
@@ -358,7 +367,15 @@ async function emitGreetingCapabilities(
         "",
         "Which task would you like to perform right now?",
       ].join("\n");
-  await emit({ type: "message", role: "assistant", text: intro });
+  // Chat first, template last (2026-09-07): Munshi ji greets in his own words from the capability list; the
+  // numbered menu is the fallback, never the first choice.
+  const capabilityFacts = intro.split("\n").filter((line) => line.trim().length > 0);
+  await speak(deps, owner, run, emit, {
+    intent: "Greet the person as Munshi ji and, in your own words, say what you can do for their FY 2025-26 / AY 2026-27 return — the seven things in the facts, kept short — then ask which to start with.",
+    facts: capabilityFacts,
+    fallback: intro,
+    maxWords: 150,
+  });
 
   const q: Question = {
     id: newId("q"),
@@ -421,7 +438,14 @@ async function emitTaskCapabilitiesSummary(
         "Type any number (1–7), name a task, or ask any tax question to continue!",
       ].join("\n");
 
-  await emit({ type: "message", role: "assistant", text });
+  // Chat first (2026-09-07): Munshi ji closes the task in a sentence and offers the next step in his own words;
+  // the numbered menu is the fallback when the model is off. The task chips under the composer are the UI's.
+  await speak(deps, owner, run, emit, {
+    intent: "Close the task as Munshi ji in one or two sentences: what just finished, then an easy invitation to the next thing — filing, comparing regimes, reconciling AIS and 26AS, advance tax and challan 280, a notice, the refund tracker or the vault. No numbered list.",
+    facts: [headerNote ?? "Task completed.", "Next steps on offer: prepare & file the return; compare the two regimes; reconcile AIS and 26AS; advance tax and challan 280; notice defence; refund tracker; the tax vault. A number 1 to 7 or the task's name starts it."],
+    fallback: text,
+    maxWords: 70,
+  });
 }
 
 async function stepClassify(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>) {
@@ -439,11 +463,28 @@ async function stepClassify(deps: RuntimeDeps, owner: Owner, run: Run, s: Return
     return;
   }
 
-  // Greetings ("hi", "hello", "namaste"), help, who-are-you, and capability inquiries present all 7 tasks
+  // "Who are you?" — including "aap kon h?" — gets Munshi ji introducing himself, never a menu (2026-09-07).
+  if (talk === "who") {
+    run.state.smallTalk = talk;
+    run.task = "explain";
+    run.state.steps = buildPlan(planningFacts("explain", null, null), s, run.state.steps).map((p) => ({ ...p, state: "done" as const }));
+    const name = firstName(owner.displayName);
+    await speak(deps, owner, run, emit, {
+      intent: "Introduce yourself as Munshi ji in one breath — who you are, what you do for the person's return, what you never do — and ask what brought them here. No menu, no list, no capabilities tour.",
+      facts: [`Name: ${MUNSHI_CHARACTER.name} — ${MUNSHI_CHARACTER.role}.`, "Reads the person's papers — Form 16, AIS — and names the source of every figure.", "Never files or pays anything without the person's say-so; everything here is a simulation."],
+      mustContain: ["Munshi"],
+      fallback: whoIsMunshi(run.lang, run.state.register ?? "plain", name),
+      maxWords: 75,
+    });
+    run.status = "completed";
+    await emit({ type: "status", status: "completed" });
+    return;
+  }
+
+  // Greetings ("hi", "hello", "namaste"), help and capability inquiries present all 7 tasks
   const isGreetingOrCapability =
     talk === "hello" ||
     talk === "help" ||
-    talk === "who" ||
     isCapabilityInquiry(text) ||
     /^(hi+|hello+|hey+|namaste|greetings|vanakkam|salaam)\b/i.test(text.trim());
 
@@ -555,11 +596,27 @@ async function speak(deps: RuntimeDeps, owner: Owner, run: Run, emit: (p: RunEve
   return text;
 }
 
+/**
+ * A task's result as Munshi ji would say it (policy, docs/VOICE.md, 2026-09-07): every figure, section, date
+ * and table row is a fact he must keep; the prose around them is his. The assembled template is the fallback
+ * when the model is off or its reply fails the check. Receipts and review cards never come through here.
+ */
+async function speakResult(deps: RuntimeDeps, owner: Owner, run: Run, emit: (p: RunEventPayload) => Promise<unknown>, lines: string[], intent = "Deliver this result as Munshi ji: keep every figure, section and date exactly as given and any table rows as they are, and say everything else in your own words — the useful thing first."): Promise<string> {
+  const text = lines.join("\n");
+  const facts = lines.map((l) => l.trim()).filter(Boolean);
+  return speak(deps, owner, run, emit, { intent, facts, fallback: text, maxWords: Math.max(120, Math.ceil(text.split(/\s+/).length * 1.2)), allowAdvice: true, shape: "review" });
+}
+
 /** What a read Form 16 said, as facts the conversation may state verbatim. */
-function fieldFacts(fields: { grossSalary?: number; tds?: number; employerName?: string }, lang: Lang): string[] {
+function fieldFacts(fields: Form16Fields, lang: Lang): string[] {
   const facts: string[] = [];
   if (fields.grossSalary !== undefined) facts.push(`Salary for the year per Form 16${fields.employerName ? ` from ${fields.employerName}` : ""}: ${formatMoney(fields.grossSalary, lang)}`);
   if (fields.tds !== undefined) facts.push(`Tax already deducted from salary (TDS) per Form 16: ${formatMoney(fields.tds, lang)}`);
+  for (const e of fields.exemptAllowances ?? []) facts.push(`Allowance exempt u/s ${e.section} per Form 16: ${formatMoney(e.amount, lang)}`);
+  for (const c of fields.employerClaims ?? []) facts.push(`Reported by the employer under ${c.section}: ${formatMoney(c.amount, lang)}`);
+  for (const row of fields.otherIncome ?? []) facts.push(`${row.kind === "interest" ? "Interest" : "Dividends"} per AIS from ${row.reporter}: ${formatMoney(row.amount, lang)}`);
+  if (fields.ltcg112A) facts.push(`Long-term gains on listed shares/funds per AIS: ${formatMoney(fields.ltcg112A.gain, lang)}`);
+  for (const t of fields.tdsOther ?? []) facts.push(`Tax deducted u/s ${t.section} by ${t.reporter} per AIS: ${formatMoney(t.amount, lang)}`);
   return facts;
 }
 
@@ -695,6 +752,14 @@ async function stepGather(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnTy
   }
   run.state.sources = dedupeSources([...run.state.sources, ...sources]);
   await emit({ type: "source_lookup", sources: run.state.sources });
+  // The person's locker record (generated once, kept) is loaded now so the consent card lists their own papers.
+  if (deps.locker) {
+    try {
+      await deps.locker.record(owner, AY);
+    } catch {
+      // the in-process rebuild in lib/agentic/digilocker.ts stands in
+    }
+  }
   run.state.steps = buildPlan(planningFacts(run.task, snapshot, documentsAvailable), s, run.state.steps);
 
   // Cross-mode context: acknowledge already-filed return or figures already populated from manual session
@@ -720,8 +785,26 @@ async function stepGather(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnTy
 }
 
 /** Read a stored Form 16 and stage an import when its figures differ from the employer's prefill. */
-type Form16Fields = { grossSalary?: number; tds?: number; employerName?: string };
-async function stageForm16(deps: RuntimeDeps, run: Run, ctx: ToolContext, snapshot: VersionedReturn, documentId: string, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>): Promise<Form16Fields | null> {
+/** The document rows the tool hands back — never a PAN, name or DOB. */
+type Form16Fields = Omit<ExtractedFields, "pan" | "name" | "dob">;
+const deps_now = () => new Date().toISOString();
+
+/** The return as it would stand with the staged commands applied — pure, never persisted; for previews and the verdict. */
+function previewState(snapshot: VersionedReturn, cmds: ReturnCommand[]): ReturnState {
+  let state = snapshot.state;
+  for (const c of cmds) {
+    const r = applyReturnCommand(state, c);
+    if (r.ok) state = r.state;
+  }
+  return state;
+}
+
+/**
+ * Read a stored Form 16 or AIS and stage what it carries: the salary and TDS as before, and since 2026-09-07 the
+ * Part B rows (exemptions u/s 10, professional tax, employer-reported Chapter VI-A) and the AIS lines (interest,
+ * dividends, listed-equity LTCG, other TDS) — one `import_document` per document, plus the year's intake record.
+ */
+async function stageForm16(deps: RuntimeDeps, run: Run, ctx: ToolContext, snapshot: VersionedReturn, documentId: string, s: ReturnType<typeof strings>, emit: (p: RunEventPayload) => Promise<unknown>, kind: "FORM_16" | "AIS" = "FORM_16"): Promise<Form16Fields | null> {
   const read = await runTool("read_document_fields", { documentId }, ctx);
   run.state.usage.toolCalls += 1;
   if (!read.ok) return null;
@@ -729,15 +812,26 @@ async function stageForm16(deps: RuntimeDeps, run: Run, ctx: ToolContext, snapsh
   const suspicious = (rr.issues ?? []).some((i) => stripInjection(i).suspicious);
   if (suspicious) await emit({ type: "message", role: "assistant", text: s.injectionNotice });
   if (rr.readable && rr.fields && rr.subjectMatchesOwner !== false) {
-    const salary = snapshot.state.baselinePersona.facts.find((f) => f.kind === "salary")?.amount;
+    const f = rr.fields;
+    const salary = snapshot.state.baselinePersona.facts.find((x) => x.kind === "salary")?.amount;
     const tds = snapshot.state.baselinePersona.taxPaid.find((t) => t.section.includes("192"))?.amount;
-    const already = (run.state.pendingCommands ?? []).some((c) => c.type === "import_document");
-    if (!already && ((rr.fields.grossSalary !== undefined && rr.fields.grossSalary !== salary) || (rr.fields.tds !== undefined && rr.fields.tds !== tds))) {
-      run.state.pendingCommands = [
-        ...(run.state.pendingCommands ?? []),
-        { type: "import_document", today: deps.today(), document: { fileName: "document.pdf", kind: "FORM_16", ingestedAt: deps.clock(), extracted: { grossSalary: rr.fields.grossSalary, tds: rr.fields.tds } } },
-      ];
+    const cmds = run.state.pendingCommands ?? [];
+    const already = cmds.some((c) => c.type === "import_document" && c.document.kind === kind);
+    const carriesRows = (f.otherIncome?.length ?? 0) > 0 || !!f.ltcg112A || (f.tdsOther?.length ?? 0) > 0 || (f.employerClaims?.length ?? 0) > 0;
+    const salaryDiffers = (f.grossSalary !== undefined && f.grossSalary !== salary) || (f.tds !== undefined && f.tds !== tds);
+    if (!already && (salaryDiffers || carriesRows)) {
+      cmds.push({ type: "import_document", today: deps.today(), document: { fileName: "document.pdf", kind, ingestedAt: deps.clock(), extracted: f } });
     }
+    if (kind === "FORM_16" && f.grossSalary !== undefined && !cmds.some((c) => c.type === "record_year_intake" && c.patch.read?.salary)) {
+      cmds.push({
+        type: "record_year_intake", assessmentYear: AY,
+        patch: {
+          read: { salary: { gross: f.grossSalary, exempt10: f.exemptAllowances ?? [], professionalTax: f.professionalTax, tdsSalary: f.tds, employerName: f.employerName, tan: f.tan }, sftFlags: [] },
+          sources: { chosen: typeof run.state.answers.source === "string" && run.state.answers.source.startsWith("upload:") ? "upload" : (run.state.answers.source as "digilocker" | "vault" | "manual" | undefined) ?? "upload", documents: { form16: [documentId] } },
+        },
+      });
+    }
+    run.state.pendingCommands = cmds;
   }
   await emit({ type: "tool_outcome", tool: "read_document_fields", ok: true, summary: rr.readable ? "fields read" : "not readable" });
   return rr.readable && rr.fields && rr.subjectMatchesOwner !== false ? rr.fields : null;
@@ -754,9 +848,9 @@ async function recordUploadedDocument(deps: RuntimeDeps, owner: Owner, run: Run,
   ]);
   run.state.documentTypes = [...new Set([...(run.state.documentTypes ?? []), meta.docType])];
   let fields: Form16Fields | null = null;
-  if (meta.docType === "FORM_16") {
+  if (meta.docType === "FORM_16" || meta.docType === "ANNUAL_INFO_STATEMENT") {
     const ctx: ToolContext = { owner, runId: run.id, assessmentYear: AY, vault: deps.vault, returns: deps.returns, store: deps.store, today: deps.today() };
-    fields = await stageForm16(deps, run, ctx, snapshot, meta.id, s, emit);
+    fields = await stageForm16(deps, run, ctx, snapshot, meta.id, s, emit, meta.docType === "FORM_16" ? "FORM_16" : "AIS");
   }
   await emit({ type: "source_lookup", sources: run.state.sources });
   if (!quiet) {
@@ -782,9 +876,14 @@ async function absorbAnswers(deps: RuntimeDeps, owner: Owner, run: Run, snapshot
   if (typeof a.details === "string" && a.details_parsed === undefined) {
     try {
       const obj = JSON.parse(a.details) as Record<string, unknown>;
-      for (const k of ["salary_amount", "pf_amount", "health_amount", "interest_amount"]) {
+      for (const k of ["salary_amount", "interest_amount", ...DEDUCTION_FIELDS.map((d) => d.key)]) {
         const v = obj[k];
         if (typeof v === "number" && Number.isFinite(v)) a[k] = Math.max(0, Math.round(v));
+      }
+      // The year's groups (2026-09-07): where they lived, anything else, who they work for.
+      for (const k of ["housing", "extras", "employer_category"]) {
+        const v = obj[k];
+        if (typeof v === "string" && v) a[k] = v.slice(0, 200);
       }
       if (typeof obj.resident === "boolean") a.resident = obj.resident;
     } catch {
@@ -802,15 +901,21 @@ async function absorbAnswers(deps: RuntimeDeps, owner: Owner, run: Run, snapshot
   // DigiLocker (mock): fetched only after the consent card was answered yes, and said so with the figures.
   if (a.digilocker_consent === true && a.digilocker_done === undefined) {
     a.digilocker_done = true;
-    const issued = listIssuedDocuments(owner, AY);
+    // The pull (2026-09-07): the identity cards and this year's papers, one activity line each so the person
+    // watches them arrive, stored in the vault as issued documents and read the way an upload is read.
+    const issued = listIssuedDocuments(owner, AY, "all");
     if (deps.vault) {
       for (const doc of issued) {
-        const meta = await deps.vault.importIssued({ owner, assessmentYear: AY, docType: doc.docType, title: doc.title, issuer: doc.issuer, fields: doc.fields, actor: "agent", runId: run.id });
+        await emit({ type: "activity", text: `${s.fetchingFromDigiLocker} ${doc.title} · ${doc.issuer}` });
+        const meta = await deps.vault.importIssued({ owner, assessmentYear: AY, docType: doc.docType, title: doc.title, issuer: doc.issuer, fields: doc.fields, actor: "agent", runId: run.id, uri: doc.uri });
         await recordUploadedDocument(deps, owner, run, snapshot, meta.id, s, emit, true);
       }
     }
     const facts = [`${s.fetchedFromDigiLocker} ${issued.map((d) => d.title).join("; ")}.`, ...fetchedFacts(issued, run.lang)];
-    await speak(deps, owner, run, emit, { intent: "Say which documents were fetched from DigiLocker and state the figures read from the Form 16.", facts, mustContain: ["DigiLocker"], fallback: facts.join("\n"), maxWords: 90 });
+    await speak(deps, owner, run, emit, {
+      intent: "Say, as Munshi ji, what came over from DigiLocker — the identity cards and this year's papers — and state the figures the Form 16 and AIS gave, each with where it came from.",
+      facts, mustContain: ["DigiLocker"], fallback: facts.join("\n"), maxWords: 120,
+    });
   }
   if (a.digilocker_consent === false && a.source === "digilocker") a.source = "manual";
   // The vault's own Form 16: read only after consent.
@@ -871,7 +976,7 @@ async function handleChosenTask(
         "",
         `There is nothing more to file. You can download or view your signed **Form ITR-V (Acknowledgement)** directly from your **Citizen Tax Vault**.`,
       ].join("\n");
-      await emit({ type: "message", role: "assistant", text: msg });
+      await speakResult(deps, owner, run, emit, msg.split("\n"));
       await emitTaskCapabilitiesSummary(deps, owner, run, s, emit, "Your return for AY 2026-27 is already submitted.");
       run.status = "completed";
       await emit({ type: "status", status: "completed" });
@@ -925,7 +1030,7 @@ async function handleChosenTask(
       }
       run.title = saving > 0 ? `Regime Comparison · ${cheaper === "new" ? "New" : "Old"} saves ${formatMoney(saving, run.lang)}` : "Regime Comparison · AY 2026-27";
       await deps.store.saveRun(run);
-      await emit({ type: "message", role: "assistant", text: lines.join("\n") });
+      await speakResult(deps, owner, run, emit, lines);
       await emitTaskCapabilitiesSummary(deps, owner, run, s, emit, "Tax regime comparison completed.");
       run.status = "completed";
       await emit({ type: "status", status: "completed" });
@@ -941,7 +1046,7 @@ async function handleChosenTask(
       ];
       run.title = "Regime Comparison · AY 2026-27";
       await deps.store.saveRun(run);
-      await emit({ type: "message", role: "assistant", text: lines.join("\n") });
+      await speakResult(deps, owner, run, emit, lines);
       await emitTaskCapabilitiesSummary(deps, owner, run, s, emit, "Tax regime comparison completed.");
       run.status = "completed";
       await emit({ type: "status", status: "completed" });
@@ -971,7 +1076,7 @@ async function handleChosenTask(
       "",
       `**Reconciliation Result**: All withholding tax credits and employer-reported income align perfectly with official department records. Zero notice risk detected.`,
     ];
-    await emit({ type: "message", role: "assistant", text: lines.join("\n") });
+    await speakResult(deps, owner, run, emit, lines);
     await emitTaskCapabilitiesSummary(deps, owner, run, s, emit, "Reconciliation audit completed.");
     run.status = "completed";
     await emit({ type: "status", status: "completed" });
@@ -1012,7 +1117,7 @@ async function handleChosenTask(
         "",
         `You can simulate a ₹0 / Nil Challan clearance below, or proceed directly to return filing.`,
       ];
-      await emit({ type: "message", role: "assistant", text: lines.join("\n") });
+      await speakResult(deps, owner, run, emit, lines);
 
       const choices = [
         { value: "pay_challan_upi", label: "⚡ Simulate UPI / QR (₹0 — Nil Due)" },
@@ -1057,7 +1162,7 @@ async function handleChosenTask(
         ? `This figure incorporates your Chartered Accountant's audited deductions and recommendations under the **${regime === "old" ? "Old Regime" : "New Regime"}**.`
         : `Select a payment method below to simulate your Challan 280 transaction. Or, you can **Review with a CA** to audit deductions and reduce this payable amount before payment.`,
     ];
-    await emit({ type: "message", role: "assistant", text: lines.join("\n") });
+    await speakResult(deps, owner, run, emit, lines);
 
     const choices = [
       { value: "pay_challan_upi", label: `⚡ Simulate UPI / QR (${formatMoney(amountToPay, run.lang)})` },
@@ -1108,7 +1213,7 @@ async function handleChosenTask(
           "",
           `No scrutiny notices, tax demand intimations, or filing defect communications have been issued for your PAN for AY 2026-27. Your return status is in good standing.`,
         ];
-    await emit({ type: "message", role: "assistant", text: lines.join("\n") });
+    await speakResult(deps, owner, run, emit, lines);
     await emitTaskCapabilitiesSummary(deps, owner, run, s, emit, "Notice defense & compliance review completed.");
     run.status = "completed";
     await emit({ type: "status", status: "completed" });
@@ -1140,7 +1245,7 @@ async function handleChosenTask(
           "",
           `Your return for AY 2026-27 has not been submitted yet. Once simulated or official filing is complete, live refund tracking through the SBI refund banker will activate automatically.`,
         ];
-    await emit({ type: "message", role: "assistant", text: lines.join("\n") });
+    await speakResult(deps, owner, run, emit, lines);
     await emitTaskCapabilitiesSummary(deps, owner, run, s, emit, "Live refund tracking status checked.");
     run.status = "completed";
     await emit({ type: "status", status: "completed" });
@@ -1163,7 +1268,7 @@ async function handleChosenTask(
       "",
       `You can open, preview, or print any of these documents directly by clicking **Tax Vault** in the top navigation.`,
     ].join("\n");
-    await emit({ type: "message", role: "assistant", text: msg });
+    await speakResult(deps, owner, run, emit, msg.split("\n"));
     await emitTaskCapabilitiesSummary(deps, owner, run, s, emit, "Citizen Tax Vault inventory inspected.");
     run.status = "completed";
     await emit({ type: "status", status: "completed" });
@@ -1206,7 +1311,7 @@ async function handleChallanPaymentExecution(
         "",
         `You do not have any pending self-assessment tax to pay under Section 140A. You can proceed directly to return filing!`,
       ];
-      await emit({ type: "message", role: "assistant", text: caLines.join("\n") });
+      await speakResult(deps, owner, run, emit, caLines);
       if (run.task === "prepare_salaried_return") {
         run.status = "running";
         return;
@@ -1224,7 +1329,7 @@ async function handleChallanPaymentExecution(
       "",
       `Your CA will log in via the CA Portal, review your draft return, audit eligible deductions and allowances (80C, 80D, 80CCD, HRA, 24b), and update the figures. Once your CA completes their review, you can inspect the side-by-side diff and adopt the updated deductions right here!`,
     ];
-    await emit({ type: "message", role: "assistant", text: caLines.join("\n") });
+    await speakResult(deps, owner, run, emit, caLines);
 
     const nextQ: Question = {
       id: newId("q"),
@@ -1391,14 +1496,29 @@ function nextQuestion(run: Run, owner: Owner, snapshot: VersionedReturn, s: Retu
     // A return that carries a salary (on record or staged from a Form 16), or an answer that said "salary", is a salaried
     // situation even when the sentence did not say so.
     const situation = { ...sit, employment: sit.employment || salaryStaged || p.facts.some((f) => f.kind === "salary") || a.income_source === "salary" };
+    // The one form is built from what the papers could not answer (lib/return/year-intake.ts), previewed over the
+    // commands staged so far so a Form 16 read a moment ago already counts.
+    const preview = previewState(snapshot, cmds);
+    const intake = preview.yearIntake ?? emptyYearIntake(AY, deps_now());
+    const gaps = gapGroups(preview.persona, intake);
     const q = nextIntakeQuestion({
       situation, snapshot, answers: a, vaultAvailable, documentTypes: run.state.documentTypes ?? [], ownerKind: owner.kind,
       vaultForm16: run.state.vaultForm16 ?? [],
       salaryStaged,
       digilockerItems: consentItems(listIssuedDocuments(owner, AY)),
+      digilockerLinked: run.state.profile?.digilockerLinked ?? false,
+      residencyKnown: !!run.state.profile,
+      gaps,
+      carried: intake.carriedFrom ? carryDefaults(intake) : undefined,
       s, lang: run.lang,
     });
     if (q) return q;
+    // Nothing left to ask: the department's own statements are the inventory, and the person has seen them.
+    if (a.details === undefined) {
+      a.details = "{}";
+      a.details_parsed = true;
+      a.inventory_confirmed = true;
+    }
   }
   // Reconciliation still asks its own pair; a declared "other" head is then judged by the guard.
   if (run.task === "reconcile_facts") {
@@ -1429,6 +1549,19 @@ async function stepResolve(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
     }
     for (const step of ["compute", "review", "confirm", "act", "outputs"] as const) run.state.steps = setStep(run.state.steps, step, "skipped", unsupported);
     return;
+  }
+  // The opener (2026-09-07): a run that knows the person from onboarding greets them once — name, the year,
+  // the refund account to confirm — before the source card. Phrased by the model; the template is the fallback.
+  if (run.state.profile && !run.state.openerSaid && (run.task === "prepare_salaried_return" || run.task === "compare_regimes")) {
+    run.state.openerSaid = true;
+    const p = run.state.profile;
+    const name = p.firstName ?? "";
+    const fallback = (p.refundAccount ? s.openerFallback : s.openerFallbackNoAccount).replace(" {name}", name ? ` ${name}` : "").replace("{account}", p.refundAccount ?? "").replace(/\s+/g, " ").trim();
+    const facts = [`Assessment year 2026-27 (FY 2025-26).`, ...(p.refundAccount ? [`Refunds are set to go to ${p.refundAccount}.`] : []), `The next step is this year's papers — Form 16 and AIS.`];
+    await speak(deps, owner, run, emit, {
+      intent: "Open the year's return as Munshi ji: greet the person, name the assessment year, ask in passing whether the refund account is still right, and say that this year's papers come first. Two or three short sentences.",
+      facts, fallback, maxWords: 60,
+    });
   }
   await absorbAnswers(deps, owner, run, snapshot, s, emit);
   const q = nextQuestion(run, owner, snapshot, s, !!deps.vault);
@@ -1464,7 +1597,7 @@ async function stepResolve(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
     cmds.push({ type: "declare_income", kind, amount: a.other_income_amount, label, today: deps.today() });
   }
   // Deductions from the intake count only with a record behind them; otherwise they are left out and said so.
-  const stageClaim = async (section: "80C" | "80D_SELF", amount: unknown, proof: unknown, label: string, plain: string) => {
+  const stageClaim = async (section: string, amount: unknown, proof: unknown, label: string, plain: string) => {
     if (typeof amount !== "number" || amount <= 0 || hasKind("declare_claim", (c) => c.type === "declare_claim" && c.section === section)) return;
     if (isDocumentAnswer(proof)) cmds.push({ type: "declare_claim", section, amount, label, evidenceAttached: true });
     else await emit({ type: "message", role: "assistant", text: s.intakeClaimSkipped.replace("{section}", plain) });
@@ -1477,7 +1610,42 @@ async function stepResolve(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
   if (typeof a.claim_80D === "number" && a.claim_80D > 0 && !hasKind("declare_claim", (c) => c.type === "declare_claim" && c.section === "80D_SELF")) {
     cmds.push({ type: "declare_claim", section: "80D_SELF", amount: a.claim_80D, label: "Section 80D (self-declared)", evidenceAttached: true });
   }
+  // The other deductions of the one form (2026-09-07), each behind the same proof.
+  for (const d of DEDUCTION_FIELDS) {
+    if (d.key === "pf_amount" || d.key === "health_amount") continue;
+    await stageClaim(d.section, a[d.key], a.proof, `Section ${d.section.replace("_", "(")}${d.section.includes("_") ? ")" : ""} (self-declared)`, d.section);
+  }
+  // The year's answers travel with the return, so the Manual shell reads the same intake (docs/MODES.md).
+  const yearAnswers = yearAnswersFrom(a);
+  if (Object.keys(yearAnswers).length && !hasKind("record_year_intake", () => true)) {
+    const source = typeof a.source === "string" ? (a.source.startsWith("upload:") ? "upload" : (a.source as "digilocker" | "vault" | "manual")) : "none";
+    cmds.push({ type: "record_year_intake", assessmentYear: AY, patch: { answers: yearAnswers, sources: { chosen: source, documents: { form16: [] } } } });
+  }
   run.state.pendingCommands = cmds;
+  // The verdict (2026-09-07), said once: which form fits and where the regime stands, on a preview of the return
+  // with everything staged so far. A return that needs ITR-2/3 stops here and goes to a CA with what was read.
+  if (!run.state.verdictSaid && (run.task === "prepare_salaried_return" || run.task === "compare_regimes")) {
+    run.state.verdictSaid = true;
+    const preview = previewState(snapshot, cmds);
+    const form = inferForm(preview.persona, { ...(preview.yearIntake?.answers ?? {}), ...yearAnswers }, run.state.profile?.residency ?? "resident");
+    const lean = regimeLean(preview.persona);
+    if (form.itrForm !== "ITR-1") {
+      // Said once; the shared guard below still decides what this release can and cannot do with such a return.
+      const fallback = s.verdictOtherForm.replace("{form}", form.itrForm).replace("{reasons}", form.reasons.join("; "));
+      await speak(deps, owner, run, emit, {
+        intent: `Tell the person, kindly and plainly, that their return needs ${form.itrForm} rather than ITR-1, give the reasons, and say a CA review carries everything read so far.`,
+        facts: [`Form needed: ${form.itrForm}.`, ...form.reasons.map((r) => `Reason: ${r}.`)], fallback, maxWords: 80,
+      });
+    } else {
+    const saving = formatMoney(Math.abs(lean.new - lean.old), run.lang);
+    const regimeLine = lean.lean === "new" ? s.regimeNewLeads.replace("{saving}", saving) : lean.lean === "old" ? s.regimeOldLeads.replace("{saving}", saving) : s.regimeOpen;
+    const fallback = s.verdictItr1.replace("{heads}", form.reasons[0] ?? "").replace("{regime}", regimeLine);
+    await speak(deps, owner, run, emit, {
+      intent: "Give the year's verdict as Munshi ji, in two short sentences: ITR-1 fits and why (the income heads), and where the two regimes stand.",
+      facts: [`ITR-1 fits: ${form.reasons.join("; ")}.`, regimeLine], fallback, maxWords: 70,
+    });
+    }
+  }
 }
 
 /** The return as it WOULD be after the staged commands — for computing, never persisted. */
@@ -1533,7 +1701,7 @@ async function stepCompute(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
       run.state.sources = answer.citations.map((c) => ({ kind: "rule", id: c.id, label: c.title,
         detail: `${c.locator} · ${c.reviewer} · ${c.contentHash}`, verified: false, url: c.url }));
       await emit({ type: "source_lookup", sources: run.state.sources });
-      await emit({ type: "message", role: "assistant", text: answer.text });
+      await speakResult(deps, owner, run, emit, answer.text.split("\n"), "Answer the tax question as Munshi ji: keep every figure, section number and date exactly as the facts give them, and explain the rest in your own words — the answer first, then why.");
       const smart = getSmartTaxAnswer(userMsg, run.lang);
       if (smart) {
         run.title = smart.title;
@@ -1547,7 +1715,7 @@ async function stepCompute(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
       run.title = smart.title;
       run.state.sources = smart.sources;
       await emit({ type: "source_lookup", sources: run.state.sources });
-      await emit({ type: "message", role: "assistant", text: smart.text });
+      await speakResult(deps, owner, run, emit, smart.text.split("\n"), "Answer the tax question as Munshi ji: keep every figure, section number and date exactly as the facts give them, and explain the rest in your own words — the answer first, then why.");
       await deps.store.saveRun(run);
       return;
     }
@@ -1594,7 +1762,7 @@ async function stepCompute(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
       }
     }
 
-    await emit({ type: "message", role: "assistant", text: answer.text });
+    await speakResult(deps, owner, run, emit, answer.text.split("\n"), "Answer the tax question as Munshi ji: keep every figure, section number and date exactly as the facts give them, and explain the rest in your own words — the answer first, then why.");
     return;
   }
   const snapshot = await deps.returns.get(owner, AY);
@@ -1720,19 +1888,18 @@ async function stepCompute(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnT
   }
 
   const brief = recommendationText({ cheaper, saving, taxableIncome: b.taxableIncome, totalTax: b.totalTax, refundOrDue: b.refundOrDue }, run.lang);
-  // Financial conclusions and their caveats stay deterministic: no model rephrases them. The model may
-  // add ONE warm, figure-free sentence in front (docs/VOICE.md); otherwise a deterministic lead is used.
-  let lead = s.leadRecommendation;
-  if (deps.model.name !== "none" && run.state.usage.modelCalls < deps.budget.maxModelCallsPerRun) {
-    run.state.usage.modelCalls += 1;
-    const warm = await warmLine(deps.model, { lang: run.lang, name: firstName(owner.displayName), moment: b.refundOrDue > 0 ? "recommendation_refund" : b.refundOrDue < 0 ? "recommendation_due" : "recommendation_nil" });
-    if (warm) {
-      run.state.usage.tokens += warm.tokens;
-      if (warm.tokens) await deps.store.addDailyUsage(owner, deps.today(), warm.tokens, 1);
-      if (warm.text) lead = warm.text;
-    }
-  }
-  await emit({ type: "message", role: "assistant", text: `${lead}\n${brief}\n\n${s.simulatedBadge}` });
+  // The recommendation in Munshi ji's words (2026-09-07): the figures and the conclusion come from `brief`
+  // and cannot change — the check refuses any figure not in it — the sentences around them are his. The
+  // deterministic lead + brief is the fallback; the simulated badge stays a template line.
+  const moment = b.refundOrDue > 0 ? "money is coming back to the person" : b.refundOrDue < 0 ? "tax is still due" : "nothing is owed either way";
+  await speak(deps, owner, run, emit, {
+    intent: `Give the recommendation as Munshi ji — ${moment} — in three or four short sentences: the outcome first, the figures exactly as given, then the one next step. No preamble.`,
+    facts: [brief],
+    fallback: `${s.leadRecommendation}\n${brief}`,
+    maxWords: 110,
+    allowAdvice: true,
+  });
+  await emit({ type: "message", role: "assistant", text: s.simulatedBadge });
   if (run.task === "load_demo") {
     // Nothing to confirm; outputs (if any) follow.
     run.state.steps = setStep(setStep(run.state.steps, "review", "skipped", s.noteNoAction), "confirm", "skipped", s.noteNoAction);
@@ -1788,7 +1955,7 @@ async function stepReview(deps: RuntimeDeps, owner: Owner, run: Run, s: ReturnTy
         ? `Simulate paying this balance now via Challan 280 to proceed to final filing:`
         : `Before paying, you can **Review with a CA** to audit deductions and exemptions (80C, 80D, 80CCD, HRA, 24b) to reduce or eliminate this payable amount, or simulate paying now via Challan 280:`,
     ];
-    await emit({ type: "message", role: "assistant", text: lines.join("\n") });
+    await speakResult(deps, owner, run, emit, lines);
 
     const choices = [
       { value: "pay_challan_upi", label: `⚡ Pay ${formatMoney(due, run.lang)} Now (UPI / QR)` },

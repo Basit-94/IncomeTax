@@ -82,3 +82,12 @@ icon remains where the assistant's identity is meant. States follow the product 
 Intentional generic icons that stay: the `MessageCircle` share icon in the CA share modal (WhatsApp), the
 `UserCheck` tab icons in the file-return and match-records modals (they label the citizen's own PAN, not
 the assistant), and lucide status glyphs inside pills.
+
+## Character (2026-09-07)
+
+The mascot is the face; the character is in `lib/agentic/munshi-character.ts` — who Munshi ji is (a munshi,
+the neighbourhood's account-keeper for thirty years), how he talks, how he reacts to a refund, a due, a notice,
+a wrong prefill, confusion, anxiety, praise and his own mistakes, what he never does, and his register
+(Hinglish for romanised Hindi). Every surface that speaks for Wapsi renders that file into its system prompt;
+see `docs/VOICE.md` for the natural-vs-template policy. The states above still map to moments: `working`
+while documents are pulled, `reading` on review cards, `happy`/`concerned` on the regime choice.

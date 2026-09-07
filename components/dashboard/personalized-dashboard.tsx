@@ -6,6 +6,7 @@ import type { Dict } from "../../lib/i18n";
 import {
   getPersonalization,
   type DashboardDestination,
+  type OnboardingIntent,
   type OnboardingProfile,
 } from "../../lib/onboarding";
 
@@ -19,12 +20,16 @@ interface PersonalizedDashboardProps {
   isRealMode?: boolean;
   /** T5.1: switching Simple / Full detail is one tap here, not a re-run of onboarding. */
   onModeChange?: (mode: OnboardingProfile["mode"]) => void;
+  /** The year's stated intent, from the return's intake; the headline follows it. */
+  intent?: OnboardingIntent;
+  /** Where the regime stands for this year, from the intake's verdict. */
+  regimeLean?: "new" | "old" | "open";
 }
 
 /**
- * The dashboard's first useful surface. It uses onboarding to choose the
- * destination and explanation pace, while leaving all tax outcomes to the
- * confirmed facts and engine-backed screens below.
+ * The dashboard's first useful surface. The profile (v3, 2026-09-07) carries only what never
+ * changes — identity, refund account, detail mode — so the strip below shows those; everything
+ * about this year comes from the return's intake and the engine-backed screens below.
  */
 export default function PersonalizedDashboard({
   profile,
@@ -35,16 +40,11 @@ export default function PersonalizedDashboard({
   onEdit,
   isRealMode = false,
   onModeChange,
+  intent = "file_return",
+  regimeLean = "new",
 }: PersonalizedDashboardProps) {
-  const personalization = getPersonalization(profile);
-  const focusLabels = profile.focuses
-    .filter((focus) => focus !== "not_sure")
-    .slice(0, 3)
-    .map((focus) => t.onboarding.focusOptions[focus]);
-
-  if (focusLabels.length === 0) {
-    focusLabels.push(t.onboarding.focusOptions.not_sure);
-  }
+  const personalization = getPersonalization(profile, regimeLean);
+  const refund = profile.banks.find((b) => b.id === profile.refundAccountId);
 
   return (
     <section
@@ -69,7 +69,7 @@ export default function PersonalizedDashboard({
                 return ready" — the filed state owns the headline. */}
             {hasFiled
               ? t.dashboard.personalized.headingFiled
-              : t.dashboard.personalized.heading[profile.intent]}
+              : t.dashboard.personalized.heading[intent]}
           </h2>
           <p className="text-sm leading-relaxed text-ink-2">
             {hasFiled
@@ -105,12 +105,9 @@ export default function PersonalizedDashboard({
 
       <div className="mt-5 grid gap-3 border-t border-line pt-4 sm:grid-cols-3">
         <div className="space-y-1">
-          <span className="block text-xs font-bold text-ink-3">
-            {t.dashboard.personalized.profileLabels.work}
-          </span>
-          <strong className="block text-sm text-ink">
-            {t.onboarding.professionOptions[profile.profession]}
-          </strong>
+          <span className="block text-xs font-bold text-ink-3">PAN</span>
+          <strong className="block text-sm text-ink font-mono">{profile.identity.pan || "—"}</strong>
+          {profile.identity.aadhaarLast4 && <span className="block text-xs text-ink-3">Aadhaar ····{profile.identity.aadhaarLast4}</span>}
         </div>
         <div className="space-y-1">
           <span className="block text-xs font-bold text-ink-3">
@@ -138,30 +135,20 @@ export default function PersonalizedDashboard({
           )}
         </div>
         <div className="space-y-1">
-          <span className="block text-xs font-bold text-ink-3">
-            {t.dashboard.personalized.profileLabels.history}
-          </span>
-          <strong className="block text-sm text-ink">
-            {t.onboarding.filingHistoryOptions[profile.filingHistory]}
-          </strong>
+          <span className="block text-xs font-bold text-ink-3">Refund account</span>
+          <strong className="block text-sm text-ink font-mono">{refund ? `${refund.bank} ${refund.maskedNumber}` : "—"}</strong>
+          {refund && <span className="block text-xs text-ink-3">{refund.status === "validated" ? "pre-validated" : refund.status.replace("_", " ")}</span>}
         </div>
       </div>
 
       <div className="mt-4 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1.5">
           <span className="block text-xs font-semibold text-ink">
-            {t.dashboard.personalized.focusLabel}
+            {profile.connections.digilocker.linked ? "DigiLocker linked" : "DigiLocker not linked"}
           </span>
-          <div className="flex flex-wrap gap-2">
-            {focusLabels.map((label) => (
-              <span
-                key={label}
-                className="glass-flat rounded-full px-2.5 py-1 text-xs font-semibold text-ink-2"
-              >
-                {label}
-              </span>
-            ))}
-          </div>
+          <span className="glass-flat inline-block rounded-full px-2.5 py-1 text-xs font-semibold text-ink-2">
+            {profile.residency === "resident" ? "Resident of India" : profile.residency === "nri" ? "Non-resident" : "Resident, not ordinarily resident"}
+          </span>
         </div>
         <p className="max-w-sm text-xs leading-relaxed text-ink-2 sm:text-right">
           <strong className="text-ink">{t.onboarding.regimeLabel}:</strong>{" "}

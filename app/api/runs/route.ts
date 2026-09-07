@@ -9,6 +9,16 @@ const createSchema = z.object({
   message: z.string().min(1).max(4000).optional(),
   task: z.enum(["prepare_salaried_return", "compare_regimes", "reconcile_facts", "load_demo", "explain"]).optional(),
   lang: z.string().optional(),
+  /** The onboarding profile's seed (2026-09-07) — no identifiers, by construction of `profileSeed`. */
+  profile: z
+    .object({
+      firstName: z.string().max(40).optional(),
+      refundAccount: z.string().max(80).optional(),
+      residency: z.enum(["resident", "nri", "rnor"]),
+      digilockerLinked: z.boolean(),
+      mode: z.enum(["simple", "full"]),
+    })
+    .optional(),
 });
 
 /** The owner's chats, newest first. */
@@ -41,7 +51,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "invalid_request" }, { status: 400 });
   }
   const lang = parsed.data.lang && isLang(parsed.data.lang) ? parsed.data.lang : "en";
-  const created = await createRun(deps, guard.session.owner, { message: parsed.data.message, task: parsed.data.task, lang });
+  const created = await createRun(deps, guard.session.owner, { message: parsed.data.message, task: parsed.data.task, lang, profile: parsed.data.profile });
   const owner = guard.session.owner;
   let run: import("@/lib/agentic/types").Run = created;
   if (run.status === "running") {

@@ -654,7 +654,7 @@ export const en = {
   },
 
   agent: {
-    title: "Wapsi Assistant",
+    title: "Munshi ji",
     open: "Open the assistant",
     close: "Close",
     placeholder: "Ask me to check, explain, or file\u2026",
@@ -670,8 +670,8 @@ export const en = {
     confirmButton: "Confirm and file",
     cancelButton: "Cancel",
     filingDismissed: "Okay \u2014 nothing was filed.",
-    error: "The assistant could not be reached. Your return was not touched \u2014 try again.",
-    intro: "I can check your return, explain any figure, run what-ifs, and prepare your filing. You always confirm before anything is filed.",
+    error: "Munshi ji could not be reached. Your return was not touched \u2014 try again.",
+    intro: "Munshi ji here. I can check your return, explain any figure, run what-ifs, and prepare your filing. You always confirm before anything is filed.",
     sample: "What would I save if I invested \u20b91,50,000 under 80C?",
   },
 

@@ -25,6 +25,8 @@ interface LandingProps {
   handlePanInputChange: (val: string) => void;
   handlePanSubmit: (e: React.FormEvent) => void;
   onboardingProfile: OnboardingProfile | null;
+  /** The year's stated intent (from the return's intake, v3); the hub's CTA copy follows it. */
+  yearIntent?: import("../lib/onboarding").OnboardingIntent;
   onEditOnboarding: () => void;
   onLaunchPersona?: (personaId: "sunita" | "rakesh" | "priya" | "custom", directToDashboard?: boolean) => void;
   onLaunchPan?: (pan: string) => void;
@@ -87,6 +89,7 @@ export default function Landing({
   handlePanInputChange,
   handlePanSubmit,
   onboardingProfile,
+  yearIntent = "file_return",
   onEditOnboarding,
   onLaunchPersona,
   onLaunchPan,
@@ -107,7 +110,7 @@ export default function Landing({
   const ps = getPortalStrings(lang || "en");
   const personalization = onboardingProfile ? getPersonalization(onboardingProfile) : null;
   const primaryAction = onboardingProfile
-    ? t.onboarding.intentCta[onboardingProfile.intent]
+    ? t.onboarding.intentCta[yearIntent]
     : t.landing.check;
 
   /* Same rise the fact cards use: the class lands on the next frame so the
@@ -196,7 +199,7 @@ export default function Landing({
           <div className="space-y-1 text-start">
             <span className="cap block">{t.onboarding.tailoredBadge}</span>
             <p className="pencil m-0 text-[22px] leading-tight text-amber-ink">
-              {t.onboarding.tailoredIntent(t.onboarding.intentOptions[onboardingProfile.intent].label)}
+              {t.onboarding.tailoredIntent(t.onboarding.intentOptions[yearIntent].label)}
             </p>
             <p className="m-0 text-[13px] leading-relaxed text-amber-ink/80">
               {personalization.guided ? t.onboarding.tailoredGuided : t.onboarding.tailoredQuick}.{" "}

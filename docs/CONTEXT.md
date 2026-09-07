@@ -49,7 +49,7 @@ Env (see `.env.example`): `NEXT_PUBLIC_BACKEND_URL` (default `http://localhost:8
 (hard-clamped to 4), `AGENT_DAILY_TOKEN_BUDGET`. Added 2026-09-05 (server-only unless prefixed):
 `DATABASE_URL` / `POSTGRES_URL` / `WAPSI_DATASOURCE_URL` (any one enables the durable stores),
 `WAPSI_VAULT_KEY` (32 bytes base64; without it uploads are refused), `NEXT_PUBLIC_WAPSI_AGENTIC`
-(`false` hides `/app`), `AGENT_MODEL_TIMEOUT_MS` (12000), `AGENT_MAX_TOOL_CALLS_PER_RUN` (40),
+(`false` hides `/app`), `AGENT_MODEL_TIMEOUT_MS` (code default 8000 since 2026-09-07; was 3500), `AGENT_MAX_TOOL_CALLS_PER_RUN` (40),
 `AGENT_MAX_MODEL_CALLS_PER_RUN` (12).
 
 ## 3. Routes
@@ -57,7 +57,7 @@ Env (see `.env.example`): `NEXT_PUBLIC_BACKEND_URL` (default `http://localhost:8
 | Route | File | What it is |
 |---|---|---|
 | `/` | `app/page.tsx` (~2,100 lines, `"use client"`) | **Signed out (2026-09-06): the public landing page** (`components/marketing/landing-page.tsx` — serif thesis, live fact card, "Sign in" / "Try a demo citizen" → `/signin`; no mode switch). **Signed in:** the Manual citizen journey, reached via the mode switch: onboarding → landing hub → dashboard. Unfiled returns walk a 5-step flow (facts → deductions → regime → check → file); filed returns get three tabs (overview/refund tracker, tax prefills, pending actions). |
-| `/signin` | `app/signin/page.tsx` | **Sign-in as its own page (2026-09-06; rebuilt 2026-09-07 to handoff 2):** `AuthPortal` has two tabs — **Citizen** (PAN → "New here? Create your account" link → OR → "Or sign in with a document" row → quick demo PANs) and **Chartered Accountant** (review code + PIN + optional stamp, verified with `lib/ca/ca-store` and handed to `/ca` through the read-once `sessionStorage` key `wapsi_ca_handoff` = `{code, pin, name, membershipNo}`); sign-up, document and the demo list are sub-views with a Back link (`?tab=signup|document|personas` opens them). `OtpScreen` follows (glass card, 6 mono boxes). **Onboarding for new accounts only:** `arrive({ newAccount: true })` — reached solely from the Create-account path — shows `components/onboarding.tsx` when no `wapsi_onboarding_profile` exists, saves the profile, seeds `wapsi_user_mode` from the mode answer, then shows the mode choice; every returning sign-in (PAN + OTP, demo, document) goes straight to the mode choice. "Change answers" on the dashboard reopens the questions later. A plain brand bar (language, theme, no mode switch); on phones a 56 px back-circle + title header. `lib/signin-flow.ts` verifies the code (`949494`) with the backend, saves the client session + seeded/blank `ReturnState`, tries for a server session, then `router.replace("/app")` — no filing flow starts. A stale client-only session is cleared here; `/app` redirects signed-out visitors to `/signin`. |
+| `/signin` | `app/signin/page.tsx` | **Sign-in as its own page (2026-09-06; rebuilt 2026-09-07 to handoff 2):** `AuthPortal` has two tabs — **Citizen** (PAN → "New here? Create your account" link → OR → "Or sign in with a document" row → quick demo PANs) and **Chartered Accountant** (review code + PIN + optional stamp, verified with `lib/ca/ca-store` and handed to `/ca` through the read-once `sessionStorage` key `wapsi_ca_handoff` = `{code, pin, name, membershipNo}`); sign-up, document and the demo list are sub-views with a Back link (`?tab=signup|document|personas` opens them). `OtpScreen` follows (glass card, 6 mono boxes). **Onboarding v3, for new accounts only (2026-09-07 — "only what never changes"):** `arrive({ newAccount: true })` — reached solely from the Create-account path — shows `components/onboarding.tsx` when no `wapsi_onboarding_profile` exists. Three screens: language (skipped when set), **This is you** (link DigiLocker → consent card → `GET /api/digilocker` fills name/DOB/masked Aadhaar/address/banks, identity locked, contact editable, residency), **Refunds and how you like to work** (nominate a pre-validated account, Simple/Full, a collapsed standing-facts row for representative assessee / disability). Nothing with a tax year on it — intent, employer, salary, housing, deductions, regime are the yearly intake (§13). The profile (`lib/onboarding.ts` v3: identity, contact, residency, banks, refundAccountId, standing, `connections.digilocker`) is saved, `wapsi_user_mode` seeded from the mode, then the mode choice; every returning sign-in goes straight to the mode choice. v1/v2 profiles migrate silently (`migratedFrom`, blank identity) — nobody is re-onboarded. A plain brand bar (language, theme, no mode switch); on phones a 56 px back-circle + title header. `lib/signin-flow.ts` verifies the code (`949494`) with the backend, saves the client session + seeded/blank `ReturnState`, tries for a server session, then `router.replace("/app")` — no filing flow starts. A stale client-only session is cleared here; `/app` redirects signed-out visitors to `/signin`. |
 | `/reconcile` | `app/reconcile/page.tsx` → `components/InteractiveTaxDashboard.tsx` | The flat **reconciliation matrix**: 13 AIS/26AS rows, confirm/dispute per row, net-position headline, live both-regimes rail (regime tiles, net figure, file/pay CTA), Challan 280, s.139(9) card, CASS radar, PDF dropzone, ITR-V preview. Starts from a synthetic prefill (₹15,00,000 salary etc.). Reachable by URL only. |
 | `/app` | `app/app/page.tsx` (`"use client"`, `Suspense`-wrapped for `useSearchParams`) | The **Agentic workspace** (plan.md §6). Without `?run=` it is a standalone landing (`components/agentic/landing.tsx`: no sidebar, serif question, "Ask →" box, icon shortcuts, sign-in when there is no session). A question or shortcut creates a run and routes to `?run=<id>`, which renders the same `AppShell` as `/` with the transcript, question/review cards and inspector. Disabled by `NEXT_PUBLIC_WAPSI_AGENTIC=false`. |
 | `/api/agent` | `app/api/agent/route.ts` | The legacy copilot endpoint (§8). |
@@ -66,6 +66,7 @@ Env (see `.env.example`): `NEXT_PUBLIC_BACKEND_URL` (default `http://localhost:8
 | `/api/return`, `/api/return/command` | `app/api/return/…` | The shared return snapshot: GET / PUT (`expectedRevision`, 409 on conflict) and the single command endpoint (zod-validated `ReturnCommand`). |
 | `/api/runs`, `/api/runs/:id[/events|/cancel|/outputs/:outputId]` | `app/api/runs/…` | Agent runs: create/list, replay + input (message / answer / confirm) + delete, SSE event stream with cursor, cancel, output download. **Response-first (2026-09-06):** POST create / POST input record the run or input and answer in ~0.3 s; the agent's steps run in `after()` from `next/server` while the client streams `/events` (`advance(..., "input_only" | "steps_only")`). `PostgresRunStore.appendEvent` is one statement (owner check + next seq + insert, PK retry) — previously a six-trip transaction that made every turn 6–10 s against Supabase. |
 | `/api/memory` | `app/api/memory/route.ts` | Owner-scoped memory entries (list / forget). |
+| `/api/digilocker` | `app/api/digilocker/route.ts` → `lib/agentic/digilocker.ts` | **DigiLocker mock for the non-agent shells (2026-09-07).** GET = the standing record (`readProfile`: PAN identity, masked Aadhaar, address, pre-validated banks) for onboarding's "This is you" screen; POST `{assessmentYear}` = this year's issued Form 16 (Part B rows) and AIS (lines with real SFT codes), imported into the vault when one exists and returned with fields for the Manual facts step. Owner-scoped; the consent card is the caller's job. |
 | `/api/transcribe`, `/api/speech` | `app/api/transcribe/route.ts`, `app/api/speech/route.ts` → `lib/server/transcriber.ts` | **Dictation & Speech Transcription (2026-09-07, upgraded):** POST multipart `audio` (≤ 8 MB) + optional `language` → `{ ok, text, language }`. Session required. Powered primarily by **Google Gemini audio transcription** (`transcribeWithGemini`) with multi-key rotation and native support for all 23 languages and Latin numerals; falls back to the local faster-whisper worker if Gemini key is not configured. The client side is `lib/speech.ts` (MediaRecorder + Web Audio `AnalyserNode` live audio level reporting) and `components/agentic/audio-waveforms.tsx` (real-time equalizer waveform while speaking, and flowing harmonic sine ribbon animation while transcribing in Sunrise/Lilac + Navy & Coral styling). |
 
 ## 4. The two state models, and the bridge between them (the most important thing to understand)
@@ -160,6 +161,17 @@ card but not the summary" (log 2026-09-02 and 2026-09-03 00:50).
   BM25 retrieval with hard Act/year/category filters (`retrieval.ts`, `query.ts` — FY/AY/TY parsing and
   aliases from all 23 dictionaries), public QA that returns exact stored paraphrases or an explicit stop
   (`rag.ts`), three-outcome predicates (`applicability.ts`) and the shared guard (`advice.ts`).
+  **Yearly intake (2026-09-07, papers-first v2 — see §13):** the intake is the yearly half of onboarding. A run
+  created with the profile's seed (`ProfileSeed` on `POST /api/runs`, `RunWorkingState.profile`: first name,
+  masked refund account, residency, DigiLocker link, mode — never an identifier) opens with Munshi ji's greeting
+  (`openerFallback`, phrased by the model), puts DigiLocker first on the source card when linked, and builds the one
+  form from `gapGroups()` (`lib/return/year-intake.ts`): housing (skipped when Form 16 shows HRA and nothing points
+  at a property), "anything else this year" (always once — the ITR-1 gate), deductions (skipped when `regimeLean()`
+  says the new regime wins even at the ₹4.5L ceiling), the no-papers figures. Documents stage the Part B rows and
+  AIS lines through `import_document` (`ExtractedFields` grew: `exemptAllowances`, `employerClaims`, `otherIncome`,
+  `ltcg112A`, `tdsOther`, `professionalTax`, `tan`) plus a `record_year_intake` command; the verdict
+  (`inferForm()` from the ITR-1 eligibility text + regime lean) is said once per run. Field specs are shared with the
+  Manual facts step (`lib/return/year-form.ts` → `components/flow/year-papers-card.tsx`, `year-gap-form.tsx`).
   **Intake — document-first, one form** (`lib/agentic/intake.ts`, rewritten 2026-09-06 on the user's
   correction "one question at a time feels worse than manual mode"): the opening sentence (English or
   Hinglish) is parsed deterministically into a `Situation`; a blank return is first asked where the money
@@ -312,3 +324,73 @@ corners, 44×5 handle, overlay `max-md:items-end`). Fact cards sit flat (`--tilt
 Two d13.css element rules leak into any bare `<nav>` / `<main>`; `globals.css` resets `header > nav` and
 `main.shell-main` right after the d13 import — do not put responsive `hidden` variants on the mascot's SVG
 (`munshi.css` is unlayered) or on component-layer classes (`md:glass` does not exist); wrap in a span instead.
+
+## 13. Papers-first onboarding v2 — once vs every year (2026-09-07)
+
+User direction: "only mention those questions that can be exactly the same every year… if something gets
+updated every year, add it in the agentic mode." The test for every field is *"will this answer be the same in
+five years?"*
+
+- **Once — the profile** (`lib/onboarding.ts` v3, `components/onboarding.tsx`, `lib/i18n/onboardingStrings.ts`
+  en + hi, others fall through to English): identity from the PAN record via the DigiLocker mock
+  (`GET /api/digilocker` → `readProfile`), contact, residency, banks + refund nominee, Simple/Full, standing facts
+  (representative assessee, disability), `connections.digilocker.linked`. Dropped: intent, profession, filing
+  history, focus areas. `profileSeed()` is the only part the runtime sees.
+- **Every year — the intake** (`lib/return/year-intake.ts`, stored as `ReturnState.yearIntake` through the
+  `record_year_intake` command; `lib/return/year-form.ts` field specs shared by both shells): sources + consent,
+  the Form 16 Part B breakup, SFT flags, the verdict (`inferForm` from the ITR-1 eligibility text; `regimeLean` =
+  `compareRegimes` as-is and at the ₹4.5L `DEDUCTION_CEILING`; `filingSection` by 31 July), the one form's answers
+  (housing, extras, deductions, no-papers figures), `carriedFrom` for next April's defaults (`carryDefaults` —
+  answers carry, documents never).
+- **Agentic** (`lib/agentic/runtime.ts`, `intake.ts`): opener → DigiLocker-first source card → consent → review
+  (facts spoken with provenance) → one form (`gapGroups`) → verdict; ITR-2/3 verdicts are said and left to the
+  guard. **Manual** (`app/page.tsx` facts step): `YearPapersCard` (POST `/api/digilocker` → `import_document` +
+  `record_year_intake`) and `YearGapForm` (→ `record_year_intake`, `declare_income`, `declare_claim`).
+- **DigiLocker mock** now issues Part B rows and AIS lines with the real SFT codes (016 interest, 015 dividend,
+  017 securities) under the FY 2025-26 TDS thresholds (194A ₹50,000; 194 ₹10,000). `pdfExtract` reads only the
+  five original fields (Phase B extends it; names with apostrophes now parse).
+- **Voice** (`lib/agentic/model.ts`): `MUNSHI_VOICE` is the model's persona; phrasing timeout 8 s; the greeting
+  menu goes through `speak()`; the tax-expert prompt carries the FY 2025-26 slabs, 87A ₹60,000 / ₹12L, and the
+  new TDS thresholds (the previous facts were FY 2024-25's).
+- Open: 21 languages on the English fallback for the new strings; `ta` agentic strings written but unreviewed;
+  a `carriedFrom` rollover has no UI trigger yet (next AY); the review card is spoken facts, not row-level
+  "wrong?" links (disputes stay on the Manual statement).
+
+### 13.1 Phase B + Phase C, and the character (2026-09-07, later the same day)
+
+- **Phase B — the extractor reads the rows** (`lib/compliance/pdfExtract.ts` `extractRichFieldsFromText`,
+  run on the raw byte scan and on the decompressed text layer): TAN; Part B 17(1)/(2)/(3) (`salaryParts`);
+  allowances exempt u/s 10 by label (HRA 10(13A), LTA 10(5), gratuity 10(10), commuted pension 10(10A), leave
+  encashment 10(10AA)); professional tax; Chapter VI-A rows as the employer reports them (80C/80CCC/80CCD(1)/
+  (1B)/(2)/80D/80E/80G/80TTA → the engine's section spellings); the 115BAC(1A) opt-out flag (`regimeOptOut`);
+  AIS Part B lines with reporter, amount and TDS (TDS-194A/SFT-016/SFT-005 → interest, DIV-/SFT-015/TDS-194 →
+  dividend, SFT-017 → 112A) with TIS summary rows as the fallback; `readFields` names what was read. Names with
+  apostrophes and the compact "Name: … PAN:" layout parse. Tests: `lib/compliance/__tests__/pdfExtractRich.test.ts`.
+- **DigiLocker, generated per person and kept** (`lib/digilocker/`): `generate.ts` builds a whole person from
+  one seed (identity with a PAN-consistent surname initial, 12-digit Aadhaar, address, employer with TAN and
+  category, salary structure with HRA exemption when renting, employer-reported 80C/80CCD(2)/80D, quarterly TDS
+  computed by the engine and jittered so refunds and dues both occur, AIS interest/deposits/dividends/112A/rent
+  with TDS at the FY 2025-26 thresholds, banks); `fromPersona` derives the three seeded personas' records so the
+  locker agrees with the return. `store.ts`: `PostgresLockerStore` (migration `0006_digilocker_records`) when
+  a database exists — random seed, durable, a returning person sees the same papers — else `MemoryLockerStore`
+  with a PAN-derived seed so a restart regenerates the same record. `provider.ts`: `MockDigiLockerProvider`
+  implements the Phase C seam `DigiLockerProvider` — `record` (create once, extend for a new AY), `status`,
+  `link`/`unlink`, `profile`, `documents` (catalogue: PAN card, Aadhaar (masked), Form 16, AIS, Form 26AS with
+  DigiLocker-style URIs), `pull(scope)`. `index.ts`: `digiLockerFor(pool)`; `DIGILOCKER_PROVIDER` accepts only
+  `mock`. `Services.locker`, `RuntimeDeps.locker` (optional; tests rebuild the PAN-seeded record in-process via
+  `lib/agentic/digilocker.ts`, whose sync helpers read the provider's `lockerCache`).
+- **Routes**: `GET /api/digilocker` → profile + link status + catalogue; `POST /api/digilocker {assessmentYear,
+  scope}` → pull, imported into the vault as issued documents (ids carry the URI so two identity cards do not
+  collide); `POST|DELETE /api/digilocker/link` → link/unlink, and on link the identity is merged into
+  `tax_vault_users` (name, Aadhaar, DOB, mobile, email, address, banks) so the vault's PAN/Aadhaar cards show
+  the generated person; `GET /api/digilocker/documents?scope=` → catalogue only.
+- **Showing the pull**: onboarding O2 links, then ticks PAN record → Aadhaar → banks as they arrive; the Manual
+  papers card lists the year's catalogue and ticks each document; the agent emits one `activity` per document
+  ("Fetching from DigiLocker: …") before importing it, then Munshi ji says what came over. After onboarding the
+  PAN record's name replaces the sign-up placeholder on the return and the session (`applyProfileToPersona`).
+- **Character** (`lib/agentic/munshi-character.ts`, `docs/VOICE.md`, `docs/MUNSHI-JI.md`): one bible for the
+  Agentic model, the tax-expert prompt, the Manual copilot (titled Munshi ji in all 18 dictionaries that carry
+  a title) and the who-am-I path (Hinglish spellings heard). **Natural vs template policy** in code:
+  `speakResult` phrases task results, RAG/smart answers and CA lines with every figure and table row kept;
+  the recommendation is phrased around `recommendationText`; the task close is one sentence; receipts, review
+  cards, badges and legal lines stay templates. `SayInput.shape` (`review`) tells the model to keep rows.

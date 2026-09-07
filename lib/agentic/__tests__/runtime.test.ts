@@ -238,7 +238,8 @@ describe("runtime — the first end-to-end milestone (plan §7)", () => {
     const r = (await advance(d, sunita, run.id))!;
     expect(r.state.pendingQuestion?.expects).toBe("form");
     expect(r.state.pendingQuestion?.text).toMatch(/आंकड़े/);
-    expect(r.state.pendingQuestion?.fields?.map((f) => f.label)).toContain("बचत या जमा पर मिला ब्याज");
+    // Sunita's salary and interest are on record (2026-09-07): the card asks where she lived and the ITR-1 gate, in Hindi.
+    expect(r.state.pendingQuestion?.fields?.map((f) => f.label)).toContain("इस साल आप कहाँ रहे?");
   });
 
   it("capability inquiry returns structured task capabilities and choice options instead of raw statutory text", async () => {

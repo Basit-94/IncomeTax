@@ -14,6 +14,7 @@
 
 import type { CustomPersonaId, IncomeFact, Lang, Persona, PersonaId } from "../types";
 import type { AISFeedbackCode } from "../compliance/aisFeedback";
+import type { YearIntake } from "./year-intake";
 
 /** What the citizen is asserting about a fact: its figure, or that it exists at all. */
 export type CorrectionField = "amount" | "existence";
@@ -63,6 +64,12 @@ export interface ReturnState {
   filedAt?: string;
   /** Facts the citizen has explicitly confirmed as correct. */
   confirmedFactIds: string[];
+  /**
+   * The year's intake (2026-09-07): sources and consent, the Form 16 breakup, the verdict and the one
+   * form's answers. Optional so every stored return before it still loads; written only through
+   * `record_year_intake`.
+   */
+  yearIntake?: YearIntake;
 }
 
 /** Replay baseline facts through non-reverted corrections, chronologically. */

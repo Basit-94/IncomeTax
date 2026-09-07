@@ -669,7 +669,7 @@ export const brx: Dict = {
   },
 
   agent: {
-    title: "वापसी हेफाजाब होग्रा",
+    title: "मुंशी जी",
     open: "हेफाजाब होग्राखौ खेव",
     close: "बन्द खालाम",
     placeholder: "आनजाद, फोरमाय एबा गथायनो बुं…",

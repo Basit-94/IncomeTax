@@ -648,7 +648,7 @@ export const doi: Dict = {
   },
 
   agent: {
-    title: "वापसी सहायक",
+    title: "मुंशी जी",
     open: "सहायक खोह्लो",
     close: "बंद करो",
     placeholder: "जांचने, समझाने जां फाइल करने गी आखो…",

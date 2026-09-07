@@ -59,7 +59,8 @@ export const GROSS_SALARY_RE = new RegExp(
 );
 
 export const TDS_RE = new RegExp(
-  `(?:Total Tax Deducted|Tax Deducted at Source|Total Tax Deposited|Total TDS|TDS Deducted|TDS)[\\s:]+${RUPEE_SIGN}\\s*([0-9,]+)`,
+  // "Total Tax Deducted at Source (TDS) 1,24,000" — the bracketed spelling on the 2026-09-07 mock PDFs — is tried first.
+  `(?:Total Tax Deducted at Source \\(TDS\\)|Total Tax Deducted|Tax Deducted at Source|Total Tax Deposited|Total TDS|TDS Deducted|TDS)[\\s:]+${RUPEE_SIGN}\\s*([0-9,]+)`,
   "i",
 );
 
@@ -69,6 +70,170 @@ export interface ExtractedFields {
   employerName?: string;
   grossSalary?: number;
   tds?: number;
+  /**
+   * The richer rows a Form 16 Part B / AIS carries (2026-09-07). The PDF parser does not read these yet
+   * (Phase B); the DigiLocker mock issues them so the yearly intake can skip what the papers answer.
+   */
+  tan?: string;
+  dob?: string;
+  professionalTax?: number;
+  /** Allowances exempt u/s 10, one row each — HRA 10(13A), LTA 10(5), gratuity 10(10)… */
+  exemptAllowances?: { section: string; amount: number }[];
+  /** Chapter VI-A the employer already reported — 80CCD(2) in both regimes; 80C/80D under the old. */
+  employerClaims?: { section: string; amount: number }[];
+  /** AIS: interest, dividends and listed-equity LTCG, with the reporter so provenance survives. */
+  otherIncome?: { kind: "interest" | "dividend"; label: string; amount: number; reporter: string; identifier?: string; section?: string }[];
+  ltcg112A?: { sale: number; cost: number; gain: number; reporter: string };
+  /** AIS: TDS by anyone other than the employer (194A on deposits, 194 on dividends…). */
+  tdsOther?: { section: string; reporter: string; amount: number }[];
+  /** Form 16 Part B rows 1(a)–(c). */
+  salaryParts?: { s17_1?: number; s17_2?: number; s17_3?: number };
+  /** Part B since FY 2023-24: "Whether opting out of taxation u/s 115BAC(1A)?" — true means the old regime. */
+  regimeOptOut?: boolean;
+  /** Which of the optional rows the parser actually found, so the interface can say what was read (Phase B). */
+  readFields?: string[];
+}
+
+/* ------------------------------------------------------- Phase B: the rows -- */
+
+const AMOUNT = `${RUPEE_SIGN}\\s*([0-9]{1,3}(?:,[0-9]{2,3})+|[0-9]{4,9})(?![0-9,])`;
+const sameLine = (label: string) => new RegExp(`(?:${label})[^\\n]{0,90}?${AMOUNT}`, "i");
+
+function grabAmount(text: string, label: string): number | undefined {
+  const m = sameLine(label).exec(text);
+  return m ? parseIndianNumber(m[1]) : undefined;
+}
+
+const EXEMPTIONS: [string, string][] = [
+  ["10(13A)", "House rent allowance|HRA[^\\n]{0,20}10\\(13A\\)|10\\(13A\\)"],
+  ["10(5)", "Travel concession|Leave travel|LTA[^\\n]{0,20}10\\(5\\)|10\\(5\\)"],
+  ["10(10)", "Death-cum-retirement gratuity|Gratuity[^\\n]{0,20}10\\(10\\)"],
+  ["10(10A)", "Commuted value of pension|Commuted pension|10\\(10A\\)"],
+  ["10(10AA)", "Cash equivalent of leave salary|Leave (?:salary )?encashment|10\\(10AA\\)"],
+];
+
+/** Chapter VI-A rows as the employer reports them; the section spellings are the engine's. */
+const EMPLOYER_CLAIMS: [string, string][] = [
+  ["80CCD_2", "80CCD\\s*\\(2\\)"],
+  ["80CCD_1B", "80CCD\\s*\\(1B\\)"],
+  ["80CCD_1", "80CCD\\s*\\(1\\)"],
+  ["80CCC", "80CCC(?![A-Z(])"],
+  ["80C", "80C(?![A-Z(])"],
+  ["80D_SELF", "80D(?![A-Z(])"],
+  ["80E", "80E(?![A-Z(])"],
+  ["80G", "80G(?![A-Z(])"],
+  ["80TTA", "80TTA"],
+];
+
+/** AIS Part B line codes → what the row is. Real AIS uses SFT-016/015/017; the 2026-09-07 mock PDFs used SFT-005 and DIV-001. */
+const AIS_LINE = /^(TDS-192|TDS-194A|TDS-194|SFT-0\d\d|DIV-\d{3})\s+(.+?)\s+((?:TAN|SB|FD|DP|UCC|ACC|CL)[-:]\s*\S+)\s+([0-9,]+)(?:\s+([0-9,]+))?\s*$/gim;
+
+/**
+ * The rows a Form 16 Part B and an AIS carry beyond salary and TDS (Phase B, 2026-09-07). Every field is
+ * optional: a row the parser cannot see is simply not read, and the yearly intake asks for it instead.
+ * Exported so the same parser runs on the raw byte scan and on the decompressed text layer.
+ */
+export function extractRichFieldsFromText(text: string): Partial<ExtractedFields> {
+  const out: Partial<ExtractedFields> = {};
+  const read: string[] = [];
+
+  const tan = /TAN(?:\s+of\s+(?:the\s+)?Deductor)?[^A-Z0-9\n]{0,30}([A-Z]{4}[0-9]{5}[A-Z])/i.exec(text);
+  if (tan) {
+    out.tan = tan[1].toUpperCase();
+    read.push("tan");
+  }
+
+  const s17_1 = grabAmount(text, "Salary as per (?:provisions contained in )?section 17\\(1\\)|Gross Salary u\\/s 17\\(1\\)");
+  const s17_2 = grabAmount(text, "Value of perquisites u\\/s 17\\(2\\)|perquisites under section 17\\(2\\)");
+  const s17_3 = grabAmount(text, "Profits in lieu of salary u\\/s 17\\(3\\)|profits in lieu of salary under section 17\\(3\\)");
+  if (s17_1 !== undefined || s17_2 !== undefined || s17_3 !== undefined) {
+    out.salaryParts = { s17_1, s17_2, s17_3 };
+    read.push("salaryParts");
+  }
+
+  const exempt: NonNullable<ExtractedFields["exemptAllowances"]> = [];
+  for (const [section, label] of EXEMPTIONS) {
+    const amount = grabAmount(text, label);
+    if (amount !== undefined && amount > 0 && !exempt.some((e) => e.section === section)) exempt.push({ section, amount });
+  }
+  if (exempt.length) {
+    out.exemptAllowances = exempt;
+    read.push("exemptAllowances");
+  }
+
+  const professionalTax = grabAmount(text, "Tax on employment|Professional Tax");
+  if (professionalTax !== undefined) {
+    out.professionalTax = professionalTax;
+    read.push("professionalTax");
+  }
+
+  const claims: NonNullable<ExtractedFields["employerClaims"]> = [];
+  for (const [section, label] of EMPLOYER_CLAIMS) {
+    const amount = grabAmount(text, `(?:section\\s+|u\\/s\\s+|Sec\\.?\\s+)?${label}`);
+    if (amount !== undefined && amount > 0) claims.push({ section, amount });
+  }
+  if (claims.length) {
+    out.employerClaims = claims;
+    read.push("employerClaims");
+  }
+
+  const regime = /opting out of (?:taxation\s+)?(?:u\/s|under section)?\s*115BAC(?:\(1A\))?[^A-Za-z\n]{0,40}(Yes|No)/i.exec(text);
+  if (regime) {
+    out.regimeOptOut = regime[1].toLowerCase() === "yes";
+    read.push("regimeOptOut");
+  }
+
+  // AIS Part B lines with a reporter; the TIS summary rows are the fallback when the lines are missing.
+  const otherIncome: NonNullable<ExtractedFields["otherIncome"]> = [];
+  const tdsOther: NonNullable<ExtractedFields["tdsOther"]> = [];
+  let ltcgGain: number | undefined;
+  let ltcgReporter = "AIS";
+  let m: RegExpExecArray | null;
+  AIS_LINE.lastIndex = 0;
+  while ((m = AIS_LINE.exec(text)) !== null) {
+    const [, code, reporter, ref, amountRaw, tdsRaw] = m;
+    const amount = parseIndianNumber(amountRaw);
+    const tds = tdsRaw ? parseIndianNumber(tdsRaw) ?? 0 : 0;
+    if (amount === undefined) continue;
+    const c = code.toUpperCase();
+    const deposit = /^FD/i.test(ref) || c === "TDS-194A";
+    if (c === "TDS-194A" || c === "SFT-016" || c === "SFT-005") {
+      otherIncome.push({ kind: "interest", label: `${deposit ? "Deposit" : "Savings account"} interest (${reporter})`, amount, reporter, identifier: ref, section: "SFT-016" });
+      if (tds > 0) tdsOther.push({ section: "194A", reporter, amount: tds });
+    } else if (c === "SFT-015" || c.startsWith("DIV-") || c === "TDS-194") {
+      otherIncome.push({ kind: "dividend", label: `Dividend (${reporter})`, amount, reporter, identifier: ref, section: "SFT-015" });
+      if (tds > 0) tdsOther.push({ section: "194", reporter, amount: tds });
+    } else if (c === "SFT-017") {
+      ltcgReporter = reporter;
+      ltcgGain = ltcgGain ?? amount;
+    }
+  }
+  if (otherIncome.length === 0) {
+    const savings = grabAmount(text, "Savings Bank Interest|Interest from savings");
+    if (savings !== undefined) otherIncome.push({ kind: "interest", label: "Savings account interest (AIS)", amount: savings, reporter: "AIS", section: "SFT-016" });
+    const deposit = grabAmount(text, "Time Deposit Interest|Interest from deposit");
+    if (deposit !== undefined) otherIncome.push({ kind: "interest", label: "Deposit interest (AIS)", amount: deposit, reporter: "AIS", section: "SFT-016" });
+    const dividend = grabAmount(text, "Dividend Income|Dividend");
+    if (dividend !== undefined) otherIncome.push({ kind: "dividend", label: "Dividend (AIS)", amount: dividend, reporter: "AIS", section: "SFT-015" });
+  }
+  const ltcgRow = grabAmount(text, "Sec(?:tion)?\\s*112A LTCG|Long[- ]term capital gains? u\\/s 112A");
+  if (ltcgRow !== undefined) ltcgGain = ltcgRow;
+  if (otherIncome.length) {
+    out.otherIncome = otherIncome;
+    read.push("otherIncome");
+  }
+  if (tdsOther.length) {
+    out.tdsOther = tdsOther;
+    read.push("tdsOther");
+  }
+  if (ltcgGain !== undefined && ltcgGain > 0) {
+    // AIS states the gain in the summary; sale and cost come from the broker statement when it is uploaded.
+    out.ltcg112A = { gain: ltcgGain, sale: ltcgGain, cost: 0, reporter: ltcgReporter };
+    read.push("ltcg112A");
+  }
+
+  if (read.length) out.readFields = read;
+  return out;
 }
 
 /** "12,50,000" → 1250000. Returns undefined rather than NaN on junk. */
@@ -101,12 +266,17 @@ export function extractFieldsFromPdfBytes(bytes: Uint8Array): ExtractedFields {
   const grossSalaryRaw = GROSS_SALARY_RE.exec(text)?.[1];
   const tdsRaw = TDS_RE.exec(text)?.[1];
 
-  const nameMatch = text.match(
-    /(?:Name of (?:the )?Employee|Name of (?:the )?Deductee)[\s:]+([A-Za-z\s]{3,35})/i,
-  );
-  const employerMatch = text.match(
-    /(?:Name of (?:the )?Employer|Name of (?:the )?Deductor)[\s:]+([A-Za-z\s.,&-]{3,50})/i,
-  );
+  const nameMatch =
+    text.match(
+      // Apostrophes and dots are part of names (D'Souza, A. Kumar) — found on the 2026-09-07 mock PDFs.
+      /(?:Name of (?:the )?Employee|Name of (?:the )?Deductee)[\s:]+([A-Za-z'’.\s]{3,35})/i,
+    ) ||
+    // The compact layout: "Name: ANTHONY D'SOUZA PAN: ABCPD1982K" on one line (the employer's line carries TAN, not PAN).
+    text.match(/Name:\s*([A-Za-z'’.][A-Za-z'’. ]{2,34}?)\s+PAN\b/);
+  const employerMatch =
+    text.match(
+      /(?:Name of (?:the )?Employer|Name of (?:the )?Deductor)[\s:]+([A-Za-z\s.,&-]{3,50})/i,
+    ) || text.match(/Name:\s*([A-Za-z&.,'][A-Za-z&.,' -]{2,49}?)\s+TAN\b/);
 
   return {
     pan,
@@ -114,6 +284,7 @@ export function extractFieldsFromPdfBytes(bytes: Uint8Array): ExtractedFields {
     employerName: employerMatch ? employerMatch[1].replace(/\s+/g, " ").trim() : undefined,
     grossSalary: grossSalaryRaw ? parseIndianNumber(grossSalaryRaw) : undefined,
     tds: tdsRaw ? parseIndianNumber(tdsRaw) : undefined,
+    ...extractRichFieldsFromText(text),
   };
 }
 
@@ -315,7 +486,8 @@ export async function extractFieldsFromPdf(bytes: Uint8Array): Promise<Extracted
   if (!name) {
     const empNameMatch =
       fullText.match(
-        /(?:Name of (?:the )?Employee|Name of (?:the )?Deductee)[\s:]+([A-Za-z\s]{3,35})/i,
+        // Apostrophes and dots are part of names (D'Souza, A. Kumar) — found on the 2026-09-07 mock PDFs.
+    /(?:Name of (?:the )?Employee|Name of (?:the )?Deductee)[\s:]+([A-Za-z'’.\s]{3,35})/i,
       ) ||
       fullText.match(
         /Name[^\w\n]*\n\s*([A-Za-z\s]{3,35})\s*\n\s*(?:PAN|P AN)/i,
@@ -376,11 +548,18 @@ export async function extractFieldsFromPdf(bytes: Uint8Array): Promise<Extracted
     }
   }
 
+  // The rows (Phase B): whatever the raw scan already read stands; the text layer fills the rest.
+  const rich = { ...extractRichFieldsFromText(fullText), ...stripUndefined(syncFields) };
   return {
+    ...rich,
     pan,
     name,
     employerName,
-    grossSalary,
+    grossSalary: grossSalary ?? rich.salaryParts?.s17_1,
     tds,
   };
+}
+
+function stripUndefined<T extends object>(o: T): Partial<T> {
+  return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Partial<T>;
 }

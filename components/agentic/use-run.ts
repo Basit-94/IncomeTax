@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { OutputRef, RunEvent } from "@/lib/agentic/types";
 import type { PublicRun } from "@/lib/agentic/runtime";
+import type { ProfileSeed } from "@/lib/onboarding";
 
 export interface RunView {
   run: PublicRun | null;
@@ -49,7 +50,7 @@ export function useRuns() {
     void refresh();
   }, [refresh]);
 
-  const create = useCallback(async (input: { message?: string; task?: PublicRun["task"]; lang: string }) => {
+  const create = useCallback(async (input: { message?: string; task?: PublicRun["task"]; lang: string; profile?: ProfileSeed }) => {
     const res = await fetch("/api/runs", {
       method: "POST",
       credentials: "same-origin",

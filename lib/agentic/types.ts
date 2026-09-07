@@ -55,9 +55,12 @@ export interface PlanStep {
 export interface FormField {
   key: string;
   label: string;
-  type: "number" | "yes_no" | "choice";
+  /** `multi` (2026-09-07): several chips may be on; the answer is the chosen values joined by ",". */
+  type: "number" | "yes_no" | "choice" | "multi";
   choices?: { value: string; label: string }[];
   hint?: string;
+  /** A pre-selected value carried from an earlier year, shown as "same as last year". */
+  defaultValue?: string | number | boolean;
 }
 
 /** One targeted question. The answer is validated against `expects`. */
@@ -180,6 +183,14 @@ export interface RunWorkingState {
   advice?: AdviceAssessment;
   /** Commands the run intends to apply once confirmed. */
   pendingCommands?: ReturnCommand[];
+  /**
+   * What the onboarding profile lets the run know (2026-09-07): first name, a masked refund account,
+   * residency, whether DigiLocker is linked, the detail mode. Never a PAN, Aadhaar or address.
+   */
+  profile?: import("../onboarding").ProfileSeed;
+  /** The opener and the year's verdict are each said once per run. */
+  openerSaid?: boolean;
+  verdictSaid?: boolean;
 }
 
 export interface Run {

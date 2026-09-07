@@ -19,6 +19,7 @@ import type { IngestedDocument, SelfAssessmentPayment } from "../../context/TaxR
 import type { AISFeedbackCode } from "../compliance/aisFeedback";
 import type { IncomeKind, Persona, Provenance, TaxAlreadyPaid } from "../types";
 import { computeForPersona } from "./compute";
+import { emptyYearIntake, mergeYearIntake, type YearIntake } from "./year-intake";
 import {
   applyCorrection,
   confirmFact,
@@ -47,7 +48,9 @@ export type ReturnCommand =
   /** Income the citizen reports themself — nothing a third party filed. */
   | { type: "declare_income"; kind: IncomeKind; amount: number; label: string; today: string }
   /** A Chapter VI-A claim the citizen asserts, with whether proof is attached. */
-  | { type: "declare_claim"; section: string; amount: number; label: string; evidenceAttached: boolean };
+  | { type: "declare_claim"; section: string; amount: number; label: string; evidenceAttached: boolean }
+  /** The year's intake — sources, Form 16 breakup, verdict, the one form's answers (2026-09-07). Merged, never replaced. */
+  | { type: "record_year_intake"; assessmentYear: string; patch: Partial<Omit<YearIntake, "version" | "assessmentYear">> };
 
 export type CommandResult =
   | { ok: true; state: ReturnState; changed: boolean }
@@ -145,6 +148,13 @@ export function applyReturnCommand(
       const add = (p: Persona): Persona => ({ ...p, facts: [...p.facts, fact] });
       const next: ReturnState = { ...state, baselinePersona: add(state.baselinePersona) };
       return { ok: true, changed: true, state: { ...next, persona: effectivePersona(next), confirmedFactIds: [...state.confirmedFactIds, fact.id] } };
+    }
+
+    case "record_year_intake": {
+      const now = ctx.now();
+      const current = state.yearIntake?.assessmentYear === command.assessmentYear ? state.yearIntake : emptyYearIntake(command.assessmentYear, now);
+      const yearIntake = mergeYearIntake(current, command.patch, now);
+      return { ok: true, changed: true, state: { ...state, yearIntake } };
     }
 
     case "declare_claim": {
@@ -291,15 +301,15 @@ function stageRevision(state: ReturnState): CommandResult {
  * never summed with the document.
  */
 function importDocument(state: ReturnState, doc: IngestedDocument, today: string, ctx: CommandContext): CommandResult {
-  const { grossSalary, tds } = doc.extracted;
-  if (grossSalary === undefined && tds === undefined) {
+  const { grossSalary, tds, otherIncome = [], ltcg112A, tdsOther = [], employerClaims = [] } = doc.extracted;
+  if (grossSalary === undefined && tds === undefined && otherIncome.length === 0 && !ltcg112A && tdsOther.length === 0 && employerClaims.length === 0) {
     return { ok: false, error: "nothing_to_do", message: "The document carried no salary or tax figure." };
   }
   const statement: Provenance["statement"] = doc.kind === "AIS" ? "AIS" : "26AS";
-  const fromDocument = (reporter: string): Provenance => ({
+  const fromDocument = (reporter: string, reporterKind: Provenance["reporterKind"] = "employer", identifier = doc.fileName): Provenance => ({
     reporter,
-    reporterKind: "employer",
-    identifier: doc.fileName,
+    reporterKind,
+    identifier,
     filedOn: today,
     statement,
     onlyReporterCanFix: true,
@@ -307,6 +317,35 @@ function importDocument(state: ReturnState, doc: IngestedDocument, today: string
   const upgrade = (p: Persona): Persona => {
     let facts = p.facts;
     let taxPaid = p.taxPaid;
+    let claims = p.claims;
+    // AIS lines (2026-09-07): one fact per reported interest/dividend row, matched by reporter so a
+    // re-import updates rather than duplicates; listed-equity LTCG as a classified capital_gains fact.
+    for (const row of otherIncome) {
+      const i = facts.findIndex((f) => f.kind === row.kind && f.provenance.reporter === row.reporter);
+      const provenance = fromDocument(row.reporter, row.kind === "dividend" ? "broker" : "bank", row.identifier ?? doc.fileName);
+      facts = i >= 0
+        ? facts.map((f, idx) => (idx === i ? { ...f, amount: row.amount, provenance } : f))
+        : [...facts, { id: ctx.newId(`ingested-${row.kind}`), label: row.label, amount: row.amount, kind: row.kind, provenance }];
+    }
+    if (ltcg112A && ltcg112A.gain > 0) {
+      const i = facts.findIndex((f) => f.kind === "capital_gains" && f.capitalGains?.assetClass === "equity_stt" && f.capitalGains.holding === "long");
+      const provenance = fromDocument(ltcg112A.reporter, "broker");
+      const row = { label: "Long-term gains on listed shares/funds (AIS)", amount: ltcg112A.gain, kind: "capital_gains" as const, capitalGains: { assetClass: "equity_stt" as const, holding: "long" as const }, provenance };
+      facts = i >= 0 ? facts.map((f, idx) => (idx === i ? { ...f, ...row } : f)) : [...facts, { id: ctx.newId("ingested-ltcg"), ...row }];
+    }
+    for (const row of tdsOther) {
+      const i = taxPaid.findIndex((x) => x.section === row.section && x.provenance.reporter === row.reporter);
+      const provenance = fromDocument(row.reporter, "bank");
+      taxPaid = i >= 0
+        ? taxPaid.map((x, idx) => (idx === i ? { ...x, amount: row.amount, provenance } : x))
+        : [...taxPaid, { id: ctx.newId("ingested-tds-other"), label: `Tax deducted u/s ${row.section} (${row.reporter})`, amount: row.amount, section: row.section, provenance }];
+    }
+    for (const row of employerClaims) {
+      const i = claims.findIndex((c) => c.section === row.section);
+      claims = i >= 0
+        ? claims.map((c, idx) => (idx === i ? { ...c, amount: row.amount, evidenceAttached: true } : c))
+        : [...claims, { id: ctx.newId("ingested-claim"), section: row.section, label: `${row.section} (reported by employer)`, amount: row.amount, evidenceAttached: true }];
+    }
     if (grossSalary !== undefined) {
       const i = facts.findIndex((f) => f.kind === "salary");
       facts =
@@ -343,7 +382,7 @@ function importDocument(state: ReturnState, doc: IngestedDocument, today: string
               },
             ];
     }
-    return { ...p, facts, taxPaid };
+    return { ...p, facts, taxPaid, claims };
   };
   const next: ReturnState = { ...state, baselinePersona: upgrade(state.baselinePersona) };
   return { ok: true, state: { ...next, persona: effectivePersona(next) }, changed: true };

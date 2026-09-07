@@ -207,6 +207,18 @@ export const MIGRATIONS: readonly Migration[] = [
       );
     `,
   },
+  {
+    // The mock DigiLocker's generated record per PAN (2026-09-07): a returning person sees the same papers.
+    id: "0006_digilocker_records",
+    sql: `
+      CREATE TABLE IF NOT EXISTS digilocker_records (
+        pan VARCHAR(10) PRIMARY KEY,
+        record JSONB NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL
+      );
+    `,
+  },
 ];
 
 /** Ids must be unique and sorted, or the runner would apply them in a surprising order. */

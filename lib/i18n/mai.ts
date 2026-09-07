@@ -618,7 +618,7 @@ export const mai: Dict = {
   },
 
   agent: {
-    title: "वापसी सहायक",
+    title: "मुंशी जी",
     open: "सहायक खोलू",
     close: "बन्द करू",
     placeholder: "जाँचय, बुझाबय वा फाइल करय लेल कहू…",

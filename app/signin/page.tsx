@@ -15,7 +15,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, CheckCircle2, LayoutDashboard, Moon, ShieldCheck, Sliders, Sparkles, Sun, Zap } from "lucide-react";
 import { MunshiAvatar } from "@/components/brand/munshi";
 import Onboarding from "@/components/onboarding";
-import { loadOnboardingDraft, loadOnboardingProfile, saveOnboardingProfile, type OnboardingProfile } from "@/lib/onboarding";
+import { applyProfileToPersona, loadOnboardingDraft, loadOnboardingProfile, saveOnboardingProfile, type OnboardingProfile } from "@/lib/onboarding";
 import type { IngestedDocument } from "@/context/TaxReturnContext";
 import { clearSession, loadSession, saveSession, type SessionInfo } from "@/lib/auth-client";
 import { ensureServerSession } from "@/lib/session-client";
@@ -23,7 +23,7 @@ import { localize } from "@/components/mock-i18n";
 import { dict, isLang } from "@/lib/i18n";
 import { isRtl } from "@/lib/i18n/languages";
 import { PERSONAS } from "@/lib/personas";
-import { save as savePersist } from "@/lib/return/persist";
+import { load as loadPersist, save as savePersist } from "@/lib/return/persist";
 import { mirrorReturn } from "@/lib/return-sync-client";
 import { MOCK_OTP, blankPersona, completeSignIn, panIssueMessage, persistSignIn, personaForPan, returnStateFor, sessionForVaultUser } from "@/lib/signin-flow";
 import type { Lang, Persona, PersonaId, Provenance } from "@/lib/types";
@@ -100,6 +100,8 @@ function SignIn() {
   // The quick setup (language, intent, situation, mode, focus) runs once, only when an account is created
   // here — never on a returning sign-in (user, 2026-09-07). "Change answers" on the dashboard reopens it later.
   const [showOnboarding, setShowOnboarding] = useState(false);
+  /** The account just created — its PAN and name seed the profile's identity screen. */
+  const [newUser, setNewUser] = useState<CitizenVaultUser | null>(null);
 
   const arrive = useCallback((opts?: { newAccount?: boolean }) => {
     setPending(null);
@@ -109,6 +111,13 @@ function SignIn() {
 
   const finishOnboarding = (profile: OnboardingProfile) => {
     saveOnboardingProfile(profile);
+    // The person the PAN record named replaces the sign-up placeholder on the return and the session (2026-09-07).
+    const stored = loadPersist();
+    if (stored && "state" in stored) {
+      savePersist({ ...stored.state, persona: applyProfileToPersona(stored.state.persona, profile), baselinePersona: applyProfileToPersona(stored.state.baselinePersona, profile) });
+    }
+    const sess = loadSession();
+    if (sess && profile.identity.name && sess.pan === profile.identity.pan) saveSession({ ...sess, fullName: profile.identity.name });
     if (profile.lang !== lang) {
       setLang(profile.lang);
       localStorage.setItem("wapsi_lang", profile.lang);
@@ -222,6 +231,7 @@ function SignIn() {
     setAuthBusy(true);
     const server = await persistSignIn(sessionForVaultUser(user), blankPersona(user.pan, user.fullName ?? "", lang), lang);
     setAuthBusy(false);
+    setNewUser(user);
     if (server.ok) return arrive({ newAccount: true });
     clearSession();
     setAuthNote(t.login.authUnreachable);
@@ -387,7 +397,14 @@ function SignIn() {
       <main id="main-content" className="own-width flex-1 px-4 py-6 sm:py-10">
         <div className="mx-auto w-full max-w-5xl">
           {showOnboarding ? (
-            <Onboarding lang={lang} t={t} initialDraft={loadOnboardingDraft()} onLanguageChange={changeLang} onComplete={finishOnboarding} />
+            <Onboarding
+              lang={lang}
+              t={t}
+              initialDraft={loadOnboardingDraft()}
+              onLanguageChange={changeLang}
+              onComplete={finishOnboarding}
+              identity={newUser ? { pan: newUser.pan, name: newUser.fullName, dob: newUser.dateOfBirth, mobile: newUser.mobile, email: newUser.email, address: newUser.address } : undefined}
+            />
           ) : showModeSelect ? (
             <div className="mx-auto w-full max-w-4xl text-center py-6 sm:py-12 space-y-9 animate-in fade-in zoom-in-95 duration-200">
               {/* Header block with status pill and rich typography */}

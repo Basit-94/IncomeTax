@@ -37,6 +37,7 @@ import { computeForPersona, DEFAULT_REGIME } from "../lib/return/compute";
 import { applyReturnCommand } from "../lib/return/commands";
 import { outcomeStampsFiled, simulatedFiling, submitReturn, type FilingOutcome } from "../lib/return/filing";
 import {
+  applyProfileToPersona,
   loadOnboardingDraft,
   loadOnboardingProfile,
   saveOnboardingProfile,
@@ -82,6 +83,10 @@ import RegimeStep from "../components/flow/regime-step";
 import CheckScreen from "../components/flow/check-screen";
 import BeforeFiling from "../components/flow/before-filing";
 import FilingStep from "../components/flow/filing-step";
+import YearPapersCard, { type FetchedDocument } from "../components/flow/year-papers-card";
+import YearGapForm from "../components/flow/year-gap-form";
+import { emptyYearIntake, gapGroups } from "../lib/return/year-intake";
+import { DEDUCTION_FIELDS, formFieldsFor, yearAnswersFrom } from "../lib/return/year-form";
 import { generateSeededUser } from "../components/sandbox-user";
 // Onboarding temporarily deactivated per user instruction
 import { QuickEditModal } from "../components/dashboard/quick-edit-modal";
@@ -198,6 +203,8 @@ export default function WapsiPrototype() {
   const [undoStack, setUndoStack] = useState<ReturnState[]>([]);
   const [restoredFrom, setRestoredFrom] = useState<string | null>(null);
   const [ingestedDoc, setIngestedDoc] = useState<IngestedDocument | null>(null);
+  /** This year's papers fetched from the DigiLocker mock on the facts step (2026-09-07). */
+  const [fetchedPapers, setFetchedPapers] = useState<FetchedDocument[] | null>(null);
 
   // Citizen Tax Vault state
   const [isVaultOpen, setIsVaultOpen] = useState(false);
@@ -344,7 +351,7 @@ export default function WapsiPrototype() {
   const dashboardDestination =
     onboardingProfile && persona
       ? getDashboardDestination(
-          onboardingProfile,
+          returnState?.yearIntake?.intent,
           persona.refund.state !== "not_filed",
         )
       : "facts";
@@ -513,7 +520,7 @@ export default function WapsiPrototype() {
       setWizardCompleted(true);
       if (savedOnboarding) {
         const destination = getDashboardDestination(
-          savedOnboarding,
+          result.state.yearIntake?.intent,
           result.state.persona.refund.state !== "not_filed",
         );
         if (destination === "facts") {
@@ -633,7 +640,7 @@ export default function WapsiPrototype() {
     }
 
     const destination = getDashboardDestination(
-      profile,
+      state.yearIntake?.intent,
       state.persona.refund.state !== "not_filed",
     );
     if (destination === "facts") {
@@ -651,7 +658,7 @@ export default function WapsiPrototype() {
     localStorage.setItem("wapsi_lang", profile.lang);
     window.dispatchEvent(new Event("wapsi_lang_change"));
     if (returnState) {
-      const nextState = { ...returnState, lang: profile.lang };
+      const nextState = { ...returnState, lang: profile.lang, persona: applyProfileToPersona(returnState.persona, profile), baselinePersona: applyProfileToPersona(returnState.baselinePersona, profile) };
       saveState(nextState);
       if (onboardingReturnStep === "dashboard") {
         setPersonalizedDashboardDestination(profile, nextState);
@@ -1788,6 +1795,56 @@ export default function WapsiPrototype() {
     commitWithUndo(result.state);
   };
 
+  /** This year's papers from the DigiLocker mock (2026-09-07): the same commands the agent stages, applied here. */
+  const handlePapersFetched = (docs: FetchedDocument[]) => {
+    if (!returnState) return;
+    let state = returnState;
+    const now = new Date().toISOString();
+    for (const d of docs) {
+      const r = applyReturnCommand(state, { type: "import_document", today: TODAY, document: { fileName: d.title, kind: d.docType === "FORM_16" ? "FORM_16" : "AIS", ingestedAt: now, extracted: d.fields } });
+      if (r.ok) state = r.state;
+    }
+    const f16 = docs.find((d) => d.docType === "FORM_16");
+    const r = applyReturnCommand(state, {
+      type: "record_year_intake",
+      assessmentYear: state.persona.assessmentYear,
+      patch: {
+        sources: { chosen: "digilocker", consentAt: now, documents: { form16: docs.filter((d) => d.docType === "FORM_16" && d.id).map((d) => d.id as string), ais: docs.find((d) => d.docType === "ANNUAL_INFO_STATEMENT")?.id ?? undefined } },
+        read: f16?.fields.grossSalary !== undefined
+          ? { salary: { gross: f16.fields.grossSalary, exempt10: f16.fields.exemptAllowances ?? [], professionalTax: f16.fields.professionalTax, tdsSalary: f16.fields.tds, employerName: f16.fields.employerName, tan: f16.fields.tan }, sftFlags: [] }
+          : undefined,
+      },
+    });
+    if (r.ok) state = r.state;
+    setFetchedPapers(docs);
+    commitWithUndo(state);
+  };
+
+  /** The one form's answers: recorded on the year, deductions declared (proof comes on the deductions step). */
+  const handleYearAnswers = (values: Record<string, string | number | boolean>) => {
+    if (!returnState) return;
+    let state = returnState;
+    const answers = yearAnswersFrom({ ...values, details_parsed: true });
+    const r = applyReturnCommand(state, { type: "record_year_intake", assessmentYear: state.persona.assessmentYear, patch: { answers, sources: { chosen: state.yearIntake?.sources.chosen ?? "manual", documents: { form16: [] } } } });
+    if (r.ok) state = r.state;
+    if (typeof values.salary_amount === "number" && values.salary_amount > 0 && !state.persona.facts.some((f) => f.kind === "salary")) {
+      const d = applyReturnCommand(state, { type: "declare_income", kind: "salary", amount: values.salary_amount, label: "Salary (stated; to be checked against Form 16)", today: TODAY });
+      if (d.ok) state = d.state;
+    }
+    if (typeof values.interest_amount === "number" && values.interest_amount > 0 && !state.persona.facts.some((f) => f.kind === "interest")) {
+      const d = applyReturnCommand(state, { type: "declare_income", kind: "interest", amount: values.interest_amount, label: "Interest on savings and deposits (self-declared)", today: TODAY });
+      if (d.ok) state = d.state;
+    }
+    for (const f of DEDUCTION_FIELDS) {
+      const amount = values[f.key];
+      if (typeof amount === "number" && amount > 0) {
+        const d = applyReturnCommand(state, { type: "declare_claim", section: f.section, amount, label: `Section ${f.section.replace("_", "(")}${f.section.includes("_") ? ")" : ""} (self-declared)`, evidenceAttached: false });
+        if (d.ok) state = d.state;
+      }
+    }
+    commitWithUndo(state);
+  };
+
   /** Positive while the main journey's own engine says tax is still owed. */
   const balanceDue = breakdown ? Math.max(0, -breakdown.refundOrDue) : 0;
 
@@ -2625,7 +2682,14 @@ export default function WapsiPrototype() {
             {/* QUICK SETUP: the onboarding questions (also re-entered from the profile strip) */}
             {step === "onboarding" && (
               <m.div key="onboarding" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.25 }}>
-                <Onboarding lang={lang} t={t} initialDraft={onboardingDraft} onLanguageChange={changeLang} onComplete={handleCompleteOnboarding} />
+                <Onboarding
+                  lang={lang}
+                  t={t}
+                  initialDraft={onboardingDraft}
+                  onLanguageChange={changeLang}
+                  onComplete={handleCompleteOnboarding}
+                  identity={persona ? { pan: persona.pan, name: persona.name, mobile: persona.mobile } : session ? { pan: session.pan, name: session.fullName ?? "" } : undefined}
+                />
               </m.div>
             )}
 
@@ -2704,11 +2768,11 @@ export default function WapsiPrototype() {
                     t={t}
                     pan={persona.pan}
                     initialEmploymentType={
-                      // T3.5: onboarding already asked; the wizard confirms instead of re-asking.
-                      onboardingProfile?.profession === "salaried" ? "salaried"
-                      : onboardingProfile?.profession === "self_employed" ? "freelancer"
-                      : onboardingProfile?.profession === "business_owner" ? "business"
-                      : onboardingProfile?.profession === "retired" ? "pension"
+                      // Employment is a yearly fact since v3 (2026-09-07): the wizard asks it itself when the
+                      // year's intake has not recorded an employer category.
+                      returnState?.yearIntake?.answers.manual?.employerCategory === "pensioner" ? "pension"
+                      : returnState?.yearIntake?.answers.manual?.employerCategory ? "salaried"
+                      : returnState?.yearIntake?.answers.extras?.includes("business") ? "business"
                       : undefined
                     }
                     onComplete={(updatedPersona, regime) => {
@@ -2800,7 +2864,15 @@ export default function WapsiPrototype() {
                               </button>
                             </div>
                           ) : (
-                            <PdfIngestionDropzone onIngested={handlePdfIngested} />
+                            <YearPapersCard
+                              lang={lang}
+                              assessmentYear={persona.assessmentYear}
+                              linked={onboardingProfile?.connections.digilocker.linked ?? false}
+                              fetched={fetchedPapers ?? undefined}
+                              onFetched={handlePapersFetched}
+                            >
+                              <PdfIngestionDropzone onIngested={handlePdfIngested} />
+                            </YearPapersCard>
                           )}
                           <StatementTab
                             persona={persona}
@@ -2824,6 +2896,19 @@ export default function WapsiPrototype() {
                               total reduction passes ₹1,00,000. Reads the shared
                               context, which mirrors the ledger above. */}
                           <AuditRiskRadar quietWhenClear />
+                          {/* The year's one form (2026-09-07): only the groups the papers could not answer,
+                              from the same field specs the agent uses. Gone once answered. */}
+                          {(() => {
+                            const yi = returnState?.yearIntake ?? emptyYearIntake(persona.assessmentYear, "");
+                            if (Object.keys(yi.answers).length > 0) return null;
+                            const gaps = gapGroups(persona, yi);
+                            const fields = formFieldsFor(
+                              { gaps, ownerKind: session?.isMock ? "demo" : "citizen", residencyKnown: !!onboardingProfile, answers: {}, s: shellStrings },
+                              persona.facts.some((f) => f.kind === "salary"),
+                            );
+                            const skipped = (["housing", "deductions"] as const).filter((g) => !gaps.includes(g));
+                            return <YearGapForm lang={lang} s={shellStrings} fields={fields} skipped={skipped} onSubmit={handleYearAnswers} />;
+                          })()}
                           {/* D13 single page (user directive 2026-08-29): the confirm
                               checklist lives WITH the cards; jump links scroll in-page.
                               The finish card stays on the check step - here the

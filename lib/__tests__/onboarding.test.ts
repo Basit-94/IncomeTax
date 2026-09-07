@@ -3,7 +3,9 @@ import {
   createOnboardingProfile,
   getDashboardDestination,
   getPersonalization,
+  isProfileComplete,
   loadOnboardingProfile,
+  profileSeed,
   saveOnboardingProfile,
   type OnboardingDraft,
 } from "../onboarding";
@@ -11,103 +13,78 @@ import { installLocalStorageStub } from "../return/__tests__/fixtures";
 
 const completeDraft: OnboardingDraft = {
   lang: "en",
-  intent: "file_return",
-  profession: "salaried",
   mode: "full",
-  filingHistory: "never",
-  focuses: ["salary", "not_sure"],
+  identity: { name: "Sunita Devi", pan: "DEMPS4417K", dob: "1992-03-04", aadhaarLast4: "4417" },
+  contact: { mobile: "90000 00001", address: "Tiruppur, Tamil Nadu" },
+  residency: "resident",
+  banks: [{ id: "b1", bank: "Kaveri Cooperative Bank", maskedNumber: "•••• •••• 1183", ifsc: "KAVC0001183", status: "validated", nominatedForRefund: true }],
+  connections: { digilocker: { linked: true, linkedAt: "2026-09-07T10:00:00.000Z" } },
 };
 
-describe("onboarding profile", () => {
+describe("onboarding profile v3 — only what never changes (2026-09-07)", () => {
   beforeEach(() => installLocalStorageStub());
 
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("requires every short answer before completing", () => {
-    expect(createOnboardingProfile({ lang: "en" }, "en")).toBeNull();
-    expect(createOnboardingProfile(completeDraft, "en")).toMatchObject({
-      intent: "file_return",
-      mode: "full",
-      focuses: ["salary", "not_sure"],
-    });
+  it("needs a PAN-shaped identity and a mode, nothing about the tax year", () => {
+    expect(createOnboardingProfile({ lang: "en", mode: "full" }, "en")).toBeNull();
+    expect(createOnboardingProfile({ ...completeDraft, identity: { name: "X", pan: "not-a-pan" } }, "en")).toBeNull();
+    const profile = createOnboardingProfile(completeDraft, "en");
+    expect(profile).toMatchObject({ version: 3, mode: "full", identity: { pan: "DEMPS4417K" }, residency: "resident", refundAccountId: "b1" });
+    expect(profile && "intent" in profile).toBe(false);
+    expect(profile && "profession" in profile).toBe(false);
   });
 
-  it("the chosen mode decides guidance; deduction signals decide the regime lens", () => {
-    const profile = createOnboardingProfile(
-      {
-        ...completeDraft,
-        mode: "simple",
-        profession: "business_owner",
-        focuses: ["business", "deductions"],
-      },
-      "en",
-    );
-    expect(profile).not.toBeNull();
-    expect(getPersonalization(profile!)).toEqual({
-      guided: true,
-      regimeLens: "check_claims",
-    });
+  it("defaults residency to resident and the refund account to the nominated bank", () => {
+    const profile = createOnboardingProfile({ ...completeDraft, residency: undefined, refundAccountId: "not-a-bank" }, "en");
+    expect(profile?.residency).toBe("resident");
+    expect(profile?.refundAccountId).toBe("b1");
   });
 
-  it("an explicit full-detail choice wins even for a first-time filer", () => {
-    // v2 semantics: the user's stated mode IS the guidance level. filingHistory no longer
-    // overrides what the person explicitly asked for.
-    const profile = createOnboardingProfile(
-      { ...completeDraft, mode: "full", filingHistory: "never", focuses: ["salary"] },
-      "en",
-    );
-    expect(profile).not.toBeNull();
-    expect(getPersonalization(profile!)).toEqual({
-      guided: false,
-      regimeLens: "compare_both",
-    });
+  it("the chosen mode decides guidance; the year's regime lean decides the lens", () => {
+    const profile = createOnboardingProfile({ ...completeDraft, mode: "simple" }, "en")!;
+    expect(getPersonalization(profile, "open")).toEqual({ guided: true, regimeLens: "check_claims" });
+    expect(getPersonalization(profile, "new")).toEqual({ guided: true, regimeLens: "compare_both" });
+    expect(getPersonalization(createOnboardingProfile(completeDraft, "en")!).guided).toBe(false);
   });
 
-  it("migrates a stored v1 profile instead of sending the user back through onboarding", () => {
-    // A v1 profile has an incomeBand and no mode. It must load as v2 with mode derived from
-    // the old guided heuristic — re-asking answered questions is what Phase 3 removes.
+  it("migrates stored v1 and v2 profiles instead of sending the user back through onboarding", () => {
     globalThis.localStorage.setItem(
       "wapsi_onboarding_profile",
-      JSON.stringify({
-        version: 1,
-        lang: "en",
-        intent: "file_return",
-        profession: "salaried",
-        incomeBand: "8_to_12",
-        filingHistory: "never",
-        focuses: ["salary", "not_sure"],
-        completedAt: "2026-06-01T00:00:00.000Z",
-      }),
+      JSON.stringify({ version: 2, lang: "hi", intent: "file_return", profession: "salaried", mode: "full", filingHistory: "never", focuses: ["salary"], completedAt: "2026-06-01T00:00:00.000Z" }),
     );
-    const migrated = loadOnboardingProfile();
-    expect(migrated).toMatchObject({ version: 2, mode: "simple", profession: "salaried" });
+    const v2 = loadOnboardingProfile();
+    expect(v2).toMatchObject({ version: 3, lang: "hi", mode: "full", migratedFrom: 2, connections: { digilocker: { linked: false } } });
+    expect(isProfileComplete(v2!)).toBe(false);
+
+    globalThis.localStorage.setItem(
+      "wapsi_onboarding_profile",
+      JSON.stringify({ version: 1, lang: "en", intent: "file_return", profession: "salaried", incomeBand: "8_to_12", filingHistory: "never", focuses: ["salary", "not_sure"], completedAt: "2026-06-01T00:00:00.000Z" }),
+    );
+    expect(loadOnboardingProfile()).toMatchObject({ version: 3, mode: "simple", migratedFrom: 1 });
   });
 
-  it("opens the filed dashboard on the surface that matches the stated intent", () => {
-    const noticeProfile = createOnboardingProfile(
-      { ...completeDraft, intent: "understand_notice", filingHistory: "every_year" },
-      "en",
-    );
-    const correctionProfile = createOnboardingProfile(
-      { ...completeDraft, intent: "correct_prefill", filingHistory: "every_year" },
-      "en",
-    );
-
-    expect(getDashboardDestination(noticeProfile!, true)).toBe("actions");
-    expect(getDashboardDestination(correctionProfile!, true)).toBe("statement");
-    expect(getDashboardDestination(noticeProfile!, false)).toBe("facts");
+  it("opens the filed dashboard on the surface that matches the year's intent", () => {
+    expect(getDashboardDestination("understand_notice", true)).toBe("actions");
+    expect(getDashboardDestination("correct_prefill", true)).toBe("statement");
+    expect(getDashboardDestination("check_refund", true)).toBe("overview");
+    expect(getDashboardDestination(undefined, true)).toBe("overview");
+    expect(getDashboardDestination("understand_notice", false)).toBe("facts");
   });
 
   it("round-trips a completed profile in local storage", () => {
-    const profile = createOnboardingProfile(completeDraft, "en");
-    expect(profile).not.toBeNull();
-    saveOnboardingProfile(profile!);
-    expect(loadOnboardingProfile()).toMatchObject({
-      lang: "en",
-      intent: "file_return",
-      profession: "salaried",
-    });
+    const profile = createOnboardingProfile(completeDraft, "en")!;
+    saveOnboardingProfile(profile);
+    expect(loadOnboardingProfile()).toMatchObject({ version: 3, identity: { pan: "DEMPS4417K" }, banks: [{ id: "b1" }] });
+    expect(isProfileComplete(profile)).toBe(true);
+  });
+
+  it("the seed the runtime sees carries no identifier", () => {
+    const seed = profileSeed(createOnboardingProfile(completeDraft, "en")!);
+    expect(seed).toEqual({ firstName: "Sunita", refundAccount: "Kaveri Cooperative Bank •••• •••• 1183", residency: "resident", digilockerLinked: true, mode: "full" });
+    expect(JSON.stringify(seed)).not.toContain("DEMPS4417K");
+    expect(JSON.stringify(seed)).not.toContain("4417\"");
   });
 });

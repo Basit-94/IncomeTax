@@ -13,7 +13,8 @@ session token yet, so localStorage remains the client's source of truth for now)
 
 | Screen | Simple ("Do it for me") | Full detail ("Show me everything") | Why different |
 |---|---|---|---|
-| **Onboarding** | Same for both — the mode question IS one of its five answers. | Same. | You cannot mode-split the screen that asks which mode you want. |
+| **Onboarding** (v3, 2026-09-07) | Same for both — three screens of what never changes (identity via DigiLocker, refund account, the mode question itself). | Same. | You cannot mode-split the screen that asks which mode you want; nothing yearly is asked here. |
+| **Yearly intake** (2026-09-07) | Munshi ji's opening conversation in `/app`: opener → source card → review → one form card → verdict. | The Manual facts step: "This year's papers" card (DigiLocker / upload) and the same one-form card above the fact cards. | One module (`lib/return/year-intake.ts`, `year-form.ts`) decides what to ask; only the surface differs. |
 | **Landing / OTP** | Same for both. | Same. | Identity has one correct shape; nothing here is tax vocabulary. |
 | **Statement (facts)** | Per-kind plain-words explainer under every figure; per-card "Yes, that's right" / "No, this is wrong" — the read-then-confirm gate. | No explainers; no per-card confirm. Cards are reading matter with provenance + dispute links, and ONE sign-off declaration confirms everything ("signed, not crossed off"). | A CA has already done the checking the gate simulates (user directive). The explainer's only job is vocabulary. Dispute stays in both — it is substance, not hand-holding. |
 | **Claims rows** | Confirm per row; evidence status shown. | No per-row confirm (sign-off covers them); evidence status STAYS — evidence is substance a CA needs. | Same reasoning as facts. |

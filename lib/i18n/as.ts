@@ -650,7 +650,7 @@ export const asDict: Dict = {
   },
 
   agent: {
-    title: "ৱাপছি সহায়ক",
+    title: "মুন্সী জী",
     open: "সহায়ক খুলক",
     close: "বন্ধ কৰক",
     placeholder: "পৰীক্ষা, বুজাই দিয়া বা ফাইল কৰিবলৈ কওক…",

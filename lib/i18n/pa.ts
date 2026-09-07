@@ -642,7 +642,7 @@ export const pa: Dict = {
   },
 
   agent: {
-    title: "ਵਾਪਸੀ ਸਹਾਇਕ",
+    title: "ਮੁਨਸ਼ੀ ਜੀ",
     open: "ਸਹਾਇਕ ਖੋਲ੍ਹੋ",
     close: "ਬੰਦ ਕਰੋ",
     placeholder: "ਜਾਂਚਣ, ਸਮਝਾਉਣ ਜਾਂ ਦਾਖਲ ਕਰਨ ਲਈ ਕਹੋ…",

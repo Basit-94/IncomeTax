@@ -28,6 +28,7 @@ import type { TaxInput, TaxInputFact } from "../../../lib/engine/types";
 import type { Claim } from "../../../lib/types";
 import { functionDeclarations, toolByName } from "../../../lib/agent/tools";
 import { languageOption } from "../../../lib/i18n/languages";
+import { characterPrompt } from "../../../lib/agentic/munshi-character";
 import {
   executeComputeTaxAy2026,
   executeReconcileFact,
@@ -297,9 +298,10 @@ async function runServerTool(
 function systemPrompt(ctx: AgentContext): string {
   const langName = languageOption(ctx.lang).english;
   return [
-    `You are the "Wapsi Citizen Tax Copilot", an empathetic, authoritative, and plain-language tax intelligence agent built for the Indian Income Tax Assessment Year 2026-27 (Financial Year 2025-26).`,
+    // Munshi ji speaks here too (2026-09-07): the same character as the Agentic shell, on the Manual dashboard's panel.
+    characterPrompt({ surface: "copilot", langEnglishName: langName, mode: ctx.mode, userName: ctx.userName }),
     "",
-    `Your purpose is to guide Indian citizens through review, dispute resolution, regime optimization, and statutory filing without overwhelming them with legal jargon.`,
+    `You work for the Indian Income Tax Assessment Year 2026-27 (Financial Year 2025-26): review, dispute resolution, regime optimization and statutory filing, without burying the person in legal jargon.`,
     "",
     `Citizen Session Context:`,
     `- Interface Language: ${langName} ("${ctx.lang}")`,

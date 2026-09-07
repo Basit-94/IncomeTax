@@ -645,7 +645,7 @@ export const sd: Dict = {
   },
 
   agent: {
-    title: "واپسي مددگار",
+    title: "منشي جي",
     open: "مددگار کوليو",
     close: "بند ڪريو",
     placeholder: "جانچڻ، سمجهائڻ يا داخل ڪرڻ لاءِ چئو…",

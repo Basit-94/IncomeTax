@@ -22,7 +22,7 @@ function deps(overrides: Partial<RuntimeDeps> = {}): RuntimeDeps {
 const vault = () => new VaultService(new MemoryVaultRepository(), loadVaultKey({ WAPSI_VAULT_KEY: Buffer.alloc(32, 9).toString("base64") }));
 const msgs = async (d: RuntimeDeps, owner: Owner, run: Run) => (await d.store.eventsAfter(owner, run.id, 0)).map((e) => e.payload).filter((p) => p.type === "message" && p.role === "assistant").map((p) => (p as { text: string }).text);
 const answer = (d: RuntimeDeps, owner: Owner, r: Run, value: string | number | boolean) => advance(d, owner, r.id, { answer: { questionId: r.state.pendingQuestion!.id, value } }) as Promise<Run>;
-const form = (fields: Record<string, number | boolean>) => JSON.stringify(fields);
+const form = (fields: Record<string, number | boolean | string>) => JSON.stringify(fields);
 
 describe("plain-English intake — the sentence becomes a situation (user request 2026-09-05)", () => {
   it("reads amounts the way people write them", () => {
@@ -73,13 +73,16 @@ describe("intake in the runtime — document-first, one form, few steps (user di
     expect(q.lead).toBeUndefined(); // no lead-ins: the question is the question
     r = await answer(d, sunita, r, "reported");
 
-    // Everything else in one card — PF, health insurance, other income — not one question at a time.
+    // Everything else in one card — not one question at a time. Since 2026-09-07 the card holds only what the
+    // papers cannot answer: Sunita's salary and interest are on record, the new regime wins even at the deduction
+    // ceiling, so no deduction is asked; what remains is where she lived and the ITR-1 gate.
     q = r.state.pendingQuestion!;
     expect(q.resolves).toBe("details");
     expect(q.expects).toBe("form");
-    expect(q.fields?.map((f) => f.key)).toEqual(["pf_amount", "health_amount", "interest_amount"]); // salary is on record; demo personas are residents
-    r = await answer(d, sunita, r, form({ pf_amount: 60000, health_amount: 0, interest_amount: 0 }));
-    expect(r.state.answers).toMatchObject({ pf_amount: 60000, health_amount: 0, interest_amount: 0, inventory_confirmed: true });
+    expect(q.fields?.map((f) => f.key)).toEqual(["housing", "extras"]);
+    // A PF figure typed anyway (the card accepts it) is still handled: proof asked, left out without one.
+    r = await answer(d, sunita, r, form({ housing: "family", extras: "none", pf_amount: 60000 }));
+    expect(r.state.answers).toMatchObject({ pf_amount: 60000, housing: "family", extras: "none", inventory_confirmed: true });
 
     // A deduction was entered, so one proof upload is offered — with an honest way out.
     q = r.state.pendingQuestion!;
@@ -120,11 +123,12 @@ describe("intake in the runtime — document-first, one form, few steps (user di
     expect((await msgs(d, citizen, r)).at(-1)).toMatch(/₹9,00,000/); // what was read is said, not "lovely, thanks"
     expect(r.state.sources.some((s) => s.kind === "document" && s.verified)).toBe(true);
 
-    // The form no longer asks for the salary; a citizen is asked about residency in the same card.
+    // The form no longer asks for the salary (read from the Form 16) nor for deductions (the new regime wins at any
+    // ceiling on ₹9,00,000); a citizen without a profile is asked about residency in the same card.
     q = r.state.pendingQuestion!;
     expect(q.resolves).toBe("details");
-    expect(q.fields?.map((f) => f.key)).toEqual(["pf_amount", "health_amount", "interest_amount", "resident"]);
-    r = await answer(d, citizen, r, form({ pf_amount: 0, health_amount: 0, interest_amount: 1240, resident: true }));
+    expect(q.fields?.map((f) => f.key)).toEqual(["resident", "housing", "extras"]);
+    r = await answer(d, citizen, r, form({ resident: true, housing: "rent", extras: "none", interest_amount: 1240 }));
 
     // Interest is a head the engine computes, so a real figure here is declared, not refused.
     // Nothing else to ask. The only thing standing between this return and a recommendation is the reviewer.
@@ -142,7 +146,7 @@ describe("intake in the runtime — document-first, one form, few steps (user di
     let q = r.state.pendingQuestion!;
     expect(q.resolves).toBe("digilocker_consent");
     expect(q.expects).toBe("yes_no");
-    expect(q.items).toHaveLength(2);
+    expect(q.items).toHaveLength(3); // Form 16, AIS, Form 26AS (2026-09-07)
     expect(q.items?.[0]).toMatch(/Form 16 .*SAMPLE/);
     expect(r.state.pendingCommands ?? []).toHaveLength(0); // nothing fetched before yes
     r = await answer(d, citizen, r, true);
@@ -167,7 +171,7 @@ describe("intake in the runtime — document-first, one form, few steps (user di
     expect(r.state.pendingCommands?.some((c) => c.type === "import_document")).toBe(true);
     const q = r.state.pendingQuestion!;
     expect(q.resolves).toBe("details"); // the staged Form 16 makes this a salaried return; no income-source question
-    expect(q.fields?.map((f) => f.key)).toEqual(["pf_amount", "health_amount", "interest_amount", "resident"]);
+    expect(q.fields?.map((f) => f.key)).toEqual(["resident", "housing", "extras"]);
   });
 
   it("DigiLocker declined falls back to typing: the form then carries the salary, and the typed figure is declared as the citizen's own", async () => {
@@ -178,7 +182,9 @@ describe("intake in the runtime — document-first, one form, few steps (user di
     r = await answer(d, citizen, r, false);
     const q = r.state.pendingQuestion!;
     expect(q.resolves).toBe("details");
-    expect(q.fields?.map((f) => f.key)).toEqual(["salary_amount", "pf_amount", "health_amount", "interest_amount", "resident"]);
+    // No papers: the salary, who they work for and the interest are typed; residency once; the year's two groups; and
+    // only the two deductions the first intake asked — the regime cannot be judged before the salary is known.
+    expect(q.fields?.map((f) => f.key)).toEqual(["salary_amount", "employer_category", "interest_amount", "resident", "housing", "extras", "pf_amount", "health_amount"]);
     expect(r.state.documentTypes ?? []).not.toContain("FORM_16"); // nothing was fetched
     r = await answer(d, citizen, r, form({ salary_amount: 900000, pf_amount: 0, health_amount: 0, interest_amount: 0, resident: true }));
     expect(r.status).toBe("completed");

@@ -284,7 +284,7 @@ export default function AgenticModeModal({
                 onClose();
                 onOpenStandardFiling?.();
               }}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r px-5 py-2 text-xs font-bold text-white shadow-md shadow-indigo-600/20 hover:opacity-90 transition cursor-pointer"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 rounded-xl bg-ink-surface px-5 py-2 text-xs font-bold text-on-ink shadow-md shadow-indigo-600/20 hover:opacity-90 transition cursor-pointer"
             >
               <span>{isHindi ? "मानक 5-चरणीय रिटर्न शुरू करें" : "Start Standard Filing"}</span>
               <ArrowRight size={14} />

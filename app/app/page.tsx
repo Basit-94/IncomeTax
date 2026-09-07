@@ -18,6 +18,7 @@ import { loadSession, saveSession, clearSession, type SessionInfo } from "@/lib/
 import { dict, isLang } from "@/lib/i18n";
 import { agenticStrings } from "@/lib/i18n/agenticStrings";
 import { isRtl } from "@/lib/i18n/languages";
+import { loadOnboardingProfile, profileSeed } from "@/lib/onboarding";
 import { PERSONAS, PERSONA_ORDER, findPersonaByPan } from "@/lib/personas";
 import { CURRENT_VERSION, load, save as savePersist } from "@/lib/return/persist";
 import { mirrorReturn, pullReturn } from "@/lib/return-sync-client";
@@ -326,7 +327,10 @@ function AgenticWorkspace() {
   }, [citizen?.pan, view.outputs]);
 
   const start = async (input: { message?: string; task?: import("@/lib/agentic/types").RunTask }) => {
-    const run = await runs.create({ ...input, lang });
+    // The profile's seed rides along (2026-09-07): first name, masked refund account, residency, the DigiLocker
+    // link, the mode — never a PAN or Aadhaar. The runtime opens the year with it and skips what it answers.
+    const profile = loadOnboardingProfile();
+    const run = await runs.create({ ...input, lang, profile: profile ? profileSeed(profile) : undefined });
     router.push(`/app?run=${run.id}`);
   };
 

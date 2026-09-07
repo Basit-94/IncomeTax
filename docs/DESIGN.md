@@ -94,6 +94,17 @@ sidebar, `AuditRiskRadar`, `DefectiveNoticeCard`, the manual page's wizard CTAs,
 comparison/share modals, the mode-select cards. Mascot: every robot/monogram placeholder is Munshi ji
 (mode-select card, Agentic-mode modal ×2, CA header, CA login, onboarding, dashboard hero on phones).
 
+**Seventh pass (2026-09-07) — onboarding v3 and the yearly intake, on the same tokens.** `components/onboarding.tsx`
+keeps the §2 shell (glass 24 px card, Munshi ji 64 asking in a bubble, h1 26/32, accent progress bars, accent-soft
+selected rows, pinned Continue on phones) with three screens: a consent card (glass-flat, accent shield) for the
+DigiLocker link, the locked identity row with a `Lock` pill on `paper-3`, editable contact fields (46 px, mono for
+numbers), the refund-account rows and the Simple/Full rows as ChoiceButtons, a collapsed "anything standing"
+disclosure. On the Manual facts step, `year-papers-card.tsx` (glass card, Munshi ji 34 explaining, amber-bg consent
+card, ok-soft result tile with mono figure rows) sits above the fact cards and `year-gap-form.tsx` (chips with the
+accent-soft "on" state, mono figure inputs, the amber "same as last year" pill) sits under the radar. In the
+workspace, `FormFields` gained the same chips for `multi`/short `choice` fields. Munshi ji's voice moved into the
+model's instructions (`MUNSHI_VOICE`, `lib/agentic/model.ts`); templates remain the fallback.
+
 | Token | Light (5a) | Dark (P5) |
 |---|---|---|
 | bg / paper | `#F3EEFF` | `#0B1424` |

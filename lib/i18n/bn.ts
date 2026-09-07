@@ -643,7 +643,7 @@ export const bn: Dict = {
   },
 
   agent: {
-    title: "ওয়াপসি সহায়ক",
+    title: "মুন্সি জি",
     open: "সহায়ক খুলুন",
     close: "বন্ধ করুন",
     placeholder: "যাচাই, ব্যাখ্যা বা ফাইল করতে বলুন…",

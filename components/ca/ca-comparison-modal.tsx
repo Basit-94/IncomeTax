@@ -68,7 +68,7 @@ export default function CAComparisonModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col bg-paper border border-line rounded-3xl shadow-glass overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="bg-gradient-to-r px-6 py-5 text-white shrink-0">
+        <div className="bg-ink-surface px-6 py-5 text-on-ink shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-2xl bg-amber-bg border border-money/40 text-money">
@@ -89,7 +89,7 @@ export default function CAComparisonModal({
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-full hover:bg-white/10 text-white/70 hover:text-white transition cursor-pointer"
+              className="p-1.5 rounded-full hover:bg-white/10 text-on-ink/70 hover:text-on-ink transition cursor-pointer"
               aria-label="Close"
             >
               <X size={18} />

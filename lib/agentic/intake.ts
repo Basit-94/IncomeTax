@@ -10,15 +10,22 @@
  * from, so the citizen recognises it ("oh, that form") instead of being told a
  * form number. Every answer lands in the same staged commands the rest of the
  * runtime reviews and confirms; nothing here applies anything.
+ *
+ * 2026-09-07 (papers-first v2): this is the yearly half of onboarding. The
+ * source card puts DigiLocker first when the profile linked it; the one form
+ * is built from `gapGroups` — housing, "anything else", deductions, and the
+ * no-papers figures — so a group the documents already answer is never shown.
  */
 
 import type { AgenticStrings } from "../i18n/agenticStrings";
 import { formatMoney } from "../money";
 import type { VersionedReturn } from "../return/snapshot-store";
+import { DEDUCTION_FIELDS, formFieldsFor, yearAnswersFrom } from "../return/year-form";
+import type { GapGroup, YearAnswers } from "../return/year-intake";
 import type { Lang } from "../types";
 import { fill } from "./response";
 import { newId } from "./store";
-import type { FormField, Question } from "./types";
+import type { Question } from "./types";
 
 export interface Situation {
   /** Salary, a job, a package, an employer. */
@@ -110,18 +117,29 @@ export interface IntakeContext {
   salaryStaged: boolean;
   /** What the DigiLocker mock would hand over, one line each, for the consent card. */
   digilockerItems: string[];
+  /** The profile linked DigiLocker at onboarding: the fetch is one tap and comes first. */
+  digilockerLinked?: boolean;
+  /** Residency already on the profile — the form does not ask again. */
+  residencyKnown?: boolean;
+  /** Which groups of the one form still need the person (lib/return/year-intake.ts `gapGroups`). */
+  gaps?: GapGroup[];
+  /** Last year's answers, pre-selected and tagged. */
+  carried?: Pick<YearAnswers, "housing" | "extras" | "deductions">;
   s: AgenticStrings;
   lang: Lang;
 }
 
 const differs = (a: number, b: number) => Math.abs(a - b) / Math.max(a, b, 1) > 0.05;
 
+// The form's field specs live in lib/return/year-form.ts (pure, browser-safe) so the Manual shell renders the same card.
+export { DEDUCTION_FIELDS, formFieldsFor, yearAnswersFrom };
+
 /**
  * The next intake step, or null when the intake is complete. Document-first and
  * short (user direction 2026-09-06: "asking one question at a time feels worse
  * than manual mode"): where the salary figures come from — an upload, the
  * DigiLocker mock, the vault (each behind explicit consent) or typed — then ONE
- * form for everything else, then at most one proof upload.
+ * form for everything the papers could not answer, then at most one proof upload.
  */
 export function nextIntakeQuestion(ctx: IntakeContext): Question | null {
   const { situation: sit, snapshot, answers: a, s, lang } = ctx;
@@ -163,8 +181,10 @@ export function nextIntakeQuestion(ctx: IntakeContext): Question | null {
   if (!salaryKnown && a.source === undefined) {
     const vaultDocs = a.vault_consent === false ? [] : ctx.vaultForm16;
     const options: NonNullable<Question["sourceOptions"]> = [];
+    // A linked locker is the one-tap path and goes first; otherwise the upload leads, as before.
+    if (ctx.vaultAvailable && ctx.digilockerLinked) options.push({ value: "digilocker", label: s.sourceDigiLocker, kind: "choice", detail: s.sourceDigiLockerLinked });
     if (ctx.vaultAvailable) options.push({ value: "upload", label: s.sourceUpload, kind: "upload", detail: s.sourceUploadDetail });
-    if (ctx.vaultAvailable) options.push({ value: "digilocker", label: s.sourceDigiLocker, kind: "choice", detail: s.sourceDigiLockerDetail });
+    if (ctx.vaultAvailable && !ctx.digilockerLinked) options.push({ value: "digilocker", label: s.sourceDigiLocker, kind: "choice", detail: s.sourceDigiLockerDetail });
     if (vaultDocs.length) options.push({ value: "vault", label: s.sourceVault, kind: "choice", detail: vaultDocs.map((d) => d.title).join(" · ") });
     options.push({ value: "manual", label: s.sourceManual, kind: "choice" });
     return { id: newId("q"), text: s.askSource, why: s.askSourceWhy, expects: "source", resolves: "source", sourceOptions: options };
@@ -177,18 +197,12 @@ export function nextIntakeQuestion(ctx: IntakeContext): Question | null {
   }
 
   if (a.details === undefined) {
-    const has80C = persona.claims.some((c) => c.section === "80C");
-    const has80D = persona.claims.some((c) => c.section.startsWith("80D"));
-    const fields: FormField[] = [];
-    if (!salaryKnown) fields.push({ key: "salary_amount", label: s.fieldSalary, type: "number", hint: s.fieldSalaryHint });
-    if (!has80C) fields.push({ key: "pf_amount", label: s.fieldPf, type: "number", hint: s.fieldPfHint });
-    if (!has80D) fields.push({ key: "health_amount", label: s.fieldHealth, type: "number", hint: s.fieldHealthHint });
-    fields.push({ key: "interest_amount", label: s.fieldInterest, type: "number", hint: s.fieldInterestHint });
-    if (ctx.ownerKind === "citizen" && a.resident === undefined) fields.push({ key: "resident", label: s.fieldResident, type: "yes_no" });
+    const fields = formFieldsFor(ctx, salaryKnown);
+    if (fields.length === 0) return null; // the papers answered everything; the runtime marks the inventory confirmed
     return { id: newId("q"), text: s.askDetails, why: s.askDetailsWhy, expects: "form", resolves: "details", fields };
   }
 
-  const claimed = (typeof a.pf_amount === "number" && a.pf_amount > 0) || (typeof a.health_amount === "number" && a.health_amount > 0);
+  const claimed = DEDUCTION_FIELDS.some((d) => typeof a[d.key] === "number" && (a[d.key] as number) > 0);
   if (claimed && ctx.vaultAvailable && a.proof === undefined) {
     return { id: newId("q"), text: s.askProof, why: s.askProofWhy, expects: "file", resolves: "proof", docType: "OTHER", skipLabel: s.skipForNow };
   }

@@ -67,3 +67,35 @@ English, Hindi, Tamil and Bengali templates are hand-written in this register (`
 `lib/i18n/agentic/bn.ts`); the other languages fall back per key. Hinglish is a *register*, not a
 language: detected from romanised Hindi in the person's message (`detectRegister`) and applied by the
 model; the fallback templates stay in the UI language.
+
+## Who speaks — Munshi ji (2026-09-07)
+
+The voice has a name and a life now. `lib/agentic/munshi-character.ts` is the one file every surface reads:
+`MUNSHI_CHARACTER` (role, backstory, appearance, values, voice, reactions to a refund / tax due / a notice /
+a wrong prefill / confusion / anxiety / not being able to advise / being asked who he is, what he never does,
+boundaries, register), `MUNSHI_VOICE` (the compact block the phrasing model gets on every call),
+`characterPrompt({ surface, langEnglishName, mode, userName })` (the bible rendered for a system prompt —
+`agentic`, `expert`, `copilot`) and `whoIsMunshi(lang, register, name)` (the deterministic introduction when the
+model is off). The Agentic model (`model.ts`), the tax-expert prompt, the Manual copilot
+(`app/api/agent/route.ts`) and the "who are you" path all use it; the Manual panel is titled Munshi ji in
+every dictionary that carries a title. "aap kon h?", "who r u", "aapka naam kya hai" are heard as the question
+they are and get him introducing himself in one breath — never a menu.
+
+## Natural vs template — the policy
+
+The user's correction (2026-09-07): "I just want agents to understand when to use templates and when to
+answer in a natural way." The rule, as code:
+
+| Natural — phrased by the model (`speak` / `speakResult`), template only as fallback | Template — identical every time |
+|---|---|
+| greetings, small talk, the who-am-I introduction | receipts and challan identifiers (BSR, CIN, serial) |
+| the year's opener, acknowledgements, "what I read from your papers" | the review card and its rows |
+| every question's wording (the terms it must keep come from the template) | the recommendation's figures and conclusion (`recommendationText` — they ride inside the brief and cannot change) |
+| the verdict (which form, where the regimes stand) | the "simulated — nothing was filed or paid" badge |
+| task results: the already-filed summary, regime comparison, reconciliation, challan lead-ins, notice status, refund tracker, vault inventory, CA review lines (`speakResult`: figures, sections, dates and table rows are facts he must keep; the prose is his) | legal and safety lines: the injection notice, budget exhausted, stale review, error |
+| tax answers from the stored RAG paraphrase and the smart answers (facts kept exactly, explanation in his words) | anything said while the model is off, out of quota or its reply failed the check |
+| the close of a task and the invitation to the next (`emitTaskCapabilitiesSummary`) | the task chips under the composer (UI, not prose) |
+
+`speakResult` passes `shape: "review"` so the model is told to keep table rows verbatim, and `allowAdvice`
+because a comparison's recommendation is the recommendation turn. The check is unchanged: a reply with a
+figure not in the facts is refused and the template stands, recorded as `tool_outcome model.phrase ok:false`.

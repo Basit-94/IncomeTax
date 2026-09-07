@@ -171,6 +171,47 @@ export interface AgenticStrings {
   formSubmit: string;
   fetchedFromDigiLocker: string;
   readFromVault: string;
+  // Yearly intake (2026-09-07): the opener, the one form's groups, the verdict. Templates are fallbacks; the model phrases first.
+  fetchingFromDigiLocker: string;
+  openerFallback: string;
+  openerFallbackNoAccount: string;
+  sourceDigiLockerLinked: string;
+  askHousing: string;
+  housingRent: string;
+  housingOwnSelf: string;
+  housingOwnLetOut: string;
+  housingFamily: string;
+  askExtras: string;
+  extraBusiness: string;
+  extraSoldAssets: string;
+  extraForeign: string;
+  extraDirector: string;
+  extraCrypto: string;
+  extraAgri: string;
+  extraDisability: string;
+  extraFamilyPension: string;
+  extraNone: string;
+  askDeductionsHint: string;
+  ded80C: string;
+  ded80D: string;
+  ded80CCD1B: string;
+  ded80E: string;
+  ded80G: string;
+  ded24B: string;
+  ded80GG: string;
+  ded80EEB: string;
+  fieldEmployerCategory: string;
+  employerCentral: string;
+  employerState: string;
+  employerPsu: string;
+  employerPensioner: string;
+  employerOthers: string;
+  verdictItr1: string;
+  regimeNewLeads: string;
+  regimeOldLeads: string;
+  regimeOpen: string;
+  verdictOtherForm: string;
+  carriedFromLastYear: string;
   inspectorModelNotes: string;
   // The voice (docs/VOICE.md, 2026-09-05): small talk, lead-ins, warmth around the facts
   chatHello: string;
@@ -367,6 +408,46 @@ const en: AgenticStrings = {
   formSubmit: "Save these",
   fetchedFromDigiLocker: "Fetched from DigiLocker:",
   readFromVault: "Read from the Form 16 in your vault:",
+  fetchingFromDigiLocker: "Fetching from DigiLocker:",
+  openerFallback: "Namaste {name}. This is the AY 2026-27 return. Refunds go to {account} — still right? First, this year's papers.",
+  openerFallbackNoAccount: "Namaste {name}. This is the AY 2026-27 return. First, this year's papers.",
+  sourceDigiLockerLinked: "Linked at onboarding — one tap for this year's Form 16 and AIS",
+  askHousing: "Where did you live this year?",
+  housingRent: "Rented",
+  housingOwnSelf: "Own it and live in it",
+  housingOwnLetOut: "Own it and rent it out",
+  housingFamily: "With family",
+  askExtras: "Anything else this year? Pick everything that applies.",
+  extraBusiness: "Freelance or business income",
+  extraSoldAssets: "Sold property or shares",
+  extraForeign: "Foreign income or assets",
+  extraDirector: "Director, or unlisted shares",
+  extraCrypto: "Crypto or lottery",
+  extraAgri: "Farm income over ₹5,000",
+  extraDisability: "Disability (self or dependant)",
+  extraFamilyPension: "Family pension",
+  extraNone: "None of these",
+  askDeductionsHint: "Money you spent that the papers don't show. Enter 0 for anything that doesn't apply.",
+  ded80C: "LIC, PPF, ELSS, tuition (80C)",
+  ded80D: "Health insurance (80D)",
+  ded80CCD1B: "Extra NPS (80CCD(1B))",
+  ded80E: "Education loan interest (80E)",
+  ded80G: "Donations (80G)",
+  ded24B: "Home loan interest (24(b))",
+  ded80GG: "Rent paid, no HRA (80GG)",
+  ded80EEB: "Electric vehicle loan interest (80EEB)",
+  fieldEmployerCategory: "Who do you work for?",
+  employerCentral: "Central government",
+  employerState: "State government",
+  employerPsu: "Public sector undertaking",
+  employerPensioner: "Pension",
+  employerOthers: "A company or anyone else",
+  verdictItr1: "ITR-1 fits: {heads}. {regime}",
+  regimeNewLeads: "The new regime leads by {saving}, and no deduction you could add closes that gap.",
+  regimeOldLeads: "The old regime leads by {saving} with what is on record.",
+  regimeOpen: "The two regimes are close; what you spent this year will decide it.",
+  verdictOtherForm: "This return needs {form}: {reasons}. ITR-1 stops here — a CA review takes everything read so far.",
+  carriedFromLastYear: "Same as last year — tap to change",
   inspectorModelNotes: "Standard wording used on {n} turn(s) — why:",
   chatHello: "Hi {name}. What's going on with your taxes this year?",
   chatHelloAnon: "Hi. What's going on with your taxes this year?",
@@ -562,6 +643,46 @@ const hi: AgenticStrings = {
   formSubmit: "सहेजें",
   fetchedFromDigiLocker: "DigiLocker से लिया:",
   readFromVault: "वॉल्ट के फॉर्म 16 से पढ़ा:",
+  fetchingFromDigiLocker: "DigiLocker से ला रहा हूँ:",
+  openerFallback: "नमस्ते {name}। यह AY 2026-27 का रिटर्न है। रिफंड {account} में जाएगा — सही है? पहले इस साल के कागज़।",
+  openerFallbackNoAccount: "नमस्ते {name}। यह AY 2026-27 का रिटर्न है। पहले इस साल के कागज़।",
+  sourceDigiLockerLinked: "ऑनबोर्डिंग में जोड़ा गया — इस साल का फॉर्म 16 और AIS एक टैप में",
+  askHousing: "इस साल आप कहाँ रहे?",
+  housingRent: "किराए पर",
+  housingOwnSelf: "अपना घर, उसी में रहते हैं",
+  housingOwnLetOut: "अपना घर, किराए पर दिया है",
+  housingFamily: "परिवार के साथ",
+  askExtras: "इस साल और कुछ? जो-जो लागू हो, सब चुनें।",
+  extraBusiness: "फ्रीलांस या व्यवसाय की आय",
+  extraSoldAssets: "प्रॉपर्टी या शेयर बेचे",
+  extraForeign: "विदेशी आय या संपत्ति",
+  extraDirector: "डायरेक्टर, या अनलिस्टेड शेयर",
+  extraCrypto: "क्रिप्टो या लॉटरी",
+  extraAgri: "₹5,000 से ज़्यादा खेती की आय",
+  extraDisability: "दिव्यांगता (स्वयं या आश्रित)",
+  extraFamilyPension: "फ़ैमिली पेंशन",
+  extraNone: "इनमें से कुछ नहीं",
+  askDeductionsHint: "जो खर्च कागज़ नहीं दिखाते। जो लागू न हो उसमें 0 लिखें।",
+  ded80C: "LIC, PPF, ELSS, ट्यूशन (80C)",
+  ded80D: "स्वास्थ्य बीमा (80D)",
+  ded80CCD1B: "अतिरिक्त NPS (80CCD(1B))",
+  ded80E: "एजुकेशन लोन का ब्याज (80E)",
+  ded80G: "दान (80G)",
+  ded24B: "होम लोन का ब्याज (24(b))",
+  ded80GG: "किराया, बिना HRA (80GG)",
+  ded80EEB: "इलेक्ट्रिक वाहन लोन का ब्याज (80EEB)",
+  fieldEmployerCategory: "आप किसके लिए काम करते हैं?",
+  employerCentral: "केंद्र सरकार",
+  employerState: "राज्य सरकार",
+  employerPsu: "सार्वजनिक उपक्रम",
+  employerPensioner: "पेंशन",
+  employerOthers: "कंपनी या कोई और",
+  verdictItr1: "ITR-1 सही है: {heads}। {regime}",
+  regimeNewLeads: "नई व्यवस्था {saving} से आगे है, और कोई भी कटौती यह अंतर नहीं भरती।",
+  regimeOldLeads: "रिकॉर्ड के हिसाब से पुरानी व्यवस्था {saving} से आगे है।",
+  regimeOpen: "दोनों व्यवस्थाएँ करीब हैं; इस साल के खर्च तय करेंगे।",
+  verdictOtherForm: "इस रिटर्न के लिए {form} चाहिए: {reasons}। ITR-1 यहाँ रुकता है — CA समीक्षा में अब तक पढ़ा सब जाएगा।",
+  carriedFromLastYear: "पिछले साल जैसा — बदलने के लिए टैप करें",
   inspectorModelNotes: "{n} बार मानक शब्द इस्तेमाल हुए — कारण:",
   chatHello: "नमस्ते {name}। इस साल टैक्स में क्या चल रहा है?",
   chatHelloAnon: "नमस्ते। इस साल टैक्स में क्या चल रहा है?",
@@ -757,6 +878,46 @@ const ta: AgenticStrings = {
   formSubmit: "சேமி",
   fetchedFromDigiLocker: "DigiLocker-இலிருந்து எடுத்தது:",
   readFromVault: "வால்ட்டின் படிவம் 16-இலிருந்து படித்தது:",
+  fetchingFromDigiLocker: "DigiLocker-இலிருந்து எடுக்கிறேன்:",
+  openerFallback: "வணக்கம் {name}. இது AY 2026-27 ரிட்டர்ன். ரீஃபண்ட் {account}-க்கு செல்லும் — சரியா? முதலில், இந்த ஆண்டின் ஆவணங்கள்.",
+  openerFallbackNoAccount: "வணக்கம் {name}. இது AY 2026-27 ரிட்டர்ன். முதலில், இந்த ஆண்டின் ஆவணங்கள்.",
+  sourceDigiLockerLinked: "ஆன்போர்டிங்கில் இணைக்கப்பட்டது — இந்த ஆண்டின் படிவம் 16 மற்றும் AIS ஒரே தட்டலில்",
+  askHousing: "இந்த ஆண்டு நீங்கள் எங்கே வசித்தீர்கள்?",
+  housingRent: "வாடகை வீடு",
+  housingOwnSelf: "சொந்த வீடு, அதிலே வசிக்கிறேன்",
+  housingOwnLetOut: "சொந்த வீடு, வாடகைக்கு விட்டுள்ளேன்",
+  housingFamily: "குடும்பத்துடன்",
+  askExtras: "இந்த ஆண்டு வேறு ஏதும்? பொருந்துவதை எல்லாம் தேர்வு செய்யுங்கள்.",
+  extraBusiness: "ஃப்ரீலான்ஸ் அல்லது வணிக வருமானம்",
+  extraSoldAssets: "சொத்து அல்லது பங்குகள் விற்றேன்",
+  extraForeign: "வெளிநாட்டு வருமானம் அல்லது சொத்து",
+  extraDirector: "இயக்குநர், அல்லது பட்டியலிடப்படாத பங்குகள்",
+  extraCrypto: "கிரிப்டோ அல்லது லாட்டரி",
+  extraAgri: "₹5,000-க்கு மேல் விவசாய வருமானம்",
+  extraDisability: "மாற்றுத்திறன் (தான் அல்லது சார்ந்தவர்)",
+  extraFamilyPension: "குடும்ப ஓய்வூதியம்",
+  extraNone: "இவற்றில் எதுவும் இல்லை",
+  askDeductionsHint: "ஆவணங்கள் காட்டாத செலவுகள். பொருந்தாதவற்றுக்கு 0 என்று எழுதுங்கள்.",
+  ded80C: "LIC, PPF, ELSS, கல்விக் கட்டணம் (80C)",
+  ded80D: "மருத்துவக் காப்பீடு (80D)",
+  ded80CCD1B: "கூடுதல் NPS (80CCD(1B))",
+  ded80E: "கல்விக் கடன் வட்டி (80E)",
+  ded80G: "நன்கொடை (80G)",
+  ded24B: "வீட்டுக் கடன் வட்டி (24(b))",
+  ded80GG: "வாடகை, HRA இல்லாமல் (80GG)",
+  ded80EEB: "மின்சார வாகனக் கடன் வட்டி (80EEB)",
+  fieldEmployerCategory: "நீங்கள் யாரிடம் பணிபுரிகிறீர்கள்?",
+  employerCentral: "மத்திய அரசு",
+  employerState: "மாநில அரசு",
+  employerPsu: "பொதுத்துறை நிறுவனம்",
+  employerPensioner: "ஓய்வூதியம்",
+  employerOthers: "நிறுவனம் அல்லது வேறு யாரும்",
+  verdictItr1: "ITR-1 பொருந்துகிறது: {heads}. {regime}",
+  regimeNewLeads: "புதிய முறை {saving} முன்னிலையில்; எந்தக் கழிவும் அந்த இடைவெளியை மூடாது.",
+  regimeOldLeads: "பதிவின்படி பழைய முறை {saving} முன்னிலையில்.",
+  regimeOpen: "இரு முறைகளும் நெருக்கமாக உள்ளன; இந்த ஆண்டின் செலவுகள் முடிவு செய்யும்.",
+  verdictOtherForm: "இந்த ரிட்டர்னுக்கு {form} தேவை: {reasons}. ITR-1 இங்கே நிற்கிறது — CA மதிப்பாய்வு இதுவரை படித்த எல்லாவற்றையும் எடுத்துச் செல்லும்.",
+  carriedFromLastYear: "கடந்த ஆண்டு போலவே — மாற்ற தட்டுங்கள்",
   inspectorModelNotes: "{n} முறை நிலையான வார்த்தைகள் — காரணம்:",
   chatHello: "வணக்கம் {name}. இந்த ஆண்டு வரியில் என்ன நடக்கிறது?",
   chatHelloAnon: "வணக்கம். இந்த ஆண்டு வரியில் என்ன நடக்கிறது?",

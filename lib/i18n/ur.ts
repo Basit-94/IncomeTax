@@ -645,7 +645,7 @@ export const ur: Dict = {
   },
 
   agent: {
-    title: "واپسی معاون",
+    title: "منشی جی",
     open: "معاون کھولیں",
     close: "بند کریں",
     placeholder: "جانچنے، سمجھانے یا داخل کرنے کو کہیں…",

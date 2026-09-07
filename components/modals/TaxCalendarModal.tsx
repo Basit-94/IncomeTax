@@ -287,7 +287,7 @@ export default function TaxCalendarModal({ isOpen, onClose, lang }: TaxCalendarM
           {activeTab === "calendar" && (
             <div className="space-y-6 animate-in fade-in duration-200">
               {/* Critical Countdown Banner */}
-              <div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-3xl bg-gradient-to-r text-white shadow-glass">
+              <div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-3xl bg-ink-surface text-on-ink shadow-glass">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="size-2 rounded-full bg-ok animate-ping" />
@@ -316,7 +316,7 @@ export default function TaxCalendarModal({ isOpen, onClose, lang }: TaxCalendarM
                   <button
                     type="button"
                     onClick={handleOpenGoogleCalendar}
-                    className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                    className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-on-ink text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
                   >
                     <ExternalLink size={14} />
                     <span>Google Calendar</span>
