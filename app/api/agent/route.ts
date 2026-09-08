@@ -23,6 +23,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync } from "fs";
 import { join } from "path";
 import { NextRequest, NextResponse } from "next/server";
 import { executeCopilotConversation } from "../../../lib/agent/copilot";
+import { getGeminiKeys } from "@/lib/server/geminiKeys";
 
 import { computeTax, compareRegimes } from "../../../lib/engine/tax";
 import type { TaxInput, TaxInputFact } from "../../../lib/engine/types";
@@ -416,12 +417,7 @@ async function callGemini(
   contents: { role: string; parts: GeminiPart[] }[],
   disableTools = false,
 ): Promise<{ parts: GeminiPart[] } | { error: string }> {
-  const keys = [
-    process.env.GEMINI_API_KEY,
-    process.env.GEMINI_FALLBACK_API_KEY,
-    process.env.GEMINI_FALLBACK_API_KEY_2,
-    process.env.GEMINI_FALLBACK_API_KEY_3,
-  ].filter((k): k is string => !!k && !k.includes("REPLACE_ME"));
+  const keys = getGeminiKeys();
 
   if (keys.length === 0) {
     return { error: "API key is not configured." };

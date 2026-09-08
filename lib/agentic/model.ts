@@ -13,6 +13,7 @@
  */
 
 import type { Lang } from "../types";
+import { getGeminiKeys } from "../server/geminiKeys";
 
 export interface ModelUsage {
   tokens: number;
@@ -97,7 +98,7 @@ function toContents(messages: ConverseMessage[]): { role: "user" | "model"; part
 
 export function geminiModel(env: Record<string, string | undefined> = process.env, fetchImpl: typeof fetch = fetch): ModelAdapter {
   const clean = (k: string | undefined) => (k ?? "").trim().replace(/^["']|["']$/g, "");
-  const keys = [env.GEMINI_API_KEY, env.GEMINI_FALLBACK_API_KEY, env.GEMINI_FALLBACK_API_KEY_2, env.GEMINI_FALLBACK_API_KEY_3].map(clean).filter((k) => k && !k.includes("REPLACE_ME"));
+  const keys = getGeminiKeys(env);
   // The primary model, then the fallbacks: free-tier quotas are per model, so a key that is out of quota on
   // gemini-3.5-flash usually still has the day's budget on gemini-3.5-flash-lite (found live 2026-09-07).
   const models = [...new Set([env.AGENT_MODEL, env.AGENT_FALLBACK_MODEL, env.AGENT_SMALL_MODEL].map(clean).filter(Boolean))];

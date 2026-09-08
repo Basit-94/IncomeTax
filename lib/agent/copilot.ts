@@ -17,6 +17,7 @@ import type { Claim } from "../types";
 import { functionDeclarations, toolByName } from "./tools";
 import { languageOption } from "../i18n/languages";
 import { characterPrompt } from "../agentic/munshi-character";
+import { getGeminiKeys } from "../server/geminiKeys";
 import {
   executeComputeTaxAy2026,
   executeReconcileFact,
@@ -333,12 +334,7 @@ export async function callGemini(
   disableTools = false,
   fetchImpl: typeof fetch = fetch,
 ): Promise<{ parts: GeminiPart[] } | { error: string }> {
-  const keys = [
-    process.env.GEMINI_API_KEY,
-    process.env.GEMINI_FALLBACK_API_KEY,
-    process.env.GEMINI_FALLBACK_API_KEY_2,
-    process.env.GEMINI_FALLBACK_API_KEY_3,
-  ].filter((k): k is string => !!k && !k.includes("REPLACE_ME"));
+  const keys = getGeminiKeys();
 
   if (keys.length === 0) {
     return { error: "API key is not configured." };

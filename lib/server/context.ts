@@ -35,29 +35,42 @@ import type { RuntimeDeps } from "../agentic/runtime";
 class PostgresSessionStore implements SessionStore {
   constructor(private readonly pool: Pool) {}
   async get(idHash: string): Promise<ServerSession | null> {
-    const res = await this.pool.query<{
-      pan: string; owner_kind: ServerSession["owner"]["kind"]; display_name: string;
-      session_kind: ServerSession["kind"]; created_at: Date; expires_at: Date;
-    }>("SELECT * FROM wapsi_sessions WHERE id_hash = $1", [idHash]);
-    const r = res.rows[0];
-    if (!r) return null;
-    return {
-      id: "", // the raw id is never stored; callers already hold it
-      owner: { pan: r.pan, kind: r.owner_kind, displayName: r.display_name },
-      kind: r.session_kind,
-      createdAt: new Date(r.created_at).toISOString(),
-      expiresAt: new Date(r.expires_at).toISOString(),
-    };
+    try {
+      const res = await this.pool.query<{
+        pan: string; owner_kind: ServerSession["owner"]["kind"]; display_name: string;
+        session_kind: ServerSession["kind"]; created_at: Date; expires_at: Date;
+      }>("SELECT * FROM wapsi_sessions WHERE id_hash = $1", [idHash]);
+      const r = res.rows[0];
+      if (!r) return null;
+      return {
+        id: "", // the raw id is never stored; callers already hold it
+        owner: { pan: r.pan, kind: r.owner_kind, displayName: r.display_name },
+        kind: r.session_kind,
+        createdAt: new Date(r.created_at).toISOString(),
+        expiresAt: new Date(r.expires_at).toISOString(),
+      };
+    } catch (err) {
+      console.warn("[wapsi] PostgresSessionStore.get error:", (err as Error)?.message);
+      return null;
+    }
   }
   async put(idHash: string, s: ServerSession) {
-    await this.pool.query(
-      `INSERT INTO wapsi_sessions (id_hash, pan, owner_kind, display_name, session_kind, created_at, expires_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id_hash) DO NOTHING`,
-      [idHash, s.owner.pan, s.owner.kind, s.owner.displayName, s.kind, s.createdAt, s.expiresAt],
-    );
+    try {
+      await this.pool.query(
+        `INSERT INTO wapsi_sessions (id_hash, pan, owner_kind, display_name, session_kind, created_at, expires_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id_hash) DO NOTHING`,
+        [idHash, s.owner.pan, s.owner.kind, s.owner.displayName, s.kind, s.createdAt, s.expiresAt],
+      );
+    } catch (err) {
+      console.warn("[wapsi] PostgresSessionStore.put error:", (err as Error)?.message);
+    }
   }
   async delete(idHash: string) {
-    await this.pool.query("DELETE FROM wapsi_sessions WHERE id_hash = $1", [idHash]);
+    try {
+      await this.pool.query("DELETE FROM wapsi_sessions WHERE id_hash = $1", [idHash]);
+    } catch (err) {
+      console.warn("[wapsi] PostgresSessionStore.delete error:", (err as Error)?.message);
+    }
   }
 }
 

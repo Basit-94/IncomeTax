@@ -1,19 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractFieldsFromPdf, detectDocumentKind } from "@/lib/compliance/pdfExtract";
+import { getGeminiKeys } from "@/lib/server/geminiKeys";
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
-
-function getGeminiKeys(): string[] {
-  const clean = (k: string | undefined) => (k ?? "").trim().replace(/^["']|["']$/g, "");
-  return [
-    process.env.GEMINI_API_KEY,
-    process.env.GEMINI_FALLBACK_API_KEY,
-    process.env.GEMINI_FALLBACK_API_KEY_2,
-    process.env.GEMINI_FALLBACK_API_KEY_3,
-  ]
-    .map(clean)
-    .filter((k) => k && !k.includes("REPLACE_ME"));
-}
 
 export async function POST(req: NextRequest) {
   try {

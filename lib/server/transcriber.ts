@@ -16,6 +16,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { getGeminiKeys } from "./geminiKeys";
 
 export type TranscribeResult = { text: string; language: string | null };
 
@@ -56,13 +57,7 @@ export async function transcribeWithGemini(input: {
   lang?: string | null;
 }): Promise<{ ok: true; text: string; language: string | null } | { ok: false; error: string }> {
   const env = process.env;
-  const clean = (k: string | undefined) => (k ?? "").trim().replace(/^["']|["']$/g, "");
-  const keys = [
-    env.GEMINI_API_KEY,
-    env.GEMINI_FALLBACK_API_KEY,
-    env.GEMINI_FALLBACK_API_KEY_2,
-    env.GEMINI_FALLBACK_API_KEY_3,
-  ].map(clean).filter((k) => k && !k.includes("REPLACE_ME"));
+  const keys = getGeminiKeys(env);
 
   if (keys.length === 0) {
     return { ok: false, error: "GEMINI_API_KEY is not configured" };
@@ -263,13 +258,7 @@ export async function refineTranscriptWithLlm(rawText: string, language?: string
   if (!trimmed) return "";
 
   const env = process.env;
-  const clean = (k: string | undefined) => (k ?? "").trim().replace(/^["']|["']$/g, "");
-  const keys = [
-    env.GEMINI_API_KEY,
-    env.GEMINI_FALLBACK_API_KEY,
-    env.GEMINI_FALLBACK_API_KEY_2,
-    env.GEMINI_FALLBACK_API_KEY_3,
-  ].map(clean).filter((k) => k && !k.includes("REPLACE_ME"));
+  const keys = getGeminiKeys(env);
 
   if (keys.length === 0) {
     return trimmed;
