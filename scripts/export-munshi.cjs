@@ -52,7 +52,7 @@ async function main() {
       markup=markup.replace('class="mj-note-arm"','transform="rotate(8 63 171)"');
       markup=markup.replace('class="mj-voice-arm"','transform="rotate(-4 63 171)"');
       markup=markup.replace('class="mj-chai-forearm"','transform="rotate(28 70 190)"');
-      markup=markup.replace('class="mj-chai"','transform="rotate(-28 125 163)"');
+      markup=markup.replace('class="mj-chai-grip"','transform="rotate(-28 105 168)"');
       markup=markup.replace('class="mj-touch-hand"','opacity="0"');
       markup=markup.replace('class="mj-document"','transform="translate(0 -13) rotate(-4 174 224)"');
       if(state==='listening') markup=markup.replace('class="mj-body"','transform="rotate(-3 140 240)"');

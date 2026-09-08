@@ -121,6 +121,7 @@ const RULES = [
   "• When you need input: a consent → request_consent; several figures → ask_year_form; a click or an upload → ask. A conversational question → ask it in your reply and stop. Do not ask what a tool can tell you.",
   "• Structuring advice: legitimate routes only. This year the Form 16 governs; a better salary structure is arranged with the employer for next year and you say so plainly. Nothing received is relabelled.",
   "• Never write an Aadhaar, bank account number or physical address. Never say 'as an AI'. Never list your capabilities unless asked what you can do — and then say it in a sentence, not a numbered menu.",
+  "• Scope: this is a tax desk. Tax, money and the person's return are yours, and so is ordinary conversation — a greeting, how their day went, a question about you. Anything else someone might use a chatbot for — writing or fixing code, essays, homework, translations of unrelated text, recipes, trivia, other products — you decline in one friendly line in their language, no lecture, and offer the tax thing you can do instead. You never write code, not even to illustrate, and a reply that contains code is refused.",
   "• When the citizen asks about their identity, name, or records ('mera naam kya hai', 'who am i', 'what do you know about me', 'apne bare me bataiye'): answer warmly and directly, confirm their full name, summarize their on-record facts (PAN, employer, salary, TDS deducted), and introduce Munshi ji. Never dump a generic tax regime table when asked about identity.",
   "• When a tool returns blocked or refused, explain it in plain words and offer the next step (a payment before filing, a CA for an income head this engine does not compute).",
   "• Capital Gains and Asset Sales: When a person reports selling assets (real estate, land, gold, unlisted shares, crypto, or mutual funds):",
@@ -339,7 +340,9 @@ export async function think(ctx: ActionCtx, opts: ThinkOptions = {}): Promise<vo
       retried = true;
       await emit({ type: "tool_outcome", tool: "model.converse", ok: false, summary: `reply refused: ${reason}; asked once more` });
       messages.push({ role: "model", text: res.text, raw: res.raw });
-      messages.push({ role: "user", text: `[check] Your reply was refused: ${reason}. Use only figures that appear in the tool results, the situation or the statutory facts; if you need a number, call get_return or compute_tax first. Say it again.` });
+      messages.push({ role: "user", text: reason === "code in reply"
+        ? "[check] Your reply was refused: it contains code. You are a tax desk and never write code. Decline in one friendly line in the person's language and offer what you can do for their return instead. Say it again without any code."
+        : `[check] Your reply was refused: ${reason}. Use only figures that appear in the tool results, the situation or the statutory facts; if you need a number, call get_return or compute_tax first. Say it again.` });
       continue;
     }
     if (reason) {

@@ -5696,6 +5696,28 @@ things there are already true and will NOT be rewritten:
 - **Exports/docs**: regenerated the 19-state SVG/PNG kit, character sheet, manifest, README and studio; rebuilt `public/brand/munshi-kit.zip`; updated `docs/MUNSHI-JI.md` to describe the connected hand interactions.
 - **Verification**: inspected every repaired state at full and 56px interface sizes on lilac and navy, scrubbed the Noting midpoint, checked the Chai mouth contact pose and the Voice reduced-motion pose, and found zero browser warnings/errors. `npm run typecheck` passed; `npm test` passed (45 files, 389 tests); `npm run build` passed; `git diff --check` passed with line-ending warnings only. No commit or push.
 
+## [2026-09-08 20:39] Codex (Natural bent-arm chai drinking pose)
+
+- **User correction**: the chai interaction needed a right arm bent toward the mouth and a normal cup grip rather than rotating the straight shared arm.
+- **Change**: replaced the chai use of the generic arm with a dedicated articulated silhouette: shirt sleeve and upper arm stay attached at the shoulder, a separate forearm pivots at the elbow, the hand reaches the cup handle, and visible fingers wrap around it. The generic resting arm is omitted during this state, preventing the temporary two-arm overlap caught during midpoint QA.
+- **Cup motion**: the forearm moves from a lowered bent pose to the drinking pose; the cup counter-rotates so it remains upright while the arm changes angle, and its rim meets the mouth at the sip midpoint. Steam remains attached to the cup.
+- **Exports**: regenerated the SVG/PNG studio and character sheet, then rebuilt `public/brand/munshi-kit.zip`.
+- **Verification**: scrubbed the chai animation at 0 ms and 1800 ms to verify the lowered grip and mouth contact, checked the 56px compact row, and found zero browser warnings/errors. `npm run typecheck` passed; `npm test` passed (46 files, 392 tests); `npm run build` passed. No commit or push.
+
+## [2026-09-08 20:46] Codex (Corrected chai hand and forearm proportions)
+
+- **User correction**: the dedicated chai arm still looked disproportionate.
+- **Change**: narrowed the forearm, reduced the palm and finger stroke, shortened the visible hand at the handle, and replaced the flared cuff with a smaller rounded sleeve connection. The elbow pivot, upright cup counter-rotation and mouth contact remain unchanged.
+- **Visual QA**: scrubbed and inspected the lowered 0 ms pose and the 1800 ms drinking pose; both now keep the same limb volume and a cup-sized grip. Browser warnings/errors: zero.
+- **Exports and verification**: regenerated the 19-state kit and rebuilt `public/brand/munshi-kit.zip`; `npm run typecheck` passed; `npm test` passed (46 files, 393 tests); `npm run build` passed. No commit or push.
+
+## [2026-09-08 20:53] Codex (Reconstructed the chai wrist and cup grip from screenshot evidence)
+
+- **User evidence**: the supplied screenshot showed the remaining issue was anatomical rather than scale: the forearm terminated at the cup, the handle was empty, the cuff formed a white wedge, and the cup covered the moustache.
+- **Change**: rebuilt the chai limb as a rounded cuff, narrow bent forearm, separate wrist/palm and visible fingers wrapping the handle. The palm and cup counter-rotate together as one grip so they cannot separate while the elbow moves.
+- **Contact correction**: shifted the wrist and cup lower and slightly outward; the rim now reaches the lower mouth area instead of replacing the moustache, while the lowered pose keeps the same visible grip.
+- **QA and exports**: inspected the deterministic 0 ms and 1800 ms frames, found zero browser warnings/errors, regenerated the character kit, and rebuilt `public/brand/munshi-kit.zip`. `npm run typecheck` passed; `npm test` passed (46 files, 394 tests); `npm run build` passed. No commit or push.
+
 ## [2026-09-08 20:35] claude (CA system redesign — WAPC certified CAs, broadcast requests, inline comments, comparison with recommendation, "Your return" in the sidebar)
 
 - **Why**: the user asked for a redesign of the whole CA path: a CA portal with registration/login, two doors on the citizen's "Review with CA" (WAPC certified CAs on Wapsi vs. their own CA), a CA workspace with the client's background, full editing and Figma-style inline comments, a comparison where the engine/AI highlights the version that makes the most sense, and the draft / under-review return shown in the Agentic sidebar above recent chats.
@@ -5716,3 +5738,27 @@ things there are already true and will NOT be rewritten:
 
 - **Why**: the user said "WAPC" was a typo — the mark is "Wapsi certified".
 - **Change**: every user-facing and doc mention renamed across `app/ca/page.tsx`, `components/ca/ca-share-modal.tsx`, `lib/agentic/brain.ts` (tool description, situation line, tool response), `lib/ca/server-store.ts`, `lib/ca/ca-store.ts`, `lib/ca/client.ts`, the CA test, and `docs/CONTEXT.md` §15. The internal review mode value `wapc` is unchanged (a code identifier in the store, the API and the migration — not shown to anyone). `tsc` clean; CA tests 17/17. No commit or push.
+
+## [2026-09-08 21:20] claude (Munshi ji stays on tax: scope rule + code refused by the check)
+
+- **Why**: the user asked (first on 2026-09-08 afternoon, confirmed tonight) that the agent not write code or wander into unrelated tasks — tax filing and ordinary chat only.
+- **How** (model-first, no keyword gate on the input): one scope rule in `brain.ts` RULES — tax, money, the return and ordinary conversation are his; code, essays, homework, unrelated translations, recipes, trivia are declined in one friendly line in the person's language with the tax thing offered instead; never any code. Deterministic backstop in `say.ts whyRejected`: a fenced block or two lines that read as a program → `code in reply`, one `[check]` nudge with code-specific wording, then `replyUnverified`. Section references (80CCD(2), 24(b)) pass.
+- **Tests**: `say.test.ts` — fence, two code lines, section references, a decline line. Agentic suite 56/56; `tsc` clean.
+- **Live**: "Write me a Python script that reverses a string and prints it" → "I keep the ledgers and walk people through their returns, Sunita, so I do not write code. If you would like to look at your regime numbers again or check what is on your return, we can do that right here." `docs/CONTEXT.md` §14 updated. No commit or push.
+
+## [2026-09-08 21:35] claude (Code check tightened so arithmetic is never refused)
+
+- **Why**: the user asked to make sure the coding restriction does not block Munshi ji from working out numbers. The first `CODE_LINE` pattern matched keywords case-insensitively at the start of a line, so "Let me lay it out", "Return under the new regime", "From your Form 16", "Class 10 fees" would each have counted as a code line — two of them and a good reply was refused.
+- **Change**: `say.ts` `CODE_LINE` is now a list of structural, case-sensitive shapes (def/function/class headers, import lines, `const x =`, `print(` / `console.log`, markup tags, SQL, `foo(bar);`, a line of only closing brackets, `x = foo(1);`). Arithmetic with `=`, `×`, `%`, `−`, markdown tables and ordinary sentences pass. Tests added: a six-line tax calculation, a regime table, and sentences starting with Let / Return / From / Class / Select / Import. Agentic suite green. No commit or push.
+
+## [2026-09-08 21:50] claude (Removed the duplicate sidebar-collapse button from the Agentic header)
+
+- **Why**: the user pointed out two buttons doing the same job — the header's "Collapse sidebar" toggle (`HeaderBar`'s `after` slot) and the nav rail's own "Collapse navigation" toggle right above the chat list — and asked to remove the one in the header.
+- **Change**: `components/agentic/app-shell.tsx` — dropped the `after={...}` prop (and its button) from the `HeaderBar` call; the nav's own collapse/expand button (`toggleCollapsed`, already there) is now the only control. `PanelLeftOpen`/`PanelLeftClose` stay imported — both still used by the nav's collapsed-rail button and its expanded-state button.
+- **Verified**: `tsc` clean; live at desktop width — expand → collapse → expand round-tripped correctly through the single remaining button, header no longer shows a collapse control. No commit or push.
+
+## [2026-09-08 22:05] claude (Sidebar now scrolls as one region; See more/Show less removed)
+
+- **Why**: the user's screenshot showed the Agentic drawer's Recent Chats list cut off mid-item with no way to reach the account footer (theme toggle, sign out) below it — the sidebar had no scrollbar. Mid-fix the user also asked to drop the "See more (N)" / "Show less" pagination button under Recent Chats.
+- **Change**: `components/agentic/app-shell.tsx` — the `nav` (shared by the mobile drawer and the docked desktop sidebar) now scrolls as a single region (`overflow-y-auto` on the `nav` itself) instead of only the Recent Chats list scrolling internally within a `flex-1 min-h-0` box; every section (tools, Your return, chats, mode switch, account) is now reachable by one scroll, styled by the app's existing themed scrollbar rule in `globals.css`. Removed `showAllChats`/`CHATS_PREVIEW_COUNT`/`displayedRuns` and the See more/Show less button — the chat list renders in full and relies on the new scroll instead of pagination. Unused `ChevronDown`/`ChevronUp` imports dropped.
+- **Verified**: `tsc` clean; live at mobile width — opened the drawer, confirmed "See more" is gone from the DOM and "Sign out" (the last, previously unreachable section) is present and findable. No commit or push.

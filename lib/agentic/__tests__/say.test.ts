@@ -24,6 +24,39 @@ describe("the check on a reply — figures come from the tools, never from the m
     expect(whyRejected("Honestly, no jargon here: you're salaried.", { allowed, actionHappened: false })).toMatch(/self-description/);
     expect(whyRejected("", { allowed, actionHappened: false })).toBe("empty");
   });
+  it("refuses code — a fence or lines that read as a program — but not section references (user, 2026-09-08)", () => {
+    expect(whyRejected("Here you go:\n```python\ndef reverse(s):\n    return s[::-1]\n```", { allowed, actionHappened: false })).toBe("code in reply");
+    expect(whyRejected("const x = 1;\nconsole.log(x);", { allowed, actionHappened: false })).toBe("code in reply");
+    expect(whyRejected("Employer NPS under 80CCD(2) is the one deduction that survives the new regime; 24(b) does not.", { allowed, actionHappened: false })).toBeNull();
+    expect(whyRejected("I only do tax here — code I'll leave to your editor. Want me to check what 80C would save you?", { allowed, actionHappened: false })).toBeNull();
+  });
+  it("never mistakes arithmetic, tables or ordinary sentences for code", () => {
+    const sums = digitsOf("4,20,000; 75,000; 3,45,000; 5%; 3,00,000; 15,000; 4%; 600; 15,600; 8,400; 7,200; 1,50,000; 2,70,000");
+    const ok = new Set([...allowed, ...sums]);
+    expect(whyRejected([
+      "Let me lay it out:",
+      "Gross salary = ₹4,20,000",
+      "Standard deduction = ₹75,000",
+      "Taxable income = ₹4,20,000 − ₹75,000 = ₹3,45,000",
+      "Tax = 5% × ₹3,00,000 = ₹15,000; cess 4% = ₹600; total = ₹15,600",
+      "Rebate u/s 87A wipes it out, so refund = TDS = ₹8,400.",
+    ].join("\n"), { allowed: ok, actionHappened: false })).toBeNull();
+    expect(whyRejected([
+      "| Line | New | Old |",
+      "|---|---|---|",
+      "| Gross | ₹4,20,000 | ₹4,20,000 |",
+      "| Deductions | ₹0 | ₹1,50,000 |",
+      "| Taxable | ₹3,45,000 | ₹2,70,000 |",
+    ].join("\n"), { allowed: ok, actionHappened: false })).toBeNull();
+    expect(whyRejected([
+      "Return under the new regime: nil tax (s.87A).",
+      "From your Form 16, TDS is ₹8,400.",
+      "Class 10 fees count under 80C (old regime only).",
+      "Select the old regime only if 80C + 80D beat the ₹75,000 standard deduction gap.",
+      "Import duty is not income tax; ignore it here.",
+      "(simulated — nothing goes to the department)",
+    ].join("\n"), { allowed: ok, actionHappened: false })).toBeNull();
+  });
   it("refuses an essay past the cap", () => {
     expect(whyRejected("word ".repeat(800), { allowed, actionHappened: false, maxWords: 700 })).toMatch(/too long/);
   });

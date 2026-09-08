@@ -18,8 +18,8 @@
 .munshi-svg .mj-deadline-clock { transform-origin:38px 132px; }
 .munshi-svg .mj-note-ledger { transform-origin:64px 151px; }
 .munshi-svg .mj-voice-sound { transform-origin:70px 104px; }
-.munshi-svg .mj-chai { transform:rotate(-28deg); transform-origin:125px 163px; }
-.munshi-svg .mj-steam { transform-origin:124px 137px; }
+.munshi-svg .mj-chai-grip { transform:rotate(-28deg); transform-origin:105px 168px; }
+.munshi-svg .mj-steam { transform-origin:125px 154px; }
 .munshi-svg[data-state="reading"] .mj-pupils { transform:translateY(5px); }
 .munshi-svg[data-state="listening"] .mj-body { transform:rotate(-3deg); }
 .munshi-svg[data-state="concerned"] .mj-body,.munshi-svg[data-state="error"] .mj-body { transform:rotate(2deg); }
@@ -57,7 +57,7 @@
 .munshi-svg[data-animated="true"][data-state="voice"] .mj-pupils { animation:mj-voice-look 2.7s ease-in-out infinite; }
 .munshi-svg[data-animated="true"][data-state="voice"] .mj-voice-arm { animation:mj-voice-cup 2.7s ease-in-out infinite; }
 .munshi-svg[data-animated="true"][data-state="chai"] .mj-chai-forearm { animation:mj-chai-sip 3.6s ease-in-out 1 both; }
-.munshi-svg[data-animated="true"][data-state="chai"] .mj-chai { animation:mj-chai-cup 3.6s ease-in-out 1 both; }
+.munshi-svg[data-animated="true"][data-state="chai"] .mj-chai-grip { animation:mj-chai-grip 3.6s ease-in-out 1 both; }
 .munshi-svg[data-animated="true"][data-state="chai"] .mj-steam { animation:mj-steam 1.8s ease-in-out 2; }
 .munshi-svg[data-animated="true"]:hover .mj-brows { animation:mj-brow-lift .8s ease-in-out 1; }
 @keyframes mj-blink { 0%,91%,96%,100% { transform:scaleY(1); } 93%,94% { transform:scaleY(.08); } }
@@ -91,7 +91,7 @@
 @keyframes mj-voice-look { 0%,100% { transform:none; } 45%,65% { transform:translate(-2px,0); } }
 @keyframes mj-voice-cup { 0%,100% { transform:rotate(-4deg); } 45%,65% { transform:rotate(2deg); } }
 @keyframes mj-chai-sip { 0%,15%,82%,100% { transform:rotate(28deg); } 42%,60% { transform:rotate(0); } }
-@keyframes mj-chai-cup { 0%,20%,80%,100% { transform:rotate(-28deg); } 43%,60% { transform:rotate(0); } }
+@keyframes mj-chai-grip { 0%,20%,80%,100% { transform:rotate(-28deg); } 43%,60% { transform:rotate(0); } }
 @keyframes mj-steam { 0%,100% { opacity:.25; transform:translateY(4px); } 50% { opacity:1; transform:translateY(-3px); } }
 .munshi-svg[data-animated="false"] *,.munshi-svg[data-animated="false"]:hover * { animation:none !important; }
 @media (prefers-reduced-motion:reduce) {

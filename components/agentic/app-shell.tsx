@@ -15,7 +15,7 @@
  */
 
 import { useEffect, useState, type ReactNode } from "react";
-import { Brain, ChevronDown, ChevronUp, FileText, History, LogOut, Menu, Moon, PanelLeftClose, PanelLeftOpen, Plus, Search, ShieldCheck, Sun, Trash2, X } from "lucide-react";
+import { Brain, FileText, History, LogOut, Menu, Moon, PanelLeftClose, PanelLeftOpen, Plus, Search, ShieldCheck, Sun, Trash2, X } from "lucide-react";
 import type { Dict } from "@/lib/i18n";
 import type { AgenticStrings } from "@/lib/i18n/agenticStrings";
 import type { Lang } from "@/lib/types";
@@ -106,15 +106,12 @@ export default function AppShell(props: AppShellProps) {
     });
   };
 
-  const [showAllChats, setShowAllChats] = useState(false);
-  const CHATS_PREVIEW_COUNT = 3;
   const visibleRuns = runs.filter((r) => !query.trim() || r.title.toLowerCase().includes(query.trim().toLowerCase()));
-  const displayedRuns = showAllChats ? visibleRuns : visibleRuns.slice(0, CHATS_PREVIEW_COUNT);
   // The chat sidebar (New chat, recent chats) belongs to Agentic only; Manual keeps its own navigation (user, 2026-09-05).
   const withSidebar = mode === "agentic";
 
   const sidebar = (
-    <nav aria-label="Wapsi" className="flex h-full flex-col bg-paper-2 border-e border-line max-lg:bg-paper max-lg:border-e-0 max-lg:pt-3">
+    <nav aria-label="Wapsi" className="flex h-full flex-col overflow-y-auto bg-paper-2 border-e border-line max-lg:bg-paper max-lg:border-e-0 max-lg:pt-3">
       {/* The brand lives in the shared header bar above; this row only holds the collapse / close control. */}
       <div className="flex items-center justify-end px-3 pt-3 pb-1">
         <button type="button" onClick={() => (drawer ? setDrawer(false) : toggleCollapsed())} className="hidden lg:flex size-8 items-center justify-center rounded-lg text-ink-3 hover:text-ink hover:bg-paper-3 cursor-pointer" aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}>
@@ -179,15 +176,15 @@ export default function AppShell(props: AppShellProps) {
         </div>
       )}
 
-      {/* Recent chats */}
-      <div className="px-3 pt-4 flex-1 min-h-0 flex flex-col">
+      {/* Recent chats — the whole nav scrolls as one region (user, 2026-09-08); this list no longer needs its own bounded, independently-scrolling area. */}
+      <div className="px-3 pt-4">
         <p className="cap px-1 mb-1.5">{s.recentChats}</p>
         {visibleRuns.length === 0 ? (
           <p className="px-1 text-xs text-ink-3 leading-relaxed">{s.noChats}</p>
         ) : (
           <>
-            <ul className="space-y-0.5 overflow-y-auto min-h-0 pr-1">
-              {displayedRuns.map((r) => {
+            <ul className="space-y-0.5">
+              {visibleRuns.map((r) => {
                 const active = r.id === props.activeRunId;
                 return (
                   <li key={r.id} className="group flex items-center gap-1">
@@ -210,16 +207,6 @@ export default function AppShell(props: AppShellProps) {
                 );
               })}
             </ul>
-            {visibleRuns.length > CHATS_PREVIEW_COUNT && (
-              <button
-                type="button"
-                onClick={() => setShowAllChats((prev) => !prev)}
-                className="w-full mt-2 flex items-center justify-between px-2.5 py-1.5 rounded-lg border border-line bg-paper/60 hover:bg-paper-3 text-xs font-medium text-ink-2 hover:text-ink transition cursor-pointer"
-              >
-                <span>{showAllChats ? "Show less" : `See more (${visibleRuns.length - CHATS_PREVIEW_COUNT})`}</span>
-                {showAllChats ? <ChevronUp size={13} aria-hidden="true" /> : <ChevronDown size={13} aria-hidden="true" />}
-              </button>
-            )}
           </>
         )}
       </div>
@@ -295,19 +282,6 @@ export default function AppShell(props: AppShellProps) {
             ) : undefined
           }
           mobileTitle={withSidebar ? runs.find((r) => r.id === props.activeRunId)?.title ?? s.newChat : undefined}
-          after={
-            withSidebar ? (
-              <button
-                type="button"
-                onClick={() => (window.matchMedia("(min-width: 1024px)").matches ? toggleCollapsed() : setDrawer(true))}
-                className={`max-md:hidden size-9 flex items-center justify-center rounded-lg border border-line bg-paper text-ink-2 hover:text-ink hover:border-money/60 transition cursor-pointer shrink-0 ${collapsed ? "text-money border-money/40 shadow-xs" : ""}`}
-                title={collapsed ? "Expand sidebar (chats & tools)" : "Collapse sidebar"}
-                aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              >
-                {collapsed ? <PanelLeftOpen size={17} aria-hidden="true" /> : <PanelLeftClose size={17} aria-hidden="true" />}
-              </button>
-            ) : undefined
-          }
         >
           <div className="flex items-center gap-2 sm:gap-3">
             {withSidebar && (

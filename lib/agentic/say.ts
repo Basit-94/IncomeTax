@@ -47,6 +47,29 @@ export function detectRegister(text: string, lang: Lang): Register {
 
 const META = /\b(no (jargon|fluff|nonsense)|jargon|plain (words|english|language)|honest(ly)?( speaking)?|friend who|happens to be an? (ca|chartered)|i'?m here to help|as an? (ai|assistant|language model|friend)|i promise|rest assured|don'?t worry|no worries)\b/i;
 const CLAIMS = /\b(has been filed|was filed|is filed|successfully filed|i (have )?filed|payment (was|has been) made|has been paid|was paid|is paid|paid to the department|submitted to the (department|government)|e-verified)\b/i;
+/**
+ * Source code in a reply (user, 2026-09-08): a fenced block, or two or more lines shaped like a program. Munshi ji is
+ * a tax desk — he explains the rule, he never writes the program. The shapes are structural and case-sensitive on
+ * purpose: arithmetic ("₹4,20,000 − ₹75,000 = ₹3,45,000", "5% of ₹3,00,000 = ₹15,000"), tables, section references
+ * (80CCD(2), 24(b)) and sentences that merely start with "Let", "Return", "From", "Class" or "Select" must pass.
+ */
+const CODE_FENCE = /```/;
+const CODE_LINE = new RegExp([
+  String.raw`^\s*(?:def|fn|func)\s+\w+\s*\(`, // def reverse(
+  String.raw`^\s*function\s*\w*\s*\(`, // function foo(
+  String.raw`^\s*class\s+\w+\s*[({:]`, // class Foo: / class Foo {
+  String.raw`^\s*import\s+[\w{*]`, // import os / import { x }
+  String.raw`^\s*from\s+[\w.]+\s+import\b`, // from x import y
+  String.raw`^\s*(?:const|let|var)\s+\w+\s*=`, // const x =
+  String.raw`^\s*(?:public|private|static|void|int|string)\s+\w+[\s(]`, // public static void main(
+  String.raw`^\s*#include\b`,
+  String.raw`^\s*(?:print\(|console\.log|System\.out|std::)`,
+  String.raw`^\s*<\/?(?:div|span|html|body|script|ul|li|table)\b`, // markup
+  String.raw`^\s*SELECT\s.+\sFROM\s`, // SQL
+  String.raw`^\s*[\w$.]+\([^)]*\)\s*[;{]\s*$`, // foo(bar);  /  foo(bar) {
+  String.raw`^\s*[}\])]+;?\s*$`, // a line that is only closing brackets
+  String.raw`^\s*[\w.$\[\]]+\s*=\s*(?:new\b|[\[{("']|\w+\()[^\n]*;\s*$`, // x = foo(1);  /  x = [ … ];
+].join("|"));
 const PAN = /\b[A-Z]{5}[0-9]{4}[A-Z]\b/;
 const AADHAAR = /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/;
 
@@ -70,6 +93,7 @@ export function whyRejected(text: string, check: ReplyCheck): string | null {
   if (!t) return "empty";
   const words = t.split(/\s+/).length;
   if (words > (check.maxWords ?? 700)) return `too long (${words} words)`;
+  if (CODE_FENCE.test(t) || t.split("\n").filter((l) => CODE_LINE.test(l)).length >= 2) return "code in reply";
   if (PAN.test(t) || AADHAAR.test(t)) return "identifier in reply";
   for (const d of digitsOf(t)) {
     if (Number(d) <= SMALL) continue;

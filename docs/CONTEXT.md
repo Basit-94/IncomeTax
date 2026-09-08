@@ -433,8 +433,11 @@ remove every single template." Approved as three phases in one go; all three lan
   is answered honestly: nothing received this year is relabelled; the structure is arranged with the employer for next year.
 - **The check** — `say.ts` `whyRejected(text, {allowed, actionHappened})`: every digit sequence in a reply must exist in
   what the model was shown this turn (system prompt, transcript, tool results, the person's words; numbers ≤ 31 pass as
-  dates/counts); no filed/paid claim unless it happened; no PAN/Aadhaar shape; no self-description. A refused reply gets
-  one `[check]` nudge, then `replyUnverified` is said and the refusal is recorded as `tool_outcome model.converse ok:false`.
+  dates/counts); no filed/paid claim unless it happened; no PAN/Aadhaar shape; no self-description; **no code** (a fence
+  or two lines that read as a program — user, 2026-09-08; the scope rule in RULES tells him to decline off-topic asks
+  such as code, essays, homework in one friendly line and offer the tax thing instead). A refused reply gets one
+  `[check]` nudge (a code refusal gets its own wording), then `replyUnverified` is said and the refusal is recorded as
+  `tool_outcome model.converse ok:false`.
   Advice words are allowed — Munshi ji advises; the figures are still the engine's.
 - **Gates** — the reviewer gate (plan §5.7) is now a *disclosure*, not a stop: `actions.ts isSoftIssue` treats
   `tax_review_required`, `facts_incomplete`, `claim_unverified`, `election_unverified`, `residency_unknown` and a
