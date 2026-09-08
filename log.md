@@ -5529,6 +5529,11 @@ things there are already true and will NOT be rewritten:
     - Verified `/signin` mode selection screen in Kannada (`kn`), Urdu (`ur`), and Bodo (`brx`): 100% of headings, descriptions, pills, feature bullets, and buttons translated cleanly with zero English leakage.
 - **Status**: Branch `dev-2`.
 
+## [2026-09-08] Codex (Frontend audit for the next Munshi ji animation set — proposal only)
+- Audited the current mascot placements and the product states around the Manual deductions and filing flow, statement sign-off, reconciliation dashboard, CA worksheet, Tax Optimizer, notices, assessment holds, DigiLocker papers, refund timeline, OTP and Agentic workspace.
+- Existing motion already covers ordinary welcome, listening, explaining, document reading/upload, agent work, regime happiness/concern, success, errors, waiting and secure consent. Proposed new motion only for six uncovered product-specific moments: reconciling two records, finding a deduction, presenting a return for sign-off, delivering a CA review, warning about a real notice deadline and presenting a balance-due challan.
+- No mascot, application, localization or generated-asset code changed. No animations were created because the user explicitly required approval of the proposed set first. No runtime verification was needed. No commit or push.
+
 ## 2026-09-08 — Remote Code Merge, Space-Saving Task Templates Harmonization, and First-Time Voice Discovery Spotlight
 
 - **Goal / Context**:

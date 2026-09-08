@@ -147,7 +147,7 @@ export function SpeakingWaveform({
 /**
  * Transcribing Animation when audio is being processed.
  * Features a distinct flowing harmonic sine ribbon, radiant traveling gradient sweep,
- * and Gemini AI processing indicators matching Sunrise/Lilac + Navy & Coral (docs/DESIGN.md).
+ * and  AI processing indicators matching Sunrise/Lilac + Navy & Coral (docs/DESIGN.md).
  */
 export function TranscribingAnimation() {
   return (
@@ -155,7 +155,7 @@ export function TranscribingAnimation() {
       className="relative flex w-full items-center justify-between gap-3 px-3 py-1.5 overflow-hidden rounded-[14px] min-h-[44px] select-none"
       role="status"
       aria-live="polite"
-      aria-label="Transcribing audio with Gemini"
+      aria-label="Transcribing audio"
     >
       {/* Background traveling shimmer beam */}
       <div
@@ -181,7 +181,7 @@ export function TranscribingAnimation() {
             <span className="inline-flex size-1.5 rounded-full bg-[var(--primary-accent)] animate-ping" />
           </span>
           <span className="text-[11px] font-mono text-[var(--primary-accent)] font-semibold uppercase tracking-wider">
-            Gemini Audio AI
+            Whisper Audio AI
           </span>
         </div>
       </div>
