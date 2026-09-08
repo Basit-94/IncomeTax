@@ -5623,6 +5623,17 @@ things there are already true and will NOT be rewritten:
   - **`.env.example`**:
     - Documented `GEMINI_FALLBACK_API_KEY_4` through `GEMINI_FALLBACK_API_KEY_8` and `GEMINI_API_KEYS`.
 - **Verification**:
-  - `npx vitest run`: All 44 test files and 381 unit tests passed green (100%).
-  - `npx tsc --noEmit`: 0 TypeScript compiler errors.
+- **Status**: Branch `dev-2`.
+
+## 2026-09-08 — Postgres Session Store Connection Resiliency
+
+- **Goal / Context**:
+  - Prevent uncaught connection errors and 500 status codes when remote database connection pool (Supabase) experiences transient connection drops or timeouts.
+- **What changed**:
+  - **`lib/server/context.ts`**:
+    - Wrapped `PostgresSessionStore.get`, `.put`, and `.delete` in try/catch blocks.
+    - Gracefully logs warnings and falls back to null/safe-recovery without crashing HTTP API routes.
+- **Verification**:
+  - `npx vitest run lib/server/__tests__/session.test.ts`: 10 passed.
+  - `npx tsc --noEmit`: 0 errors.
 - **Status**: Branch `dev-2`.
