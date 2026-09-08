@@ -5799,3 +5799,8 @@ things there are already true and will NOT be rewritten:
     - CA Portal oversight tab and 1-click text report export button.
 - **Verification**: `npm run typecheck` clean; `npm run build` compiled successfully with `/inspector` route; all 394 Vitest tests passing across 46 test files.
 
+## [2026-09-09 00:29] antigravity (Commit & Push to origin/dev-2)
+
+- **Why**: User instructed push of the visual web activity inspector, stats API, and one-click batch launcher.
+- **Change**: Committed and pushed commit `393be00` to `origin/dev-2`.
+- **Verification**: Git push successful (`98a6c5d..393be00  dev-2 -> dev-2`); Vercel build triggered on `dev-2`.
