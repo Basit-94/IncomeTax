@@ -5766,4 +5766,14 @@ things there are already true and will NOT be rewritten:
   - Triggered Vercel redeployment on branch `dev-2`.
 - **Verification**: All 394 vitest unit and integration tests passing; TypeScript clean; live Vercel deployment (https://wapsi-git-dev-2-abs21.vercel.app/api/agent) tested and returning HTTP 200 with sub-3s response latency across Hindi and English multi-turn queries.
 
+## [2026-09-09 00:05] antigravity (Purge user test session contexts and transcripts for submission)
+
+- **Why**: Clean state required for competition submission/judging so fresh visitors open with zero pre-filled test user context, empty chats, and clean filing journeys from scratch, while preserving registered CAs in the CA portal.
+- **Change**:
+  - Cleared `data/agent_telemetry.jsonl` and `.agent-transcripts/` session transcripts.
+  - Verified default user state, chat surfaces, and sign-in inputs start completely blank.
+  - Preserved Chartered Accountant registry and verified CA directory (`SEED_REGISTERED_CAS`) intact in `lib/ca/ca-registry.ts`.
+- **Verification**: All 394 vitest unit and integration tests passing across 46 files.
+
+
 
