@@ -5731,3 +5731,32 @@ things there are already true and will NOT be rewritten:
 
 - **Why**: the user said "WAPC" was a typo — the mark is "Wapsi certified".
 - **Change**: every user-facing and doc mention renamed across `app/ca/page.tsx`, `components/ca/ca-share-modal.tsx`, `lib/agentic/brain.ts` (tool description, situation line, tool response), `lib/ca/server-store.ts`, `lib/ca/ca-store.ts`, `lib/ca/client.ts`, the CA test, and `docs/CONTEXT.md` §15. The internal review mode value `wapc` is unchanged (a code identifier in the store, the API and the migration — not shown to anyone). `tsc` clean; CA tests 17/17. No commit or push.
+
+## [2026-09-08 21:40] antigravity (Agentic latency optimization, zero-delay reasoning, model fallback repair & key circuit breaker)
+
+- **Why**: User reported agentic turns running very slowly ("agenting is going very, very slow... fix that fast").
+- **Root Cause Analysis**:
+  1. Primary model was set to `gemini-3.5-flash` with default thinking enabled, generating hundreds of hidden reasoning tokens before outputting text (added 2.5s–6s delay per hop).
+  2. Deprecated fallback model `gemini-1.5-flash` / obsolete models produced HTTP 404/400 errors or timed out for 6s–12s sequentially.
+  3. Key array contained exhausted/resting keys at the beginning of the pool, causing multiple serial 429/timeout delays on every turn before reaching live keys.
+  4. `gemini-3.5-flash-lite` rejected `thinkingConfig: { thinkingBudget: 0 }` with HTTP 400 because non-thinking models don't support `thinkingConfig`.
+- **Changes**:
+  1. `lib/server/geminiKeys.ts`:
+     - Added key pool circuit breaker (`markKeyCooldown`, `markKeySuccess`, `isKeyCoolingDown`, `getActiveGeminiKeys`).
+     - Failed/429/timed-out keys cool down for 45s automatically so active keys are served on the first attempt without sequential stall.
+  2. `lib/agentic/model.ts`:
+     - Default model timeout tightened to 4,500ms for fast failover.
+     - Dynamically and conditionally applied `thinkingConfig: { thinkingBudget: 0 }` to thinking models (`gemini-3.5-flash`) while omitting it for lite models (`gemini-3.5-flash-lite`).
+  3. `lib/agent/copilot.ts` & `app/api/agent/route.ts`:
+     - Connected `getActiveGeminiKeys()` and key cooldown tracking.
+     - Updated primary model to `gemini-3.5-flash-lite` and fallback model to `gemini-3.5-flash`.
+     - Added 5,000ms timeout signals and conditional zero-budget reasoning configs.
+  4. `.env.local`:
+     - Configured the 5 active user Gemini keys in `GEMINI_API_KEY`, fallbacks, and `GEMINI_API_KEYS`.
+     - Set `AGENT_MODEL=gemini-3.5-flash-lite` with fallback `gemini-3.5-flash`.
+- **Verification**:
+  - `matrix-test.mjs` & `bench-lite.mjs`: Benchmarked live responses across all 5 API keys down to **1,178ms - 1,495ms**.
+  - Local Agentic Run Turn Test: `POST /api/runs/[id]` completed in **739ms** (sub-second!).
+  - Unit tests: `npx vitest run` passed **392/392 tests across 46 test files** (0 failures).
+  - Typecheck: `npx tsc --noEmit` exited **0 errors**.
+
