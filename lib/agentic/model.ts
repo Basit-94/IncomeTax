@@ -156,16 +156,19 @@ export function geminiModel(env: Record<string, string | undefined> = process.en
             }
             if (!res.ok) {
               lastFailure = `HTTP ${res.status}`;
-              return null;
+              break;
             }
             const data = await res.json();
             const parts: GeminiPart[] = data?.candidates?.[0]?.content?.parts ?? [];
-            const text = parts.filter((p) => typeof p.text === "string" && !p.thought).map((p) => p.text as string).join("").trim();
+            let text = parts.filter((p) => typeof p.text === "string" && !p.thought).map((p) => p.text as string).join("").trim();
+            if (!text) {
+              text = parts.filter((p) => typeof p.text === "string").map((p) => p.text as string).join("").trim();
+            }
             const calls: ToolCall[] = parts.filter((p) => p.functionCall?.name).map((p) => ({ name: p.functionCall!.name, args: (p.functionCall!.args ?? {}) as Record<string, unknown> }));
             const tokens = Number(data?.usageMetadata?.totalTokenCount) || Math.ceil((input.system.length + JSON.stringify(input.messages).length + text.length) / 4);
             if (!text && calls.length === 0) {
               lastFailure = `empty reply (${data?.candidates?.[0]?.finishReason ?? "no candidate"})`;
-              return null;
+              break;
             }
             lastFailure = null;
             return { text, calls, raw: parts, usage: { tokens, model: pair.model } };

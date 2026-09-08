@@ -5662,7 +5662,22 @@ things there are already true and will NOT be rewritten:
     - Gracefully logs warnings and falls back to null/safe-recovery without crashing HTTP API routes.
 - **Verification**:
   - `npx vitest run lib/server/__tests__/session.test.ts`: 10 passed.
-  - `npx tsc --noEmit`: 0 errors.
+- **Status**: Branch `dev-2`.
+
+## 2026-09-08 — Gemini Thought Recovery & Empty Reply Failover
+
+- **Goal / Context**:
+  - Fix issue where Gemini thinking models generated text inside thought parts or returned `finishReason: "STOP"` with empty filtered text on greetings/simple queries, causing `empty reply (STOP)` fallback messages.
+- **What changed**:
+  - **`lib/agentic/model.ts`**:
+    - If `!p.thought` filter results in empty string, recover all text parts from response candidates.
+    - If a candidate returns empty text with no tool calls, continue through the key/model pair loop instead of aborting immediately with null.
+    - If non-200 HTTP status is returned, try the next key/model pair.
+  - **`lib/agentic/brain.ts`**:
+    - Added clean greeting response handler in deterministic fallback for simple conversational openings.
+- **Verification**:
+  - `npx vitest run`: All 45 test files and 384 tests passed (100%).
+  - `npx tsc --noEmit`: 0 TypeScript compiler errors.
 - **Status**: Branch `dev-2`.
 
 ## [2026-09-08 00:40] claude (Lessons loop for Munshi ji; first-reply latency; second brain lessons hook)
