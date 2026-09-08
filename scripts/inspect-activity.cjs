@@ -363,23 +363,114 @@ function renderTerminalDashboard(data) {
     console.log(C.bold + C.brightMagenta + '└───────────────────────────────────────────────────────────────────────────────────┘' + C.reset);
   }
 
+function stripAnsi(str) {
+  return typeof str === 'string' ? str.replace(/\x1b\[[0-9;]*m/g, '') : '';
+}
+
   if (exportReport) {
     const reportDir = path.join(__dirname, '..', 'reports');
     if (!fs.existsSync(reportDir)) fs.mkdirSync(reportDir, { recursive: true });
-    const reportFile = path.join(reportDir, 'activity-report-' + Date.now() + '.md');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const reportFileMd = path.join(reportDir, `activity-report-${timestamp}.md`);
+    const reportFileLatestTxt = path.join(reportDir, 'activity-report-latest.txt');
+    const reportFileLatestMd = path.join(reportDir, 'activity-report-latest.md');
     
-    let md = '# Wapsi Platform — Live Judge & User Activity Report\n\n';
-    md += '**Generated At:** ' + new Date().toISOString() + '\n';
-    md += '**Filter:** ' + filterText + '\n\n';
-    md += '## 📊 Executive Metrics\n';
-    md += '- **Unique Visitors / Judges:** ' + totalSessions + '\n';
-    md += '- **AI Conversation Turns:** ' + totalChats + '\n';
-    md += '- **Vault Documents Uploaded:** ' + totalDocs + '\n';
-    md += '- **Tax Returns Prepared/Filed:** ' + totalSnapshots + '\n';
-    md += '- **CA Review Interactions:** ' + totalCAReviews + '\n\n';
+    let text = '================================================================================\n';
+    text += '            WAPSI PLATFORM — JUDGE & USER ACTIVITY AUDIT REPORT\n';
+    text += '================================================================================\n';
+    text += `Generated At : ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST\n`;
+    text += `Time Range   : ${stripAnsi(filterText)}\n\n`;
+    text += '--------------------------------------------------------------------------------\n';
+    text += '1. EXECUTIVE SUMMARY METRICS\n';
+    text += '--------------------------------------------------------------------------------\n';
+    text += `• Unique Visitors / Judges      : ${totalSessions}\n`;
+    text += `• AI Conversation Turns (Munshi): ${totalChats}\n`;
+    text += `• Vault Documents Uploaded      : ${totalDocs}\n`;
+    text += `• Tax Returns Prepared/Filed    : ${totalSnapshots}\n`;
+    text += `• CA Review Interactions        : ${totalCAReviews}\n\n`;
 
-    fs.writeFileSync(reportFile, md, 'utf8');
-    console.log('\n' + C.green + '✓ Markdown Audit Report successfully exported to: ' + C.bold + reportFile + C.reset + '\n');
+    text += '--------------------------------------------------------------------------------\n';
+    text += '2. VISITOR & JUDGE JOURNEYS\n';
+    text += '--------------------------------------------------------------------------------\n';
+
+    const sessionList = Array.from(sessions.values());
+    if (sessionList.length === 0) {
+      text += 'No activity recorded for this period.\n';
+    } else {
+      sessionList.forEach((sess, idx) => {
+        const durationSec = Math.max(1, Math.round((new Date(sess.lastSeen) - new Date(sess.firstSeen)) / 1000));
+        const durStr = durationSec > 60 ? Math.floor(durationSec / 60) + 'm ' + (durationSec % 60) + 's' : durationSec + 's';
+        text += `\n[#${idx + 1}] Session: ${sess.id}\n`;
+        text += `     User PAN/Name : ${sess.pan} ${sess.userName ? `(${sess.userName})` : ''} [${sess.userKind.toUpperCase()}]\n`;
+        text += `     Started At    : ${formatTime(sess.firstSeen)}\n`;
+        text += `     Duration      : ${durStr}\n`;
+        text += `     Language      : ${sess.lang}\n`;
+        text += `     Device/View   : ${sess.screenSize || 'N/A'}\n`;
+        text += `     Summary       : ${sess.events.length} clicks/actions | ${sess.chats.length} Munshi chats\n`;
+
+        if (sess.events.length > 0) {
+          text += '\n     Action Timeline:\n';
+          for (const evt of sess.events) {
+            const tStr = formatTime(evt.created_at);
+            const d = typeof evt.details === 'string' ? JSON.parse(evt.details || '{}') : (evt.details || {});
+            let label = evt.event_type;
+            if (evt.event_type === 'sign_in') label = `User signed in with PAN: ${d.pan || 'N/A'}`;
+            else if (evt.event_type === 'sign_out') label = 'User signed out / cleared session';
+            else if (evt.event_type === 'doc_upload') label = `Uploaded document: ${d.name || 'File'} (${d.category || 'Vault'})`;
+            else if (evt.event_type === 'tab_change') label = `Switched tab to: ${d.tab}`;
+            else if (evt.event_type === 'flow_step') label = `Navigated to flow step: ${d.step}`;
+            else if (evt.event_type === 'compute_tax') label = `Computed tax: Salary Rs ${(d.grossSalary || 0).toLocaleString('en-IN')} -> Tax: Rs ${(d.tax || 0).toLocaleString('en-IN')}`;
+            else if (evt.event_type === 'regime_select') label = `Selected regime: ${(d.regime || '').toUpperCase()} (Saved Rs ${(d.savings || 0).toLocaleString('en-IN')})`;
+            else if (evt.event_type === 'dispute_create') label = `Disputed fact: ${d.label} (Reason: ${d.reason})`;
+            else if (evt.event_type === 'challan_pay') label = `Paid Self-Assessment Tax / Challan 280: Rs ${(d.amount || 0).toLocaleString('en-IN')}`;
+            else if (evt.event_type === 'itrv_download') label = 'Generated & Downloaded official ITR-V Ack Receipt PDF';
+            else if (evt.event_type === 'agent_prompt') label = `Asked Munshi: "${d.prompt || d.text}"`;
+            else if (evt.event_type === 'agent_reply') label = `Munshi replied in ${d.durationMs ? d.durationMs + 'ms' : 'fast stream'}`;
+            else if (evt.event_type === 'mic_dictation') label = `Used voice speech dictation: "${d.spokenText || ''}"`;
+            else if (evt.event_type === 'ca_register') label = `Registered CA: ${d.name} (${d.membershipNo})`;
+
+            text += `       [${tStr}] ${label}\n`;
+          }
+        }
+
+        if (sess.chats.length > 0) {
+          text += '\n     AI / Munshi ji Conversation:\n';
+          for (const chat of sess.chats) {
+            text += `       Task: ${chat.run.task} | Status: ${chat.run.status}\n`;
+            for (const ev of chat.events) {
+              const p = ev.payload || {};
+              if (p.type === 'message' && p.role === 'user') {
+                text += `       [Judge/User]: "${p.text}"\n`;
+              } else if (p.type === 'message' && p.role === 'assistant') {
+                text += `       [Munshi ji ]: ${p.text}\n`;
+              } else if (p.type === 'tool_call') {
+                text += `         -> Tool: ${p.name}(${JSON.stringify(p.args || {})})\n`;
+              }
+            }
+          }
+        }
+      });
+    }
+
+    if (data.caAccounts.length > 0 || data.caReviews.length > 0) {
+      text += '\n--------------------------------------------------------------------------------\n';
+      text += '3. CHARTERED ACCOUNTANT PORTAL ACTIVITY\n';
+      text += '--------------------------------------------------------------------------------\n';
+      text += `Registered CAs: ${data.caAccounts.length} | Review Requests: ${data.caReviews.length}\n`;
+      for (const ca of data.caAccounts) {
+        text += `• ${ca.name} (ICAI: ${ca.membership_no}) - ${ca.firm_name}, ${ca.city} [${ca.email}]\n`;
+      }
+      for (const rev of data.caReviews) {
+        text += `• Review [${rev.code}] for PAN: ${rev.citizen_pan} | Status: ${rev.status} | Mode: ${rev.mode}\n`;
+      }
+    }
+
+    fs.writeFileSync(reportFileMd, text, 'utf8');
+    fs.writeFileSync(reportFileLatestTxt, text, 'utf8');
+    fs.writeFileSync(reportFileLatestMd, text, 'utf8');
+    console.log('\n' + C.green + '✓ Full Activity Report exported to:' + C.reset);
+    console.log('  📄 Text File : ' + C.bold + reportFileLatestTxt + C.reset);
+    console.log('  📜 Markdown  : ' + C.bold + reportFileMd + C.reset + '\n');
   }
 }
 

@@ -24,7 +24,7 @@ import { join } from "path";
 import { NextRequest, NextResponse } from "next/server";
 import { executeCopilotConversation } from "../../../lib/agent/copilot";
 import { getActiveGeminiKeys, getGeminiKeys, markKeyCooldown, markKeySuccess } from "@/lib/server/geminiKeys";
-import { getPool } from "@/lib/db/postgres";
+import { getDbPool } from "@/lib/db/postgres";
 
 
 import { computeTax, compareRegimes } from "../../../lib/engine/tax";
@@ -533,7 +533,7 @@ export async function POST(request: NextRequest) {
   const lastUser = messages[messages.length - 1];
   appendTranscript(sessionId, { type: "user", text: lastUser?.text ?? "" });
 
-  const pool = getPool();
+  const pool = getDbPool();
   const promptId = "evt_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   if (pool && lastUser?.text) {
     pool.query(

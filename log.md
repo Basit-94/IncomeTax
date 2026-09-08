@@ -5785,8 +5785,17 @@ things there are already true and will NOT be rewritten:
   - Wired activity capture across sign-in, theme switch, PDF upload, regime selection, and AI agent chat in `app/page.tsx`, `components/auth/auth-portal.tsx`, and `app/api/agent/route.ts`.
   - Built comprehensive terminal inspector in `scripts/inspect-activity.cjs` with `--today`, `--yesterday`, `--all`, `--from <date>`, `--live`, `--user <PAN>`, and `--export` modes.
   - Added npm convenience scripts `npm run inspect`, `npm run inspect:live`, and `npm run inspect:all` in `package.json`.
-- **Verification**: Tested `node scripts/inspect-activity.cjs --all` against Supabase; verified live session reconstruction, transcripts, and CA review summaries; 394 Vitest tests passing.
+## [2026-09-09 00:26] antigravity (Visual Web Browser Activity Dashboard at /inspector & Stats API)
 
-
-
+- **Why**: Give the user a beautiful, interactive visual web dashboard accessible right inside their browser at `http://localhost:3000/inspector` (and deployed on Vercel) with real-time cards, timelines, AI chat transcripts, CA monitor, search, and one-click report exports.
+- **Change**:
+  - Created `app/api/telemetry/stats/route.ts` API route for querying user activities, agent runs/events, vault documents, return snapshots, and CA reviews with date range and PAN filtering.
+  - Built interactive, high-contrast visual dashboard at `app/inspector/page.tsx` with:
+    - 5 live metric counter cards (Judges/Visitors, AI Conversations, Vault Docs, Returns Filed, CA Reviews).
+    - Date range filter buttons (`Today`, `Yesterday`, `Last 7 Days`, `All Time`).
+    - Live Search bar for instant filtering by PAN or Judge Name.
+    - Real-time 3s auto-refresh toggle with live pulse badge.
+    - Expandable visitor journey cards with event timeline pills and full AI conversation speech bubbles.
+    - CA Portal oversight tab and 1-click text report export button.
+- **Verification**: `npm run typecheck` clean; `npm run build` compiled successfully with `/inspector` route; all 394 Vitest tests passing across 46 test files.
 

@@ -1,5 +1,5 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
-import { getPool } from '@/lib/db/postgres';
+import { NextRequest, NextResponse } from 'next/server';
+import { getDbPool } from '@/lib/db/postgres';
 
 interface TelemetryEventBody {
   id?: string;
@@ -42,13 +42,13 @@ export async function POST(req: NextRequest) {
     const lang = (body.lang || 'en').slice(0, 8);
     const createdAt = body.createdAt ? new Date(body.createdAt) : new Date();
 
-    const pool = getPool();
+    const pool = getDbPool();
     if (pool) {
       // Fire-and-forget query into Supabase
       pool.query(
-        INSERT INTO user_activity_events (id, session_id, pan, user_name, user_kind, event_type, details, user_agent, screen_size, lang, created_at)
-         VALUES (, , , , , , , , , , )
-         ON CONFLICT (id) DO NOTHING,
+        `INSERT INTO user_activity_events (id, session_id, pan, user_name, user_kind, event_type, details, user_agent, screen_size, lang, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         ON CONFLICT (id) DO NOTHING`,
         [id, sessionId, pan, userName, userKind, eventType, details, userAgent, screenSize, lang, createdAt]
       ).catch(() => {
         // Safe failover

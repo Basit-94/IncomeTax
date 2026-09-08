@@ -13,7 +13,8 @@
     "inspect": "node scripts/inspect-activity.cjs --today",
     "inspect:live": "node scripts/inspect-activity.cjs --live",
     "inspect:all": "node scripts/inspect-activity.cjs --all",
-    "inspect:export": "node scripts/inspect-activity.cjs --all --export"
+    "inspect:export": "node scripts/inspect-activity.cjs --all --export",
+    "inspect:report": "node scripts/inspect-activity.cjs --all --export"
   },
 
   "dependencies": {

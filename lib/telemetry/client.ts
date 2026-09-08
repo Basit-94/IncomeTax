@@ -1,4 +1,4 @@
-﻿/**
+/**
  * lib/telemetry/client.ts
  *
  * Sovereign, non-blocking telemetry recorder for tracking user & judge activity,
@@ -102,7 +102,7 @@ export function recordActivity(
       }
     }
 
-    const screenSize = ${window.innerWidth}x;
+    const screenSize = `${window.innerWidth}x${window.innerHeight}`;
     const userAgent = navigator.userAgent;
 
     const body = JSON.stringify({
