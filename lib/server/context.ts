@@ -157,7 +157,12 @@ async function build(): Promise<Services> {
     demoReturns: new MemoryReturnStore(),
     runs: pool ? new PostgresRunStore(pool) : null,
     demoRuns: new MemoryRunStore(),
-    model: geminiModel(),
+    model: geminiModel({
+      ...process.env,
+      AGENT_MODEL: process.env.AGENT_MODEL || "gemini-3.5-flash-lite",
+      AGENT_FALLBACK_MODEL: process.env.AGENT_FALLBACK_MODEL || "gemini-3.5-flash",
+      AGENT_SMALL_MODEL: process.env.AGENT_SMALL_MODEL || "gemini-3.5-flash-lite",
+    }),
     locker: digiLockerFor(pool),
     caStore: caStoreFor(pool),
     pool,

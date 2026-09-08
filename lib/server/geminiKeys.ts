@@ -16,6 +16,26 @@
  * - Any environment variable matching /^GEMINI_(FALLBACK_)?API_KEY(_\d+)?$/i
  */
 
+const restingKeys = new Map<string, number>();
+
+export function markKeyCooldown(key: string, cooldownMs = 45_000): void {
+  restingKeys.set(key, Date.now() + cooldownMs);
+}
+
+export function markKeySuccess(key: string): void {
+  restingKeys.delete(key);
+}
+
+export function isKeyCoolingDown(key: string): boolean {
+  const until = restingKeys.get(key);
+  if (!until) return false;
+  if (Date.now() > until) {
+    restingKeys.delete(key);
+    return false;
+  }
+  return true;
+}
+
 export function getGeminiKeys(env: Record<string, string | undefined> = process.env): string[] {
   const clean = (k: string | undefined) => (k ?? "").trim().replace(/^["']|["']$/g, "");
   const keys: string[] = [];
@@ -54,4 +74,11 @@ export function getGeminiKeys(env: Record<string, string | undefined> = process.
   }
 
   return keys;
+}
+
+/** Returns all configured keys with resting/cooling-down keys sorted to the end or filtered */
+export function getActiveGeminiKeys(env: Record<string, string | undefined> = process.env): string[] {
+  const all = getGeminiKeys(env);
+  const active = all.filter((k) => !isKeyCoolingDown(k));
+  return active.length > 0 ? active : all;
 }

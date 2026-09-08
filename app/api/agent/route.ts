@@ -23,7 +23,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync } from "fs";
 import { join } from "path";
 import { NextRequest, NextResponse } from "next/server";
 import { executeCopilotConversation } from "../../../lib/agent/copilot";
-import { getGeminiKeys } from "@/lib/server/geminiKeys";
+import { getActiveGeminiKeys, getGeminiKeys, markKeyCooldown, markKeySuccess } from "@/lib/server/geminiKeys";
 
 import { computeTax, compareRegimes } from "../../../lib/engine/tax";
 import type { TaxInput, TaxInputFact } from "../../../lib/engine/types";
@@ -386,6 +386,9 @@ async function tryCallGemini(
   }
 
   const maxTokens = Number(process.env.AGENT_MAX_TOKENS_PER_REPLY || 2048);
+  const timeoutMs = Number(process.env.AGENT_MODEL_TIMEOUT_MS || 5000);
+  const isThinkingModel = !model.toLowerCase().includes("lite");
+
   try {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -396,18 +399,28 @@ async function tryCallGemini(
           systemInstruction: { parts: [{ text: system }] },
           contents,
           tools: disableTools ? undefined : [{ functionDeclarations: functionDeclarations() }],
-          generationConfig: { maxOutputTokens: maxTokens, temperature: 0.2 },
+          generationConfig: {
+            maxOutputTokens: maxTokens,
+            temperature: 0.2,
+            ...(isThinkingModel ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+          },
         }),
+        signal: AbortSignal.timeout(timeoutMs),
       },
     );
     if (!res.ok) {
+      if (res.status === 429 || res.status === 503) {
+        markKeyCooldown(key, 45_000);
+      }
       const body = await res.text();
       return { error: `Model call failed: HTTP ${res.status} ${body.slice(0, 300)}` };
     }
     const data = await res.json();
+    markKeySuccess(key);
     const parts: GeminiPart[] = data?.candidates?.[0]?.content?.parts ?? [];
     return { parts };
   } catch (err) {
+    markKeyCooldown(key, 30_000);
     return { error: err instanceof Error ? err.message : String(err) };
   }
 }
@@ -417,18 +430,18 @@ async function callGemini(
   contents: { role: string; parts: GeminiPart[] }[],
   disableTools = false,
 ): Promise<{ parts: GeminiPart[] } | { error: string }> {
-  const keys = getGeminiKeys();
+  const keys = getActiveGeminiKeys();
 
   if (keys.length === 0) {
     return { error: "API key is not configured." };
   }
 
   const primaryModel = process.env.AGENT_MODEL || "gemini-3.5-flash";
-  const fallbackModel = process.env.AGENT_FALLBACK_MODEL || "gemini-1.5-flash";
+  const fallbackModel = process.env.AGENT_FALLBACK_MODEL || "gemini-3.5-flash-lite";
 
   let lastError = "";
 
-  // 1. Try all keys with the primary model
+  // 1. Try active keys with the primary model
   for (const key of keys) {
     const result = await tryCallGemini(key, primaryModel, system, contents, disableTools);
     if (!("error" in result)) {
@@ -437,7 +450,7 @@ async function callGemini(
     lastError = result.error;
   }
 
-  // 2. If all failed, and fallbackModel is different, try all keys with the fallback model
+  // 2. If all failed, and fallbackModel is different, try active keys with the fallback model
   if (fallbackModel !== primaryModel) {
     for (const key of keys) {
       const result = await tryCallGemini(key, fallbackModel, system, contents, disableTools);

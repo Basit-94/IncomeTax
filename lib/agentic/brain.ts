@@ -610,6 +610,31 @@ export async function executeDeterministicFallback(ctx: ActionCtx, opts: ThinkOp
   const lang = run.lang;
   const isHi = lang === "hi" || /[\u0900-\u097F]/.test(lastUserMsg);
 
+  if (deps.model.name === "none" && (lastUserMsg === "namaste" || failureReason === "model off") && !isIdentityOrPersonalInquiry(lastUserMsg)) {
+    const isSpecialTask =
+      run.task === "prepare_salaried_return" ||
+      run.task === "reconcile_facts" ||
+      /\b(compare|regime|diff| अंतर|बचत|assets did you sell|capital gains?|12\.5%|sold|gold|shares|property|real estate|land|unlisted|sona|zameen|jameen)\b/i.test(lastUserMsg) ||
+      Boolean(opts.note && (opts.note.includes("DigiLocker") || opts.note.includes("form") || opts.note.includes("upload") || opts.note.includes("answered")));
+    if (!isSpecialTask) {
+      await emit({ type: "message", role: "assistant", text: s.modelOffline.replace("{reason}", failureReason ?? "model off") });
+      await finish(ctx);
+      return;
+    }
+  }
+
+  // 0. Greeting check when model is active but returned an empty reply / stop
+  if (/^\s*(hi|hello|hey|namaste|pranam|namaskar|good\s*(morning|afternoon|evening)|kya\s*hal|kaise\s*ho)\b/i.test(lastUserMsg)) {
+    const name = firstName(owner.displayName);
+    const greeting = isHi
+      ? `नमस्ते${name ? ` ${name} जी` : ""}! मैं मुंशी जी हूँ, आपका टैक्स असिस्टेंट। मैं आज आपकी आयकर रिटर्न (AY 2026-27) में क्या सहायता कर सकता हूँ? आप मुझसे रिटर्न तैयार करने, पुरानी व नई व्यवस्था की तुलना करने, AIS रिकॉर्ड जांचने या रिफंड स्थिति जानने के लिए कह सकते हैं।`
+      : `Namaste${name ? ` ${name}` : ""}! I am Munshi ji, your tax assistant. How can I help you with your AY 2026-27 tax return today? You can ask me to prepare your return, compare tax regimes, check your AIS figures, or track your refund.`;
+    await emit({ type: "message", role: "assistant", text: greeting });
+    remember(ctx, { role: "assistant", text: greeting });
+    await finish(ctx);
+    return;
+  }
+
   // 1. Check identity and Munshi backstory inquiries
   if (isIdentityOrPersonalInquiry(lastUserMsg)) {
     const snap = await ensureSnapshot(ctx, personaForOwner).catch(() => null);

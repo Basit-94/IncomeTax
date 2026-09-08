@@ -17,7 +17,7 @@ import type { Claim } from "../types";
 import { functionDeclarations, toolByName } from "./tools";
 import { languageOption } from "../i18n/languages";
 import { characterPrompt } from "../agentic/munshi-character";
-import { getGeminiKeys } from "../server/geminiKeys";
+import { getActiveGeminiKeys, getGeminiKeys, markKeyCooldown, markKeySuccess } from "../server/geminiKeys";
 import {
   executeComputeTaxAy2026,
   executeReconcileFact,
@@ -300,7 +300,9 @@ export async function tryCallGemini(
   }
 
   const maxTokens = Number(process.env.AGENT_MAX_TOKENS_PER_REPLY || 2048);
-  const timeoutMs = Number(process.env.AGENT_MODEL_TIMEOUT_MS || 12000);
+  const timeoutMs = Number(process.env.AGENT_MODEL_TIMEOUT_MS || 5000);
+  const isThinkingModel = !model.toLowerCase().includes("lite");
+
   try {
     const res = await fetchImpl(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -311,19 +313,28 @@ export async function tryCallGemini(
           systemInstruction: { parts: [{ text: system }] },
           contents,
           tools: disableTools ? undefined : [{ functionDeclarations: functionDeclarations() }],
-          generationConfig: { maxOutputTokens: maxTokens, temperature: 0.3 },
+          generationConfig: {
+            maxOutputTokens: maxTokens,
+            temperature: 0.3,
+            ...(isThinkingModel ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+          },
         }),
         signal: AbortSignal.timeout(timeoutMs),
       },
     );
     if (!res.ok) {
+      if (res.status === 429 || res.status === 503) {
+        markKeyCooldown(key, 45_000);
+      }
       const body = await res.text();
       return { error: `Model call failed: HTTP ${res.status} ${body.slice(0, 300)}` };
     }
     const data = await res.json();
+    markKeySuccess(key);
     const parts: GeminiPart[] = data?.candidates?.[0]?.content?.parts ?? [];
     return { parts };
   } catch (err) {
+    markKeyCooldown(key, 30_000);
     return { error: err instanceof Error ? err.message : String(err) };
   }
 }
@@ -334,18 +345,18 @@ export async function callGemini(
   disableTools = false,
   fetchImpl: typeof fetch = fetch,
 ): Promise<{ parts: GeminiPart[] } | { error: string }> {
-  const keys = getGeminiKeys();
+  const keys = getActiveGeminiKeys();
 
   if (keys.length === 0) {
     return { error: "API key is not configured." };
   }
 
   const primaryModel = process.env.AGENT_MODEL || "gemini-3.5-flash";
-  const fallbackModel = process.env.AGENT_FALLBACK_MODEL || "gemini-1.5-flash";
+  const fallbackModel = process.env.AGENT_FALLBACK_MODEL || "gemini-3.5-flash-lite";
 
   let lastError = "";
 
-  // 1. Try all keys with primary model
+  // 1. Try active keys with primary model
   for (const key of keys) {
     const result = await tryCallGemini(key, primaryModel, system, contents, disableTools, fetchImpl);
     if (!("error" in result)) {

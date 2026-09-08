@@ -103,8 +103,8 @@ export function geminiModel(env: Record<string, string | undefined> = process.en
   // gemini-3.5-flash usually still has the day's budget on gemini-3.5-flash-lite (found live 2026-09-07).
   const models = [...new Set([env.AGENT_MODEL, env.AGENT_FALLBACK_MODEL, env.AGENT_SMALL_MODEL].map(clean).filter(Boolean))];
   const model = models[0];
-  // A thinking turn with tools takes longer than a phrasing; 6.5 s default for fast responses, env wins.
-  const timeoutMs = Number(env.AGENT_MODEL_TIMEOUT_MS) || 6_500;
+  // A thinking turn with tools takes longer than a phrasing; 4.5 s default for fast responses, env wins.
+  const timeoutMs = Number(env.AGENT_MODEL_TIMEOUT_MS) || 4_500;
   const maxTokens = Number(env.AGENT_MAX_TOKENS_PER_REPLY) || 2048;
   if (keys.length === 0 || !model) return nullModel;
   // A key+model pair that hit HTTP 429 rests until the API's own "retry in Ns" (an hour when it gives none).
@@ -127,14 +127,19 @@ export function geminiModel(env: Record<string, string | undefined> = process.en
         lastFailure = `all keys out of quota (HTTP 429); next try in ${Math.max(1, Math.ceil((soonest - now) / 1000))} s`;
         return null;
       }
-      const body = {
-        systemInstruction: { parts: [{ text: input.system }] },
-        contents: toContents(input.messages),
-        ...(input.tools.length ? { tools: [{ functionDeclarations: input.tools.map((t) => ({ name: t.name, description: t.description, ...(t.parameters ? { parameters: t.parameters } : {}) })) }], toolConfig: { functionCallingConfig: { mode: "AUTO" } } } : {}),
-        generationConfig: { maxOutputTokens: maxTokens, temperature: input.temperature ?? 0.7 },
-      };
       for (const pair of live) {
         let waited = false;
+        const isThinkingModel = !pair.model.toLowerCase().includes("lite");
+        const body = {
+          systemInstruction: { parts: [{ text: input.system }] },
+          contents: toContents(input.messages),
+          ...(input.tools.length ? { tools: [{ functionDeclarations: input.tools.map((t) => ({ name: t.name, description: t.description, ...(t.parameters ? { parameters: t.parameters } : {}) })) }], toolConfig: { functionCallingConfig: { mode: "AUTO" } } } : {}),
+          generationConfig: {
+            maxOutputTokens: maxTokens,
+            temperature: input.temperature ?? 0.7,
+            ...(isThinkingModel ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+          },
+        };
         for (;;) {
           try {
             const res = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${pair.model}:generateContent`, {
@@ -155,21 +160,26 @@ export function geminiModel(env: Record<string, string | undefined> = process.en
               break;
             }
             if (!res.ok) {
+              restingUntil.set(pair.id, Date.now() + 30_000);
               lastFailure = `HTTP ${res.status}`;
-              return null;
+              break;
             }
             const data = await res.json();
             const parts: GeminiPart[] = data?.candidates?.[0]?.content?.parts ?? [];
-            const text = parts.filter((p) => typeof p.text === "string" && !p.thought).map((p) => p.text as string).join("").trim();
+            let text = parts.filter((p) => typeof p.text === "string" && !p.thought).map((p) => p.text as string).join("").trim();
+            if (!text) {
+              text = parts.filter((p) => typeof p.text === "string").map((p) => p.text as string).join("").trim();
+            }
             const calls: ToolCall[] = parts.filter((p) => p.functionCall?.name).map((p) => ({ name: p.functionCall!.name, args: (p.functionCall!.args ?? {}) as Record<string, unknown> }));
             const tokens = Number(data?.usageMetadata?.totalTokenCount) || Math.ceil((input.system.length + JSON.stringify(input.messages).length + text.length) / 4);
             if (!text && calls.length === 0) {
               lastFailure = `empty reply (${data?.candidates?.[0]?.finishReason ?? "no candidate"})`;
-              return null;
+              break;
             }
             lastFailure = null;
             return { text, calls, raw: parts, usage: { tokens, model: pair.model } };
           } catch (err) {
+            restingUntil.set(pair.id, Date.now() + 20_000);
             lastFailure = err instanceof Error && err.name === "TimeoutError" ? `timeout after ${timeoutMs} ms` : "network error";
             break;
           }

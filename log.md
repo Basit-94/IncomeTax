@@ -5662,7 +5662,22 @@ things there are already true and will NOT be rewritten:
     - Gracefully logs warnings and falls back to null/safe-recovery without crashing HTTP API routes.
 - **Verification**:
   - `npx vitest run lib/server/__tests__/session.test.ts`: 10 passed.
-  - `npx tsc --noEmit`: 0 errors.
+- **Status**: Branch `dev-2`.
+
+## 2026-09-08 — Gemini Thought Recovery & Empty Reply Failover
+
+- **Goal / Context**:
+  - Fix issue where Gemini thinking models generated text inside thought parts or returned `finishReason: "STOP"` with empty filtered text on greetings/simple queries, causing `empty reply (STOP)` fallback messages.
+- **What changed**:
+  - **`lib/agentic/model.ts`**:
+    - If `!p.thought` filter results in empty string, recover all text parts from response candidates.
+    - If a candidate returns empty text with no tool calls, continue through the key/model pair loop instead of aborting immediately with null.
+    - If non-200 HTTP status is returned, try the next key/model pair.
+  - **`lib/agentic/brain.ts`**:
+    - Added clean greeting response handler in deterministic fallback for simple conversational openings.
+- **Verification**:
+  - `npx vitest run`: All 45 test files and 384 tests passed (100%).
+  - `npx tsc --noEmit`: 0 TypeScript compiler errors.
 - **Status**: Branch `dev-2`.
 
 ## [2026-09-08 00:40] claude (Lessons loop for Munshi ji; first-reply latency; second brain lessons hook)
@@ -5738,27 +5753,3 @@ things there are already true and will NOT be rewritten:
 
 - **Why**: the user said "WAPC" was a typo — the mark is "Wapsi certified".
 - **Change**: every user-facing and doc mention renamed across `app/ca/page.tsx`, `components/ca/ca-share-modal.tsx`, `lib/agentic/brain.ts` (tool description, situation line, tool response), `lib/ca/server-store.ts`, `lib/ca/ca-store.ts`, `lib/ca/client.ts`, the CA test, and `docs/CONTEXT.md` §15. The internal review mode value `wapc` is unchanged (a code identifier in the store, the API and the migration — not shown to anyone). `tsc` clean; CA tests 17/17. No commit or push.
-
-## [2026-09-08 21:20] claude (Munshi ji stays on tax: scope rule + code refused by the check)
-
-- **Why**: the user asked (first on 2026-09-08 afternoon, confirmed tonight) that the agent not write code or wander into unrelated tasks — tax filing and ordinary chat only.
-- **How** (model-first, no keyword gate on the input): one scope rule in `brain.ts` RULES — tax, money, the return and ordinary conversation are his; code, essays, homework, unrelated translations, recipes, trivia are declined in one friendly line in the person's language with the tax thing offered instead; never any code. Deterministic backstop in `say.ts whyRejected`: a fenced block or two lines that read as a program → `code in reply`, one `[check]` nudge with code-specific wording, then `replyUnverified`. Section references (80CCD(2), 24(b)) pass.
-- **Tests**: `say.test.ts` — fence, two code lines, section references, a decline line. Agentic suite 56/56; `tsc` clean.
-- **Live**: "Write me a Python script that reverses a string and prints it" → "I keep the ledgers and walk people through their returns, Sunita, so I do not write code. If you would like to look at your regime numbers again or check what is on your return, we can do that right here." `docs/CONTEXT.md` §14 updated. No commit or push.
-
-## [2026-09-08 21:35] claude (Code check tightened so arithmetic is never refused)
-
-- **Why**: the user asked to make sure the coding restriction does not block Munshi ji from working out numbers. The first `CODE_LINE` pattern matched keywords case-insensitively at the start of a line, so "Let me lay it out", "Return under the new regime", "From your Form 16", "Class 10 fees" would each have counted as a code line — two of them and a good reply was refused.
-- **Change**: `say.ts` `CODE_LINE` is now a list of structural, case-sensitive shapes (def/function/class headers, import lines, `const x =`, `print(` / `console.log`, markup tags, SQL, `foo(bar);`, a line of only closing brackets, `x = foo(1);`). Arithmetic with `=`, `×`, `%`, `−`, markdown tables and ordinary sentences pass. Tests added: a six-line tax calculation, a regime table, and sentences starting with Let / Return / From / Class / Select / Import. Agentic suite green. No commit or push.
-
-## [2026-09-08 21:50] claude (Removed the duplicate sidebar-collapse button from the Agentic header)
-
-- **Why**: the user pointed out two buttons doing the same job — the header's "Collapse sidebar" toggle (`HeaderBar`'s `after` slot) and the nav rail's own "Collapse navigation" toggle right above the chat list — and asked to remove the one in the header.
-- **Change**: `components/agentic/app-shell.tsx` — dropped the `after={...}` prop (and its button) from the `HeaderBar` call; the nav's own collapse/expand button (`toggleCollapsed`, already there) is now the only control. `PanelLeftOpen`/`PanelLeftClose` stay imported — both still used by the nav's collapsed-rail button and its expanded-state button.
-- **Verified**: `tsc` clean; live at desktop width — expand → collapse → expand round-tripped correctly through the single remaining button, header no longer shows a collapse control. No commit or push.
-
-## [2026-09-08 22:05] claude (Sidebar now scrolls as one region; See more/Show less removed)
-
-- **Why**: the user's screenshot showed the Agentic drawer's Recent Chats list cut off mid-item with no way to reach the account footer (theme toggle, sign out) below it — the sidebar had no scrollbar. Mid-fix the user also asked to drop the "See more (N)" / "Show less" pagination button under Recent Chats.
-- **Change**: `components/agentic/app-shell.tsx` — the `nav` (shared by the mobile drawer and the docked desktop sidebar) now scrolls as a single region (`overflow-y-auto` on the `nav` itself) instead of only the Recent Chats list scrolling internally within a `flex-1 min-h-0` box; every section (tools, Your return, chats, mode switch, account) is now reachable by one scroll, styled by the app's existing themed scrollbar rule in `globals.css`. Removed `showAllChats`/`CHATS_PREVIEW_COUNT`/`displayedRuns` and the See more/Show less button — the chat list renders in full and relies on the new scroll instead of pagination. Unused `ChevronDown`/`ChevronUp` imports dropped.
-- **Verified**: `tsc` clean; live at mobile width — opened the drawer, confirmed "See more" is gone from the DOM and "Sign out" (the last, previously unreachable section) is present and findable. No commit or push.
