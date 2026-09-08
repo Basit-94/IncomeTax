@@ -253,28 +253,134 @@ async function transcribeWithWorker(bytes: Uint8Array, ext: string, language: st
 }
 
 /**
+ * Post-processes a raw voice transcription using a fast lightweight LLM (gemini-2.5-flash-lite / gemini-2.5-flash).
+ * Removes filler words ("um", "uh", "like", "you know", "basically", etc.), fixes spelling mistakes,
+ * corrects mispronounced words or acoustic homophones (e.g. "lock" -> "lakh", "pan cord" -> "PAN card",
+ * "eighty c" -> "80C", "regeem" -> "regime"), and returns clean, structured text.
+ */
+export async function refineTranscriptWithLlm(rawText: string, language?: string | null): Promise<string> {
+  const trimmed = rawText.trim();
+  if (!trimmed) return "";
+
+  const env = process.env;
+  const clean = (k: string | undefined) => (k ?? "").trim().replace(/^["']|["']$/g, "");
+  const keys = [
+    env.GEMINI_API_KEY,
+    env.GEMINI_FALLBACK_API_KEY,
+    env.GEMINI_FALLBACK_API_KEY_2,
+    env.GEMINI_FALLBACK_API_KEY_3,
+  ].map(clean).filter((k) => k && !k.includes("REPLACE_ME"));
+
+  if (keys.length === 0) {
+    return trimmed;
+  }
+
+  const smallModel = env.AGENT_FALLBACK_MODEL?.trim() || "gemini-2.5-flash-lite";
+  const standardModel = env.AGENT_MODEL?.trim() || "gemini-2.5-flash";
+  const models = [smallModel, ...(standardModel !== smallModel ? [standardModel] : [])];
+
+  const systemInstruction = `You are an expert voice transcription post-processor for an Indian income tax assistant (Wapsi).
+Your sole task is to transform raw voice transcriptions into clean, well-structured, clear text.
+
+Rules:
+1. REMOVE FILLER WORDS: Eliminate hesitation sounds, stuttering, repetitions, and vocal fillers (e.g. "um", "uh", "er", "ah", "like", "you know", "sort of", "actually", "basically", "matlab", "yani", "haan toh", etc.).
+2. FIX SPELLINGS & MISPRONUNCIATIONS: Correct misheard words, wrong spellings, and acoustic homophones, especially financial and tax terminology (e.g., "lock"/"locks" -> "lakh", "crore", "pan cord"/"pen card" -> "PAN card", "eighty c"/"atc" -> "80C", "eighty d" -> "80D", "form sixteen" -> "Form 16", "regeem" -> "regime", "rent reset" -> "rent receipt", "challan 280", "advance tax", "TDS", "AIS", "ITR-V", etc.).
+3. STRUCTURE & PUNCTUATION: Fix grammatical flow, capitalize proper nouns/acronyms (PAN, ITR, TDS, HRA), format numbers logically, and add proper punctuation (. ? ,).
+4. PRESERVE INTENT & LANGUAGE: Keep the exact meaning, tone, and language of the speaker (English, Hindi, Hinglish, Tamil, Telugu, Marathi, Bengali, Gujarati, etc.). Never translate across languages unless correcting obvious acoustic misrecognition.
+5. STRICT OUTPUT: Return ONLY the cleaned, structured text. Do NOT wrap in quotes, do NOT add conversational prefixes ("Here is the corrected transcript:"), and do NOT answer the question.`;
+
+  for (const key of keys) {
+    for (const model of models) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8_000);
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": key,
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  { text: `${systemInstruction}\n\nInterface language: ${language || "auto"}\nRaw voice transcript:\n${trimmed}` },
+                ],
+              },
+            ],
+            generationConfig: { maxOutputTokens: 300, temperature: 0.1 },
+          }),
+          signal: controller.signal,
+        });
+
+        if (!res.ok) continue;
+
+        const data = (await res.json()) as {
+          candidates?: {
+            content?: {
+              parts?: Array<{ text?: string; thought?: boolean }>;
+            };
+          }[];
+        };
+
+        let result = (data.candidates?.[0]?.content?.parts ?? [])
+          .filter((p) => !p.thought && p.text)
+          .map((p) => p.text!)
+          .join("")
+          .trim();
+
+        if (result) {
+          if ((result.startsWith('"') && result.endsWith('"')) || (result.startsWith('“') && result.endsWith('”'))) {
+            result = result.slice(1, -1).trim();
+          }
+          return result;
+        }
+      } catch {
+        // Fallback on next model/key
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+  }
+
+  return trimmed;
+}
+
+/**
  * Transcribe one audio clip.
  * `ext` is the container ("webm", "ogg", "m4a", "wav"); `language` is a language code or null.
  * First tries the Gemini cloud transcription engine; falls back to the faster-whisper worker.
+ * Finally, runs the text through a lightweight LLM to remove filler words, fix mispronunciations,
+ * and structure the transcription cleanly.
  */
 export async function transcribeAudio(bytes: Uint8Array, ext: string, language: string | null): Promise<TranscribeResult> {
   const mimeType = mimeFromExt(ext);
 
+  let rawResult: TranscribeResult;
+
   // 1. Primary: Gemini transcription engine
   const gemini = await transcribeWithGemini({ bytes, mimeType, lang: language });
   if (gemini.ok) {
-    return { text: gemini.text, language: gemini.language };
+    rawResult = { text: gemini.text, language: gemini.language };
+  } else {
+    // 2. Fallback: local faster-whisper worker
+    try {
+      rawResult = await transcribeWithWorker(bytes, ext, language);
+    } catch (workerErr) {
+      const workerMsg = workerErr instanceof Error ? workerErr.message : String(workerErr);
+      if (gemini.error && !gemini.error.includes("not configured")) {
+        throw new Error(`Gemini transcription failed: ${gemini.error}`);
+      }
+      throw new Error(workerMsg);
+    }
   }
 
-  // 2. Fallback: local faster-whisper worker
-  try {
-    const workerResult = await transcribeWithWorker(bytes, ext, language);
-    return workerResult;
-  } catch (workerErr) {
-    const workerMsg = workerErr instanceof Error ? workerErr.message : String(workerErr);
-    if (gemini.error && !gemini.error.includes("not configured")) {
-      throw new Error(`Gemini transcription failed: ${gemini.error}`);
-    }
-    throw new Error(workerMsg);
+  // 3. Post-process through lightweight LLM to eliminate fillers, fix spellings, and structure cleanly
+  if (rawResult.text.trim()) {
+    const refined = await refineTranscriptWithLlm(rawResult.text, language || rawResult.language);
+    return { text: refined, language: rawResult.language };
   }
+
+  return rawResult;
 }

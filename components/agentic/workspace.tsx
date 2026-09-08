@@ -9,7 +9,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowRight, Check, CircleDot, Download, FileText, Mic, MicOff, Send, ShieldAlert, ShieldCheck, Sparkles, Upload, X, Award } from "lucide-react";
+import { ArrowDown, ArrowRight, Check, ChevronDown, CircleDot, Download, FileText, Mic, MicOff, Send, ShieldAlert, ShieldCheck, Sparkles, Upload, X, Award } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import type { PublicRun } from "@/lib/agentic/runtime";
 import type { OutputRef, Question, ReviewCard, RunEvent, RunTask } from "@/lib/agentic/types";
@@ -53,6 +53,16 @@ const STATUS_KEY: Record<PublicRun["status"], keyof AgenticStrings> = {
   failed: "statusFailed",
 };
 
+const TASK_TEMPLATES = [
+  { id: "1", label: "📄 Prepare Return", fullTitle: "Prepare & File Return", message: "1. Prepare & File Return", desc: "AY 2026-27 salary return intake & computation" },
+  { id: "2", label: "⚖️ Compare Regimes", fullTitle: "Compare Tax Regimes", message: "2. Compare Tax Regimes", desc: "Old vs New regime side-by-side tax comparison" },
+  { id: "3", label: "🔍 Reconcile AIS", fullTitle: "Reconcile AIS & 26AS", message: "3. Reconcile AIS & 26AS", desc: "Cross-check TDS & reported salary facts" },
+  { id: "4", label: "💳 Pay Tax / Challan 280", fullTitle: "Pay Tax / Challan 280", message: "4. Pay Tax / Challan 280", desc: "Simulate ITNS 280 advance / self-assessment tax" },
+  { id: "5", label: "🛡️ Defend Notice", fullTitle: "Defend Tax Notice", message: "5. Defend Tax Notice", desc: "Analyze 143(1) mismatch or statutory defense" },
+  { id: "6", label: "⚡ Track Refund", fullTitle: "Track Refund Status", message: "6. Track Refund Status", desc: "Check processing timeline and refund credit" },
+  { id: "7", label: "🏛️ Citizen Tax Vault", fullTitle: "Citizen Tax Vault", message: "7. Citizen Tax Vault", desc: "Open encrypted storage for Form 16 & ITR-V" },
+] as const;
+
 function getDynamicLoader(inFlightQuery: string | null, run: PublicRun | null, events: RunEvent[], lang: Lang): { title: string; subtext: string; state: MunshiState } {
   let userText = inFlightQuery?.toLowerCase().trim() || "";
   if (!userText) {
@@ -81,8 +91,8 @@ function getDynamicLoader(inFlightQuery: string | null, run: PublicRun | null, e
   if (isIdentityOrChat && (!userText.includes("tax") && !userText.includes("return") && !userText.includes("calc") && !userText.includes("file"))) {
     return {
       title: isHindi ? "मुंशी जी सोच रहे हैं…" : "Munshi ji is thinking…",
-      subtext: isHindi ? "आपके सवाल का उत्तर तैयार कर रहे हैं…" : "Formulating a thoughtful answer for you…",
-      state: "welcome",
+      subtext: isHindi ? "आपके सवाल का उत्तर तैयार कर रहे हैं…" : "Consulting the ledger and formulating an answer…",
+      state: "reading",
     };
   }
 
@@ -95,8 +105,8 @@ function getDynamicLoader(inFlightQuery: string | null, run: PublicRun | null, e
   if (isTaxCalc) {
     return {
       title: isHindi ? "मुंशी जी कर गणना कर रहे हैं…" : "Munshi ji is calculating…",
-      subtext: isHindi ? "AY 2026-27 के स्लैब, 87A छूट और टैक्स देयता की गणना हो रही है…" : "Crunching AY 2026-27 tax slabs, rebate u/s 87A & cess…",
-      state: "working",
+      subtext: isHindi ? "AY 2026-27 के स्लैब, 87A छूट और टैक्स देयता की गणना हो रही है…" : "Reviewing reports & crunching AY 2026-27 tax slabs…",
+      state: "reading",
     };
   }
 
@@ -110,8 +120,8 @@ function getDynamicLoader(inFlightQuery: string | null, run: PublicRun | null, e
   if (isDocOrVault) {
     return {
       title: isHindi ? "मुंशी जी दस्तावेज़ जांच रहे हैं…" : "Munshi ji is reviewing papers…",
-      subtext: isHindi ? "Form 16, AIS और टैक्स वॉल्ट के रिकॉर्ड्स का मिलान हो रहा है…" : "Cross-checking Form 16 facts, AIS entries & Tax Vault records…",
-      state: "working",
+      subtext: isHindi ? "Form 16, AIS और टैक्स वॉल्ट के रिकॉर्ड्स का मिलान हो रहा है…" : "Reading Form 16 reports, AIS entries & Tax Vault records…",
+      state: "reading",
     };
   }
 
@@ -124,8 +134,8 @@ function getDynamicLoader(inFlightQuery: string | null, run: PublicRun | null, e
   if (isFilingOrReturn) {
     return {
       title: isHindi ? "मुंशी जी रिटर्न तैयार कर रहे हैं…" : "Munshi ji is preparing return…",
-      subtext: isHindi ? "ITR-1 सारांश और शेड्यूल का मिलान किया जा रहा है…" : "Assembling ITR-1 schedules & drafting return summary…",
-      state: "working",
+      subtext: isHindi ? "ITR-1 सारांश और शेड्यूल का मिलान किया जा रहा है…" : "Reading reports & assembling ITR-1 schedules…",
+      state: "reading",
     };
   }
 
@@ -135,8 +145,8 @@ function getDynamicLoader(inFlightQuery: string | null, run: PublicRun | null, e
   if (isExplanation) {
     return {
       title: isHindi ? "मुंशी जी नियम जांच रहे हैं…" : "Munshi ji is checking tax rules…",
-      subtext: isHindi ? "CBDT नियमों और आयकर प्रावधानों की समीक्षा हो रही है…" : "Looking up CBDT provisions & income tax guidelines…",
-      state: "explaining",
+      subtext: isHindi ? "CBDT नियमों और आयकर प्रावधानों की समीक्षा हो रही है…" : "Reading statute provisions & CBDT guidelines…",
+      state: "reading",
     };
   }
 
@@ -146,16 +156,16 @@ function getDynamicLoader(inFlightQuery: string | null, run: PublicRun | null, e
   if (isNotice) {
     return {
       title: isHindi ? "मुंशी जी नोटिस का विश्लेषण कर रहे हैं…" : "Munshi ji is examining notice…",
-      subtext: isHindi ? "CBDT नियमों और वैधानिक आधार की समीक्षा की जा रही है…" : "Reviewing statutory notice & defense grounds…",
-      state: "explaining",
+      subtext: isHindi ? "CBDT नियमों और वैधानिक आधार की समीक्षा की जा रही है…" : "Reading notice papers & analyzing defense grounds…",
+      state: "reading",
     };
   }
 
   // Default fallback: thinking
   return {
     title: isHindi ? "मुंशी जी सोच रहे हैं…" : "Munshi ji is thinking…",
-    subtext: isHindi ? "आपके सवाल का विश्लेषण और समाधान तैयार हो रहा है…" : "Analyzing your question & consulting the books…",
-    state: "welcome",
+    subtext: isHindi ? "आपके सवाल का विश्लेषण और समाधान तैयार हो रहा है…" : "Reading records & analyzing your request…",
+    state: "reading",
   };
 }
 
@@ -166,6 +176,26 @@ export default function Workspace(props: WorkspaceProps) {
   const isNearBottomRef = useRef(true);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [inFlightQuery, setInFlightQuery] = useState<string | null>(null);
+  const [isTaskMenuOpen, setIsTaskMenuOpen] = useState(false);
+  const taskMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isTaskMenuOpen) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (taskMenuRef.current && !taskMenuRef.current.contains(e.target as Node)) {
+        setIsTaskMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsTaskMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isTaskMenuOpen]);
 
   const scrollToBottom = useCallback((smooth = true) => {
     if (!scrollRef.current) return;
@@ -439,10 +469,9 @@ export default function Workspace(props: WorkspaceProps) {
                     <Sparkles size={13} className="text-money animate-pulse" />
                     <span>{dynamicLoader.title}</span>
                   </span>
-                  <div className="flex items-center gap-0.5 ml-auto">
-                    <span className="w-1 h-3.5 bg-money rounded-full animate-bounce [animation-delay:-0.3s]" />
-                    <span className="w-1 h-4 bg-money rounded-full animate-bounce [animation-delay:-0.15s]" />
-                    <span className="w-1 h-3.5 bg-money rounded-full animate-bounce" />
+                  <div className="flex items-center gap-1.5 ml-auto px-2 py-0.5 rounded-full bg-money/10 text-money text-[10px] font-mono font-semibold">
+                    <span className="size-1.5 rounded-full bg-money animate-ping" />
+                    <span>Reading</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 text-[11px] text-ink-3 font-mono">
@@ -476,41 +505,83 @@ export default function Workspace(props: WorkspaceProps) {
       </div>
 
       {run.status === "completed" && (
-        <div className="px-4 sm:px-6 py-2.5 border-t border-line/60 bg-paper-2/60 backdrop-blur-xs">
-          <div className="mx-auto w-full max-w-3xl space-y-1.5">
-            <div className="flex items-center justify-between gap-2 text-xs text-ink-3">
-              <span className="inline-flex items-center gap-1.5 font-medium text-ink-2">
-                <Sparkles size={12} className="text-money" aria-hidden="true" />
-                <span>{props.lang === "hi" ? "अगले 7 उपलब्ध कार्य (AY 2026-27):" : "Next Available Tasks (AY 2026-27):"}</span>
-              </span>
-              <span className="text-[11px] text-ink-3 font-mono">Select or type 1–7</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {[
-                { id: "1", label: "📄 Prepare Return", message: "1. Prepare & File Return" },
-                { id: "2", label: "⚖️ Compare Regimes", message: "2. Compare Tax Regimes" },
-                { id: "3", label: "🔍 Reconcile AIS", message: "3. Reconcile AIS & 26AS" },
-                { id: "4", label: "💳 Pay Tax / Challan 280", message: "4. Pay Tax / Challan 280" },
-                { id: "5", label: "🛡️ Defend Notice", message: "5. Defend Tax Notice" },
-                { id: "6", label: "⚡ Track Refund", message: "6. Track Refund Status" },
-                { id: "7", label: "🏛️ Citizen Tax Vault", message: "7. Citizen Tax Vault" },
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  disabled={props.loading}
-                  onClick={() => {
-                    if (item.id === "7" && props.onOpenVault) {
-                      props.onOpenVault();
-                    }
-                    handleUserSend({ message: item.message });
-                  }}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-line bg-paper hover:bg-paper-2 hover:border-money/60 text-xs font-medium text-ink transition shadow-2xs hover:shadow-xs cursor-pointer disabled:opacity-50"
+        <div className="px-4 sm:px-6 py-1.5 border-t border-line/60 bg-paper-2/50 backdrop-blur-xs">
+          <div className="mx-auto w-full max-w-3xl flex items-center justify-between gap-2 text-xs">
+            {/* Space-Saving Dropdown Menu */}
+            <div className="relative" ref={taskMenuRef}>
+              <button
+                type="button"
+                id="task-template-dropdown-btn"
+                aria-haspopup="menu"
+                aria-expanded={isTaskMenuOpen}
+                disabled={props.loading}
+                onClick={() => setIsTaskMenuOpen((prev) => !prev)}
+                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all shadow-2xs hover:shadow-xs cursor-pointer disabled:opacity-50 ${
+                  isTaskMenuOpen
+                    ? "bg-paper-2 border-money/80 text-money ring-2 ring-money/20"
+                    : "bg-paper border-line hover:border-money/60 text-ink hover:text-money"
+                }`}
+              >
+                <Sparkles size={12} className="text-money shrink-0" aria-hidden="true" />
+                <span>{props.lang === "hi" ? "कार्य टेम्पलेट (AY 2026-27)" : "Task Templates (AY 2026-27)"}</span>
+                <ChevronDown
+                  size={12}
+                  className={`text-ink-3 transition-transform duration-200 ${isTaskMenuOpen ? "rotate-180 text-money" : ""}`}
+                  aria-hidden="true"
+                />
+              </button>
+
+              {/* Floating Dropdown Popover (opening upward) */}
+              {isTaskMenuOpen && (
+                <div
+                  role="menu"
+                  aria-labelledby="task-template-dropdown-btn"
+                  className="absolute bottom-full mb-2 left-0 z-40 w-72 sm:w-88 rounded-[20px] bg-paper dark:bg-[#111A2E] border border-line shadow-2xl p-2 animate-in fade-in slide-in-from-bottom-2 duration-150"
                 >
-                  <span>{item.label}</span>
-                </button>
-              ))}
+                  <div className="px-3 py-2 border-b border-line/60 flex items-center justify-between text-[11px] font-mono text-ink-3">
+                    <span className="font-semibold text-ink flex items-center gap-1.5">
+                      <Sparkles size={11} className="text-money" />
+                      <span>{props.lang === "hi" ? "कार्य टेम्पलेट चुनें" : "Select a Task Template"}</span>
+                    </span>
+                    <span className="text-[10px] text-ink-3">Esc to close</span>
+                  </div>
+                  <div className="py-1 space-y-0.5 max-h-[380px] overflow-y-auto">
+                    {TASK_TEMPLATES.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        role="menuitem"
+                        disabled={props.loading}
+                        onClick={() => {
+                          setIsTaskMenuOpen(false);
+                          if (item.id === "7" && props.onOpenVault) {
+                            props.onOpenVault();
+                          }
+                          handleUserSend({ message: item.message });
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[14px] text-left text-xs font-medium text-ink hover:bg-money/10 hover:text-money transition cursor-pointer group disabled:opacity-50"
+                      >
+                        <span className="size-5 rounded-md bg-paper-2 border border-line flex items-center justify-center text-[11px] font-mono font-bold text-ink-3 group-hover:border-money/40 group-hover:text-money shrink-0">
+                          {item.id}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <span className="block font-semibold text-ink group-hover:text-money truncate">
+                            {item.label}
+                          </span>
+                          <span className="block text-[10.5px] text-ink-3 group-hover:text-ink-2 truncate">
+                            {item.desc}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
+
+            <span className="text-[11px] text-ink-3 font-mono hidden sm:inline">
+              Select or type 1–7
+            </span>
           </div>
         </div>
       )}

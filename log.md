@@ -5357,6 +5357,55 @@ things there are already true and will NOT be rewritten:
     - Verified live Context panel and UI layout remained completely intact.
 - **Status**: Branch `dev-2`. Not committed, not pushed.
 
+## [2026-09-08 10:30] antigravity (Voice Transcription Post-Processing with Lightweight LLM Refiner)
+- **Why**:
+  - User requested cleaner and structured transcription output that corrects mispronounced words or incorrect meanings (e.g. acoustic homophones like "lock" -> "lakh", "pan cord" -> "PAN card", "eighty c" -> "80C", "regeem" -> "regime").
+  - Needed automatic removal of speech disfluencies, stuttering, and filler words ("um", "uh", "like", "you know", "basically", "matlab", "yani", etc.).
+- **What changed**:
+  - **Lightweight LLM Transcript Refiner (`lib/server/transcriber.ts`)**:
+    - Created `refineTranscriptWithLlm(rawText: string, language?: string | null): Promise<string>`.
+    - Queries `gemini-2.5-flash-lite` (or fallback `gemini-2.5-flash`) at temperature 0.1 and maxOutputTokens 300 with strict transcription structuring instructions:
+      1. Eliminate all vocal fillers, hesitation sounds, and stuttering.
+      2. Fix acoustic misspellings and domain homophones ("lock" -> "lakh", "atc"/"eighty c" -> "80C", "eighty d" -> "80D", "form sixteen" -> "Form 16", "pan cord" -> "PAN card", "regeem" -> "regime", "rent reset" -> "rent receipt").
+      3. Capitalize proper financial nouns/acronyms (PAN, ITR, TDS, AIS, HRA) and add proper punctuation.
+      4. Strictly preserve original intent and language (English, Hindi, Hinglish, Tamil, Telugu, Marathi, etc.) without translating across languages.
+      5. Safe degradation: returns original trimmed raw transcript if no API key is set, or if API timeout/network failure occurs.
+  - **Audio Transcription Pipeline Integration (`lib/server/transcriber.ts`)**:
+    - Updated `transcribeAudio()` to pipe the raw output of both Gemini cloud speech transcription and faster-whisper local worker through `refineTranscriptWithLlm()` before returning the result.
+  - **Unit Tests (`lib/__tests__/speech.test.ts`)**:
+    - Added tests for `refineTranscriptWithLlm`:
+      - Handles empty/whitespace input without calling API.
+      - Gracefully falls back to raw trimmed text when no API key is available.
+- **Verification**:
+  - `npx vitest run`: All 44 test files / 381 unit tests passed green.
+  - `npm run build`: Production build verified with 0 errors.
+- **Status**: Branch `dev-2`. Not committed, not pushed per project rules.
 
-
+## [2026-09-08 10:45] antigravity (Space-Saving Task Templates Dropdown Menu & Munshi ji Reading-The-Report Animation)
+- **Why**:
+  - User requested transforming the multi-line "Next Available Tasks (AY 2026-27)" chip banner above the composer into a space-saving drop-down menu to reclaim precious vertical space in the UI.
+  - User requested replacing the wave animation when Munshi ji starts analyzing or thinking about a request with Munshi ji's document/report reading animation already available in the codebase.
+- **What changed**:
+  - **Space-Saving Task Templates Dropdown Menu (`components/agentic/workspace.tsx`)**:
+    - Replaced the bulky 2-line wrapped buttons section with a compact, single-line toolbar featuring a sleek pill dropdown trigger: `✨ Task Templates (AY 2026-27) ▾` alongside the keyboard shortcut hint `Select or type 1–7`.
+    - Added an upward-floating popover dropdown menu (`bottom-full mb-2`, `z-40`, `rounded-[20px]`, with high-contrast `bg-paper dark:bg-[#111A2E]` and `border border-line shadow-2xl`) listing all 7 official tasks:
+      1. `📄 Prepare Return` — AY 2026-27 salary return intake & computation
+      2. `⚖️ Compare Regimes` — Old vs New regime side-by-side tax comparison
+      3. `🔍 Reconcile AIS` — Cross-check TDS & reported salary facts
+      4. `💳 Pay Tax / Challan 280` — Simulate ITNS 280 advance / self-assessment tax
+      5. `🛡️ Defend Notice` — Analyze 143(1) mismatch or statutory defense
+      6. `⚡ Track Refund` — Check processing timeline and refund credit
+      7. `🏛️ Citizen Tax Vault` — Open encrypted storage for Form 16 & ITR-V
+    - Integrated click-outside detection and `Escape` key listeners to dismiss the menu naturally.
+    - Saves ~70px of vertical space in the workspace UI while improving readability and touch usability.
+  - **Munshi ji Reading-The-Report Animation (`components/brand/munshi.css`, `components/agentic/workspace.tsx`, `components/agentic/audio-waveforms.tsx`)**:
+    - Connected `[data-state="reading"]` in `components/brand/munshi.css` to the full 6-second keyframe sequence (`mj-page`, `mj-read`, `mj-glasses`, `mj-touch`, `mj-arm-away`), where Munshi ji retrieves a report page, moves his pupils down the page reading it, touches and adjusts his spectacles, and returns the sheet.
+    - Updated `getDynamicLoader()` in `components/agentic/workspace.tsx` so all analyzing, calculating, explaining, and thinking states use `state: "reading"` instead of `"welcome"` or `"explaining"` (which previously triggered the waving arm `mj-wave-arm`).
+    - Replaced the three bouncing audio wave bars in the loader card with a clean, subtle `Reading` status badge.
+    - In `TranscribingAnimation` (`components/agentic/audio-waveforms.tsx`), replaced the sine wave SVG ribbon with `<Munshi size={42} compact state="reading" />` reading the report and structuring transcripts.
+- **Verification**:
+  - `npx vitest run`: All 44 test files / 381 unit tests passed green.
+  - `npm run build`: Production Next.js Turbopack build passed cleanly with 0 errors.
+  - Playwright visual audit: Tested live at `http://localhost:3000/app` in both Dark mode and Light mode ("Sunrise/Lilac"); verified dropdown toggle, click-outside dismissal, instant task execution (`2. Compare Regimes`), and animated CSS report-reading keyframes in the DOM.
+- **Status**: Branch `dev-2`. Not committed, not pushed per project rules.
 

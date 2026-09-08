@@ -54,3 +54,25 @@ describe("transcribeWithGemini error handling", () => {
   });
 });
 
+describe("refineTranscriptWithLlm", () => {
+  it("returns empty string on empty input", async () => {
+    const { refineTranscriptWithLlm } = await import("../server/transcriber");
+    expect(await refineTranscriptWithLlm("")).toBe("");
+    expect(await refineTranscriptWithLlm("   \n\t ")).toBe("");
+  });
+
+  it("falls back cleanly to trimmed input when no API key is configured", async () => {
+    const { refineTranscriptWithLlm } = await import("../server/transcriber");
+    const originalKey = process.env.GEMINI_API_KEY;
+    try {
+      delete process.env.GEMINI_API_KEY;
+      delete process.env.GEMINI_FALLBACK_API_KEY;
+      const res = await refineTranscriptWithLlm("  i want to check eighty c deduction  ");
+      expect(res).toBe("i want to check eighty c deduction");
+    } finally {
+      if (originalKey) process.env.GEMINI_API_KEY = originalKey;
+    }
+  });
+});
+
+

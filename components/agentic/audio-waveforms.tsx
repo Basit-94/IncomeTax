@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MicOff, X, Sparkles } from "lucide-react";
 import { m } from "motion/react";
+import { Munshi } from "../brand/munshi";
 
 interface SpeakingWaveformProps {
   audioLevel: number;
@@ -185,62 +186,12 @@ export function TranscribingAnimation() {
         </div>
       </div>
 
-      {/* Center: Harmonic flowing Sine Wave ribbon */}
-      <div className="relative flex-1 flex items-center justify-center h-8 px-2 overflow-hidden">
-        <svg
-          viewBox="0 0 200 40"
-          className="w-full max-w-[260px] h-8 stroke-current"
-          preserveAspectRatio="none"
-          aria-hidden="true"
-        >
-          <defs>
-            <linearGradient id="transcribeGrad1" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="var(--tertiary-color)" stopOpacity="0.3" />
-              <stop offset="50%" stopColor="var(--primary-accent)" stopOpacity="0.95" />
-              <stop offset="100%" stopColor="var(--soft-color)" stopOpacity="0.3" />
-            </linearGradient>
-            <linearGradient id="transcribeGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="var(--primary-accent)" stopOpacity="0.2" />
-              <stop offset="50%" stopColor="var(--tertiary-color)" stopOpacity="0.9" />
-              <stop offset="100%" stopColor="var(--primary-accent)" stopOpacity="0.2" />
-            </linearGradient>
-          </defs>
-
-          {/* Primary wave path with horizontal flowing dasharray */}
-          <m.path
-            d="M 0,20 Q 25,6 50,20 T 100,20 T 150,20 T 200,20"
-            fill="none"
-            stroke="url(#transcribeGrad1)"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            animate={{
-              d: [
-                "M 0,20 Q 25,6 50,20 T 100,20 T 150,20 T 200,20",
-                "M 0,20 Q 25,34 50,20 T 100,20 T 150,20 T 200,20",
-                "M 0,20 Q 25,6 50,20 T 100,20 T 150,20 T 200,20",
-              ],
-            }}
-            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-          />
-
-          {/* Secondary counter-phase harmonic wave path */}
-          <m.path
-            d="M 0,20 Q 25,30 50,20 T 100,20 T 150,20 T 200,20"
-            fill="none"
-            stroke="url(#transcribeGrad2)"
-            strokeWidth="1.75"
-            strokeLinecap="round"
-            strokeDasharray="4 2"
-            animate={{
-              d: [
-                "M 0,20 Q 25,30 50,20 T 100,20 T 150,20 T 200,20",
-                "M 0,20 Q 25,10 50,20 T 100,20 T 150,20 T 200,20",
-                "M 0,20 Q 25,30 50,20 T 100,20 T 150,20 T 200,20",
-              ],
-            }}
-            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut", delay: 0.25 }}
-          />
-        </svg>
+      {/* Center: Munshi ji reading the report animation */}
+      <div className="relative flex-1 flex items-center justify-center gap-2.5 h-10 px-2 overflow-hidden z-10">
+        <Munshi size={42} compact state="reading" />
+        <span className="text-xs font-semibold text-ink-2 truncate hidden sm:inline">
+          Munshi ji is reading & structuring transcript…
+        </span>
       </div>
 
       {/* Right: Pulsing status dots */}

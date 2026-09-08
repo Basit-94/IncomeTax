@@ -15,11 +15,11 @@
 .munshi-svg[data-animated="true"][data-state="welcome"] .mj-wave-arm { animation:mj-wave 2.6s ease-in-out 2; }
 .munshi-svg[data-animated="true"][data-state="explaining"] .mj-wave-arm { animation:mj-explain 2.2s ease-in-out 2; }
 .munshi-svg[data-animated="true"][data-state="explaining"] .mj-mouth { animation:mj-talk .65s ease-in-out 5; transform-origin:140px 143px; }
-.munshi-svg[data-animated="true"][data-state="working"] .mj-document,.munshi-svg[data-animated="true"][data-state="uploading"] .mj-document { animation:mj-page 6s ease-in-out infinite; }
-.munshi-svg[data-animated="true"][data-state="working"] .mj-pupils,.munshi-svg[data-animated="true"][data-state="uploading"] .mj-pupils { animation:mj-read 6s ease-in-out infinite; }
-.munshi-svg[data-animated="true"][data-state="working"] .mj-glasses,.munshi-svg[data-animated="true"][data-state="uploading"] .mj-glasses { animation:mj-glasses 6s ease-in-out infinite; }
-.munshi-svg[data-animated="true"][data-state="working"] .mj-touch-hand,.munshi-svg[data-animated="true"][data-state="uploading"] .mj-touch-hand { animation:mj-touch 6s ease-in-out infinite; }
-.munshi-svg[data-animated="true"][data-state="working"] .mj-adjust-arm,.munshi-svg[data-animated="true"][data-state="uploading"] .mj-adjust-arm { animation:mj-arm-away 6s ease-in-out infinite; }
+.munshi-svg[data-animated="true"][data-state="working"] .mj-document,.munshi-svg[data-animated="true"][data-state="reading"] .mj-document,.munshi-svg[data-animated="true"][data-state="uploading"] .mj-document { animation:mj-page 6s ease-in-out infinite; }
+.munshi-svg[data-animated="true"][data-state="working"] .mj-pupils,.munshi-svg[data-animated="true"][data-state="reading"] .mj-pupils,.munshi-svg[data-animated="true"][data-state="uploading"] .mj-pupils { animation:mj-read 6s ease-in-out infinite; }
+.munshi-svg[data-animated="true"][data-state="working"] .mj-glasses,.munshi-svg[data-animated="true"][data-state="reading"] .mj-glasses,.munshi-svg[data-animated="true"][data-state="uploading"] .mj-glasses { animation:mj-glasses 6s ease-in-out infinite; }
+.munshi-svg[data-animated="true"][data-state="working"] .mj-touch-hand,.munshi-svg[data-animated="true"][data-state="reading"] .mj-touch-hand,.munshi-svg[data-animated="true"][data-state="uploading"] .mj-touch-hand { animation:mj-touch 6s ease-in-out infinite; }
+.munshi-svg[data-animated="true"][data-state="working"] .mj-adjust-arm,.munshi-svg[data-animated="true"][data-state="reading"] .mj-adjust-arm,.munshi-svg[data-animated="true"][data-state="uploading"] .mj-adjust-arm { animation:mj-arm-away 6s ease-in-out infinite; }
 .munshi-svg[data-animated="true"][data-state="happy"] .mj-body,.munshi-svg[data-animated="true"][data-state="success"] .mj-body { animation:mj-pleased 1.5s ease-in-out 1; }
 .munshi-svg[data-animated="true"][data-state="concerned"] .mj-body,.munshi-svg[data-animated="true"][data-state="error"] .mj-body { animation:mj-concern 1.5s ease-in-out 1; }
 .munshi-svg[data-animated="true"][data-state="waiting"] .mj-pupils { animation:mj-wait 7s ease-in-out infinite; }
