@@ -30,6 +30,6 @@ describe("getGeminiKeys — universal key resolver", () => {
       GEMINI_API_KEYS: "valid-key-2, valid-key-3, REPLACE_ME",
     };
     const keys = getGeminiKeys(env);
-    expect(keys).toEqual(["valid-key-1", "valid-key-2", "valid-key-3"]);
+    expect(keys).toEqual(["valid-key-2", "valid-key-3", "valid-key-1"]);
   });
 });

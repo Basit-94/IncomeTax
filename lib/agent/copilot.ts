@@ -351,8 +351,8 @@ export async function callGemini(
     return { error: "API key is not configured." };
   }
 
-  const primaryModel = process.env.AGENT_MODEL || "gemini-3.5-flash";
-  const fallbackModel = process.env.AGENT_FALLBACK_MODEL || "gemini-3.5-flash-lite";
+  const primaryModel = process.env.AGENT_MODEL || "gemini-3.5-flash-lite";
+  const fallbackModel = process.env.AGENT_FALLBACK_MODEL || "gemini-3.5-flash";
 
   let lastError = "";
 
