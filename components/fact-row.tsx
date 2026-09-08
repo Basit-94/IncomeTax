@@ -123,7 +123,7 @@ export default function FactRow({
       >
         <summary>
           {meaning ? (
-            <span className="hand flex items-center gap-2"><MunshiAvatar size={24} state={confirmed ? "happy" : hasRead ? "explaining" : "idle"} /> Munshi ji: {t.factCard.whatThisMeans}</span>
+            <span className="hand flex items-center gap-2"><MunshiAvatar size={24} state={confirmed ? "noting" : hasRead ? "explaining" : "idle"} /> Munshi ji: {t.factCard.whatThisMeans}</span>
           ) : (
             <span className="font-mono text-[11px] uppercase tracking-wider text-ink-2">
               {t.groups.fromWhere}

@@ -34,6 +34,9 @@ import { useRun, useRuns } from "@/components/agentic/use-run";
 import CitizenVaultModal from "@/components/vault/citizen-vault-modal";
 import CAShareModal from "@/components/ca/ca-share-modal";
 import CAComparisonModal from "@/components/ca/ca-comparison-modal";
+import { citizenReviews, reviewStatusLabel, type PublicReview } from "@/lib/ca/client";
+import { computeForPersona } from "@/lib/return/compute";
+import { formatMoney } from "@/lib/money";
 import {
   getActiveReviewForPan,
   fetchReviewRecord,
@@ -169,6 +172,18 @@ function AgenticWorkspace() {
   const [caShareOpen, setCaShareOpen] = useState(false);
   const [caComparisonOpen, setCaComparisonOpen] = useState(false);
   const [activeCAReview, setActiveCAReview] = useState<CAReviewRecord | null>(null);
+  // The server's list of this person's review requests (2026-09-08): the sidebar's "Your return" and the
+  // status Munshi ji and the filing step show. Polled while the page is open; a review that comes back becomes
+  // the active one, so the comparison opens from wherever the person is.
+  const [myReviews, setMyReviews] = useState<PublicReview[]>([]);
+  useEffect(() => {
+    if (sessionState !== "ready") return;
+    let alive = true;
+    const pull = () => citizenReviews.list().then((r) => { if (!alive) return; setMyReviews(r.reviews); const live = r.reviews.find((x) => x.status === "reviewed") ?? r.reviews.find((x) => x.status === "claimed" || x.status === "pending"); setActiveCAReview((prev) => { const next = live ?? (prev ? r.reviews.find((x) => x.code === prev.code) : undefined); return !next || (prev && prev.code === next.code && prev.status === next.status) ? prev : ({ ...next, pinHash: "" } as CAReviewRecord); }); }).catch(() => undefined);
+    void pull();
+    const t = setInterval(pull, 6000);
+    return () => { alive = false; clearInterval(t); };
+  }, [sessionState]);
 
   useEffect(() => {
     if (!persona?.pan) return;
@@ -363,6 +378,19 @@ function AgenticWorkspace() {
     setMemory((m) => m.filter((e) => e.key !== key));
   };
 
+  // "Your return" in the sidebar: the draft midway, then every CA review that is still live (2026-09-08).
+  const workItems = useMemo(() => {
+    const items: NonNullable<React.ComponentProps<typeof AppShell>["workItems"]> = [];
+    if (returnState && !returnState.filedAt && returnState.persona.facts.length > 0) {
+      const b = computeForPersona(returnState.persona, returnState.regime ?? "new");
+      items.push({ id: "draft", title: `Draft return · AY ${returnState.persona.assessmentYear}`, detail: `${returnState.persona.facts.length} income row${returnState.persona.facts.length === 1 ? "" : "s"} · ${b.refundOrDue >= 0 ? `refund ${formatMoney(b.refundOrDue, lang)}` : `${formatMoney(-b.refundOrDue, lang)} due`} · not filed`, tone: "draft", onClick: () => router.push("/") });
+    }
+    for (const r of myReviews.filter((x) => x.status === "pending" || x.status === "claimed" || x.status === "reviewed")) {
+      items.push({ id: r.code, title: r.status === "reviewed" ? "CA review ready" : "Being reviewed by a CA", detail: reviewStatusLabel(r), tone: r.status === "reviewed" ? "ready" : "review", onClick: () => { setActiveCAReview({ ...r, pinHash: "" } as CAReviewRecord); setCaComparisonOpen(true); } });
+    }
+    return items;
+  }, [returnState, myReviews, lang, router]);
+
   if (!agenticEnabled()) {
     return (
       <main className="min-h-dvh flex items-center justify-center p-8 text-ink">
@@ -393,6 +421,7 @@ function AgenticWorkspace() {
         onSelectRun={(id) => router.push(`/app?run=${id}`)}
         onNewChat={() => router.push("/app")}
         onDeleteRun={(id: string) => void runs.remove(id).then(() => activeRunId === id && router.push("/app"))}
+        workItems={workItems}
         inspector={{
           steps: view.run?.steps ?? [],
           outputs: view.outputs,
@@ -457,6 +486,7 @@ function AgenticWorkspace() {
           onClose={() => setCaShareOpen(false)}
           persona={persona}
           regime={returnState?.regime ?? "new"}
+          returnState={returnState}
           lang={lang}
           onRecordCreated={(rec) => setActiveCAReview(rec)}
           onReviewReceived={(rec) => {

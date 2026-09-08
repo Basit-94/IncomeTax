@@ -302,6 +302,35 @@ describe("Munshi ji thinks, the engine counts — the conversation loop (2026-09
     expect(model.inputs[0].tools.map((t) => t.name)).toContain("scan_opportunities");
   });
 
+  it("a correction is noted as an event, redacted, shown in later chats; a refused tool call is named in the Progress panel", async () => {
+    const first = scripted([
+      { calls: [{ name: "read_document", args: { documentId: "doc_x" } }] },
+      { calls: [{ name: "note_correction", args: { scope: "figure", what: "I said the 80D limit was 50,000 for everyone", correct: "25,000 unless 60+; PAN DEMPS4417K" } }] },
+      { text: "Right — 25,000 unless the person insured is 60 or older." },
+    ]);
+    const d = deps({ model: first });
+    const run1 = await createRun(d, sunita, { message: "no, 80D is 25,000 not 50,000", lang: "en" });
+    const r1 = (await advance(d, sunita, run1.id))!;
+    const evs = await events(d, sunita, r1);
+    const correction = evs.find((e) => e.type === "correction") as { scope: string; what: string; correct?: string } | undefined;
+    expect(correction).toMatchObject({ scope: "figure", what: expect.stringContaining("80D limit") });
+    expect(correction?.correct).toContain("[PAN]");
+    expect(JSON.stringify(evs)).not.toContain("DEMPS4417K");
+    // The refused read shows up as a named tool outcome, not a silent nothing.
+    expect(evs.some((e) => e.type === "tool_outcome" && e.tool === "read_document" && !e.ok && /consent_required/.test((e as { summary: string }).summary))).toBe(true);
+
+    // A new chat knows about the earlier one: its title, what he last said, and the correction.
+    const second = scripted([{ text: "Welcome back." }]);
+    const d2 = { ...d, model: second };
+    await advance(d2, sunita, (await createRun(d2, sunita, { message: "hi again", lang: "en" })).id);
+    const sys = second.inputs[0].system;
+    expect(sys).toContain("Earlier chats with this person");
+    expect(sys).toContain('"no, 80D is 25,000 not 50,000"');
+    expect(sys).toContain("the person corrected you");
+    expect(sys).toContain("80D limit");
+    expect(sys).not.toContain("DEMPS4417K");
+  });
+
   it("the reply language follows the latest message: Hindi for Devanagari, Hinglish for romanised Hindi, and it switches turn by turn", async () => {
     const model = scripted([{ text: "नमस्ते।" }, { text: "Haan, bataata hoon." }, { text: "Sure." }]);
     const d = deps({ model });

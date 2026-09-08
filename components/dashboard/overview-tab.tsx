@@ -295,7 +295,7 @@ export default function OverviewTab({
           {refund.state !== "not_filed" && (
             <details className="surface-panel group p-5">
               <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-mono uppercase tracking-wider text-ink-2 font-bold [&::-webkit-details-marker]:hidden">
-                <span className="flex items-center gap-2"><MunshiAvatar size={34} state={refund.state === "credited" ? "success" : openHolds.length > 0 ? "concerned" : "waiting"} />{t.dashboard.refundTimeline}</span>
+                <span className="flex items-center gap-2"><MunshiAvatar size={34} state={refund.state === "credited" ? "success" : openHolds.length > 0 ? "concerned" : "chai"} />{t.dashboard.refundTimeline}</span>
                 <ChevronDown size={14} className="transition-transform group-open:rotate-180" aria-hidden="true" />
               </summary>
               <div className="space-y-6 border-t border-line mt-2 pt-4">

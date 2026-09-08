@@ -51,6 +51,8 @@ export interface RuntimeDeps {
   model: ModelAdapter;
   /** The DigiLocker mock's record store (2026-09-07); absent in tests, where the PAN-seeded record is rebuilt in-process. */
   locker?: DigiLockerProvider;
+  /** The CA system's store (2026-09-08), so Munshi ji can say where a review stands and compare the two versions. */
+  caStore?: import("../ca/server-store").CAStore;
   budget: RunBudget;
   clock: () => string;
   /** Today's date for provenance/filing stamps; injected so tests are stable. */

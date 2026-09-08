@@ -80,6 +80,7 @@ export function SpeakingWaveform({
     >
       {/* Left: Status indicator & Live counter */}
       <div className="flex items-center gap-2.5 shrink-0">
+        <Munshi size={38} compact state="voice" />
         <div className="relative flex size-3 items-center justify-center">
           <span className="absolute inline-flex size-full animate-ping rounded-full bg-[var(--primary-accent)] opacity-75" />
           <span className="relative inline-flex size-2 rounded-full bg-[var(--primary-accent)] shadow-[0_0_8px_var(--primary-accent)]" />

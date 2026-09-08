@@ -27,6 +27,7 @@ import {
 import type { Lang, Notice } from "@/lib/types";
 import { formatMoney } from "@/lib/money";
 import { PERSONAS } from "@/lib/personas";
+import { MunshiAvatar } from "../brand/munshi";
 
 export interface NoticeItemDisplay {
   id: string;
@@ -554,10 +555,13 @@ export default function NoticesModal({
             <div className="space-y-6 animate-in fade-in duration-200">
               {/* Active Notice Selected Bar */}
               <div className="rounded-2xl border border-line bg-paper-2 p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
-                <div>
+                <div className="flex items-center gap-3">
+                  <MunshiAvatar size={42} state={currentNotice.daysRemaining <= 7 ? "deadline" : "concerned"} />
+                  <div>
                   <span className="text-[10px] font-mono uppercase text-ink-3 block">Selected Case for Defense:</span>
                   <span className="font-bold text-sm text-ink">{currentNotice.din}</span>
                   <span className="text-ink-2 block mt-0.5">Section {currentNotice.section} — {currentNotice.taxpayerName}</span>
+                  </div>
                 </div>
                 <div className="text-end">
                   <span className="text-[10px] font-mono text-ink-3 block">Time Remaining:</span>

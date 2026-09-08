@@ -137,7 +137,9 @@ export type RunEventPayload =
   | { type: "review_card"; card: ReviewCard }
   | { type: "confirmation"; cardId: string; accepted: boolean }
   | { type: "output"; output: OutputRef }
-  | { type: "status"; status: RunStatus; reason?: string };
+  | { type: "status"; status: RunStatus; reason?: string }
+  /** The person corrected Munshi ji (2026-09-07, `note_correction`): what he had wrong, and the right version if they gave one. Redacted. */
+  | { type: "correction"; scope: "figure" | "rule" | "tone" | "process" | "other"; what: string; correct?: string };
 
 export interface RunEvent {
   runId: string;

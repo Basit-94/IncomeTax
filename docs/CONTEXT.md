@@ -35,7 +35,7 @@ and `/architecture` no longer exist on `dev-2`; the disclosure lives in `README.
 | Layer | Choice | Notes |
 |---|---|---|
 | Framework | Next.js **16.3** (App Router, Turbopack), React **19.2**, TypeScript **7** strict | `AGENTS.md` warns: APIs differ from training data — read `node_modules/next/dist/docs/` when unsure |
-| Styling | Tailwind **4** via `@tailwindcss/postcss`; design tokens in `app/globals.css`. **Redesign 2026-09-06** (`docs/redesign/README.md`, "Sunrise/Lilac" light + "Navy & Coral" dark): the token NAMES stayed (`paper/ink/money/line/amber-*`) and were remapped — paper = lilac `#F3EEFF`, paper-2 = glass `rgba(255,255,255,.62)`, money = tangerine `#FF7A1A`, amber-bg/ink = the accent-soft pair — plus new `glass / glass-edge / ink-surface / on-ink / soft / ok(-soft,-ink) / bad / tertiary` colours, `shadow-glass`, `shadow-glow`, soft radii (14/20/24 px) and the component classes `.glass .glass-flat .ink-surface .munshi-bubble .btn-primary`. `app/d13.css` keeps its verbatim classes; its palette variables are remapped unlayered at the top of `globals.css`. Fonts: **Outfit** for everything (`--font-outfit`; `font-serif` classes are an alias), JetBrains Mono for numbers, Caveat for Munshi ji's notes. Mascot: `components/brand/munshi-art.tsx` is the editable identity-master-derived SVG rig, `components/brand/munshi.tsx` exposes `Munshi`/`MunshiAvatar`/`MunshiBubble`, and `components/brand/munshi.css` owns 13 semantic animation states including the document-reading/glasses-adjusting loop and signed-net regime reactions. Standalone SVG/PNG/logo/character-sheet exports and an interactive studio live in `public/brand/munshi/`; see `docs/MUNSHI-JI.md`. The ground is the lilac page with two drifting blobs (`.paper::before/::after`), no graph paper. | Money classes: `.tabular` (journey) or `font-mono tabular-nums` (spec surfaces) |
+| Styling | Tailwind **4** via `@tailwindcss/postcss`; design tokens in `app/globals.css`. **Redesign 2026-09-06** (`docs/redesign/README.md`, "Sunrise/Lilac" light + "Navy & Coral" dark): the token NAMES stayed (`paper/ink/money/line/amber-*`) and were remapped — paper = lilac `#F3EEFF`, paper-2 = glass `rgba(255,255,255,.62)`, money = tangerine `#FF7A1A`, amber-bg/ink = the accent-soft pair — plus new `glass / glass-edge / ink-surface / on-ink / soft / ok(-soft,-ink) / bad / tertiary` colours, `shadow-glass`, `shadow-glow`, soft radii (14/20/24 px) and the component classes `.glass .glass-flat .ink-surface .munshi-bubble .btn-primary`. `app/d13.css` keeps its verbatim classes; its palette variables are remapped unlayered at the top of `globals.css`. Fonts: **Outfit** for everything (`--font-outfit`; `font-serif` classes are an alias), JetBrains Mono for numbers, Caveat for Munshi ji's notes. Mascot: `components/brand/munshi-art.tsx` is the editable identity-master-derived SVG rig, `components/brand/munshi.tsx` exposes `Munshi`/`MunshiAvatar`/`MunshiBubble`, and `components/brand/munshi.css` owns 19 semantic animation states including the document-reading/glasses-adjusting loop, signed-net regime reactions, CA-review delivery, urgent deadline, guidance, ledger notation, live voice and patient chai. Standalone SVG/PNG/logo/character-sheet exports and an interactive studio live in `public/brand/munshi/`; see `docs/MUNSHI-JI.md`. The ground is the lilac page with two drifting blobs (`.paper::before/::after`), no graph paper. | Money classes: `.tabular` (journey) or `font-mono tabular-nums` (spec surfaces) |
 | Motion | `motion` v13 (framer-motion's successor). `m.*` components under `<LazyMotion features={domMax} strict>` | Rule: never gate correctness or the visibility of a figure on an animation (`AnimatePresence mode="wait"` is banned where content matters — see log 2026-09-02 22:32) |
 | Icons / QR | `lucide-react`, `qrcode.react` | |
 | Tests | `vitest` 4, node environment, **no jsdom** — nothing mounts a component; browser checks are done live (agent-browser CLI or the Chrome extension) | |
@@ -311,8 +311,9 @@ procedure or regime comparison.
 
 Below `md` (767 px) the same components render the phone layouts from `Wapsi Mobile.dc.html` (M1–M10);
 desktop is unchanged from `md` up. Shared pieces in `components/mobile/`: `MobileTabBar` (Manual: Overview ·
-Statement · Actions · Vault, fixed, `data-testid="mobile-tab-bar"`, rendered by `app/page.tsx` after the main
-element for the hub and the dashboard; Vault opens the vault modal, the others set the dashboard tab),
+Statement · Actions, fixed, `data-testid="mobile-tab-bar"`, rendered by `app/page.tsx` after the main element for
+the hub and the dashboard **only once the return is filed** (`returnState.filedAt`; before that the steps are the
+journey, and the page has its own Tax Vault button — user, 2026-09-08); each tab sets the dashboard tab),
 `BottomSheet` (the Agentic inspector below `lg`: scrim, grab handle, ink icon square, segmented Progress ·
 Outputs · Sources; `InspectorPanel` renders it and takes `onClose`), `MobileDrawer` (the Agentic sidebar below
 `lg`, with a Mode section that carries the full-width `ModeSwitch` and the language menu). `HeaderBar` gained
@@ -462,3 +463,57 @@ remove every single template." Approved as three phases in one go; all three lan
   ledger figure); consent gate on `read_document`; balance due → challan → card at ₹0; Rakesh blocked with the reason;
   typed answers to cards; budget/cancel/redaction; model off; the system prompt's contents. `model.test.ts` (function
   calls, raw parts, functionResponse mapping), `say.test.ts`, `knowledge/__tests__/opportunities.test.ts` new.
+- **Lessons loop for Munshi ji (2026-09-07, night — `docs/MUNSHI-LESSONS.md`)** — per person: `brain.ts previousChats` puts
+  the last three chats (title, status, open card/question, last thing said, corrections) into the situation block, so a
+  new chat is not blank; `note_correction` tool → `correction` event (redacted), shown as "Noted — …". System level:
+  refused tool calls now emit `tool_outcome <tool> ok:false`; `scripts/munshi-lessons-digest.mjs [--days N] [--dry]`
+  tallies refusals / corrections / declines from the database into dated drafts under *Drafts (unreviewed)*; a human
+  promotes a line into `lib/agentic/lessons.ts` (`MUNSHI_LESSONS`, appended to the rules). The model never edits it.
+  Transcript entries redact the model's own tool arguments too.
+- **First reply latency (same night)** — `POST /api/runs` and `POST /api/runs/[id]` answered only after the whole first
+  model turn; the landing page sat there for the length of a Gemini call. Both routes now respond as soon as the run /
+  input is recorded and run the turn in `after()`; the client streams the events. Measured: run id and the person's
+  bubble on screen within ~1 s of Send.
+
+## 15. The CA system — Wapsi certified CAs, broadcast requests, inline comments, the comparison (2026-09-08)
+
+Redesign of the whole CA path. The own-CA flow (code + PIN, WhatsApp link, `/ca?code=`) is kept as one of two doors.
+
+- **Server truth: `lib/ca/server-store.ts`** — `CAStore` (Memory via `globalThis.__WAPSI_CA_SERVER_STORE__`, Postgres via
+  migration `0007_ca_system`: `ca_accounts`, `ca_sessions`, `ca_reviews`, `ca_comments`). Types: `CAAccount` (scrypt
+  password hash, `certified`, `reviewCount`), `CAReviewRequest extends CAReviewRecord` (+ `mode: "wapc" | "own"`,
+  `background`, `claimedByCaId/Name`, `updatedAt`), `ReviewComment` (`anchor`, `author {role: ca|citizen, name}`).
+  Statuses: `pending → claimed → reviewed → accepted | declined` (`rejected` kept for the old route). CA cookie
+  `wapsi_ca_sid` (12 h), separate from the citizen's `wapsi_sid`. `Services.caStore`, `RuntimeDeps.caStore`.
+- **Logic: `lib/ca/server-actions.ts`** — `registerAccount` / `loginAccount`, `createReview` (persona PAN must be the
+  owner's; `own` needs a PIN), `claimReview` (first come, first served — a second CA gets 409), `submitReview` (sets
+  `reviewed`, bumps `reviewCount`, mirrors the CA's figures onto the server return as before), `decideReview`,
+  `addComment`, `publicReview` (strips `pinHash`), `mirrorLegacy` (keeps `getLatestReviewForPan` working).
+- **Comparison: `lib/ca/compare.ts` `compareReturns()`** — both versions through the engine, row changes with the same
+  anchors the comments use (`income:<kind>`, `deduction:<section>`, `taxPaid:tds`, `regime`, `summary`), flags
+  (`risk`: income below a third-party statement, TDS raised beyond 26AS; `warn`: claim without proof or above the cap;
+  `info`: VI-A under the new regime), and a deterministic recommendation (`ca | original | either`) where a risk flag
+  outranks a bigger refund. `/compare` adds a short narrative from `services.model.converse`, checked by `whyRejected`.
+- **Routes** — `/api/ca/auth` (GET me + registeredCount; POST register | login | logout), `/api/ca/inbox` (CA: open +
+  mine), `/api/ca/reviews` (citizen: GET mine, POST create `{mode, regime, persona, background, clientNotes, pinHash?}`),
+  `/api/ca/reviews/[code]` (GET review + comments + viewer; POST claim | submit (CA), accept | decline (citizen)),
+  `/api/ca/reviews/[code]/comments` (GET / POST / PATCH resolve), `/api/ca/reviews/[code]/compare`. The old
+  `/api/ca/review` now reads and writes the same store. Client wrapper: `lib/ca/client.ts` (`caAuth`, `caInbox`,
+  `reviewApi`, `citizenReviews`, `reviewStatusLabel`).
+- **CA portal `app/ca/page.tsx`** — register as a Wapsi certified CA / sign in → dashboard (incoming broadcast requests
+  with "Take this return", my reviews, the client-code card) → workspace: who the client is (`review.background` —
+  situation, their own words, housing, extras), editable Income / Deductions / Taxes-paid worksheets, a comment bubble
+  on every row plus "overall" and "regime" threads (Figma-style: click → box → post), regime rail, "Send my version to
+  the client". Comments need an account; code+PIN CAs can edit and send but not comment.
+- **Citizen side** — `components/ca/ca-share-modal.tsx` opens on two doors: "Get it verified by a Wapsi certified CA"
+  (`citizenReviews.create({mode:"wapc"})` with `backgroundFor(persona, regime, state, notes)`) and "I have my own CA"
+  (unchanged). `components/ca/ca-comparison-modal.tsx` shows both versions with the recommended column highlighted,
+  the changes, the flags, the CA's comments beside their rows, Munshi ji's narrative, and "Keep my version" /
+  "Adopt the CA's version". `app/app/page.tsx` polls `citizenReviews.list()` every 6 s and feeds the sidebar's
+  **"Your return"** block (`AppShell.workItems`, above Recent chats): the draft midway (rows, position, "not filed")
+  and every live review ("Being reviewed by a CA" / "CA review ready"). Banners treat `claimed` like `pending`.
+- **Munshi ji** — `ca_review` tool (the person's requests, comments, and the comparison for a reviewed one) and a
+  situation line when a review is live. He weighs in; the person decides on the card.
+- **Decisions** — "Wapsi certified" is Wapsi's own mark (registered and checked on Wapsi), said so on the register form;
+  broadcast requests have no PIN; the CA sees the client's PAN (they need it to file); routes keep the open posture of
+  the old `/api/ca/review`. Tests: `lib/ca/__tests__/ca-system.test.ts`.

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { m } from "motion/react";
-import { Banknote, CheckCircle2, FileCheck, Loader2, Award, ShieldCheck } from "lucide-react";
+import { Banknote, CheckCircle2, FileCheck, Loader2, Award } from "lucide-react";
 import type { Persona, Lang } from "../../lib/types";
 import type { Dict } from "../../lib/i18n";
 import { formatMoney } from "../../lib/money";
@@ -166,7 +166,7 @@ export default function FilingStep({
           : ""}
       </p>
       <div className="space-y-1">
-        <div className="flex items-center gap-3 pb-1"><MunshiAvatar size={36} state={busy ? "working" : stage === "error" ? "error" : "reading"} /><p className="text-xs font-bold uppercase tracking-[.08em] text-money">{t.flow.file}</p></div>
+        <div className="flex items-center gap-3 pb-1"><MunshiAvatar size={36} state={busy ? "working" : stage === "error" ? "error" : mustPayFirst || !canSubmit ? "guide" : "reading"} /><p className="text-xs font-bold uppercase tracking-[.08em] text-money">{t.flow.file}</p></div>
         <h2 className="text-[26px] font-extrabold tracking-[-0.03em] leading-[1.05] text-ink">{t.filing.heading}</h2>
         <p className="text-sm text-ink-2 leading-relaxed">{t.filing.sub}</p>
       </div>
@@ -250,7 +250,7 @@ export default function FilingStep({
           {activeCAReview?.status === "reviewed" ? (
             <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-between gap-3 animate-in fade-in">
               <div className="flex items-center gap-2.5">
-                <div className="size-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <MunshiAvatar size={34} state="review-delivered" />
                 <div>
                   <span className="text-xs font-bold text-emerald-900 dark:text-emerald-200 block">
                     CA Review Complete from {activeCAReview.caDetails?.name || "Tax Professional"}!
@@ -270,10 +270,10 @@ export default function FilingStep({
                 </button>
               )}
             </div>
-          ) : activeCAReview?.status === "pending" ? (
+          ) : activeCAReview?.status === "pending" || activeCAReview?.status === "claimed" ? (
             <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-between text-xs animate-in fade-in">
               <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200">
-                <ShieldCheck size={16} className="text-amber-600 shrink-0" />
+                <MunshiAvatar size={30} state="chai" />
                 <span>Shared with CA (Code: <strong className="font-mono">{activeCAReview.code}</strong>)</span>
               </div>
               {onReviewWithCA && (

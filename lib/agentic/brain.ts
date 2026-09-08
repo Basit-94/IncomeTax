@@ -18,11 +18,14 @@ import { cite, retrieve } from "../knowledge/retrieval";
 import { formatMoney } from "../money";
 import type { VersionedReturn } from "../return/snapshot-store";
 import { compareForPersona } from "../return/compute";
+import { compareReturns } from "../ca/compare";
+import type { CAReviewRequest } from "../ca/server-store";
 import {
   absorbDocument, buildReviewCard, dedupeSources, ensureSnapshot, executePayment, fieldFacts, firstName, listPapers, markStep, noticeFacts, opportunities,
   paymentQuestion, pullDigiLocker, reconciliation, refundFacts, returnSummary, stageChanges, whatIf, yearFormQuestion, type ActionCtx, type DocumentFields,
 } from "./actions";
 import { consentItems, listIssuedDocuments } from "./digilocker";
+import { MUNSHI_LESSONS } from "./lessons";
 import type { ConverseMessage, ToolCall, ToolDeclaration } from "./model";
 import { characterPrompt, generateIdentityAndKnowledgeReply, isIdentityOrPersonalInquiry } from "./munshi-character";
 import { redactText } from "./redact";
@@ -60,6 +63,8 @@ export const TOOLS: ToolDeclaration[] = [
   { name: "notices", description: "Any notices or intimations from the department on this return, with what they claim and by when.", parameters: obj({}) },
   { name: "reconcile", description: "The department's statements (AIS / 26AS / Form 16 rows) against what the person declares, row by row, with who can fix a wrong figure.", parameters: obj({}) },
   { name: "remember", description: "Remember one preference for later visits. Keys: preferred_language, employment_category, prefers_regime_explanations, filing_history. Never an amount or an identifier.", parameters: obj({ key: { type: "STRING", enum: [...MEMORY_KEYS] }, value: STR }, ["key", "value"]) },
+  { name: "ca_review", description: "Where the person's CA review stands (2026-09-08): every request they sent — to the Wapsi certified CAs on Wapsi or to their own CA by code — with status (waiting, being reviewed, reviewed, adopted, kept own), the CA's name and note, the CA's inline comments, and for a reviewed one the engine's row-by-row comparison of the two versions with cross-check flags and which version the engine recommends. Call it when they ask about the CA, the review, or which version to keep; you may weigh in, the person decides on the comparison card.", parameters: obj({}) },
+  { name: "note_correction", description: "The person just corrected you — a figure you got wrong, a rule you misstated, a tone that landed badly, a step you skipped. Record it (scope + what you had wrong + the right version if they gave one) BEFORE you answer, so it is remembered across chats and reviewed later. A disagreement about a REPORTED figure is a correct_fact via stage_changes, not this.", parameters: obj({ scope: { type: "STRING", enum: ["figure", "rule", "tone", "process", "other"] }, what: STR, correct: STR }, ["scope", "what"]) },
 ];
 
 const PAUSING = new Set(["request_consent", "ask", "ask_year_form", "show_review", "offer_payment"]);
@@ -67,7 +72,29 @@ const PAUSING = new Set(["request_consent", "ask", "ask_year_form", "show_review
 const ACTIVITY: Record<string, string> = {
   get_return: "Reading the ledger", compute_tax: "Running the arithmetic", scan_opportunities: "Looking for what you may be missing", lookup_rules: "Checking the rule book",
   list_documents: "Looking at your papers", read_document: "Reading a document", refund_status: "Checking the refund", notices: "Checking for notices", reconcile: "Matching the statements", remember: "Noting a preference",
+  note_correction: "Noting the correction", ca_review: "Checking with the CA desk",
 };
+
+/** The CA reviews this person has open, said in one line for the situation — never the code or the PAN. */
+function caReviewLine(reviews: CAReviewRequest[]): string | null {
+  const live = reviews.filter((r) => r.status === "pending" || r.status === "claimed" || r.status === "reviewed");
+  if (!live.length) return null;
+  return `CA review: ${live.map((r) => r.status === "pending" ? `a request to ${r.mode === "wapc" ? "the Wapsi certified CAs" : "their own CA"} is waiting to be picked up` : r.status === "claimed" ? `${r.claimedByCaName ?? "a CA"} is reviewing the return now` : `${r.caDetails?.name ?? "the CA"} sent a version back — the person has not decided yet (ca_review has the comparison)`).join("; ")}. Mention it when it bears on the question; do not nag.`;
+}
+
+/** The person's earlier chats, for continuity: what they were about, where they stopped, what they corrected. Never an identifier. */
+function previousChats(run: import("./types").Run, others: import("./types").Run[]): string[] {
+  return others
+    .filter((r) => r.id !== run.id && r.status !== "cancelled" && (r.state.transcript?.length ?? 0) > 0)
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .slice(0, 3)
+    .map((r) => {
+      const lastSaid = [...(r.state.transcript ?? [])].reverse().find((e) => e.role === "assistant")?.text.replace(/\s+/g, " ").slice(0, 160);
+      const corrections = (r.state.transcript ?? []).filter((e) => e.role === "tool" && e.text.startsWith("note_correction(")).map((e) => e.text.slice("note_correction(".length, e.text.indexOf(") →")).slice(0, 160));
+      const left = r.state.pendingCard ? `; a ${r.state.pendingCard.kind} card was left unconfirmed` : r.state.pendingQuestion ? `; a question was left unanswered ("${r.state.pendingQuestion.text.slice(0, 80)}")` : "";
+      return `"${r.title}" (${r.updatedAt.slice(0, 10)}, ${r.status}${left})${lastSaid ? ` — you last said: "${lastSaid}"` : ""}${corrections.length ? ` — the person corrected you: ${corrections.join("; ")}` : ""}`;
+    });
+}
 
 /* ------------------------------------------------------------------- prompt -- */
 
@@ -105,9 +132,11 @@ const RULES = [
   "  3. State clearly: Wapsi's direct automated return currently processes ITR-1 (salaried income, one house property, and other sources). Because selling real estate, gold or unlisted shares requires ITR-2 with Schedule CG, they can have their return audited and filed through our registered Chartered Accountants via the CA Review portal, or provide their purchase cost and sale consideration if they want an estimate.",
   "  4. NEVER repeat the question 'What kind of assets did you sell' once they have answered. Proceed directly to the explanation and next steps.",
   "• Language: answer in the language of the person's latest message — English, Hindi (Devanagari) or Hinglish — and switch when they switch. No other language for now; a message in another script gets English.",
+  "• When the person corrects you, call note_correction first, then answer with the correction absorbed — no apology spiral, no arguing; a disputed REPORTED figure is a correct_fact.",
+  ...(MUNSHI_LESSONS.length ? ["Lessons in force — corrections from earlier conversations, reviewed by a human:", ...MUNSHI_LESSONS.map((l) => `• ${l}`)] : []),
 ].join("\n");
 
-function situationBlock(ctx: ActionCtx, snapshot: VersionedReturn | null, papers: Awaited<ReturnType<typeof listPapers>>, memory: { key: string; value: unknown }[]): string {
+function situationBlock(ctx: ActionCtx, snapshot: VersionedReturn | null, papers: Awaited<ReturnType<typeof listPapers>>, memory: { key: string; value: unknown }[], previous: string[], caReviews: CAReviewRequest[] = []): string {
   const { run, deps, owner } = ctx;
   const p = run.state.profile;
   const displayName = owner.displayName?.trim() || firstName(owner.displayName);
@@ -137,10 +166,15 @@ function situationBlock(ctx: ActionCtx, snapshot: VersionedReturn | null, papers
   }
   lines.push(papers.vault.length ? `Vault this year: ${papers.vault.map((d) => `${d.title} [${d.docType}, id ${d.id}${d.consented ? ", consent given" : d.readable ? ", consent needed to read" : ""}]`).join("; ")}.` : papers.vaultAvailable ? "Vault this year: empty." : "Vault: no document store in this deployment — no uploads, no DigiLocker pull.");
   lines.push(`DigiLocker: ${papers.digilocker.pulled ? "already pulled this run" : papers.digilocker.consented ? "consent given" : "not pulled"}; catalogue: ${papers.digilocker.catalogue.map((d) => d.title).join("; ")}.`);
+  const ca = caReviewLine(caReviews);
+  if (ca) lines.push(ca);
   if (run.state.pendingQuestion) lines.push(`A card is on screen waiting for the person: "${run.state.pendingQuestion.text}" (${run.state.pendingQuestion.expects}).`);
   if (run.state.pendingCard) lines.push(`A review card is on screen: ${run.state.pendingCard.title} — waiting for confirm or cancel.`);
   if (run.state.actionTaken) lines.push(`Already happened this run: ${run.state.actionTaken.kind} ${run.state.actionTaken.id} at ${run.state.actionTaken.at}.`);
   if (memory.length) lines.push(`Remembered from earlier visits: ${memory.map((m) => `${m.key}=${String(m.value)}`).join("; ")}.`);
+  if (previous.length) lines.push(`Earlier chats with this person (newest first) — pick up where things stopped when it fits, and do not repeat a correction they already made: ${previous.join(" | ")}`);
+  const noted = (run.state.transcript ?? []).filter((e) => e.role === "tool" && e.text.startsWith("note_correction(")).length;
+  if (noted) lines.push(`Corrections noted in this chat: ${noted}. Absorb them; do not restate the mistake.`);
   const answeredSources = run.state.sources.filter((s) => s.kind === "answer");
   if (answeredSources.length) {
     lines.push(`Questions already answered by the person in this conversation: ${answeredSources.map((s) => `"${s.label}" → "${s.detail}"`).join("; ")}. NEVER re-ask these questions; acknowledge the answer and proceed to the next step.`);
@@ -188,12 +222,14 @@ export async function think(ctx: ActionCtx, opts: ThinkOptions = {}): Promise<vo
   const snapshot = await ensureSnapshot(ctx, personaForOwner);
   const papers = await listPapers(ctx);
   const memory = await deps.store.getMemory(owner).catch(() => []);
+  const previous = previousChats(run, await deps.store.listRuns(owner).catch(() => []));
+  const caReviews = deps.caStore ? await deps.caStore.listReviewsForPan(owner.pan).catch(() => []) : [];
   const system = [
     characterPrompt({ surface: "agentic", langEnglishName: replyLanguageName(run.state.replyLanguage ?? "en"), mode: run.state.profile?.mode, userName: firstName(owner.displayName) || undefined }),
     RULES,
     STATUTORY,
     "This person, right now:",
-    situationBlock(ctx, snapshot, papers, memory),
+    situationBlock(ctx, snapshot, papers, memory, previous, caReviews),
   ].join("\n\n");
 
   // Everything the model saw this turn — the digits in it are the only digits it may use.
@@ -284,8 +320,12 @@ export async function think(ctx: ActionCtx, opts: ThinkOptions = {}): Promise<vo
         const out = await runCall(ctx, call, snapshot);
         const text = JSON.stringify(out.response);
         absorb(text);
+        // A refused or invalid call is a lesson signal (docs/MUNSHI-LESSONS.md): named in the Progress panel, counted by the digest.
+        const r = out.response as { error?: string; refused?: string; detail?: string; blocked?: string } | null;
+        if (r && (r.error || r.refused || r.blocked)) await emit({ type: "tool_outcome", tool: call.name, ok: false, summary: `${r.error ?? r.refused ?? r.blocked}${r.detail ? `: ${r.detail}` : ""}`.slice(0, 200) });
         results.push({ name: call.name, response: out.response });
-        remember(ctx, { role: "tool", text: `${call.name}(${JSON.stringify(call.args).slice(0, 300)}) → ${text}` });
+        // The transcript is persisted and read back by the model: the model's own arguments are redacted like any other text.
+        remember(ctx, { role: "tool", text: `${call.name}(${redactText(JSON.stringify(call.args)).text.slice(0, 300)}) → ${redactText(text).text}` });
         if (out.pause) paused = true;
       }
       messages.push({ role: "tool", results });
@@ -480,6 +520,30 @@ async function runCall(ctx: ActionCtx, call: ToolCall, snapshot: VersionedReturn
         if (!snapshot) return { response: needReturn() };
         markStep(run, "gather", "done");
         return { response: reconciliation(snapshot) };
+      }
+      case "ca_review": {
+        if (!deps.caStore) return { response: { refused: "no_ca_store", detail: "The CA desk is not wired in this deployment." } };
+        const reviews = (await deps.caStore.listReviewsForPan(owner.pan)).sort((x, y) => y.updatedAt.localeCompare(x.updatedAt));
+        if (!reviews.length) return { response: { reviews: [], note: "No CA review was requested. The Review with CA button on the return offers two doors: the Wapsi certified CAs on Wapsi, or their own CA by code." } };
+        const comments = await deps.caStore.listComments(reviews[0].code).catch(() => []);
+        const latest = reviews[0];
+        const comparison = latest.caPersona && latest.caRegime ? compareReturns(latest.originalPersona, latest.originalRegime, latest.caPersona, latest.caRegime) : null;
+        return {
+          response: {
+            reviews: reviews.map((r) => ({ to: r.mode === "wapc" ? "Wapsi certified CAs" : "own CA", status: r.status, requestedOn: r.createdAt.slice(0, 10), reviewedBy: r.caDetails?.name ?? r.claimedByCaName ?? null, caNote: r.caNotes ?? null })),
+            latestComments: comments.map((c) => ({ on: c.anchor, by: c.author.name, text: c.text })),
+            comparison: comparison ? { original: comparison.original, ca: comparison.ca, delta: comparison.delta, changes: comparison.changes, flags: comparison.flags, engineRecommends: comparison.recommendation } : null,
+            note: comparison ? "The person decides on the comparison card (Keep my version / Adopt the CA's version). Weigh in with the flags; a risk flag outranks a bigger refund." : "Nothing to compare until the CA sends a version back.",
+          },
+        };
+      }
+      case "note_correction": {
+        const scope = str("scope");
+        const what = redactText(str("what")).text.slice(0, 300);
+        const correct = redactText(str("correct")).text.slice(0, 300);
+        if (!what || !["figure", "rule", "tone", "process", "other"].includes(scope)) return { response: { error: "invalid_args", detail: "scope (figure|rule|tone|process|other) and what are required" } };
+        await emit({ type: "correction", scope: scope as "figure" | "rule" | "tone" | "process" | "other", what, ...(correct ? { correct } : {}) });
+        return { response: { noted: true, scope, what, correct: correct || null, note: "Recorded for this chat and for later chats with this person; the nightly digest reviews it. Now answer with the correction absorbed." } };
       }
       case "remember": {
         const key = str("key") as (typeof MEMORY_KEYS)[number];

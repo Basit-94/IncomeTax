@@ -69,6 +69,8 @@ export interface AppShellProps {
   };
   /** A short truthful note under the sidebar, e.g. "demo session clears on restart". */
   notice?: string;
+  /** "Your return" (2026-09-08): the draft in progress and any CA review under way, shown above the chats. */
+  workItems?: { id: string; title: string; detail: string; tone: "draft" | "review" | "ready"; onClick: () => void }[];
   children: ReactNode;
 }
 
@@ -156,6 +158,26 @@ export default function AppShell(props: AppShellProps) {
           )}
         </ul>
       </div>
+
+      {/* Your return: the draft midway and any CA review, above the chats (user, 2026-09-08). */}
+      {props.workItems && props.workItems.length > 0 && (
+        <div className="px-3 pt-4">
+          <p className="cap px-1 mb-1.5">Your return</p>
+          <ul className="space-y-0.5">
+            {props.workItems.map((w) => (
+              <li key={w.id}>
+                <button type="button" onClick={() => { w.onClick(); setDrawer(false); }} className="w-full flex items-start gap-2.5 rounded-lg px-2.5 py-2 text-start hover:bg-paper-3 cursor-pointer">
+                  <span className={`mt-1.5 size-2 rounded-full shrink-0 ${w.tone === "review" ? "bg-money animate-pulse" : w.tone === "ready" ? "bg-ok" : "bg-ink-3"}`} aria-hidden="true" />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-ink truncate">{w.title}</span>
+                    <span className="block text-[11px] text-ink-3 truncate">{w.detail}</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Recent chats */}
       <div className="px-3 pt-4 flex-1 min-h-0 flex flex-col">

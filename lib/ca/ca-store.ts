@@ -9,7 +9,8 @@
 
 import type { Persona, Lang } from "../types";
 
-export type CAReviewStatus = "pending" | "reviewed" | "accepted" | "rejected";
+/** `claimed` and `declined` arrived with the 2026-09-08 redesign (a Wapsi certified CA takes a broadcast request; a citizen turns a review down). */
+export type CAReviewStatus = "pending" | "claimed" | "reviewed" | "accepted" | "rejected" | "declined";
 
 export interface CADetails {
   name: string;

@@ -14,7 +14,7 @@ import { QRCodeSVG } from "qrcode.react";
 import type { PublicRun } from "@/lib/agentic/runtime";
 import type { OutputRef, Question, ReviewCard, RunEvent, RunTask } from "@/lib/agentic/types";
 import type { AgenticStrings } from "@/lib/i18n/agenticStrings";
-import { isSpeechSupported, startDictation, warmUpAudioStream, type Dictation } from "@/lib/speech";
+import { isSpeechSupported, startDictation, type Dictation } from "@/lib/speech";
 import { SpeakingWaveform, TranscribingAnimation } from "./audio-waveforms";
 import type { Lang } from "@/lib/types";
 import { renderAssistantText } from "../agent/format";
@@ -331,7 +331,7 @@ export default function Workspace(props: WorkspaceProps) {
     return (
       <div className="flex-1 flex flex-col">
         {/* CA Review Status Banner on Empty State */}
-        {props.activeCAReview?.status === "pending" && (
+        {(props.activeCAReview?.status === "pending" || props.activeCAReview?.status === "claimed") && (
           <div className="px-4 sm:px-6 pt-3">
             <div className="mx-auto w-full max-w-2xl p-3 bg-amber-bg border border-money/30 rounded-[18px] flex items-center justify-between gap-3 animate-in fade-in">
               <div className="flex items-center gap-2.5 min-w-0">
@@ -438,7 +438,7 @@ export default function Workspace(props: WorkspaceProps) {
       </div>
 
       {/* CA Review Status Banner (Pending or Complete) */}
-      {props.activeCAReview?.status === "pending" && (
+      {(props.activeCAReview?.status === "pending" || props.activeCAReview?.status === "claimed") && (
         <div className="px-4 sm:px-6 pt-2">
           <div className="mx-auto w-full max-w-3xl p-3 bg-amber-bg border border-money/30 rounded-[18px] flex items-center justify-between gap-3 animate-in fade-in">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -684,6 +684,13 @@ function EventRow({ event, s, answered, confirmed, questions, runId, onOpenVault
       return (
         <p className="flex items-center gap-2 ps-11 max-md:ps-9 text-[11.5px] font-mono text-ink-3">
           <span className="size-1.5 rounded-full bg-money shrink-0" aria-hidden="true" /> {p.text}
+        </p>
+      );
+    case "correction":
+      // The person corrected him and he wrote it down (2026-09-07): shown like an activity line, so the noting is visible.
+      return (
+        <p className="flex items-center gap-2 ps-11 max-md:ps-9 text-[11.5px] font-mono text-ink-3">
+          <Check size={11} className="text-money shrink-0" aria-hidden="true" /> Noted — {p.what}{p.correct ? ` → ${p.correct}` : ""}
         </p>
       );
     case "question": {
@@ -1177,11 +1184,6 @@ export function Composer({ s, lang, disabled, onSubmit, variant = "chat", placeh
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const speech = typeof window !== "undefined" && isSpeechSupported();
 
-  // Pre-warm audio hardware so clicking the mic starts recording in 0ms
-  useEffect(() => {
-    warmUpAudioStream();
-  }, []);
-
   // Dynamically auto-expand height up to 160px and ensure vertical scrollability
   useEffect(() => {
     const el = textareaRef.current;
@@ -1322,8 +1324,6 @@ export function Composer({ s, lang, disabled, onSubmit, variant = "chat", placeh
   return (
     <div className={ask ? "shrink-0 pt-2" : "shrink-0 px-4 sm:px-6 pb-4 pt-2 max-md:pb-7 max-md:bg-[linear-gradient(to_top,var(--color-paper)_70%,transparent)]"}>
       <form
-        onMouseEnter={warmUpAudioStream}
-        onFocus={warmUpAudioStream}
         className={`glass mx-auto w-full relative flex items-center gap-2.5 p-2 ps-5 max-md:p-1.5 max-md:ps-3.5 rounded-[20px] max-md:rounded-[18px] transition-all duration-200 ${
           isListening
             ? "border-[var(--primary-accent)]/80 shadow-[var(--accent-glow)] ring-2 ring-[var(--primary-accent)]/20"

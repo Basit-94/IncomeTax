@@ -53,10 +53,9 @@ export async function POST(req: NextRequest) {
   const lang = parsed.data.lang && isLang(parsed.data.lang) ? parsed.data.lang : "en";
   const created = await createRun(deps, guard.session.owner, { message: parsed.data.message, task: parsed.data.task, lang, profile: parsed.data.profile });
   const owner = guard.session.owner;
-  let run: import("@/lib/agentic/types").Run = created;
-  if (run.status === "running") {
-    const adv = await advance(deps, owner, run.id, {}, "steps_only").catch(() => null);
-    if (adv) run = adv;
-  }
-  return NextResponse.json({ ok: true, run: publicRun(run), durable: guard.services.dbConfigured }, { status: 201 });
+  // Answer the browser now — the chat screen opens on the run id — and think after the response is sent; the client
+  // streams the events as they land. Awaiting the first turn here held the landing page for the whole model call
+  // (user, 2026-09-07: "the new chat screen stays for too long… it feels quite broken and very slow").
+  if (created.status === "running") after(() => advance(deps, owner, created.id, {}, "steps_only").catch(() => null));
+  return NextResponse.json({ ok: true, run: publicRun(created), durable: guard.services.dbConfigured }, { status: 201 });
 }

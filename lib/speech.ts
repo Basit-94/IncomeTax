@@ -99,28 +99,9 @@ function extensionFor(mime: string): string {
   return "webm";
 }
 
-let prewarmedStream: MediaStream | null = null;
-let prewarmingPromise: Promise<MediaStream | null> | null = null;
-
-/** Pre-warm the audio input device so clicking the mic starts recording in 0ms without hardware startup latency. */
-export function warmUpAudioStream(): void {
-  if (typeof window === "undefined" || !isSpeechSupported()) return;
-  if (prewarmedStream && prewarmedStream.active && prewarmedStream.getAudioTracks().some((t) => t.readyState === "live")) {
-    return;
-  }
-  if (prewarmingPromise) return;
-  prewarmingPromise = navigator.mediaDevices
-    .getUserMedia({ audio: true })
-    .then((s) => {
-      prewarmedStream = s;
-      prewarmingPromise = null;
-      return s;
-    })
-    .catch(() => {
-      prewarmingPromise = null;
-      return null;
-    });
-}
+// The microphone is opened only when the person clicks the mic (2026-09-08, user: "as soon as people open the agent
+// mode, it starts recording the voice… only when someone clicks the mic button"). No pre-warming on mount, hover or
+// focus, and no re-warming after a clip: getUserMedia runs inside startDictation, nowhere else.
 
 /**
  * Starts one recording and returns a handle to stop it. Returns `null` when the browser cannot record —
@@ -144,8 +125,6 @@ export function startDictation(opts: DictationOptions): Dictation | null {
     if (capTimer) clearTimeout(capTimer);
     stream?.getTracks().forEach((t) => t.stop());
     void audioCtx?.close().catch(() => {});
-    // Pre-warm the next stream in background
-    setTimeout(warmUpAudioStream, 500);
   };
 
   const send = async () => {
@@ -248,39 +227,12 @@ export function startDictation(opts: DictationOptions): Dictation | null {
     }
   };
 
-  // If we already have a live prewarmed stream ready, use it immediately (0ms start delay)!
-  if (prewarmedStream && prewarmedStream.active && prewarmedStream.getAudioTracks().some((t) => t.readyState === "live")) {
-    const s = prewarmedStream;
-    prewarmedStream = null;
-    setupRecorder(s);
-  } else if (prewarmingPromise) {
-    prewarmingPromise
-      .then((s) => {
-        if (s && s.active && s.getAudioTracks().some((t) => t.readyState === "live")) {
-          prewarmedStream = null;
-          setupRecorder(s);
-        } else {
-          navigator.mediaDevices.getUserMedia({ audio: true }).then(setupRecorder).catch(() => {
-            stopped = true;
-            opts.onError("not-allowed");
-            opts.onEnd();
-          });
-        }
-      })
-      .catch(() => {
-        navigator.mediaDevices.getUserMedia({ audio: true }).then(setupRecorder).catch(() => {
-          stopped = true;
-          opts.onError("not-allowed");
-          opts.onEnd();
-        });
-      });
-  } else {
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(setupRecorder).catch(() => {
-      stopped = true;
-      opts.onError("not-allowed");
-      opts.onEnd();
-    });
-  }
+  // The one place the microphone is opened: on the click that called startDictation.
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(setupRecorder).catch(() => {
+    stopped = true;
+    opts.onError("not-allowed");
+    opts.onEnd();
+  });
 
   return {
     stop() {

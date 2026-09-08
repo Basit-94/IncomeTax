@@ -54,8 +54,8 @@ export default function PersonalizedDashboard({
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex items-start gap-4 max-w-2xl">
         <div className="shrink-0" aria-hidden="true">
-          <span className="max-md:hidden"><Munshi size={72} state={hasFiled ? "waiting" : "welcome"} /></span>
-          <span className="md:hidden"><Munshi size={40} state={hasFiled ? "waiting" : "welcome"} /></span>
+          <span className="max-md:hidden"><Munshi size={72} state={hasFiled ? "chai" : "welcome"} /></span>
+          <span className="md:hidden"><Munshi size={40} state={hasFiled ? "chai" : "welcome"} /></span>
         </div>
         <div className="space-y-2">
           <p className="text-xs font-bold uppercase tracking-[.08em] text-money">

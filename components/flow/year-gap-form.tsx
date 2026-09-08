@@ -53,7 +53,7 @@ export default function YearGapForm({ lang, s, fields, skipped = [], onSubmit }:
   return (
     <form onSubmit={submit} className="glass rounded-[24px] p-5 space-y-4">
       <div className="flex items-start gap-3">
-        <span className="shrink-0"><MunshiAvatar size={34} state="listening" /></span>
+        <span className="shrink-0"><MunshiAvatar size={34} state="guide" /></span>
         <div className="min-w-0 space-y-1">
           <p className="text-[15px] font-extrabold text-ink tracking-[-0.01em]">{L("What the papers can't tell us")}</p>
           {skipped.length > 0 && <p className="text-[12px] text-ink-3">{L("Already answered by your papers:")} {skipped.join(" · ")}</p>}

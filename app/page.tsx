@@ -50,7 +50,7 @@ import Landing from "../components/landing";
 import OtpScreen from "../components/otp-screen";
 import Onboarding from "@/components/onboarding";
 import MobileTabBar, { type MobileTab } from "@/components/mobile/mobile-tab-bar";
-import { Grid as TabGridIcon, FileText as TabFileIcon, ShieldAlert as TabAlertIcon, ShieldCheck as TabVaultIcon } from "lucide-react";
+import { Grid as TabGridIcon, FileText as TabFileIcon, ShieldAlert as TabAlertIcon } from "lucide-react";
 import { getPortalStrings as portalStringsFor } from "@/lib/i18n/portalTranslations";
 import PortalHeader from "../components/dashboard/portal-header";
 import ProfileStrip from "../components/dashboard/profile-strip";
@@ -3261,8 +3261,9 @@ export default function WapsiPrototype() {
           </AnimatePresence>
 
         </main>
-        {/* Phones: the Manual tab bar (handoff 2, M5/M6) — Overview · Statement · Actions · Vault. */}
-        {persona && (step === "landing" || step === "dashboard") && !antigravityUi && (
+        {/* Phones: the Manual tab bar (handoff 2, M5/M6) — Overview · Statement · Actions. Only once the return is
+            filed (user, 2026-09-08): before that the journey is the steps, and the page already has a Tax Vault button. */}
+        {persona && returnState?.filedAt && (step === "landing" || step === "dashboard") && !antigravityUi && (
           <MobileTabBar
             label={t.shell.productName}
             active={step === "dashboard" ? activeTab : null}
@@ -3270,13 +3271,9 @@ export default function WapsiPrototype() {
               { id: "overview", label: t.dashboard.userDashboard, icon: <TabGridIcon size={20} /> },
               { id: "statement", label: t.dashboard.taxPrefills, icon: <TabFileIcon size={20} /> },
               { id: "actions", label: t.dashboard.pendingActions, icon: <TabAlertIcon size={20} />, badge: persona.notices.length },
-              { id: "vault", label: portalStringsFor(lang).taxVault, icon: <TabVaultIcon size={20} /> },
             ]}
             onSelect={(id: MobileTab) => {
-              if (id === "vault") {
-                setIsVaultOpen(true);
-                return;
-              }
+              if (id === "vault") return;
               setActiveTab(id);
               setStep("dashboard");
             }}
@@ -3380,6 +3377,7 @@ export default function WapsiPrototype() {
             onClose={() => setCaShareOpen(false)}
             persona={persona}
             regime={regime}
+            returnState={returnState}
             lang={lang}
             onRecordCreated={(rec) => setActiveCAReview(rec)}
             onReviewReceived={(rec) => {

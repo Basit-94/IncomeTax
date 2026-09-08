@@ -138,6 +138,21 @@ export function saveRegisteredCAs(cas: RegisteredCA[]): void {
  * Name, Membership No, and Password are the only mandatory inputs.
  */
 export async function registerCA(input: CARegistrationInput): Promise<{ ok: boolean; ca?: RegisteredCA; error?: string }> {
+  // 2026-09-08: the account lives on the server (`/api/ca/auth`, a CA cookie); the local list below is a cache the
+  // older screens still read. The server's answer is the one that counts.
+  if (typeof window !== "undefined") {
+    try {
+      const res = await fetch("/api/ca/auth", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "register", ...input, membershipNo: input.membershipNo.replace(/[^0-9]/g, "") }) });
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; account?: { id: string; name: string; membershipNo: string; firmName: string; city: string; state: string; email: string; phone?: string; specialties: string[]; registeredAt: string; reviewCount: number } };
+      if (!res.ok || !body.ok || !body.account) return { ok: false, error: body.error || "Registration failed." };
+      const ca: RegisteredCA = { ...body.account, experienceYears: input.experienceYears || 5, bio: input.bio, rating: 5, isVerified: true };
+      saveRegisteredCAs([ca, ...listRegisteredCAs().filter((c) => c.id !== ca.id)]);
+      setActiveCASession(ca.id);
+      return { ok: true, ca };
+    } catch {
+      // fall through to the local registry when the server is unreachable
+    }
+  }
   const cleanName = input.name.trim();
   const cleanMembership = input.membershipNo.replace(/[^0-9]/g, "").trim();
   const password = input.password?.trim() || "";
@@ -226,6 +241,23 @@ export async function loginCA(credentials: {
   const cleanId = credentials.identifier.trim().toLowerCase();
   const cleanNum = credentials.identifier.replace(/[^0-9]/g, "").trim();
   const cleanPass = credentials.password.trim();
+
+  // 2026-09-08: sign in against the server account first (sets the CA cookie the portal reads).
+  if (typeof window !== "undefined" && cleanId && cleanPass) {
+    try {
+      const res = await fetch("/api/ca/auth", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "login", identifier: credentials.identifier.trim(), password: cleanPass }) });
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; account?: { id: string; name: string; membershipNo: string; firmName: string; city: string; state: string; email: string; phone?: string; specialties: string[]; registeredAt: string; reviewCount: number } };
+      if (res.ok && body.ok && body.account) {
+        const ca: RegisteredCA = { ...body.account, experienceYears: 5, rating: 5, isVerified: true };
+        saveRegisteredCAs([ca, ...listRegisteredCAs().filter((c) => c.id !== ca.id)]);
+        setActiveCASession(ca.id);
+        return { ok: true, ca };
+      }
+      if (res.status === 401 || res.status === 404) return { ok: false, error: body.error || "No registered CA matches those details." };
+    } catch {
+      // server unreachable: the local registry below still answers for demo accounts
+    }
+  }
 
   if (!cleanId) {
     return { ok: false, error: "Please enter your ICAI Membership Number, Name, or registered email." };

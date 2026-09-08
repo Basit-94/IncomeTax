@@ -1,6 +1,6 @@
 MUNSHI JI VECTOR AND MOTION KIT
 
-The purple background and message box in the supplied identity master are intentionally excluded.
+The purple background and message box in the supplied identity master are intentionally excluded. The kit contains 19 semantic animation states.
 
 logo.svg             primary transparent avatar mark
 logo-full.svg        transparent welcome pose

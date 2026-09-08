@@ -219,6 +219,62 @@ export const MIGRATIONS: readonly Migration[] = [
       );
     `,
   },
+  {
+    // The CA system's server side (2026-09-08 redesign): registered CAs and their sessions, review requests
+    // (broadcast to every CA or handed to one by code + PIN), and the inline comments a CA leaves on a return.
+    id: "0007_ca_system",
+    sql: `
+      CREATE TABLE IF NOT EXISTS ca_accounts (
+        id VARCHAR(32) PRIMARY KEY,
+        name VARCHAR(120) NOT NULL,
+        membership_no VARCHAR(12) NOT NULL UNIQUE,
+        firm_name VARCHAR(160) NOT NULL,
+        city VARCHAR(80) NOT NULL,
+        state VARCHAR(80) NOT NULL,
+        email VARCHAR(160) NOT NULL,
+        phone VARCHAR(32),
+        specialties JSONB NOT NULL DEFAULT '[]'::jsonb,
+        password_hash CHAR(64) NOT NULL,
+        salt CHAR(32) NOT NULL,
+        certified BOOLEAN NOT NULL DEFAULT TRUE,
+        registered_at TIMESTAMPTZ NOT NULL,
+        review_count INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE INDEX IF NOT EXISTS idx_ca_accounts_email ON ca_accounts(lower(email));
+
+      CREATE TABLE IF NOT EXISTS ca_sessions (
+        id_hash CHAR(64) PRIMARY KEY,
+        ca_id VARCHAR(32) NOT NULL REFERENCES ca_accounts(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS ca_reviews (
+        code VARCHAR(16) PRIMARY KEY,
+        citizen_pan VARCHAR(10) NOT NULL,
+        mode VARCHAR(8) NOT NULL,
+        status VARCHAR(16) NOT NULL,
+        claimed_by_ca_id VARCHAR(32),
+        record JSONB NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_ca_reviews_pan ON ca_reviews(citizen_pan, updated_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_ca_reviews_open ON ca_reviews(mode, status) WHERE claimed_by_ca_id IS NULL;
+
+      CREATE TABLE IF NOT EXISTS ca_comments (
+        id VARCHAR(40) PRIMARY KEY,
+        code VARCHAR(16) NOT NULL REFERENCES ca_reviews(code) ON DELETE CASCADE,
+        anchor VARCHAR(64) NOT NULL,
+        text TEXT NOT NULL,
+        author_role VARCHAR(12) NOT NULL,
+        author_name VARCHAR(120) NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL,
+        resolved BOOLEAN NOT NULL DEFAULT FALSE
+      );
+      CREATE INDEX IF NOT EXISTS idx_ca_comments_code ON ca_comments(code, created_at);
+    `,
+  },
 ];
 
 /** Ids must be unique and sorted, or the runner would apply them in a surprising order. */

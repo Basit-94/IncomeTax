@@ -26,6 +26,7 @@ import { MemoryReturnStore, PostgresReturnStore, type ReturnSnapshotStore } from
 import { MemoryRunStore, PostgresRunStore, type RunStore } from "../agentic/store";
 import { geminiModel, type ModelAdapter } from "../agentic/model";
 import { digiLockerFor, type DigiLockerProvider } from "../digilocker";
+import { caStoreFor, type CAStore } from "../ca/server-store";
 import { runBudget } from "../agentic/types";
 import type { RuntimeDeps } from "../agentic/runtime";
 
@@ -82,6 +83,8 @@ export interface Services {
   model: ModelAdapter;
   /** The DigiLocker mock (2026-09-07): durable random records with a database, PAN-seeded without. */
   locker: DigiLockerProvider;
+  /** The CA system (2026-09-08): accounts, CA sessions, review requests, inline comments. */
+  caStore: CAStore;
   pool: Pool | null;
 }
 
@@ -107,6 +110,7 @@ export function runtimeFor(services: Services, session: ServerSession): RuntimeD
     vault: services.vault,
     model: services.model,
     locker: services.locker,
+    caStore: services.caStore,
     budget: runBudget(),
     clock: () => new Date().toISOString(),
     today: () => new Date().toISOString().slice(0, 10),
@@ -142,6 +146,7 @@ async function build(): Promise<Services> {
     demoRuns: new MemoryRunStore(),
     model: geminiModel(),
     locker: digiLockerFor(pool),
+    caStore: caStoreFor(pool),
     pool,
   };
 }

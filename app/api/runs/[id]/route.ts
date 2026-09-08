@@ -47,12 +47,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const owner = guard.session.owner;
   const initial = await advance(deps, owner, id, parsed.data, "input_only");
   if (!initial) return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
-  let run: import("@/lib/agentic/types").Run = initial;
-  if (run.status === "running") {
-    const adv = await advance(deps, owner, id, {}, "steps_only").catch(() => null);
-    if (adv) run = adv;
-  }
-  return NextResponse.json({ ok: true, run: publicRun(run) });
+  // The person's own words are on screen at once; Munshi ji's turn runs after the response is sent (2026-09-07).
+  if (initial.status === "running") after(() => advance(deps, owner, id, {}, "steps_only").catch(() => null));
+  return NextResponse.json({ ok: true, run: publicRun(initial) });
 }
 
 /** Delete a chat: its events and run-owned outputs go; the return's own audit does not (§5.4). */

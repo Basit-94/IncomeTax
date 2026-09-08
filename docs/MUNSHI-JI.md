@@ -34,6 +34,12 @@ ledger, document and glasses-adjusting hand. `MunshiState` currently provides:
 | `error` | Existing error state; adjacent UI owns explanation and recovery |
 | `waiting` | Refund or CA-review queue without implying a deadline |
 | `secure` | Consent/OTP moment; decorative and never a security claim |
+| `review-delivered` | Completed CA-to-citizen review handoff; the right hand lifts a sealed envelope and its seal settles |
+| `deadline` | Selected statutory notice with seven days or fewer remaining; the right hand holds a compact alarm while it rings once |
+| `guide` | Uses the existing arm for one calm guiding sweep toward the current action |
+| `noting` | Brings up the ledger in the right hand and adds one orange line after a confirmed fact, correction or professional edit |
+| `voice` | Raises the right hand to his ear while sound arcs pulse during live microphone capture |
+| `chai` | Raises a steaming cup in the right hand for one patient sip during a genuinely pending refund, bank verification or CA review |
 
 Regime emotion compares signed engine outcomes: more refund is higher, and less tax due is also higher.
 It never parses formatted copy, guesses with incomplete data or reacts on a tie. The expression changes
@@ -42,7 +48,8 @@ only after the user selects. It does not change the recommendation or block eith
 ## Motion and accessibility
 
 `components/brand/munshi.css` owns CSS-only, transform-and-opacity animation. The working loop is six
-seconds: retrieve, read, adjust, return. Motion never gates state, copy, figures or controls. Operating
+seconds: retrieve, read, adjust, return. The six later additions are brief state-transition performances;
+only `voice` repeats while microphone capture is active. Motion never gates state, copy, figures or controls. Operating
 system reduced-motion preference stops all loops and settles Munshi ji into a readable pose with the
 wave down. Print and explicit static exports also stop animation.
 
@@ -78,6 +85,12 @@ icon remains where the assistant's identity is meant. States follow the product 
 | Deductions question cards, wizard file step, filed screen | `MunshiAvatar` 30 / 36, `Munshi` 96 | `idle`, `reading` / `working` / `error`, `success` |
 | CA login card, CA worksheet note, CA sign-off | `Munshi` 56, `MunshiAvatar` 24, `Munshi` 56 | `secure` / `working` / `concerned`, `idle` |
 | Reconcile header and Munshi note, Challan 280, dispute sheet, notice reply, vault header/docs/footer | `MunshiAvatar` 44 / 36 / 26 / 34 / 26 / 38 / 24 / 22 | `idle`, vault header `secure` / `working` |
+| CA portal send state and citizen CA-review card | `MunshiAvatar` 38 / 34 | `noting` while sending, then `review-delivered` |
+| Selected urgent notice in the defense drafter | `MunshiAvatar` 42 | `deadline` at seven days or fewer, otherwise `concerned` |
+| Manual year-gap form and blocked filing step | `MunshiAvatar` 34 / 36 | `guide` |
+| Confirmed fact-card explanation | `MunshiAvatar` 24 | `noting` |
+| Live microphone capture | `Munshi` 38 compact | `voice` |
+| Filed dashboard, refund queue and pending CA review | `Munshi` / `MunshiAvatar` 30–72 | `chai` |
 
 Intentional generic icons that stay: the `MessageCircle` share icon in the CA share modal (WhatsApp), the
 `UserCheck` tab icons in the file-return and match-records modals (they label the citizen's own PAN, not
