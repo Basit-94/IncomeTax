@@ -5764,6 +5764,6 @@ things there are already true and will NOT be rewritten:
   - Set `gemini-3.5-flash-lite` as default primary model and `gemini-3.5-flash` as fallback with automatic failover across all keys.
   - Consolidated Vercel environment variables to a single `GEMINI_API_KEYS` across Production, Preview, and Development.
   - Triggered Vercel redeployment on branch `dev-2`.
-- **Verification**: All 392 vitest unit and integration tests passing; TypeScript clean; local dev server responding sub-second (730ms-1200ms).
+- **Verification**: All 394 vitest unit and integration tests passing; TypeScript clean; live Vercel deployment (https://wapsi-git-dev-2-abs21.vercel.app/api/agent) tested and returning HTTP 200 with sub-3s response latency across Hindi and English multi-turn queries.
 
 
