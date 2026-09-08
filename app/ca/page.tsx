@@ -222,6 +222,10 @@ function CAPortalContent() {
     document.body?.classList.toggle("dark", theme === "dark");
     document.body?.classList.toggle("dark-mode", theme === "dark");
   }, [theme]);
+  useEffect(() => {
+    document.documentElement.dir = "ltr";
+    document.documentElement.lang = lang;
+  }, [lang]);
   const toggleTheme = () => {
     const next = theme === "dark" ? "light" : "dark";
     setTheme(next);

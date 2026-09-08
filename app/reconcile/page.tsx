@@ -30,6 +30,7 @@ export default function ReconcilePage() {
      in, per docs/CONTEXT.md §3 — rendered light whatever the citizen chose.
      Same toggle, same `wapsi_theme` key. */
   useEffect(() => {
+    document.documentElement.dir = "ltr";
     const dark = localStorage.getItem("wapsi_theme") === "dark";
     document.documentElement.classList.toggle("dark", dark);
     document.documentElement.classList.toggle("dark-mode", dark);

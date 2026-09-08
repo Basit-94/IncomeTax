@@ -21,7 +21,6 @@ import { clearSession, loadSession, saveSession, type SessionInfo } from "@/lib/
 import { ensureServerSession } from "@/lib/session-client";
 import { localize } from "@/components/mock-i18n";
 import { dict, isLang } from "@/lib/i18n";
-import { isRtl } from "@/lib/i18n/languages";
 import { PERSONAS } from "@/lib/personas";
 import { load as loadPersist, save as savePersist } from "@/lib/return/persist";
 import { mirrorReturn } from "@/lib/return-sync-client";
@@ -77,8 +76,10 @@ function SignIn() {
     document.body?.classList.toggle("dark", theme === "dark");
     document.body?.classList.toggle("dark-mode", theme === "dark");
   }, [theme]);
+  // Keep form and document layout in standard LTR structure so forms, cards,
+  // badges, and inputs never shift or invert sides for Urdu/RTL.
   useEffect(() => {
-    document.documentElement.dir = isRtl(lang) ? "rtl" : "ltr";
+    document.documentElement.dir = "ltr";
     document.documentElement.lang = lang;
   }, [lang]);
   const changeLang = (l: Lang) => {

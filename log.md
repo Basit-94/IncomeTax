@@ -5562,5 +5562,37 @@ things there are already true and will NOT be rewritten:
   - `npx tsc --noEmit`: 0 TypeScript compiler errors.
   - Playwright visual audit:
     - Verified voice discovery tooltip in English and Urdu (RTL).
-    - Tested dismissal button, verified `wapsi_voice_discovery_seen: "true"` written to `localStorage`.
+- **Status**: Branch `dev-2`.
+
+## 2026-09-08 — Urdu & RTL Layout Mirroring Fix Across All Pages
+
+- **Goal / Context**:
+  - User reported that selecting Urdu caused the entire website layout to invert/mirror (sidebars, brand logos, card positions, headers, chat inputs shifting from left to right and vice versa) across multiple pages (`/`, `/app`, `/signin`, etc.).
+  - User requirement: Sentences and words should flow naturally in Urdu/RTL, but the physical document and component structure (grid layout, sidebars, rails, navigation, cards) must never invert or shift sides.
+- **Root Cause**:
+  - `app/app/page.tsx` (line 90) and `app/signin/page.tsx` (line 81) were executing `document.documentElement.dir = isRtl(lang) ? "rtl" : "ltr";`.
+  - Setting `dir="rtl"` on `<html>` causes CSS flexbox and grid layouts to reverse their axes globally across all pages in the SPA session.
+- **What changed**:
+  - **`app/layout.tsx`**:
+    - Added `dir="ltr"` attribute directly to the root `<html>` tag.
+    - Updated the inline head initialization script to enforce `document.documentElement.dir = 'ltr';`.
+  - **`app/app/page.tsx`**:
+    - Replaced `document.documentElement.dir = isRtl(lang) ? "rtl" : "ltr"` with `document.documentElement.dir = "ltr"`.
+    - Removed unused `isRtl` import.
+  - **`app/signin/page.tsx`**:
+    - Replaced `document.documentElement.dir = isRtl(lang) ? "rtl" : "ltr"` with `document.documentElement.dir = "ltr"`.
+    - Removed unused `isRtl` import.
+  - **`app/ca/page.tsx`**:
+    - Added a `lang` change effect setting `document.documentElement.dir = "ltr"` and `document.documentElement.lang = lang`.
+  - **`app/reconcile/page.tsx`**:
+    - Added `document.documentElement.dir = "ltr"` in the initial layout mount effect.
+- **Verification**:
+  - **Playwright Visual Verification**:
+    - Visited `/signin` with Urdu (`ur`): Wapsi logo remains top-left, Language selector / dark mode / Back to home buttons remain top-right, Agentic Mode card remains on left, Manual Filing card remains on right. Urdu text flows naturally right-to-left within sentences.
+    - Visited `/app` with Urdu (`ur`): Left icon rail remains on the left, Wapsi logo and Agentic/Manual toggle remain top-left, Context Inspector (Live Sync ledger, Bank Accounts, Tax Vault) remains on the right, chat input maintains mic/send buttons on right and prompt input on left.
+    - Visited `/` with Urdu (`ur`): Brand bar and steps maintain standard LTR positioning.
+    - Visited `/ca` and `/reconcile`: Verified `document.documentElement.dir` evaluates to `"ltr"`.
+  - **Test Suite**:
+    - `npx vitest run`: All 44 test files and all 381 unit tests passed green (100%).
+    - `npx tsc --noEmit`: 0 TypeScript compiler errors.
 - **Status**: Branch `dev-2`.
