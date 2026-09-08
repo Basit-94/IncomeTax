@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  applyProfileToReturn,
   createOnboardingProfile,
   getDashboardDestination,
   getPersonalization,
+  isPlaceholderName,
   isProfileComplete,
   loadOnboardingProfile,
   profileSeed,
@@ -86,5 +88,54 @@ describe("onboarding profile v3 — only what never changes (2026-09-07)", () =>
     expect(seed).toEqual({ firstName: "Sunita", refundAccount: "Kaveri Cooperative Bank •••• •••• 1183", residency: "resident", digilockerLinked: true, mode: "full" });
     expect(JSON.stringify(seed)).not.toContain("DEMPS4417K");
     expect(JSON.stringify(seed)).not.toContain("4417\"");
+  });
+});
+
+describe("the PAN record's name replaces the sign-up placeholder wherever a return arrives (2026-09-09)", () => {
+  const profile = createOnboardingProfile(completeDraft, "en")!;
+  const placeholder = {
+    name: "Citizen 6666",
+    city: "",
+    state: "",
+    mobile: "",
+    banks: [] as never[],
+  };
+  const stateWith = (name: string) => ({
+    persona: { ...placeholder, name },
+    baselinePersona: { ...placeholder, name },
+    other: "untouched",
+  });
+
+  it("knows a placeholder from a real name", () => {
+    expect(isPlaceholderName("Citizen 6666")).toBe(true);
+    expect(isPlaceholderName("Real User")).toBe(true);
+    expect(isPlaceholderName("")).toBe(true);
+    expect(isPlaceholderName(undefined)).toBe(true);
+    expect(isPlaceholderName("Sunita Devi")).toBe(false);
+    // A real name that merely starts with the word must survive.
+    expect(isPlaceholderName("Citizen Kane")).toBe(false);
+  });
+
+  it("writes the profile onto both personas and leaves the rest of the return alone", () => {
+    const applied = applyProfileToReturn(stateWith("Citizen 6666"), profile);
+    expect(applied.persona.name).toBe("Sunita Devi");
+    expect(applied.baselinePersona.name).toBe("Sunita Devi");
+    expect(applied.persona.city).toBe("Tiruppur");
+    expect(applied.persona.state).toBe("Tamil Nadu");
+    expect(applied.persona.mobile).toBe("90000 00001");
+    expect(applied.persona.banks).toHaveLength(1);
+    expect(applied.other).toBe("untouched");
+  });
+
+  it("never overwrites a real name, and applying twice changes nothing", () => {
+    const once = applyProfileToReturn(stateWith("Rakesh Kumar"), profile);
+    expect(once.persona.name).toBe("Rakesh Kumar");
+    const twice = applyProfileToReturn(applyProfileToReturn(stateWith("Citizen 6666"), profile), profile);
+    expect(twice).toEqual(applyProfileToReturn(stateWith("Citizen 6666"), profile));
+  });
+
+  it("is a no-op when nobody has onboarded yet", () => {
+    const state = stateWith("Citizen 6666");
+    expect(applyProfileToReturn(state, null)).toBe(state);
   });
 });

@@ -270,7 +270,7 @@ export function saveOnboardingProfile(profile: OnboardingProfile): void {
  * the pre-validated banks fill in where the persona had none. Seeded figures are never touched.
  */
 export function applyProfileToPersona<T extends { name: string; city: string; state: string; mobile: string; banks: BankAccount[] }>(persona: T, profile: OnboardingProfile): T {
-  const placeholderName = !persona.name || /^Citizen\s+\d{4}$/i.test(persona.name) || /^Real User$/i.test(persona.name);
+  const placeholderName = isPlaceholderName(persona.name);
   const parts = (profile.contact.address ?? "").split(",").map((p) => p.trim()).filter(Boolean);
   const city = parts.length >= 2 ? parts[parts.length - 2] : "";
   const state = parts.length >= 1 ? parts[parts.length - 1].replace(/\s+\d{6}.*$/, "").replace(/\s*\(DigiLocker mock, sample\)$/, "") : "";
@@ -282,6 +282,32 @@ export function applyProfileToPersona<T extends { name: string; city: string; st
     mobile: persona.mobile || profile.contact.mobile || "",
     banks: persona.banks.length ? persona.banks : profile.banks,
   };
+}
+
+/**
+ * The profile written onto a whole return, wherever that return just arrived (2026-09-09).
+ *
+ * The server's copy of the return is created at sign-up, BEFORE onboarding runs, so it carries the
+ * "Citizen 6666" placeholder and no bank. Every surface that pulls it — the Manual page and the
+ * Agentic page both do — has to re-apply the profile, or the placeholder comes back and is shown as
+ * the person's name. Idempotent: `applyProfileToPersona` fills only a placeholder name and empty
+ * city/state/mobile/banks, so applying it twice changes nothing.
+ */
+export function applyProfileToReturn<T extends { persona: P; baselinePersona: P }, P extends { name: string; city: string; state: string; mobile: string; banks: BankAccount[] }>(
+  state: T,
+  profile: OnboardingProfile | null = loadOnboardingProfile(),
+): T {
+  if (!profile) return state;
+  return {
+    ...state,
+    persona: applyProfileToPersona(state.persona, profile),
+    baselinePersona: applyProfileToPersona(state.baselinePersona, profile),
+  };
+}
+
+/** The name to show for this person: the PAN record's, never the `Citizen 6666` sign-up placeholder. */
+export function isPlaceholderName(name: string | undefined | null): boolean {
+  return !name || /^Citizen\s+\d{4}$/i.test(name.trim()) || /^Real User$/i.test(name.trim());
 }
 
 /**

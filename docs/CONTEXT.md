@@ -337,6 +337,20 @@ five years?"*
   (`GET /api/digilocker` → `readProfile`), contact, residency, banks + refund nominee, Simple/Full, standing facts
   (representative assessee, disability), `connections.digilocker.linked`. Dropped: intent, profession, filing
   history, focus areas. `profileSeed()` is the only part the runtime sees.
+  **Both sign-up paths onboard, and the profile is consumed (2026-09-09).** `/signin`'s Create-account path has
+  shown it since 2026-09-07 (`arrive({newAccount:true})`); `app/page.tsx`'s own in-app sign-up
+  (`handleSignUpComplete`, the vault path) sent people straight to the landing hub until now — it routes to
+  `step: "onboarding"` when `loadOnboardingProfile()` is null, seeding `identity` with the PAN/name/DOB/mobile/
+  email/address sign-up already holds. What the profile then feeds: **the return** — `withProfile()` applies
+  `applyProfileToPersona` wherever a return arrives (mount restore, server pull, server adopt), because the
+  server's copy is created at sign-up *before* onboarding runs and otherwise overwrites the local one back to
+  the `Citizen 1234` placeholder with no bank; **the Manual dashboard** — `PersonalizedDashboard` (built
+  2026-08-28, never rendered until now) leads the dashboard with the intent- and filed-aware greeting, PAN +
+  masked Aadhaar, the refund account, DigiLocker and residency, the regime lens from `regimeLean(persona).lean`,
+  and a live Simple/Full switch (detail density only — the header pill still owns Agentic↔Manual); **the
+  landing hub** — `Landing` gets the real profile and `handleEditOnboarding` instead of `null` and a no-op;
+  **Munshi ji** — `profileSeed` → `run.state.profile` → the situation block's residency / detail mode /
+  DigiLocker / masked refund account and `characterPrompt`'s detail level (asserted in `runtime.test.ts`).
 - **Every year — the intake** (`lib/return/year-intake.ts`, stored as `ReturnState.yearIntake` through the
   `record_year_intake` command; `lib/return/year-form.ts` field specs shared by both shells): sources + consent,
   the Form 16 Part B breakup, SFT flags, the verdict (`inferForm` from the ITR-1 eligibility text; `regimeLean` =

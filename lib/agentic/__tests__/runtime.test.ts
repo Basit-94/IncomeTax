@@ -295,6 +295,12 @@ describe("Munshi ji thinks, the engine counts — the conversation loop (2026-09
     expect(sys).toContain("You are Munshi ji");
     expect(sys).toContain("first name Sunita");
     expect(sys).toContain("DigiLocker linked at onboarding");
+    // The whole onboarding seed has to land, not just the name (user, 2026-09-09): residency and the
+    // detail mode steer the answer, the masked refund account is what a refund question is answered with.
+    expect(sys).toContain("residency resident");
+    expect(sys).toContain("detail mode simple");
+    expect(sys).toContain("refunds go to SBI •••• 1234");
+    expect(sys).toContain("Detail mode: Simple");
     expect(sys).toContain("Income on record: salary ₹4,20,000");
     expect(sys).toContain("Statutory facts, FY 2025-26");
     expect(sys).not.toContain("DEMPS4417K");

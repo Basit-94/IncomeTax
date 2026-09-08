@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { LazyMotion, domMax, m, AnimatePresence } from "motion/react";
 import AppShell from "../components/agentic/app-shell";
@@ -38,6 +38,7 @@ import { applyReturnCommand } from "../lib/return/commands";
 import { outcomeStampsFiled, simulatedFiling, submitReturn, type FilingOutcome } from "../lib/return/filing";
 import {
   applyProfileToPersona,
+  applyProfileToReturn,
   loadOnboardingDraft,
   loadOnboardingProfile,
   saveOnboardingProfile,
@@ -48,7 +49,7 @@ import {
 
 import Landing from "../components/landing";
 import OtpScreen from "../components/otp-screen";
-import Onboarding from "@/components/onboarding";
+import Onboarding, { type OnboardingIdentitySeed } from "@/components/onboarding";
 import MobileTabBar, { type MobileTab } from "@/components/mobile/mobile-tab-bar";
 import { Grid as TabGridIcon, FileText as TabFileIcon, ShieldAlert as TabAlertIcon } from "lucide-react";
 import { getPortalStrings as portalStringsFor } from "@/lib/i18n/portalTranslations";
@@ -85,7 +86,7 @@ import BeforeFiling from "../components/flow/before-filing";
 import FilingStep from "../components/flow/filing-step";
 import YearPapersCard, { type FetchedDocument } from "../components/flow/year-papers-card";
 import YearGapForm from "../components/flow/year-gap-form";
-import { emptyYearIntake, gapGroups } from "../lib/return/year-intake";
+import { emptyYearIntake, gapGroups, regimeLean } from "../lib/return/year-intake";
 import { DEDUCTION_FIELDS, formFieldsFor, yearAnswersFrom } from "../lib/return/year-form";
 import { generateSeededUser } from "../components/sandbox-user";
 // Onboarding temporarily deactivated per user instruction
@@ -180,6 +181,8 @@ export default function WapsiPrototype() {
   const [onboardingProfile, setOnboardingProfile] = useState<OnboardingProfile | null>(null);
   const [onboardingDraft, setOnboardingDraft] = useState<OnboardingDraft>({});
   const [onboardingReturnStep, setOnboardingReturnStep] = useState<"landing" | "dashboard">("landing");
+  /** What sign-up already knows (PAN, name, mobile) — seeded into onboarding so it never re-asks (2026-09-09). */
+  const [onboardingIdentity, setOnboardingIdentity] = useState<OnboardingIdentitySeed | undefined>(undefined);
   /** Versioned return document — the single source the whole flow reads and writes. */
   const [returnState, setReturnState] = useState<ReturnState | null>(null);
 
@@ -358,6 +361,9 @@ export default function WapsiPrototype() {
         )
       : "facts";
 
+  /** Which regime this year leans to — the personalized card's lens: an open lean checks the claims first. */
+  const yearRegimeLean = useMemo(() => (persona ? regimeLean(persona).lean : "new"), [persona]);
+
   const openPersonalizedDashboardDestination = () => {
     if (dashboardDestination === "facts") {
       setFlowStep("facts");
@@ -400,6 +406,14 @@ export default function WapsiPrototype() {
   // then mirror every local change with the revision last seen. A 409 means
   // the agent wrote in between: adopt its snapshot rather than overwrite it.
   const serverSessionReady = useRef(false);
+  /**
+   * The profile's standing facts written onto whatever copy of the return just arrived (2026-09-09).
+   * The server's copy is created at sign-up, before onboarding runs, so it still carries the
+   * "Citizen 1234" placeholder and no bank; without this it overwrites the local copy on every pull.
+   * Idempotent: `applyProfileToPersona` fills only a placeholder name and empty city/state/mobile/banks.
+   */
+  const withProfile = useCallback((state: ReturnState): ReturnState => applyProfileToReturn(state), []);
+
   const adoptingFromServer = useRef(false);
   useEffect(() => {
     if (!syncWithServer) return;
@@ -412,10 +426,11 @@ export default function WapsiPrototype() {
       void shellRuns.refresh();
       const remote = await pullReturn();
       if (cancelled || !remote) return;
-      if (!returnState || JSON.stringify(remote.state) !== JSON.stringify(returnState)) {
+      const incoming = withProfile(remote.state);
+      if (!returnState || JSON.stringify(incoming) !== JSON.stringify(returnState)) {
         adoptingFromServer.current = true;
-        setReturnState(remote.state);
-        savePersist(remote.state);
+        setReturnState(incoming);
+        savePersist(incoming);
       }
     })();
     return () => {
@@ -431,8 +446,9 @@ export default function WapsiPrototype() {
     void mirrorReturn(returnState).then((r) => {
       if (r.adopt) {
         adoptingFromServer.current = true;
-        setReturnState(r.adopt);
-        savePersist(r.adopt);
+        const adopted = withProfile(r.adopt);
+        setReturnState(adopted);
+        savePersist(adopted);
       }
     });
   }, [returnState]);
@@ -519,7 +535,13 @@ export default function WapsiPrototype() {
         /* restore banner is cosmetic */
       }
       setActivePersonaId(result.state.personaId);
-      setReturnState(result.state);
+      // The profile reaches the return here too (2026-09-09). Onboarding can finish on /signin before any
+      // return document exists — that path's applyProfileToPersona then has nothing to write to, and the
+      // return is created afterwards carrying the "Citizen 1234" sign-up placeholder. Applying it on load
+      // is idempotent: applyProfileToPersona only fills a placeholder name and empty city/mobile/banks.
+      const restored = withProfile(result.state);
+      setReturnState(restored);
+      if (savedOnboarding && restored.persona.name !== result.state.persona.name) saveState(restored);
       // Only the blank custom persona is a "real user" return; restoring a seeded citizen
       // as one relabelled Rakesh "(Real User Return)" after every reload.
       setIsRealMode(result.state.personaId === "custom");
@@ -663,12 +685,19 @@ export default function WapsiPrototype() {
   const handleCompleteOnboarding = (profile: OnboardingProfile) => {
     setOnboardingProfile(profile);
     setOnboardingDraft({});
+    setOnboardingIdentity(undefined);
     saveOnboardingProfile(profile);
     setLang(profile.lang);
     localStorage.setItem("wapsi_lang", profile.lang);
     window.dispatchEvent(new Event("wapsi_lang_change"));
+    // The mode choice follows the account, the same way sign-in pushes it (T5.1).
+    if (session) void pushModePreference(session.token, profile.mode);
     if (returnState) {
       const nextState = { ...returnState, lang: profile.lang, persona: applyProfileToPersona(returnState.persona, profile), baselinePersona: applyProfileToPersona(returnState.baselinePersona, profile) };
+      // The profile has to reach the live return, not only localStorage: the name read from the PAN
+      // record, the city/state from the address, the mobile and the pre-validated banks are what the
+      // dashboard, the wizard and the engine read from here on (user, 2026-09-09).
+      setReturnState(nextState);
       saveState(nextState);
       if (onboardingReturnStep === "dashboard") {
         setPersonalizedDashboardDestination(profile, nextState);
@@ -953,7 +982,23 @@ export default function WapsiPrototype() {
     // 3. Keep vault modal closed
     setIsVaultOpen(false);
 
-    // 4. Navigate directly to main portal page (landing action grid)
+    // 4. A brand-new account goes through onboarding once (user, 2026-09-09 — reactivating the flow
+    //    deactivated on 2026-09-03). It asks only what never changes; the year's facts come later.
+    //    Someone who already has a profile in this browser goes straight to the portal as before.
+    if (!loadOnboardingProfile()) {
+      setOnboardingIdentity({
+        pan: newUser.pan,
+        name: newUser.fullName || "",
+        dob: newUser.dateOfBirth || undefined,
+        mobile: newUser.mobile || undefined,
+        email: newUser.email || undefined,
+        address: newUser.address || undefined,
+      });
+      setOnboardingDraft({});
+      setOnboardingReturnStep("landing");
+      setStep("onboarding");
+      return;
+    }
     setStep("landing");
   };
 
@@ -2764,8 +2809,8 @@ export default function WapsiPrototype() {
                   panInputError={panInputError}
                   handlePanInputChange={handlePanInputChange}
                   handlePanSubmit={handlePanSubmit}
-                  onboardingProfile={null}
-                  onEditOnboarding={() => {}}
+                  onboardingProfile={onboardingProfile}
+                  onEditOnboarding={handleEditOnboarding}
                   onLaunchPersona={(personaId, direct) => void launchPersonaDirect(personaId, direct)}
                   onLaunchPan={launchWithPan}
                   onLaunchWithForm16={launchWithForm16}
@@ -2821,7 +2866,7 @@ export default function WapsiPrototype() {
                   initialDraft={onboardingDraft}
                   onLanguageChange={changeLang}
                   onComplete={handleCompleteOnboarding}
-                  identity={persona ? { pan: persona.pan, name: persona.name, mobile: persona.mobile } : session ? { pan: session.pan, name: session.fullName ?? "" } : undefined}
+                  identity={onboardingIdentity ?? (persona ? { pan: persona.pan, name: persona.name, mobile: persona.mobile } : session ? { pan: session.pan, name: session.fullName ?? "" } : undefined)}
                 />
               </m.div>
             )}
@@ -2892,6 +2937,31 @@ export default function WapsiPrototype() {
                       {t.common.close}
                     </button>
                   </div>
+                )}
+
+                {/* Who this person said they are (2026-09-09): the greeting follows the year's intent and
+                    the filed state, the Simple/Full switch is live here, and the standing facts — PAN,
+                    refund account, DigiLocker, residency — are shown as recorded, not re-asked. */}
+                {onboardingProfile && (
+                  <PersonalizedDashboard
+                    profile={onboardingProfile}
+                    t={t}
+                    hasFiled={persona.refund.state !== "not_filed"}
+                    destination={dashboardDestination}
+                    onPrimaryAction={openPersonalizedDashboardDestination}
+                    onEdit={handleEditOnboarding}
+                    isRealMode={isRealMode}
+                    intent={returnState?.yearIntake?.intent ?? "file_return"}
+                    regimeLean={yearRegimeLean}
+                    onModeChange={(mode) => {
+                      // Detail density only. Switching between Agentic and Manual is the header pill's job —
+                      // a tap here must not throw the person out of the mode they are working in.
+                      const nextProfile = { ...onboardingProfile, mode };
+                      setOnboardingProfile(nextProfile);
+                      saveOnboardingProfile(nextProfile);
+                      if (session) void pushModePreference(session.token, mode);
+                    }}
+                  />
                 )}
 
                 {/* UNFILED → default path (plan §B.3). FILED → tracker tabs. */}

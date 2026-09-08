@@ -17,7 +17,7 @@ import type { MemoryEntry } from "@/lib/agentic/types";
 import { loadSession, saveSession, clearSession, type SessionInfo } from "@/lib/auth-client";
 import { dict, isLang } from "@/lib/i18n";
 import { agenticStrings } from "@/lib/i18n/agenticStrings";
-import { loadOnboardingProfile, profileSeed } from "@/lib/onboarding";
+import { applyProfileToReturn, isPlaceholderName, loadOnboardingProfile, profileSeed } from "@/lib/onboarding";
 import { PERSONAS, PERSONA_ORDER, findPersonaByPan } from "@/lib/personas";
 import { CURRENT_VERSION, load, save as savePersist } from "@/lib/return/persist";
 import { mirrorReturn, pullReturn } from "@/lib/return-sync-client";
@@ -139,8 +139,11 @@ function AgenticWorkspace() {
   // Sync latest return snapshot from server
   useEffect(() => {
     if (sessionState !== "ready") return;
+    // The server's copy predates onboarding, so it still carries the "Citizen 6666" sign-up placeholder
+    // and no bank; the profile is re-applied here or Munshi ji and the Context panel show the placeholder
+    // as the person's name (user, 2026-09-09).
     void pullReturn().then((res) => {
-      if (res?.state) setReturnState(res.state);
+      if (res?.state) setReturnState(applyProfileToReturn(res.state));
     });
   }, [sessionState, activeRunId]);
 
@@ -153,15 +156,29 @@ function AgenticWorkspace() {
     // 2. If localStorage has a return for this PAN, use it
     const local = load();
     if (local && "state" in local && local.state.persona && local.state.persona.pan.toUpperCase() === server.owner.pan.toUpperCase()) {
-      return local.state.persona;
+      return applyProfileToReturn(local.state).persona;
     }
     // 3. If seeded demo persona
     const seeded = findPersonaByPan(server.owner.pan);
     if (seeded) return seeded;
-    // 4. Default to blankPersona so CA review and all features work unconditionally for any PAN
-    return blankPersona(server.owner.pan, server.owner.displayName, lang);
+    // 4. Default to blankPersona so CA review and all features work unconditionally for any PAN. The server
+    //    session's displayName is the `Citizen 6666` sign-up placeholder; the PAN record's name wins (2026-09-09).
+    const onboarded = loadOnboardingProfile();
+    const displayName = isPlaceholderName(server.owner.displayName) && onboarded?.identity.name
+      ? onboarded.identity.name
+      : server.owner.displayName;
+    return blankPersona(server.owner.pan, displayName, lang);
   }, [server, returnState, lang]);
-  const citizen = useMemo(() => (server ? { name: server.owner.displayName, pan: server.owner.pan, isDemo: server.owner.kind === "demo" } : null), [server]);
+  const citizen = useMemo(() => {
+    if (!server) return null;
+    // The account card, the greeting and Munshi ji's "who am I" all read this; never show the placeholder
+    // when onboarding has the name from the PAN record (user, 2026-09-09).
+    const onboarded = loadOnboardingProfile();
+    const name = isPlaceholderName(server.owner.displayName) && onboarded?.identity.name
+      ? onboarded.identity.name
+      : server.owner.displayName;
+    return { name, pan: server.owner.pan, isDemo: server.owner.kind === "demo" };
+  }, [server]);
   useEffect(() => {
     if (!server) return setVaultUser(null);
     if (persona) setVaultUser((prev) => (prev && prev.pan === persona.pan ? prev : getSeededVaultForPersona(persona)));

@@ -14,19 +14,19 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, CheckCircle2, LayoutDashboard, Moon, ShieldCheck, Sliders, Sparkles, Sun, Zap } from "lucide-react";
 import { MunshiAvatar } from "@/components/brand/munshi";
-import Onboarding from "@/components/onboarding";
-import { applyProfileToPersona, loadOnboardingDraft, loadOnboardingProfile, saveOnboardingProfile, type OnboardingProfile } from "@/lib/onboarding";
+import Onboarding, { type OnboardingIdentitySeed } from "@/components/onboarding";
+import { applyProfileToReturn, isPlaceholderName, loadOnboardingDraft, loadOnboardingProfile, saveOnboardingProfile, type OnboardingProfile } from "@/lib/onboarding";
 import type { IngestedDocument } from "@/context/TaxReturnContext";
 import { clearSession, loadSession, saveSession, type SessionInfo } from "@/lib/auth-client";
 import { ensureServerSession } from "@/lib/session-client";
 import { localize } from "@/components/mock-i18n";
 import { dict, isLang } from "@/lib/i18n";
-import { PERSONAS } from "@/lib/personas";
+import { PERSONAS, findPersonaByPan } from "@/lib/personas";
 import { load as loadPersist, save as savePersist } from "@/lib/return/persist";
 import { mirrorReturn } from "@/lib/return-sync-client";
 import { MOCK_OTP, blankPersona, completeSignIn, panIssueMessage, persistSignIn, personaForPan, returnStateFor, sessionForVaultUser } from "@/lib/signin-flow";
 import type { Lang, Persona, PersonaId, Provenance } from "@/lib/types";
-import { addDocumentToVault, type CitizenVaultUser } from "@/lib/vault/vault-store";
+import { addDocumentToVault, getLocalVaultUser, setLocalVaultUser, type CitizenVaultUser } from "@/lib/vault/vault-store";
 import AuthPortal from "@/components/auth/auth-portal";
 import { PrototypeBanner } from "@/components/agentic/header-frame";
 import { BrandBox } from "@/components/agentic/header-frame";
@@ -107,10 +107,17 @@ function SignIn() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   /** The account just created — its PAN and name seed the profile's identity screen. */
   const [newUser, setNewUser] = useState<CitizenVaultUser | null>(null);
+  /** The same seed for the other first-time doors: an unknown PAN, or a Form 16 we just read a name off. */
+  const [identitySeed, setIdentitySeed] = useState<OnboardingIdentitySeed | undefined>(undefined);
 
-  const arrive = useCallback((opts?: { newAccount?: boolean }) => {
+  const arrive = useCallback((opts?: { newAccount?: boolean; pan?: string }) => {
     setPending(null);
-    if (opts?.newAccount && !loadOnboardingProfile()) setShowOnboarding(true);
+    // Onboarding runs once, for a person this browser does not know yet: an account just created, or a
+    // sign-in with a PAN / Form 16 that is not one of the seeded demo citizens — that is a new account in
+    // everything but name (user, 2026-09-09). A seeded demo persona already has its name, banks and figures,
+    // so it goes straight through, and anyone who already has a profile is never asked twice.
+    const firstTimeHere = opts?.newAccount || (opts?.pan ? !findPersonaByPan(opts.pan) : false);
+    if (firstTimeHere && !loadOnboardingProfile()) setShowOnboarding(true);
     else setShowModeSelect(true);
   }, []);
 
@@ -119,10 +126,19 @@ function SignIn() {
     // The person the PAN record named replaces the sign-up placeholder on the return and the session (2026-09-07).
     const stored = loadPersist();
     if (stored && "state" in stored) {
-      savePersist({ ...stored.state, persona: applyProfileToPersona(stored.state.persona, profile), baselinePersona: applyProfileToPersona(stored.state.baselinePersona, profile) });
+      const applied = applyProfileToReturn(stored.state, profile);
+      savePersist(applied);
+      // …and on the server's copy, which was created at sign-up with the placeholder. Without this push the
+      // next pull overwrites the name everywhere it is shown (user, 2026-09-09).
+      void mirrorReturn(applied).catch(() => undefined);
     }
     const sess = loadSession();
     if (sess && profile.identity.name && sess.pan === profile.identity.pan) saveSession({ ...sess, fullName: profile.identity.name });
+    // The vault card and the document previews read the vault record's own name, not the return's.
+    const vault = getLocalVaultUser();
+    if (vault && vault.pan === profile.identity.pan && profile.identity.name && isPlaceholderName(vault.fullName)) {
+      setLocalVaultUser({ ...vault, fullName: profile.identity.name, email: vault.email || profile.contact.email, mobile: vault.mobile || profile.contact.mobile, address: vault.address || profile.contact.address });
+    }
     if (profile.lang !== lang) {
       setLang(profile.lang);
       localStorage.setItem("wapsi_lang", profile.lang);
@@ -146,6 +162,8 @@ function SignIn() {
     const issue = panIssueMessage(clean, t);
     if (issue) return setPanInputError(issue);
     setPanInputError(null);
+    // An unknown PAN is a first-time person: carry it into onboarding so the identity screen starts filled.
+    if (!findPersonaByPan(clean)) setIdentitySeed({ pan: clean, name: "" });
     setPending(personaForPan(clean, lang));
     setOtp(["", "", "", "", "", ""]);
     setOtpError(false);
@@ -180,11 +198,11 @@ function SignIn() {
         await mirrorReturn(state);
       } catch {}
       setAuthBusy(false);
-      return arrive();
+      return arrive({ pan: persona.pan });
     }
     const out = await completeSignIn(persona, MOCK_OTP, lang);
     setAuthBusy(false);
-    if (out.ok) arrive();
+    if (out.ok) arrive({ pan: persona.pan });
     else {
       setPending(persona);
       setOtp(MOCK_OTP.split(""));
@@ -223,11 +241,11 @@ function SignIn() {
         await mirrorReturn(state);
       } catch {}
       setAuthBusy(false);
-      return arrive();
+      return arrive({ pan: pending.pan });
     }
     const out = await completeSignIn(pending, code, lang);
     setAuthBusy(false);
-    if (out.ok) return arrive();
+    if (out.ok) return arrive({ pan: pending.pan });
     setOtpError(true);
     setAuthNote(out.reason === "unreachable" ? t.login.authUnreachable : out.reason === "rejected" ? t.login.authRejected(out.detail ?? "") : null);
   };
@@ -252,6 +270,8 @@ function SignIn() {
     const employer = doc.extracted.employerName?.trim() || "Employer";
     const provenance: Provenance = { reporter: `${employer}, per uploaded ${doc.kind}`, reporterKind: "employer", identifier: doc.fileName, filedOn: doc.ingestedAt.slice(0, 10), statement: doc.kind === "AIS" ? "AIS" : "26AS", onlyReporterCanFix: true };
     const persona: Persona = { ...base, name, facts: [...base.facts], taxPaid: [...base.taxPaid] };
+    // The document already named them; onboarding starts from that instead of an empty identity screen.
+    setIdentitySeed({ pan, name: doc.extracted.name?.trim() || "" });
     if (doc.extracted.grossSalary !== undefined) {
       const i = persona.facts.findIndex((f) => f.kind === "salary");
       const fact = { id: i >= 0 ? persona.facts[i].id : `form16-salary-${Date.now()}`, label: `Gross salary (${employer})`, amount: doc.extracted.grossSalary, kind: "salary" as const, provenance };
@@ -322,7 +342,7 @@ function SignIn() {
         console.warn("[SignIn] addDocumentToVault error:", err);
       }
       setAuthBusy(false);
-      return arrive();
+      return arrive({ pan });
     }
     const out = await completeSignIn(persona, MOCK_OTP, lang);
     setAuthBusy(false);
@@ -362,7 +382,7 @@ function SignIn() {
       } catch (err) {
         console.warn("[SignIn] addDocumentToVault error:", err);
       }
-      arrive();
+      arrive({ pan });
     } else {
       setPending(persona);
       setOtp(MOCK_OTP.split(""));
@@ -408,7 +428,7 @@ function SignIn() {
               initialDraft={loadOnboardingDraft()}
               onLanguageChange={changeLang}
               onComplete={finishOnboarding}
-              identity={newUser ? { pan: newUser.pan, name: newUser.fullName, dob: newUser.dateOfBirth, mobile: newUser.mobile, email: newUser.email, address: newUser.address } : undefined}
+              identity={newUser ? { pan: newUser.pan, name: newUser.fullName, dob: newUser.dateOfBirth, mobile: newUser.mobile, email: newUser.email, address: newUser.address } : identitySeed}
             />
           ) : showModeSelect ? (
             <div className="mx-auto w-full max-w-4xl text-center py-6 sm:py-12 space-y-9 animate-in fade-in zoom-in-95 duration-200">
