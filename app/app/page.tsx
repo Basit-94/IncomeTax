@@ -17,7 +17,6 @@ import type { MemoryEntry } from "@/lib/agentic/types";
 import { loadSession, saveSession, clearSession, type SessionInfo } from "@/lib/auth-client";
 import { dict, isLang } from "@/lib/i18n";
 import { agenticStrings } from "@/lib/i18n/agenticStrings";
-import { isRtl } from "@/lib/i18n/languages";
 import { loadOnboardingProfile, profileSeed } from "@/lib/onboarding";
 import { PERSONAS, PERSONA_ORDER, findPersonaByPan } from "@/lib/personas";
 import { CURRENT_VERSION, load, save as savePersist } from "@/lib/return/persist";
@@ -86,8 +85,10 @@ function AgenticWorkspace() {
     document.body?.classList.toggle("dark", theme === "dark");
     document.body?.classList.toggle("dark-mode", theme === "dark");
   }, [theme]);
+  // Keep form and document layout in standard LTR structure so sidebars, forms,
+  // chat rails, and cards never shift or invert sides for Urdu/RTL.
   useEffect(() => {
-    document.documentElement.dir = isRtl(lang) ? "rtl" : "ltr";
+    document.documentElement.dir = "ltr";
     document.documentElement.lang = lang;
   }, [lang]);
   const changeLang = (l: Lang) => {

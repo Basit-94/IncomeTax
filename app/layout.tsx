@@ -46,13 +46,14 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      dir="ltr"
       data-scroll-behavior="smooth"
       className={`${outfit.variable} ${jbMono.variable} ${caveat.variable}`}
     >
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('wapsi_theme');if(t==='dark'){document.documentElement.classList.add('dark','dark-mode');}else{document.documentElement.classList.remove('dark','dark-mode');}}catch(e){}})()`,
+            __html: `(function(){try{document.documentElement.dir='ltr';var t=localStorage.getItem('wapsi_theme');if(t==='dark'){document.documentElement.classList.add('dark','dark-mode');}else{document.documentElement.classList.remove('dark','dark-mode');}}catch(e){}})()`,
           }}
         />
       </head>
