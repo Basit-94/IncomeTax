@@ -5597,7 +5597,32 @@ things there are already true and will NOT be rewritten:
     - Visited `/app` with Urdu (`ur`): Left icon rail remains on the left, Wapsi logo and Agentic/Manual toggle remain top-left, Context Inspector (Live Sync ledger, Bank Accounts, Tax Vault) remains on the right, chat input maintains mic/send buttons on right and prompt input on left.
     - Visited `/` with Urdu (`ur`): Brand bar and steps maintain standard LTR positioning.
     - Visited `/ca` and `/reconcile`: Verified `document.documentElement.dir` evaluates to `"ltr"`.
-  - **Test Suite**:
-    - `npx vitest run`: All 44 test files and all 381 unit tests passed green (100%).
-    - `npx tsc --noEmit`: 0 TypeScript compiler errors.
+- **Status**: Branch `dev-2`.
+
+## 2026-09-08 — Universal Gemini API Key & Fallback Pool Resolver
+
+- **Goal / Context**:
+  - Enable arbitrary number of Gemini API fallback keys (`GEMINI_FALLBACK_API_KEY_4`, `_5`, `_6`, `_7`, `_8`, etc. up to `_20`, or comma-separated `GEMINI_API_KEYS`).
+  - Ensure seamless failover across all AI endpoints (Agentic flow, Copilot, Chat API route, PDF extraction, Voice transcription).
+  - Prepare configuration instructions for local development (`.env.local`) and Vercel preview/production deployments on `dev-2`.
+- **What changed**:
+  - **`lib/server/geminiKeys.ts`**:
+    - Created unified resolver `getGeminiKeys(env)` that detects:
+      1. `GEMINI_API_KEY` (Primary)
+      2. `GEMINI_FALLBACK_API_KEY` (Fallback 1)
+      3. `GEMINI_FALLBACK_API_KEY_2` .. `_20` (Sequential numbered fallbacks)
+      4. `GEMINI_API_KEYS` (Comma-separated key string)
+      5. Any env matching `/^GEMINI_(FALLBACK_)?API_KEY(_\d+)?$/i`
+      6. Trims quotes, filters placeholder values (`REPLACE_ME`), and deduplicates.
+  - **Connected all AI subsystems**:
+    - `lib/agentic/model.ts`: uses `getGeminiKeys(env)` for autonomous agent turns.
+    - `lib/agent/copilot.ts`: uses `getGeminiKeys()` for manual copilot assistance.
+    - `app/api/agent/route.ts`: uses `getGeminiKeys()` for streaming chat endpoint.
+    - `app/api/extract/route.ts`: uses `getGeminiKeys()` for PDF/Form-16 AI extraction.
+    - `lib/server/transcriber.ts`: uses `getGeminiKeys(env)` for audio transcription & LLM text refinement.
+  - **`.env.example`**:
+    - Documented `GEMINI_FALLBACK_API_KEY_4` through `GEMINI_FALLBACK_API_KEY_8` and `GEMINI_API_KEYS`.
+- **Verification**:
+  - `npx vitest run`: All 44 test files and 381 unit tests passed green (100%).
+  - `npx tsc --noEmit`: 0 TypeScript compiler errors.
 - **Status**: Branch `dev-2`.
