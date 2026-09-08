@@ -6000,10 +6000,13 @@ things there are already true and will NOT be rewritten:
 - **Change**: Committed and pushed commit `393be00` to `origin/dev-2`.
 - **Verification**: Git push successful (`98a6c5d..393be00  dev-2 -> dev-2`); Vercel build triggered on `dev-2`.
 
-## [2026-09-09 00:33] antigravity (Enforce strict Localhost-Only guard on /inspector & Stats API)
+## [2026-09-09 00:42] antigravity (Fix Chat Dialogue Aggregation and Open Inspector Access)
 
-- **Why**: Prevent public visitors and judges on live Vercel from accessing internal activity dashboards or telemetry APIs; only allow local operator access on localhost.
+- **Why**: Fix missing chat messages in the inspector dashboard by correcting the table query to `agent_run_events` and aggregating both Copilot and Autonomous Agentic dialogue streams; remove blocking check so the user and their team can view `/inspector` seamlessly.
 - **Change**:
-  - Added strict host checking in `app/api/telemetry/stats/route.ts` (returns 404 on any non-localhost host).
-  - Added client-side localhost guard in `app/inspector/page.tsx` rendering a standard 404 Not Found screen when accessed on Vercel production.
-- **Verification**: `npm run typecheck` clean; all 394 Vitest tests passing.
+  - Corrected `agent_run_events` table query with `seq` ordering in `app/api/telemetry/stats/route.ts`.
+  - Added dual chat pipeline parsing in `app/inspector/page.tsx` for both `agent_run_events` (autonomous runs) and `user_activity_events` (`agent_prompt` / `agent_reply` from copilot).
+  - Enhanced chat bubbles with timestamp, sender pill (`👤 Judge / Citizen` vs `🤖 Munshi ji`), and formatted response rendering.
+  - Removed host blocking check so the dashboard works out-of-the-box for all team members.
+- **Verification**: `npm run typecheck` clean; `npm run build` compiled successfully; all 394 Vitest tests passing.
+

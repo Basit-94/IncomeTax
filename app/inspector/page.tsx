@@ -54,6 +54,7 @@ interface AgentEvent {
   id: string;
   run_id: string;
   seq: number;
+  type?: string;
   payload: {
     type?: string;
     role?: string;
@@ -95,7 +96,6 @@ interface StatsData {
 export default function InspectorPage() {
   const [data, setData] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isLocalHost, setIsLocalHost] = useState(true);
   const [range, setRange] = useState<'today' | 'yesterday' | '7d' | 'all'>('today');
   const [search, setSearch] = useState('');
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -103,18 +103,7 @@ export default function InspectorPage() {
   const [activeTab, setActiveTab] = useState<'journeys' | 'ca' | 'vault'>('journeys');
   const [lastUpdated, setLastUpdated] = useState<string>('');
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      setIsLocalHost(isLocal);
-    }
-  }, []);
-
   const fetchData = useCallback(async () => {
-    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      setLoading(false);
-      return;
-    }
     try {
       const res = await fetch(`/api/telemetry/stats?range=${range}&user=${encodeURIComponent(search)}`);
       if (res.ok) {
@@ -136,21 +125,12 @@ export default function InspectorPage() {
   }, [fetchData]);
 
   useEffect(() => {
-    if (!autoRefresh || !isLocalHost) return;
+    if (!autoRefresh) return;
     const interval = setInterval(() => {
       fetchData();
     }, 3000);
     return () => clearInterval(interval);
-  }, [autoRefresh, isLocalHost, fetchData]);
-
-  if (!isLocalHost) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 p-4 select-none">
-        <h1 className="text-6xl font-extrabold text-slate-200 mb-2">404</h1>
-        <p className="text-sm text-slate-500">This page could not be found.</p>
-      </div>
-    );
-  }
+  }, [autoRefresh, fetchData]);
 
   // Aggregate user sessions
   const sessions = useMemo(() => {
@@ -195,6 +175,53 @@ export default function InspectorPage() {
       if (act.user_name && act.user_name !== 'Visitor') s.userName = act.user_name;
       if (act.user_kind) s.userKind = act.user_kind;
       s.events.push(act);
+
+      // Extract Copilot chats from activity stream
+      if (act.event_type === 'agent_prompt' || act.event_type === 'agent_reply') {
+        const d = typeof act.details === 'string' ? JSON.parse(act.details || '{}') : (act.details || {});
+        let chatGroup = s.chats.find((c) => c.run.id === `copilot_${sid}`);
+        if (!chatGroup) {
+          chatGroup = {
+            run: {
+              id: `copilot_${sid}`,
+              owner_pan: s.pan,
+              owner_kind: s.userKind,
+              task: 'Assistant Dialogue',
+              status: 'completed',
+              lang: s.lang,
+              created_at: act.created_at,
+              updated_at: act.created_at,
+            },
+            events: [],
+          };
+          s.chats.push(chatGroup);
+        }
+        if (act.event_type === 'agent_prompt' && (d.prompt || d.text)) {
+          chatGroup.events.push({
+            id: act.id,
+            run_id: `copilot_${sid}`,
+            seq: chatGroup.events.length + 1,
+            payload: {
+              type: 'message',
+              role: 'user',
+              text: d.prompt || d.text,
+            },
+            created_at: act.created_at,
+          });
+        } else if (act.event_type === 'agent_reply' && (d.reply || d.text)) {
+          chatGroup.events.push({
+            id: act.id,
+            run_id: `copilot_${sid}`,
+            seq: chatGroup.events.length + 1,
+            payload: {
+              type: 'message',
+              role: 'assistant',
+              text: d.reply || d.text,
+            },
+            created_at: act.created_at,
+          });
+        }
+      }
     }
 
     for (const run of data.runs) {
@@ -622,11 +649,13 @@ export default function InspectorPage() {
                                   <div className="space-y-2">
                                     {chat.events.map((ev) => {
                                       const p = ev.payload || {};
-                                      if (p.type !== 'message') return null;
-                                      const isUser = p.role === 'user';
+                                      const text = p.text || (typeof p === 'string' ? p : '');
+                                      if (!text && ev.type !== 'message' && p.type !== 'message') return null;
+                                      if (!text) return null;
+                                      const isUser = p.role === 'user' || ev.payload?.role === 'user';
                                       return (
                                         <div
-                                          key={ev.id}
+                                          key={ev.id || `${ev.seq}_${chat.run.id}`}
                                           className={`flex items-start gap-2.5 text-xs ${
                                             isUser ? 'justify-end' : 'justify-start'
                                           }`}
@@ -637,16 +666,21 @@ export default function InspectorPage() {
                                             </span>
                                           )}
                                           <div
-                                            className={`p-2.5 rounded-xl max-w-[85%] ${
+                                            className={`p-3 rounded-xl max-w-[85%] ${
                                               isUser
                                                 ? 'bg-teal-500/15 border border-teal-500/30 text-teal-100'
                                                 : 'bg-slate-800/80 border border-slate-700/80 text-slate-200'
                                             }`}
                                           >
-                                            <div className="text-[10px] text-slate-400 font-semibold mb-0.5">
-                                              {isUser ? 'Judge / User' : 'Munshi ji'}
+                                            <div className="text-[10px] text-slate-400 font-semibold mb-1 flex items-center justify-between gap-4">
+                                              <span>{isUser ? '👤 Judge / Citizen' : '🤖 Munshi ji'}</span>
+                                              {ev.created_at && (
+                                                <span className="text-[9px] font-mono text-slate-500">
+                                                  {new Date(ev.created_at).toLocaleTimeString('en-IN')}
+                                                </span>
+                                              )}
                                             </div>
-                                            <p className="whitespace-pre-wrap leading-relaxed">{p.text}</p>
+                                            <p className="whitespace-pre-wrap leading-relaxed text-slate-100">{text}</p>
                                           </div>
                                           {isUser && (
                                             <span className="w-6 h-6 rounded-full bg-teal-500/20 text-teal-300 flex items-center justify-center text-[10px] shrink-0 font-bold border border-teal-500/30">

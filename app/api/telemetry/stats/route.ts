@@ -2,12 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDbPool } from '@/lib/db/postgres';
 
 export async function GET(req: NextRequest) {
-  const host = req.headers.get('host') || '';
-  const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
-  if (!isLocal) {
-    return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 });
-  }
-
   const pool = getDbPool();
   if (!pool) {
     return NextResponse.json({ ok: false, error: 'Database unavailable' }, { status: 503 });
@@ -91,7 +85,7 @@ export async function GET(req: NextRequest) {
       let runEvents: unknown[] = [];
       if (runIds.length > 0) {
         const evRes = await client.query(
-          'SELECT * FROM agent_events WHERE run_id = ANY($1) ORDER BY created_at ASC',
+          'SELECT run_id, seq, at AS created_at, type, payload FROM agent_run_events WHERE run_id = ANY($1) ORDER BY seq ASC',
           [runIds]
         ).catch(() => ({ rows: [] }));
         runEvents = evRes.rows;
