@@ -118,6 +118,8 @@ import {
 import type { ReconcileRow } from "../components/modals/MatchRecordsModal";
 import AgenticModeModal from "../components/modals/AgenticModeModal";
 import PortalFooter from "../components/layout/portal-footer";
+import { recordActivity } from "@/lib/telemetry/client";
+
 
 // --- VALIDATION (lib/validate.ts issue codes → dictionary messages) ---
 function panIssueMessage(raw: string, t: ReturnType<typeof dict>): string {
@@ -374,7 +376,9 @@ export default function WapsiPrototype() {
     const nextTheme = theme === "dark" ? "light" : "dark";
     setTheme(nextTheme);
     localStorage.setItem("wapsi_theme", nextTheme);
+    recordActivity("switch_theme", { theme: nextTheme });
   };
+
 
   // Custom user inputs for step 0
   const [customName, setCustomName] = useState("");
@@ -717,12 +721,15 @@ export default function WapsiPrototype() {
       setUndoStack([]);
       setOtp(["9", "4", "9", "4", "9", "4"]);
       setStep("otp");
+      recordActivity("sign_in", { pan: cleanPan, name: seeded.name, method: "seeded_demo" }, { pan: cleanPan, userName: seeded.name, userKind: "demo", lang });
       return;
     }
 
     setCustomPan(cleanPan);
     setIsRealMode(true);
     setWizardCompleted(false);
+    recordActivity("sign_in", { pan: cleanPan, method: "pan_direct" }, { pan: cleanPan, userName: "Citizen", userKind: "citizen", lang });
+
 
     const customUser: Persona = {
       id: "custom",
@@ -801,7 +808,9 @@ export default function WapsiPrototype() {
         // Fallback for offline prototype
       }
       saveState({ ...nextState, lang });
+      recordActivity("sign_in", { personaId: seeded.id, pan: seeded.pan, name: seeded.name, method: "demo_button" }, { pan: seeded.pan, userName: seeded.name, userKind: "demo", lang });
       if (seeded.refund.state === "not_filed") {
+
         setFlowStep("facts");
       } else {
         setActiveTab("overview");

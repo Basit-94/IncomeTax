@@ -275,7 +275,30 @@ export const MIGRATIONS: readonly Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_ca_comments_code ON ca_comments(code, created_at);
     `,
   },
+  {
+    // Real-time telemetry & audit events (2026-09-09): Tracks judge and citizen user journeys, AI chats, manual actions, and UX metrics.
+    id: "0008_user_activity_events",
+    sql: `
+      CREATE TABLE IF NOT EXISTS user_activity_events (
+        id VARCHAR(64) PRIMARY KEY,
+        session_id VARCHAR(64),
+        pan VARCHAR(16),
+        user_name VARCHAR(120),
+        user_kind VARCHAR(16),
+        event_type VARCHAR(64) NOT NULL,
+        details JSONB NOT NULL DEFAULT '{}'::jsonb,
+        user_agent VARCHAR(255),
+        screen_size VARCHAR(32),
+        lang VARCHAR(8),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_activity_created_at ON user_activity_events(created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_activity_pan ON user_activity_events(pan, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_activity_type ON user_activity_events(event_type, created_at DESC);
+    `,
+  },
 ];
+
 
 /** Ids must be unique and sorted, or the runner would apply them in a surprising order. */
 export function validateMigrations(list: readonly Migration[] = MIGRATIONS): string[] {

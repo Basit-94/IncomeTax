@@ -42,6 +42,8 @@ import { createDemoReview, fetchReviewRecord, verifyPin } from "@/lib/ca/ca-stor
 import { registerCA, loginCA, type RegisteredCA } from "@/lib/ca/ca-registry";
 import type { IngestedDocument } from "@/context/TaxReturnContext";
 import { Munshi } from "../brand/munshi";
+import { recordActivity } from "@/lib/telemetry/client";
+
 
 interface AuthPortalProps {
   t: Dict;
@@ -567,8 +569,14 @@ export default function AuthPortal({
       lastIngestedRef.current = ingested;
 
       onPanChange(cleanPan);
+      recordActivity(
+        "upload_doc",
+        { filename: uploadedFile.name, kind: detectedKind, grossSalary: extractedData.grossSalary, tds: extractedData.tds },
+        { pan: cleanPan, userName: extractedData.name, lang },
+      );
 
       if (onLaunchWithForm16) {
+
         await onLaunchWithForm16(ingested);
       } else if (onSignUpComplete) {
         await onSignUpComplete(updatedUser);

@@ -24,6 +24,8 @@ import { join } from "path";
 import { NextRequest, NextResponse } from "next/server";
 import { executeCopilotConversation } from "../../../lib/agent/copilot";
 import { getActiveGeminiKeys, getGeminiKeys, markKeyCooldown, markKeySuccess } from "@/lib/server/geminiKeys";
+import { getPool } from "@/lib/db/postgres";
+
 
 import { computeTax, compareRegimes } from "../../../lib/engine/tax";
 import type { TaxInput, TaxInputFact } from "../../../lib/engine/types";
@@ -531,6 +533,17 @@ export async function POST(request: NextRequest) {
   const lastUser = messages[messages.length - 1];
   appendTranscript(sessionId, { type: "user", text: lastUser?.text ?? "" });
 
+  const pool = getPool();
+  const promptId = "evt_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  if (pool && lastUser?.text) {
+    pool.query(
+      `INSERT INTO user_activity_events (id, session_id, pan, user_name, user_kind, event_type, details, lang, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       ON CONFLICT (id) DO NOTHING`,
+      [promptId, sessionId, ctx.userName || "ANONYMOUS", ctx.userName || "Visitor", "citizen", "agent_prompt", JSON.stringify({ prompt: lastUser.text }), ctx.lang, new Date()]
+    ).catch(() => {});
+  }
+
   const out = await executeCopilotConversation({ ctx, messages });
   for (const ev of out.toolEvents) {
     appendTranscript(sessionId, { type: "tool", tool: ev.tool, args: ev.args, result: ev.result });
@@ -543,8 +556,20 @@ export async function POST(request: NextRequest) {
     );
   }
   appendTranscript(sessionId, { type: "model", text: out.reply });
+
+  if (pool && out.reply) {
+    const replyId = "evt_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    pool.query(
+      `INSERT INTO user_activity_events (id, session_id, pan, user_name, user_kind, event_type, details, lang, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       ON CONFLICT (id) DO NOTHING`,
+      [replyId, sessionId, ctx.userName || "ANONYMOUS", ctx.userName || "Visitor", "citizen", "agent_reply", JSON.stringify({ reply: out.reply.slice(0, 500), tools: out.toolEvents.map(t => t.tool) }), ctx.lang, new Date()]
+    ).catch(() => {});
+  }
+
   return NextResponse.json(out);
 }
+
 
 /** T6.7 — the session transcript, reviewable by the user (and a CA). */
 export async function GET(request: NextRequest) {

@@ -9,8 +9,13 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "export:munshi": "node scripts/export-munshi.cjs"
+    "export:munshi": "node scripts/export-munshi.cjs",
+    "inspect": "node scripts/inspect-activity.cjs --today",
+    "inspect:live": "node scripts/inspect-activity.cjs --live",
+    "inspect:all": "node scripts/inspect-activity.cjs --all",
+    "inspect:export": "node scripts/inspect-activity.cjs --all --export"
   },
+
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",

@@ -5775,5 +5775,18 @@ things there are already true and will NOT be rewritten:
   - Preserved Chartered Accountant registry and verified CA directory (`SEED_REGISTERED_CAS`) intact in `lib/ca/ca-registry.ts`.
 - **Verification**: All 394 vitest unit and integration tests passing across 46 files.
 
+## [2026-09-09 00:15] antigravity (Live Judge & Citizen Activity Inspector & Telemetry Pipeline)
+
+- **Why**: Enable the user to monitor live judge sessions, sign-ins, AI conversations, manual filing actions, regime selections, PDF uploads, and UX performance metrics across both local dev and production Vercel environments.
+- **Change**:
+  - Created `0008_user_activity_events` database migration in `lib/db/migrations.ts`.
+  - Built non-blocking client-side telemetry recorder in `lib/telemetry/client.ts` (`recordActivity`).
+  - Added fast, asynchronous event ingestion route at `app/api/telemetry/event/route.ts` with direct Supabase PostgreSQL persistence.
+  - Wired activity capture across sign-in, theme switch, PDF upload, regime selection, and AI agent chat in `app/page.tsx`, `components/auth/auth-portal.tsx`, and `app/api/agent/route.ts`.
+  - Built comprehensive terminal inspector in `scripts/inspect-activity.cjs` with `--today`, `--yesterday`, `--all`, `--from <date>`, `--live`, `--user <PAN>`, and `--export` modes.
+  - Added npm convenience scripts `npm run inspect`, `npm run inspect:live`, and `npm run inspect:all` in `package.json`.
+- **Verification**: Tested `node scripts/inspect-activity.cjs --all` against Supabase; verified live session reconstruction, transcripts, and CA review summaries; 394 Vitest tests passing.
+
+
 
 
