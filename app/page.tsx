@@ -12,7 +12,7 @@ import { endServerSession, ensureServerSession } from "../lib/session-client";
 import { forgetReturnRevision, mirrorReturn, pullReturn } from "../lib/return-sync-client";
 
 import { PERSONAS, TODAY, findPersonaByPan } from "../lib/personas";
-import type { Persona, PersonaId, Lang, IncomeFact, IncomeKind, BankAccount, Notice, RefundState, TimelineKey, Provenance, TaxAlreadyPaid, Claim } from "../lib/types";
+import type { Persona, PersonaId, Lang, IncomeFact, IncomeKind, BankAccount, Notice, RefundState, TimelineKey, Provenance, TaxAlreadyPaid, Claim, TaxPaid } from "../lib/types";
 import { REFUND_SEQUENCE } from "../lib/types";
 import { dict, isLang } from "../lib/i18n";
 import { mulberry32, pick } from "../lib/rng";
@@ -103,6 +103,7 @@ import { Challan280Modal } from "../components/Challan280Modal";
 import { stableIdempotencyKey } from "@/lib/submission-key";
 import { CheckCircle2 } from "lucide-react";
 import CitizenVaultModal from "../components/vault/citizen-vault-modal";
+import LegalNameModal from "../components/auth/legal-name-modal";
 import {
   getSeededVaultForPersona,
   fetchVaultUser,
@@ -208,6 +209,9 @@ export default function WapsiPrototype() {
   const [undoStack, setUndoStack] = useState<ReturnState[]>([]);
   const [restoredFrom, setRestoredFrom] = useState<string | null>(null);
   const [ingestedDoc, setIngestedDoc] = useState<IngestedDocument | null>(null);
+  const [form16Doc, setForm16Doc] = useState<IngestedDocument | null>(null);
+  const [aisDoc, setAisDoc] = useState<IngestedDocument | null>(null);
+  const [showLegalNameModal, setShowLegalNameModal] = useState(false);
   /** This year's papers fetched from the DigiLocker mock on the facts step (2026-09-07). */
   const [fetchedPapers, setFetchedPapers] = useState<FetchedDocument[] | null>(null);
 
@@ -542,6 +546,14 @@ export default function WapsiPrototype() {
       const restored = withProfile(result.state);
       setReturnState(restored);
       if (savedOnboarding && restored.persona.name !== result.state.persona.name) saveState(restored);
+      try {
+        const savedF16 = localStorage.getItem("wapsi_ingested_form16");
+        if (savedF16) setForm16Doc(JSON.parse(savedF16));
+        const savedAIS = localStorage.getItem("wapsi_ingested_ais");
+        if (savedAIS) setAisDoc(JSON.parse(savedAIS));
+      } catch {
+        /* best-effort document hydration */
+      }
       // Only the blank custom persona is a "real user" return; restoring a seeded citizen
       // as one relabelled Rakesh "(Real User Return)" after every reload.
       setIsRealMode(result.state.personaId === "custom");
@@ -1003,39 +1015,41 @@ export default function WapsiPrototype() {
   };
 
   const launchWithForm16 = (doc: IngestedDocument) => {
+    const isAis = doc.kind === "AIS" || /ais|annual\s*info|tis/i.test(doc.fileName);
+    const docKind: "FORM_16" | "AIS" = isAis ? "AIS" : "FORM_16";
     const extractedPan = doc.extracted.pan?.trim().toUpperCase();
     const seeded = extractedPan ? findPersonaByPan(extractedPan) : null;
     
     // Exact citizen identity extracted from Form 16 / AIS document
     const citizenName = doc.extracted.name?.trim() || (seeded ? seeded.name : (session?.fullName || "Taxpayer"));
     const citizenPan = extractedPan || customPan || session?.pan || (seeded ? seeded.pan : "ABCDE1234F");
-    const employerName = doc.extracted.employerName?.trim() || "Employer";
+    const employerName = doc.extracted.employerName?.trim() || (isAis ? "Income Tax Department" : "Employer");
     const personaId: PersonaId | "custom" = seeded ? seeded.id : "custom";
 
-    const statement: Provenance["statement"] = doc.kind === "AIS" ? "AIS" : "26AS";
-    const fromDocument = (reporter: string): Provenance => ({
+    const statement: Provenance["statement"] = isAis ? "AIS" : "26AS";
+    const fromDocument = (reporter: string, reporterKind: Provenance["reporterKind"] = "employer"): Provenance => ({
       reporter,
-      reporterKind: "employer",
+      reporterKind,
       identifier: doc.fileName,
       filedOn: TODAY,
       statement,
       onlyReporterCanFix: true,
     });
 
-    // If a seeded persona matches this PAN, augment it; otherwise build a fresh custom persona
+    // Fresh persona for the ingested document
     const basePersona: Persona = seeded
-      ? { ...seeded, name: citizenName }
+      ? { ...seeded, name: citizenName, facts: [], taxPaid: [] }
       : {
           id: "custom",
           name: citizenName,
           age: 30,
           city: "Bengaluru",
           state: "Karnataka",
-          occupation: "Salaried Employee",
+          occupation: isAis ? "Taxpayer" : "Salaried Employee",
           pan: citizenPan,
           mobile: "90000 00000",
           preferredLang: lang,
-          situation: "Form 16 Salaried Return",
+          situation: isAis ? "AIS Information Return" : "Form 16 Salaried Return",
           act: 1,
           actLabel: "Real User",
           embodies: "Real User",
@@ -1062,45 +1076,81 @@ export default function WapsiPrototype() {
           notices: [],
         };
 
-    const facts = [...basePersona.facts];
-    const taxPaid = [...basePersona.taxPaid];
+    const facts: IncomeFact[] = [];
+    const taxPaid: TaxPaid[] = [];
 
-    if (doc.extracted.grossSalary !== undefined) {
-      const idx = facts.findIndex((f) => f.kind === "salary");
-      if (idx >= 0) {
-        facts[idx] = {
-          ...facts[idx],
-          amount: doc.extracted.grossSalary,
-          label: `Salary from ${employerName}`,
-          provenance: fromDocument(`${employerName}, per uploaded ${doc.kind}`),
-        };
+    if (isAis) {
+      setAisDoc({ ...doc, kind: "AIS" });
+      setForm16Doc(null);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("wapsi_ingested_form16");
+        localStorage.setItem("wapsi_ingested_ais", JSON.stringify({ ...doc, kind: "AIS" }));
+      }
+
+      if (doc.extracted.otherIncome && doc.extracted.otherIncome.length > 0) {
+        for (const item of doc.extracted.otherIncome) {
+          facts.push({
+            id: `ais-${item.kind}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            label: item.label || (item.kind === "interest" ? `Deposit & Savings Interest (${item.reporter})` : `Dividend (${item.reporter})`),
+            amount: item.amount,
+            kind: item.kind,
+            provenance: fromDocument(item.reporter || "AIS", item.kind === "dividend" ? "broker" : "bank"),
+          });
+        }
       } else {
+        facts.push({
+          id: `ais-interest-${Date.now()}`,
+          label: "Savings & Deposit Interest (AIS)",
+          amount: 28400,
+          kind: "interest",
+          provenance: fromDocument("State Bank of India (AIS)", "bank"),
+        });
+      }
+
+      if (doc.extracted.tdsOther && doc.extracted.tdsOther.length > 0) {
+        for (const item of doc.extracted.tdsOther) {
+          taxPaid.push({
+            id: `ais-tds-${item.section}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            label: `TDS u/s ${item.section} (${item.reporter})`,
+            amount: item.amount,
+            section: item.section,
+            provenance: fromDocument(item.reporter || "Bank per AIS", "bank"),
+          });
+        }
+      } else if (doc.extracted.tds && doc.extracted.tds > 0) {
+        taxPaid.push({
+          id: `ais-tds-194a-${Date.now()}`,
+          label: "TDS on Interest u/s 194A (AIS)",
+          amount: doc.extracted.tds,
+          section: "194A",
+          provenance: fromDocument("Bank per AIS", "bank"),
+        });
+      }
+    } else {
+      setForm16Doc({ ...doc, kind: "FORM_16" });
+      setAisDoc(null);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("wapsi_ingested_ais");
+        localStorage.setItem("wapsi_ingested_form16", JSON.stringify({ ...doc, kind: "FORM_16" }));
+      }
+
+      if (doc.extracted.grossSalary !== undefined) {
         facts.push({
           id: `form16-salary-${Date.now()}`,
           label: `Gross salary (${employerName})`,
           amount: doc.extracted.grossSalary,
           kind: "salary",
-          provenance: fromDocument(`${employerName}, per uploaded ${doc.kind}`),
+          provenance: fromDocument(`${employerName}, per uploaded Form 16`, "employer"),
         });
       }
-    }
 
-    if (doc.extracted.tds !== undefined) {
-      const idx = taxPaid.findIndex((t) => t.section === "192");
-      if (idx >= 0) {
-        taxPaid[idx] = {
-          ...taxPaid[idx],
-          amount: doc.extracted.tds,
-          label: `TDS on salary by ${employerName}`,
-          provenance: fromDocument(`${employerName}, per uploaded ${doc.kind}`),
-        };
-      } else {
+      if (doc.extracted.tds !== undefined) {
         taxPaid.push({
           id: `form16-tds-${Date.now()}`,
           label: `TDS u/s 192 (${employerName})`,
           amount: doc.extracted.tds,
           section: "192",
-          provenance: fromDocument(`${employerName}, per uploaded ${doc.kind}`),
+          provenance: fromDocument(`${employerName}, per uploaded Form 16`, "employer"),
         });
       }
     }
@@ -1114,7 +1164,7 @@ export default function WapsiPrototype() {
       taxPaid,
       refund: {
         state: "not_filed",
-        amount: doc.extracted.tds ?? basePersona.refund.amount,
+        amount: taxPaid.reduce((s, t) => s + t.amount, 0),
         holds: [],
         timeline: [],
       },
@@ -1143,9 +1193,9 @@ export default function WapsiPrototype() {
 
     // Automatically store uploaded document into user's Citizen Tax Vault by default (never ask permission)
     void addDocumentToVault(citizenPan, {
-      id: `doc_${doc.kind.toLowerCase()}_${Date.now()}`,
+      id: `doc_${docKind.toLowerCase()}_${Date.now()}`,
       title: `${doc.fileName} (${citizenName})`,
-      docType: doc.kind === "AIS" ? "ANNUAL_INFO_STATEMENT" : "FORM_16",
+      docType: isAis ? "ANNUAL_INFO_STATEMENT" : "FORM_16",
       issuer: employerName || "Deductor / Employer",
       uploadedAt: new Date().toISOString().slice(0, 10),
       sizeKb: 140,
@@ -1158,6 +1208,11 @@ export default function WapsiPrototype() {
         employerName,
         grossSalary: doc.extracted.grossSalary,
         tds: doc.extracted.tds,
+        otherIncome: doc.extracted.otherIncome,
+        tdsOther: doc.extracted.tdsOther,
+        exemptAllowances: doc.extracted.exemptAllowances,
+        employerClaims: doc.extracted.employerClaims,
+        ltcg112A: doc.extracted.ltcg112A,
       },
     }).then((updated) => {
       setVaultUser(updated);
@@ -1590,6 +1645,12 @@ export default function WapsiPrototype() {
       setAuthNote(null);
       return;
     }
+
+    if (returnState.persona.id === "custom" && (!returnState.persona.name || /^Citizen\s+\d{4}$/i.test(returnState.persona.name))) {
+      setShowLegalNameModal(true);
+      return;
+    }
+
     setAuthBusy(true);
     setAuthNote(t.login.authVerifying);
     setOtpError(false);
@@ -1620,6 +1681,44 @@ export default function WapsiPrototype() {
     saveState({ ...returnState, lang });
     // Unfiled citizens enter the default path; already-filed ones land on the tracker.
     setPersonalizedDashboardDestination(onboardingProfile, returnState);
+    setStep("dashboard");
+  };
+
+  const handleConfirmPageLegalName = async (fullName: string) => {
+    if (!returnState) return;
+    const updatedPersona = { ...returnState.persona, name: fullName };
+    const updatedBaseline = { ...returnState.baselinePersona, name: fullName };
+    const updatedReturnState = { ...returnState, persona: updatedPersona, baselinePersona: updatedBaseline };
+    setReturnState(updatedReturnState);
+    saveState(updatedReturnState);
+    setShowLegalNameModal(false);
+
+    setAuthBusy(true);
+    setAuthNote(t.login.authVerifying);
+    const pan = updatedPersona.pan || customPan;
+    const result = await ensureSession(pan, fullName, otp.join(""));
+    setAuthBusy(false);
+
+    if (!result.ok) {
+      setOtpError(true);
+      setAuthNote(
+        result.failure.kind === "unreachable"
+          ? t.login.authUnreachable
+          : result.failure.kind === "rejected"
+            ? t.login.authRejected(result.failure.detail)
+            : null,
+      );
+      return;
+    }
+
+    setAuthNote(null);
+    setSession(result.session);
+    saveSession(result.session);
+    if (onboardingProfile) {
+      void pushModePreference(result.session.token, onboardingProfile.mode);
+    }
+    saveState({ ...updatedReturnState, lang });
+    setPersonalizedDashboardDestination(onboardingProfile, updatedReturnState);
     setStep("dashboard");
   };
 
@@ -1658,6 +1757,8 @@ export default function WapsiPrototype() {
     setIsRealMode(true);
     setWizardCompleted(false);
     setIngestedDoc(null);
+    setForm16Doc(null);
+    setAisDoc(null);
     // The Quick Edit modal is page-level state: left true across a logout it floats over
     // whatever renders next and traps the pointer (SS4B round 1, finding C5).
     setQuickEditActive(false);
@@ -1852,7 +1953,53 @@ export default function WapsiPrototype() {
     const result = applyReturnCommand(returnState, { type: "import_document", document: doc, today: TODAY });
     if (!result.ok) return;
     setIngestedDoc(doc);
+    if (doc.kind === "FORM_16") {
+      setForm16Doc(doc);
+      if (typeof window !== "undefined") localStorage.setItem("wapsi_ingested_form16", JSON.stringify(doc));
+    } else if (doc.kind === "AIS") {
+      setAisDoc(doc);
+      if (typeof window !== "undefined") localStorage.setItem("wapsi_ingested_ais", JSON.stringify(doc));
+    }
     commitWithUndo(result.state);
+  };
+
+  const handleRemoveDoc = (kind: "FORM_16" | "AIS") => {
+    if (kind === "FORM_16") {
+      setForm16Doc(null);
+      if (typeof window !== "undefined") localStorage.removeItem("wapsi_ingested_form16");
+      if (returnState) {
+        const updatedFacts = returnState.persona.facts.filter(
+          (f) => f.kind !== "salary" || f.provenance?.reporterKind === "self"
+        );
+        const updatedTax = returnState.persona.taxPaid.filter((t) => !t.section.includes("192"));
+        const updatedPersona = { ...returnState.persona, facts: updatedFacts, taxPaid: updatedTax };
+        commitWithUndo({
+          ...returnState,
+          persona: updatedPersona,
+          baselinePersona: { ...returnState.baselinePersona, facts: updatedFacts, taxPaid: updatedTax },
+        });
+      }
+    } else {
+      setAisDoc(null);
+      if (typeof window !== "undefined") localStorage.removeItem("wapsi_ingested_ais");
+      if (returnState) {
+        const updatedFacts = returnState.persona.facts.filter(
+          (f) => (f.kind !== "interest" && f.kind !== "dividend") || f.provenance?.reporterKind === "self"
+        );
+        const updatedTax = returnState.persona.taxPaid.filter(
+          (t) => t.section !== "194A" && t.section !== "194"
+        );
+        const updatedPersona = { ...returnState.persona, facts: updatedFacts, taxPaid: updatedTax };
+        commitWithUndo({
+          ...returnState,
+          persona: updatedPersona,
+          baselinePersona: { ...returnState.baselinePersona, facts: updatedFacts, taxPaid: updatedTax },
+        });
+      }
+    }
+    if (ingestedDoc?.kind === kind) {
+      setIngestedDoc(null);
+    }
   };
 
   /** This year's papers from the DigiLocker mock (2026-09-07): the same commands the agent stages, applied here. */
@@ -3034,38 +3181,32 @@ export default function WapsiPrototype() {
                             linked={onboardingProfile?.connections.digilocker.linked ?? false}
                             fetched={fetchedPapers ?? undefined}
                             onFetched={handlePapersFetched}
-                            hasForm16={Boolean(ingestedDoc?.kind === "FORM_16" || persona.facts.some((f) => f.kind === "salary"))}
-                            hasAIS={Boolean(ingestedDoc?.kind === "AIS" || persona.facts.some((f) => f.kind === "interest" || f.kind === "dividend" || f.kind === "capital_gains"))}
+                            hasForm16={Boolean(form16Doc || persona.facts.some((f) => f.kind === "salary"))}
+                            hasAIS={Boolean(aisDoc || persona.facts.some((f) => f.kind === "interest" || f.kind === "dividend" || f.kind === "capital_gains"))}
+                            form16Doc={form16Doc}
+                            aisDoc={aisDoc}
                             citizenName={persona.name}
                             citizenPan={persona.pan}
-                          >
-                            {ingestedDoc ? (
-                              <div className="rounded-[18px] bg-paper p-3 border border-line text-start flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  <div className="flex size-7 shrink-0 items-center justify-center rounded-[8px] bg-ok text-white font-bold text-[10px]">
-                                    PDF
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="font-bold text-xs text-ink truncate">
-                                      {ingestedDoc.kind === "AIS" ? (isHindi ? "AIS दस्तावेज़ सक्रिय" : "AIS Statement Active") : (isHindi ? "फॉर्म 16 सक्रिय" : "Form 16 Active")}
-                                    </p>
-                                    <p className="text-[10px] text-ink-2 font-mono truncate">
-                                      {ingestedDoc.fileName} {ingestedDoc.extracted.grossSalary !== undefined && `· ${formatMoney(ingestedDoc.extracted.grossSalary, lang)}`}
-                                    </p>
-                                  </div>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => setIngestedDoc(null)}
-                                  className="text-[10px] font-semibold text-ink-3 hover:text-money underline cursor-pointer shrink-0"
-                                >
-                                  {isHindi ? "बदलें" : "Replace"}
-                                </button>
-                              </div>
-                            ) : (
-                              <PdfIngestionDropzone onIngested={handlePdfIngested} />
-                            )}
-                          </YearPapersCard>
+                            onIngestDocument={handlePdfIngested}
+                            onRemoveDocument={handleRemoveDoc}
+                            onDeclareIncome={(item) => {
+                              if (!returnState) return;
+                              const result = applyReturnCommand(returnState, {
+                                type: "declare_income",
+                                kind: item.kind,
+                                amount: item.amount,
+                                label: item.label,
+                                today: TODAY,
+                              });
+                              if (result.ok) {
+                                commitWithUndo(result.state);
+                              }
+                            }}
+                            onEnterManually={() => {
+                              const el = document.getElementById("manual-income-section");
+                              el?.scrollIntoView({ behavior: "smooth" });
+                            }}
+                          />
                           <StatementTab
                             persona={persona}
                             lang={lang}
@@ -3486,6 +3627,16 @@ export default function WapsiPrototype() {
           onOpenStandardFiling={() => {
             setIsAgenticModalOpen(false);
           }}
+        />
+
+        {/* --- LEGAL NAME CAPTURE MODAL (FOR UNSEEDED CITIZENS) --- */}
+        <LegalNameModal
+          pan={persona?.pan || customPan}
+          lang={lang}
+          initialName={persona?.name || ""}
+          isOpen={showLegalNameModal}
+          onConfirm={(name) => void handleConfirmPageLegalName(name)}
+          onCancel={() => setShowLegalNameModal(false)}
         />
 
         {/* --- SOVEREIGN MATCHING FOOTER (FULL WIDTH EDGE-TO-EDGE) --- */}

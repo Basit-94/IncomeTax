@@ -120,6 +120,8 @@ export interface TaxAlreadyPaid {
   provenance: Provenance;
 }
 
+export type TaxPaid = TaxAlreadyPaid;
+
 export type ClaimSection =
   | "80C"
   | "80D_SELF"

@@ -37,7 +37,7 @@ import {
   type CitizenVaultUser,
   type VaultDocument,
 } from "@/lib/vault/vault-store";
-import { extractFieldsFromPdf, detectDocumentKind, isEmptyExtraction, decodeLatin1 } from "@/lib/compliance/pdfExtract";
+import { extractFieldsFromPdf, detectDocumentKind, isEmptyExtraction, decodeLatin1, type ExtractedFields } from "@/lib/compliance/pdfExtract";
 import { createDemoReview, fetchReviewRecord, verifyPin } from "@/lib/ca/ca-store";
 import { registerCA, loginCA, type RegisteredCA } from "@/lib/ca/ca-registry";
 import type { IngestedDocument } from "@/context/TaxReturnContext";
@@ -250,6 +250,11 @@ export default function AuthPortal({
     grossSalary?: number;
     tds?: number;
     kind?: "FORM_16" | "AIS";
+    otherIncome?: ExtractedFields["otherIncome"];
+    tdsOther?: ExtractedFields["tdsOther"];
+    exemptAllowances?: ExtractedFields["exemptAllowances"];
+    employerClaims?: ExtractedFields["employerClaims"];
+    ltcg112A?: ExtractedFields["ltcg112A"];
   }>({});
   const [manualPanForDoc, setManualPanForDoc] = useState<string>("");
   const [docStatusMsg, setDocStatusMsg] = useState<string>("");
@@ -318,11 +323,17 @@ export default function AuthPortal({
         let tdsAmount: number | undefined = undefined;
         let detectedKind: "FORM_16" | "AIS" = "FORM_16";
 
+        let extractedRaw: Awaited<ReturnType<typeof extractFieldsFromPdf>> | undefined = undefined;
+
         if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
           const buffer = await file.arrayBuffer();
           const bytes = new Uint8Array(buffer);
           detectedKind = detectDocumentKind(bytes, file.name);
+          if (/ais|tis|annual\s*info/i.test(file.name)) {
+            detectedKind = "AIS";
+          }
           const extracted = await extractFieldsFromPdf(bytes);
+          extractedRaw = extracted;
 
           if (!isEmptyExtraction(extracted)) {
             foundPan = extracted.pan;
@@ -385,12 +396,18 @@ export default function AuthPortal({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               fileName: file.name,
+              kind: detectedKind,
               extracted: {
                 pan: foundPan,
                 name: detectedName,
                 employerName,
                 grossSalary,
                 tds: tdsAmount,
+                otherIncome: extractedRaw?.otherIncome,
+                tdsOther: extractedRaw?.tdsOther,
+                exemptAllowances: extractedRaw?.exemptAllowances,
+                employerClaims: extractedRaw?.employerClaims,
+                ltcg112A: extractedRaw?.ltcg112A,
               },
             }),
           });
@@ -402,7 +419,13 @@ export default function AuthPortal({
               if (aiData.data.employerName && !employerName) employerName = aiData.data.employerName;
               if (typeof aiData.data.grossSalary === "number" && grossSalary === undefined) grossSalary = aiData.data.grossSalary;
               if (typeof aiData.data.tds === "number" && tdsAmount === undefined) tdsAmount = aiData.data.tds;
-              if (aiData.data.kind) detectedKind = aiData.data.kind;
+              if (aiData.data.kind) {
+                if (/ais|tis|annual\s*info/i.test(file.name)) {
+                  detectedKind = "AIS";
+                } else {
+                  detectedKind = aiData.data.kind;
+                }
+              }
             }
           }
         } catch {
@@ -415,6 +438,11 @@ export default function AuthPortal({
           grossSalary,
           tds: tdsAmount,
           kind: detectedKind,
+          otherIncome: extractedRaw?.otherIncome,
+          tdsOther: extractedRaw?.tdsOther,
+          exemptAllowances: extractedRaw?.exemptAllowances,
+          employerClaims: extractedRaw?.employerClaims,
+          ltcg112A: extractedRaw?.ltcg112A,
         });
 
         // Slight parse beat for high-trust user feedback
@@ -431,7 +459,7 @@ export default function AuthPortal({
             id: `doc_${Date.now()}`,
             title: file.name,
             docType: detectedKind === "AIS" ? "ANNUAL_INFO_STATEMENT" : "FORM_16",
-            issuer: employerName || "Uploaded Tax Document",
+            issuer: employerName || (detectedKind === "AIS" ? "Income Tax Department" : "Uploaded Tax Document"),
             uploadedAt: new Date().toISOString().slice(0, 10),
             sizeKb: Math.max(1, Math.round(file.size / 1024)),
             status: "verified",
@@ -443,6 +471,11 @@ export default function AuthPortal({
               employerName,
               grossSalary,
               tds: tdsAmount,
+              otherIncome: extractedRaw?.otherIncome,
+              tdsOther: extractedRaw?.tdsOther,
+              exemptAllowances: extractedRaw?.exemptAllowances,
+              employerClaims: extractedRaw?.employerClaims,
+              ltcg112A: extractedRaw?.ltcg112A,
             },
           };
 
@@ -459,6 +492,11 @@ export default function AuthPortal({
               employerName,
               grossSalary,
               tds: tdsAmount,
+              otherIncome: extractedRaw?.otherIncome,
+              tdsOther: extractedRaw?.tdsOther,
+              exemptAllowances: extractedRaw?.exemptAllowances,
+              employerClaims: extractedRaw?.employerClaims,
+              ltcg112A: extractedRaw?.ltcg112A,
             },
             file,
           };
@@ -530,12 +568,14 @@ export default function AuthPortal({
     setIsDocLaunching(true);
 
     try {
-      const detectedKind = extractedData.kind || (uploadedFile.name.toLowerCase().includes("ais") ? "AIS" : "FORM_16");
+      const detectedKind =
+        extractedData.kind ||
+        (/ais|tis|annual\s*info/i.test(uploadedFile.name) ? "AIS" : "FORM_16");
       const vaultDoc: VaultDocument = {
         id: `doc_${Date.now()}`,
         title: uploadedFile.name,
         docType: detectedKind === "AIS" ? "ANNUAL_INFO_STATEMENT" : "FORM_16",
-        issuer: extractedData.employerName || "Citizen Tax Document",
+        issuer: extractedData.employerName || (detectedKind === "AIS" ? "Income Tax Department" : "Citizen Tax Document"),
         uploadedAt: new Date().toISOString().slice(0, 10),
         sizeKb: Math.max(1, Math.round(uploadedFile.size / 1024)),
         status: "verified",
@@ -547,6 +587,11 @@ export default function AuthPortal({
           employerName: extractedData.employerName,
           grossSalary: extractedData.grossSalary,
           tds: extractedData.tds,
+          otherIncome: extractedData.otherIncome,
+          tdsOther: extractedData.tdsOther,
+          exemptAllowances: extractedData.exemptAllowances,
+          employerClaims: extractedData.employerClaims,
+          ltcg112A: extractedData.ltcg112A,
         },
       };
 
@@ -563,6 +608,11 @@ export default function AuthPortal({
           employerName: extractedData.employerName,
           grossSalary: extractedData.grossSalary,
           tds: extractedData.tds,
+          otherIncome: extractedData.otherIncome,
+          tdsOther: extractedData.tdsOther,
+          exemptAllowances: extractedData.exemptAllowances,
+          employerClaims: extractedData.employerClaims,
+          ltcg112A: extractedData.ltcg112A,
         },
         file: uploadedFile,
       };
@@ -1252,6 +1302,18 @@ export default function AuthPortal({
 
                   <button
                     type="button"
+                    onClick={() => void handleLoadSampleDoc("AIS _ TIS Statement - Anthony D'Souza.pdf")}
+                    className="glass-flat flex items-center justify-between p-2.5 rounded-[12px] hover:border-money transition text-left group cursor-pointer"
+                  >
+                    <div className="min-w-0 pr-2">
+                      <span className="block text-[12.5px] font-bold text-ink truncate group-hover:text-money">{localizeName("Anthony D'Souza", lang)}</span>
+                      <span className="block text-[10.5px] text-ink-3">AIS / TIS (Interest ₹28.5K)</span>
+                    </div>
+                    <span className="text-[11px] font-bold text-money shrink-0">Load ⚡</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => void handleLoadSampleDoc("Form 16 - Faheem Ahmed.pdf")}
                     className="glass-flat flex items-center justify-between p-2.5 rounded-[12px] hover:border-money transition text-left group cursor-pointer"
                   >
@@ -1261,16 +1323,30 @@ export default function AuthPortal({
                     </div>
                     <span className="text-[11px] font-bold text-money shrink-0">Load ⚡</span>
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => void handleLoadSampleDoc("AIS _ TIS Statement - Faheem Ahmed.pdf")}
+                    className="glass-flat flex items-center justify-between p-2.5 rounded-[12px] hover:border-money transition text-left group cursor-pointer"
+                  >
+                    <div className="min-w-0 pr-2">
+                      <span className="block text-[12.5px] font-bold text-ink truncate group-hover:text-money">{localizeName("Faheem Ahmed", lang)}</span>
+                      <span className="block text-[10.5px] text-ink-3">AIS / TIS (Interest ₹18.4K)</span>
+                    </div>
+                    <span className="text-[11px] font-bold text-money shrink-0">Load ⚡</span>
+                  </button>
                 </div>
 
-                <div className="flex items-center justify-between pt-1 border-t border-glass-edge text-[11px] text-ink-3">
+                <div className="flex items-center justify-between pt-1 border-t border-glass-edge text-[11px] text-ink-3 flex-wrap gap-1">
                   <span>Download PDFs for manual drag & drop:</span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <a href="/samples/Form 16 - Anthony D'Souza.pdf" download className="hover:text-money underline">Anthony Form 16</a>
+                    <span>·</span>
+                    <a href="/samples/AIS _ TIS Statement - Anthony D'Souza.pdf" download className="hover:text-money underline">Anthony AIS</a>
                     <span>·</span>
                     <a href="/samples/Form 16 - Faheem Ahmed.pdf" download className="hover:text-money underline">Faheem Form 16</a>
                     <span>·</span>
-                    <a href="/samples/AIS _ TIS Statement - Anthony D'Souza.pdf" download className="hover:text-money underline">AIS/TIS</a>
+                    <a href="/samples/AIS _ TIS Statement - Faheem Ahmed.pdf" download className="hover:text-money underline">Faheem AIS</a>
                   </div>
                 </div>
               </div>

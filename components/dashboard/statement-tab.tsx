@@ -241,7 +241,7 @@ export default function StatementTab({
           </div>
         )}
 
-        <div className="board">
+        <div id="manual-income-section" className="board scroll-mt-6">
           {persona.facts.length === 0 ? (
             <div className="surface-panel rounded-2xl p-5 space-y-4 border border-line">
               <div className="space-y-1">

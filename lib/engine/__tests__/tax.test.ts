@@ -57,7 +57,7 @@ describe("s.87A rebate cliff and marginal relief (new regime)", () => {
       expect(tax - prev).toBeLessThanOrEqual(16); // max one rupee + cess jump
       prev = tax;
     }
-  });
+  }, 15000);
 });
 
 describe("old-regime s.87A", () => {

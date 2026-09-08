@@ -31,6 +31,11 @@ export async function POST(req: NextRequest) {
       if (body.extracted) {
         extractedDeterministic = body.extracted;
       }
+      if (body.kind === "AIS" || body.kind === "FORM_16") {
+        detectedKind = body.kind;
+      } else if (fileName) {
+        detectedKind = /ais|tis|annual\s*info/i.test(fileName) ? "AIS" : "FORM_16";
+      }
     }
 
     // Heuristic extraction from fileName if name is not yet determined
@@ -111,7 +116,11 @@ Return ONLY a JSON object with those keys:
               resultTds = Math.round(parsed.tds);
             }
             if (parsed.kind === "AIS" || parsed.kind === "FORM_16") {
-              detectedKind = parsed.kind;
+              if (/ais|tis|annual\s*info/i.test(fileName)) {
+                detectedKind = "AIS";
+              } else {
+                detectedKind = parsed.kind;
+              }
             }
             source = "gemini";
             break;

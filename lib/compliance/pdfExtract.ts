@@ -37,9 +37,9 @@ export function detectDocumentKind(
   extraText = "",
 ): DocumentKind {
   const text = decodeLatin1(bytes) + " " + extraText;
-  if (/Annual Information Statement/i.test(text)) return "AIS";
+  if (/Annual Information Statement|Taxpayer Information Summary|\bTIS\b|\bAIS\b/i.test(text)) return "AIS";
   if (/FORM\s*NO\.?\s*16|Certificate under section 203/i.test(text)) return "FORM_16";
-  return /ais/i.test(fileName) ? "AIS" : "FORM_16";
+  return /ais|tis|annual\s*info/i.test(fileName) ? "AIS" : "FORM_16";
 }
 
 /**

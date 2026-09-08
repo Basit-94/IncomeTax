@@ -13,6 +13,11 @@ export interface VaultExtractedFields {
   quarters?: number[];
   tan?: string;
   assessmentYear?: string;
+  otherIncome?: { kind: "interest" | "dividend"; label: string; amount: number; reporter: string; identifier?: string; section?: string }[];
+  tdsOther?: { section: string; reporter: string; amount: number }[];
+  exemptAllowances?: { section: string; amount: number }[];
+  employerClaims?: { section: string; amount: number }[];
+  ltcg112A?: { sale?: number; cost?: number; gain: number; reporter?: string };
 }
 
 export interface VaultDocument {
