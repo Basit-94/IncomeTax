@@ -57,7 +57,7 @@ function AgenticWorkspace() {
   const activeRunId = params.get("run");
 
   const [lang, setLang] = useState<Lang>("en");
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [client, setClient] = useState<SessionInfo | null>(null);
   const [server, setServer] = useState<ServerSessionInfo | null>(null);
   const [sessionState, setSessionState] = useState<"checking" | "none" | "ready" | "unverifiable">("checking");
@@ -74,7 +74,11 @@ function AgenticWorkspace() {
     const savedLang = localStorage.getItem("wapsi_lang");
     if (savedLang && isLang(savedLang)) setLang(savedLang);
     const savedTheme = localStorage.getItem("wapsi_theme");
-    if (savedTheme === "dark" || savedTheme === "light") setTheme(savedTheme);
+    if (savedTheme === "dark") {
+      setTheme("dark");
+    } else {
+      setTheme("light");
+    }
   }, []);
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -428,6 +432,11 @@ function AgenticWorkspace() {
             loading={view.loading}
             error={view.error}
             durable={view.durable}
+            isFiled={Boolean(
+              returnState?.filedAt ||
+              (returnState?.persona?.refund?.state && returnState.persona.refund.state !== "not_filed") ||
+              (persona?.refund?.state && persona.refund.state !== "not_filed")
+            )}
             onStart={(input) => void start(input)}
             onSend={(input) => void view.send(input)}
             onOpenVault={() => setVaultOpen(true)}

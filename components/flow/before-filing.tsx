@@ -17,6 +17,8 @@
  * button unlocks only when the gate is met, and says exactly what is missing.
  */
 
+import React, { useState } from "react";
+import { AlertTriangle, AlertCircle } from "lucide-react";
 import type { Dict } from "../../lib/i18n";
 import type { Lang, Persona } from "../../lib/types";
 import type { TaxBreakdown } from "../../lib/engine/types";
@@ -96,11 +98,17 @@ export default function BeforeFiling({
   showChecklist = true,
   showFinish = true,
 }: BeforeFilingProps) {
+  const [nilReturnConfirmed, setNilReturnConfirmed] = useState(false);
+
   const items = [...persona.facts, ...persona.taxPaid, ...persona.claims];
   const isDone = (id: string) => confirmedIds.includes(id);
 
+  const hasDeclaredIncome = persona.facts.length > 0 && persona.facts.some((f) => f.amount > 0);
+  const hasLegalName = Boolean(persona.name && persona.name.trim().length > 0 && !/^Citizen\s+\d{4}$/i.test(persona.name));
+  const isStatutoryValid = (hasDeclaredIncome || nilReturnConfirmed) && hasLegalName;
+
   const remaining = items.filter((i) => !isDone(i.id)).length;
-  const ready = remaining === 0;
+  const ready = remaining === 0 && isStatutoryValid;
 
   const outcomePositive = breakdown.refundOrDue >= 0;
   // Payable, and the caller can take a challan: the statutory route is to pay
@@ -121,6 +129,57 @@ export default function BeforeFiling({
         <span className="label">{t.checklist.divider}</span>
         <div className="line" />
       </div>
+
+      {/* Statutory validation warnings */}
+      {!hasDeclaredIncome && (
+        <div className="mb-5 rounded-[20px] bg-amber-500/10 border border-amber-500/30 p-4 space-y-3 animate-in fade-in">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="size-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="space-y-1 text-start">
+              <h4 className="text-sm font-bold text-ink">
+                {localize("No income declared for this financial year", lang)}
+              </h4>
+              <p className="text-xs text-ink-2 leading-relaxed">
+                {localize("An Income Tax Return cannot be filed with blank figures unless you explicitly declare a statutory NIL return under Section 139.", lang)}
+              </p>
+            </div>
+          </div>
+          <div className="pt-2 border-t border-amber-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <label className="flex items-center gap-2 text-xs font-semibold text-ink cursor-pointer">
+              <input
+                type="checkbox"
+                checked={nilReturnConfirmed}
+                onChange={(e) => setNilReturnConfirmed(e.target.checked)}
+                className="rounded border-line size-4 accent-emerald-600 cursor-pointer"
+              />
+              <span>{localize("Declare Statutory NIL Return (u/s 139) — Gross income below ₹3,00,000", lang)}</span>
+            </label>
+            <button
+              type="button"
+              onClick={() => onJumpToFact("salary")}
+              className="text-xs font-bold text-money hover:underline cursor-pointer self-start sm:self-auto"
+            >
+              {localize("+ Add Income Figures", lang)} →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!hasLegalName && (
+        <div className="mb-5 rounded-[20px] bg-red-500/10 border border-red-500/30 p-4 flex items-center justify-between gap-3 text-xs animate-in fade-in">
+          <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+            <AlertCircle className="size-4 shrink-0" />
+            <span>{localize("Legal Name as per PAN is required before filing.", lang)}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onJumpToFact("salary")}
+            className="text-xs font-bold text-red-700 dark:text-red-300 underline cursor-pointer shrink-0"
+          >
+            {localize("Provide Name", lang)} →
+          </button>
+        </div>
+      )}
 
       {showChecklist && mode === "simple" && (
         <div className="checklist">
@@ -180,7 +239,11 @@ export default function BeforeFiling({
           <div className="note">
             {mustPayFirst
               ? localize("A return filed with tax outstanding is defective under section 139(9). Pay the balance first; filing unlocks once nothing is due.", lang)
-              : ready
+              : !hasLegalName
+                ? localize("Enter full legal name as per PAN before filing can unlock.", lang)
+                : !hasDeclaredIncome && !nilReturnConfirmed
+                ? localize("Declare income or confirm statutory NIL return (u/s 139) to unlock filing.", lang)
+                : ready
                 ? t.checklist.noteReady
                 : t.checklist.noteLocked}
           </div>
@@ -197,7 +260,13 @@ export default function BeforeFiling({
           </button>
         ) : (
           <button className="file" disabled={!ready} onClick={onProceed}>
-            {ready ? t.checklist.fileBtn : t.checklist.lockedBtn(remaining)}
+            {!hasLegalName
+              ? localize("Enter Legal Name to file", lang)
+              : !hasDeclaredIncome && !nilReturnConfirmed
+              ? localize("Declare Income / NIL Return", lang)
+              : ready
+              ? t.checklist.fileBtn
+              : t.checklist.lockedBtn(remaining)}
             <span className="pg" />
           </button>
         )}

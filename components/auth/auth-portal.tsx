@@ -23,11 +23,13 @@ import {
   HelpCircle,
   KeyRound,
   Award,
+  Sparkles,
 } from "lucide-react";
 import type { Dict } from "@/lib/i18n";
 import type { Lang, PersonaId } from "@/lib/types";
 import { getPortalStrings } from "@/lib/i18n/portalTranslations";
 import { PERSONAS } from "@/lib/personas";
+import { localizeName } from "@/lib/i18n/names";
 import {
   syncVaultUser,
   createVaultUserFromPan,
@@ -487,6 +489,24 @@ export default function AuthPortal({
       }
     },
     [ps, onLaunchWithForm16, onPanChange, onSignUpComplete]
+  );
+
+  const handleLoadSampleDoc = useCallback(
+    async (fileName: string) => {
+      try {
+        setDocPhase("reading");
+        setDocStatusMsg(`Loading sample document: ${fileName}…`);
+        const res = await fetch(`/samples/${encodeURIComponent(fileName)}`);
+        if (!res.ok) throw new Error("Could not fetch sample document");
+        const blob = await res.blob();
+        const file = new File([blob], fileName, { type: "application/pdf" });
+        await processDocument(file);
+      } catch (err) {
+        setDocPhase("error");
+        setDocStatusMsg(err instanceof Error ? err.message : "Failed to load sample document");
+      }
+    },
+    [processDocument]
   );
 
   const handleManualPanForDocSubmit = async (e: React.FormEvent) => {
@@ -1199,6 +1219,54 @@ export default function AuthPortal({
                 </div>
               </div>
 
+              {/* Evaluator / Judge Quick Sample PDFs */}
+              <div className="rounded-[18px] bg-white/55 dark:bg-white/[0.06] border border-glass-edge p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-bold text-ink flex items-center gap-1.5">
+                    <Sparkles size={13} className="text-money" />
+                    <span>Try with Official Sample PDFs:</span>
+                  </span>
+                  <span className="text-[10px] font-mono text-money bg-amber-bg px-2 py-0.5 rounded-full font-semibold">1-Click Test</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void handleLoadSampleDoc("Form 16 - Anthony D'Souza.pdf")}
+                    className="glass-flat flex items-center justify-between p-2.5 rounded-[12px] hover:border-money transition text-left group cursor-pointer"
+                  >
+                    <div className="min-w-0 pr-2">
+                      <span className="block text-[12.5px] font-bold text-ink truncate group-hover:text-money">{localizeName("Anthony D'Souza", lang)}</span>
+                      <span className="block text-[10.5px] text-ink-3">Form 16 (Salaried ₹12.5L)</span>
+                    </div>
+                    <span className="text-[11px] font-bold text-money shrink-0">Load ⚡</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => void handleLoadSampleDoc("Form 16 - Faheem Ahmed.pdf")}
+                    className="glass-flat flex items-center justify-between p-2.5 rounded-[12px] hover:border-money transition text-left group cursor-pointer"
+                  >
+                    <div className="min-w-0 pr-2">
+                      <span className="block text-[12.5px] font-bold text-ink truncate group-hover:text-money">{localizeName("Faheem Ahmed", lang)}</span>
+                      <span className="block text-[10.5px] text-ink-3">Form 16 (Salaried ₹8.4L)</span>
+                    </div>
+                    <span className="text-[11px] font-bold text-money shrink-0">Load ⚡</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between pt-1 border-t border-glass-edge text-[11px] text-ink-3">
+                  <span>Download PDFs for manual drag & drop:</span>
+                  <div className="flex items-center gap-2">
+                    <a href="/samples/Form 16 - Anthony D'Souza.pdf" download className="hover:text-money underline">Anthony Form 16</a>
+                    <span>·</span>
+                    <a href="/samples/Form 16 - Faheem Ahmed.pdf" download className="hover:text-money underline">Faheem Form 16</a>
+                    <span>·</span>
+                    <a href="/samples/AIS _ TIS Statement - Anthony D'Souza.pdf" download className="hover:text-money underline">AIS/TIS</a>
+                  </div>
+                </div>
+              </div>
+
               {docStatusMsg && (
                 <div
                   role="status"
@@ -1268,7 +1336,7 @@ export default function AuthPortal({
                       </span>
                       <span className="flex-1 min-w-0">
                         <span className="flex items-center gap-2 flex-wrap font-bold text-ink">
-                          {person.name}
+                          {localizeName(person.name, lang)}
                           <span className="glass-flat inline-flex rounded-full px-[11px] py-1 font-mono text-[12px] font-medium tracking-[.04em] text-ink-3">{person.pan}</span>
                         </span>
                         <span className="block text-[12.5px] text-ink-3">{t.personas[id].phase} · {t.personas[id].action}</span>

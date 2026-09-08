@@ -9,12 +9,13 @@
  */
 
 import { useState, type ReactNode } from "react";
-import { CheckCircle2, ShieldCheck } from "lucide-react";
+import { CheckCircle2, ShieldCheck, FileCheck, Sparkles } from "lucide-react";
 import type { ExtractedFields } from "../../lib/compliance/pdfExtract";
 import { formatMoney } from "../../lib/money";
 import type { Lang } from "../../lib/types";
 import { MunshiAvatar } from "../brand/munshi";
 import { localize } from "../mock-i18n";
+import DigiLockerModal from "../digilocker/digilocker-modal";
 
 export interface FetchedDocument {
   id: string | null;
@@ -34,10 +35,26 @@ interface YearPapersCardProps {
   fetched?: FetchedDocument[];
   onFetched: (documents: FetchedDocument[]) => void;
   children?: ReactNode;
+  hasForm16?: boolean;
+  hasAIS?: boolean;
+  citizenName?: string;
+  citizenPan?: string;
 }
 
-export default function YearPapersCard({ lang, assessmentYear, linked, fetched, onFetched, children }: YearPapersCardProps) {
+export default function YearPapersCard({
+  lang,
+  assessmentYear,
+  linked,
+  fetched,
+  onFetched,
+  children,
+  hasForm16 = false,
+  hasAIS = false,
+  citizenName,
+  citizenPan,
+}: YearPapersCardProps) {
   const [phase, setPhase] = useState<"idle" | "consent" | "fetching" | "error">("idle");
+  const [isLockerModalOpen, setIsLockerModalOpen] = useState(false);
   /** The catalogue being pulled, ticking off as each document arrives (2026-09-07). */
   const [pulling, setPulling] = useState<{ title: string; done: boolean }[]>([]);
   // "2026-27" → "2025-26"
@@ -96,14 +113,59 @@ export default function YearPapersCard({ lang, assessmentYear, linked, fetched, 
       <div className="flex items-start gap-3">
         <span className="shrink-0"><MunshiAvatar size={34} state={phase === "fetching" ? "working" : "explaining"} /></span>
         <div className="min-w-0 space-y-1">
-          <p className="text-[15px] font-extrabold text-ink tracking-[-0.01em]">{L("This year's papers")}</p>
-          <p className="text-[13px] text-ink-2 leading-relaxed">{L("Form 16 and AIS for FY")} {fy}. {L("Read once, with your permission — then Munshi ji asks only what they can't answer.")}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-[15px] font-extrabold text-ink tracking-[-0.01em]">{L("This year's papers")}</p>
+            {hasForm16 && (
+              <span className="text-[11px] font-bold text-ok px-2 py-0.5 rounded-full bg-ok-soft">Form 16 on Record</span>
+            )}
+            {hasAIS && (
+              <span className="text-[11px] font-bold text-ok px-2 py-0.5 rounded-full bg-ok-soft">AIS on Record</span>
+            )}
+          </div>
+          <p className="text-[13px] text-ink-2 leading-relaxed">
+            {hasForm16 && !hasAIS
+              ? L("Your Form 16 is recorded. You may provide your AIS / TIS below to reconcile interest and tax credits, or enter figures manually.")
+              : hasAIS && !hasForm16
+              ? L("Your AIS is recorded. Please provide your Form 16 below, or type your salary figures manually.")
+              : `${L("Form 16 and AIS for FY")} ${fy}. ${L("Read once, with your permission — then Munshi ji asks only what they can't answer.")}`}
+          </p>
         </div>
       </div>
 
+      {/* Document status notices */}
+      {hasForm16 && !hasAIS && (
+        <div className="p-3 rounded-[16px] bg-ok-soft/50 border border-ok/20 flex items-center justify-between text-xs text-ink-2">
+          <span className="flex items-center gap-2 font-medium">
+            <CheckCircle2 size={15} className="text-ok shrink-0" />
+            <span>Form 16 already submitted at sign-in. Not requested again.</span>
+          </span>
+          <span className="text-[11px] text-ink-3 font-mono">1 of 2 Complete</span>
+        </div>
+      )}
+
+      {hasAIS && !hasForm16 && (
+        <div className="p-3 rounded-[16px] bg-ok-soft/50 border border-ok/20 flex items-center justify-between text-xs text-ink-2">
+          <span className="flex items-center gap-2 font-medium">
+            <CheckCircle2 size={15} className="text-ok shrink-0" />
+            <span>AIS / TIS statement already submitted at sign-in. Not requested again.</span>
+          </span>
+          <span className="text-[11px] text-ink-3 font-mono">1 of 2 Complete</span>
+        </div>
+      )}
+
+      {hasForm16 && hasAIS && (
+        <div className="p-3 rounded-[16px] bg-ok-soft/50 border border-ok/20 flex items-center justify-between text-xs text-ink-2">
+          <span className="flex items-center gap-2 font-medium">
+            <CheckCircle2 size={15} className="text-ok shrink-0" />
+            <span>{L("Both Form 16 and AIS / TIS records are matched. All key figures pre-filled.")}</span>
+          </span>
+          <span className="text-[11px] text-ink-3 font-mono">2 of 2 Complete</span>
+        </div>
+      )}
+
       {phase === "fetching" ? (
         <ul className="rounded-[18px] bg-amber-bg p-4 space-y-1.5 text-[13px] text-amber-ink" role="status" aria-live="polite">
-          <li className="font-semibold">{L("Pulling from DigiLocker…")}</li>
+          <li className="font-semibold">{L("Pulling from Government DigiLocker…")}</li>
           {(pulling.length ? pulling : [{ title: `Form 16 — FY ${fy}`, done: false }, { title: `Annual Information Statement — FY ${fy}`, done: false }]).map((d) => (
             <li key={d.title} className="flex items-center gap-2">
               <span className={`inline-flex size-4 items-center justify-center rounded-full ${d.done ? "bg-ok text-white" : "border border-amber-ink/40 text-transparent"}`} aria-hidden="true"><CheckCircle2 size={10} /></span>
@@ -111,28 +173,35 @@ export default function YearPapersCard({ lang, assessmentYear, linked, fetched, 
             </li>
           ))}
         </ul>
-      ) : phase === "consent" ? (
-        <div className="rounded-[18px] bg-amber-bg p-4 space-y-3">
-          <div className="flex items-center gap-2 text-amber-ink font-bold text-sm"><ShieldCheck size={16} aria-hidden="true" /> {L("Fetch these from DigiLocker?")}</div>
-          <ul className="space-y-1 text-sm text-amber-ink/90">
-            <li>· Form 16 — FY {fy}</li>
-            <li>· Annual Information Statement — FY {fy}</li>
-          </ul>
-          <div className="flex flex-wrap gap-2 pt-1">
-            <button type="button" onClick={() => void fetchNow()} className="btn-primary rounded-[14px] h-[46px] px-5 text-[14.5px] cursor-pointer">{L("Yes, fetch these")}</button>
-            <button type="button" onClick={() => setPhase("idle")} className="glass-flat rounded-[14px] h-[46px] px-4 text-[14.5px] font-semibold text-ink-2 hover:text-ink cursor-pointer">{L("Not now")}</button>
-          </div>
-        </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
-          <button type="button" onClick={() => setPhase("consent")} className={`text-start rounded-[18px] border-[1.5px] px-4 py-3.5 transition-colors cursor-pointer ${linked ? "border-money bg-amber-bg text-amber-ink" : "border-glass-edge glass-flat text-ink hover:border-money/50"}`}>
-            <span className="block text-sm font-semibold">{L("Fetch from DigiLocker")}</span>
-            <span className="mt-1 block text-xs opacity-80">{linked ? L("Linked at onboarding — one tap") : L("You approve the list first")}</span>
+          <button
+            type="button"
+            onClick={() => setIsLockerModalOpen(true)}
+            className={`text-start rounded-[18px] border-[1.5px] px-4 py-3.5 transition-colors cursor-pointer hover:border-money/60 ${linked ? "border-money bg-amber-bg text-amber-ink" : "border-glass-edge glass-flat text-ink"}`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="block text-sm font-semibold">{L("Fetch from DigiLocker")}</span>
+              <ShieldCheck size={16} className="text-[#00c070]" />
+            </div>
+            <span className="mt-1 block text-xs opacity-80">{linked ? L("Linked at onboarding — one tap") : L("Sign in & approve documents via DigiLocker")}</span>
           </button>
           <div className="min-w-0">{children}</div>
         </div>
       )}
+
       {phase === "error" && <p className="text-xs font-semibold text-alarm">{L("DigiLocker did not answer. Upload the PDF instead, or type the figures below.")}</p>}
+
+      {/* Official Government DigiLocker Modal */}
+      <DigiLockerModal
+        isOpen={isLockerModalOpen}
+        onClose={() => setIsLockerModalOpen(false)}
+        onConsentSuccess={fetchNow}
+        assessmentYear={assessmentYear}
+        lang={lang}
+        citizenName={citizenName}
+        citizenPan={citizenPan}
+      />
     </div>
   );
 }

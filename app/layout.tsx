@@ -37,7 +37,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0B1424",
+  themeColor: "#FAFAF8",
 };
 
 export default function RootLayout({
@@ -47,8 +47,15 @@ export default function RootLayout({
     <html
       lang="en"
       data-scroll-behavior="smooth"
-      className={`dark dark-mode ${outfit.variable} ${jbMono.variable} ${caveat.variable}`}
+      className={`${outfit.variable} ${jbMono.variable} ${caveat.variable}`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('wapsi_theme');if(t==='dark'){document.documentElement.classList.add('dark','dark-mode');}else{document.documentElement.classList.remove('dark','dark-mode');}}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body className="min-h-dvh flex flex-col">
         {/* The ambient ground: lilac page with two drifting blobs (globals.css .paper), under everything. */}
         <div className="paper" aria-hidden="true" />

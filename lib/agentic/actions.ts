@@ -203,22 +203,42 @@ export function hardIssues(advice: AdviceAssessment) {
 
 /** The person's return as the model may see it: no identifiers, every figure from the engine, every limit named. */
 export function returnSummary(ctx: ActionCtx, snapshot: VersionedReturn) {
-  const { run } = ctx;
+  const { run, deps } = ctx;
   const state = projected(snapshot, run.state.pendingCommands);
   const p = state.persona;
   const advice = assessAdvice(p, adviceContext(ctx));
   const both = compareForPersona(p);
   const regime = state.regime ?? "new";
-  const figures = (b: ReturnType<typeof computeForPersona>) => ({ grossIncome: b.grossIncome, standardDeduction: b.standardDeduction, deductionsAllowed: b.totalDeductions, taxableIncome: b.taxableIncome, rebate87A: b.rebate87A, marginalRelief: b.marginalReliefApplied, cess: b.cess, totalTax: b.totalTax, tdsAndTaxPaid: b.tdsCredits, refundOrDue: b.refundOrDue });
+  const isFiled = Boolean(state.filedAt || (p.refund?.state && p.refund.state !== "not_filed"));
+  const filedAtDate = state.filedAt ?? (p.refund?.state && p.refund.state !== "not_filed" ? deps.today() : null);
+  const figures = (b: ReturnType<typeof computeForPersona>) => ({
+    grossIncome: b.grossIncome,
+    standardDeduction: b.standardDeduction,
+    deductionsAllowed: b.totalDeductions,
+    taxableIncome: b.taxableIncome,
+    slabTax: b.slabTax,
+    taxBeforeRebate: b.taxBeforeRebate,
+    rebate87A: b.rebate87A,
+    marginalRelief: b.marginalReliefApplied,
+    taxAfterRebate: b.taxAfterRebate,
+    cess: b.cess,
+    totalTax: b.totalTax,
+    tdsAndTaxPaid: b.tdsCredits,
+    refundOrDue: b.refundOrDue,
+  });
+  const taxSaving = Math.abs(both.new.totalTax - both.old.totalTax);
+  const refundDiff = Math.abs(both.new.refundOrDue - both.old.refundOrDue);
+  const taxableDiff = Math.abs(both.new.taxableIncome - both.old.taxableIncome);
+  const deductionsDiff = Math.abs(both.new.totalDeductions - both.old.totalDeductions);
   const intake = state.yearIntake;
   return {
-    assessmentYear: AY, financialYear: "2025-26", revision: snapshot.revision, regimeOnRecord: regime, filed: !!state.filedAt, filedAt: state.filedAt ?? null,
+    assessmentYear: AY, financialYear: "2025-26", revision: snapshot.revision, regimeOnRecord: regime, filed: isFiled, filedAt: filedAtDate,
     facts: p.facts.map((f) => ({ id: f.id, kind: f.kind, amount: f.amount, label: f.label, reportedBy: f.provenance.reporter, reporterKind: f.provenance.reporterKind, statement: f.provenance.statement, confirmed: state.confirmedFactIds.includes(f.id), capitalGains: f.capitalGains })),
     taxPaid: p.taxPaid.map((t) => ({ id: t.id, section: t.section, amount: t.amount, by: t.provenance.reporter })),
     claims: p.claims.map((c) => ({ id: c.id, section: c.section, amount: c.amount, label: c.label, proofAttached: c.evidenceAttached })),
     corrections: state.corrections.filter((c) => !c.reverted).length,
     stagedChanges: (run.state.pendingCommands ?? []).map((c) => c.type),
-    figures: { new: figures(both.new), old: figures(both.old), cheaper: both.new.totalTax <= both.old.totalTax ? "new" : "old" },
+    figures: { new: figures(both.new), old: figures(both.old), cheaper: both.new.totalTax <= both.old.totalTax ? "new" : "old", taxSaving, refundDiff, taxableDiff, deductionsDiff },
     yearIntake: intake ? { source: intake.sources.chosen, formAnswers: intake.answers, form16: intake.read.salary ? { gross: intake.read.salary.gross, exempt10: intake.read.salary.exempt10, professionalTax: intake.read.salary.professionalTax, employer: intake.read.salary.employerName, tds: intake.read.salary.tdsSalary } : null, verdict: intake.inferred ?? null } : null,
     limits: advice.issues.map((i) => ({ code: i.code, reason: i.reason, blocksFiling: !isSoftIssue(i) })),
     engineNote: "Figures are the engine's arithmetic on the facts as recorded (an engineering draft awaiting a qualified reviewer's sign-off). Surcharge above ₹50 lakh and s.234 interest are not modelled.",

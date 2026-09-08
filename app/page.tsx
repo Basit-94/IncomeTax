@@ -171,7 +171,7 @@ export default function WapsiPrototype() {
 
   // --- CORE UI STATES ---
   const [lang, setLang] = useState<Lang>("en");
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<"dark" | "light">("light");
   const [antigravityUi, setAntigravityUi] = useState(false);
   const [step, setStep] = useState<"auth" | "onboarding" | "landing" | "otp" | "dashboard">("auth");
   const [activePersonaId, setActivePersonaId] = useState<PersonaId | "custom" | null>(null);
@@ -485,8 +485,10 @@ export default function WapsiPrototype() {
       setLang(savedOnboarding.lang);
     }
 
-    if (savedTheme === "dark" || savedTheme === "light") {
-      setTheme(savedTheme as "dark" | "light");
+    if (savedTheme === "dark") {
+      setTheme("dark");
+    } else {
+      setTheme("light");
     }
 
     const savedUserMode = localStorage.getItem("wapsi_user_mode");
@@ -554,7 +556,11 @@ export default function WapsiPrototype() {
 
   // Sync document root class with theme state
   useEffect(() => {
-    document.documentElement.classList.toggle("dark-mode", theme === "dark");
+    const isDark = theme === "dark";
+    document.documentElement.classList.toggle("dark", isDark);
+    document.documentElement.classList.toggle("dark-mode", isDark);
+    document.body?.classList.toggle("dark", isDark);
+    document.body?.classList.toggle("dark-mode", isDark);
   }, [theme]);
 
   // Keep form and document layout in standard LTR structure so forms, tables,
@@ -2296,6 +2302,114 @@ export default function WapsiPrototype() {
     });
   };
 
+  const handleSaveGuidedIncome = (data: {
+    legalName?: string;
+    employer: string;
+    grossSalary: number;
+    tds: number;
+    interest: number;
+  }) => {
+    if (!persona || !returnState) return;
+    const newFacts: IncomeFact[] = [];
+    const newTaxPaid = [...persona.taxPaid];
+
+    if (data.grossSalary > 0) {
+      newFacts.push({
+        id: `fact-salary-${Date.now()}`,
+        label: `Salary from ${data.employer || "Employer"}`,
+        amount: data.grossSalary,
+        kind: "salary",
+        provenance: {
+          reporter: data.employer || "Employer",
+          reporterKind: "employer",
+          filedOn: TODAY,
+          statement: "self",
+          onlyReporterCanFix: false,
+        },
+      });
+    }
+
+    if (data.tds > 0) {
+      newTaxPaid.push({
+        id: `tax-salary-${Date.now()}`,
+        label: `TDS on salary (Sec 192)`,
+        amount: data.tds,
+        section: "192",
+        provenance: {
+          reporter: data.employer || "Employer",
+          reporterKind: "employer",
+          filedOn: TODAY,
+          statement: "26AS",
+          onlyReporterCanFix: false,
+        },
+      });
+    }
+
+    if (data.interest > 0) {
+      newFacts.push({
+        id: `fact-interest-${Date.now()}`,
+        label: "Savings & Deposit Interest (AIS)",
+        amount: data.interest,
+        kind: "interest",
+        provenance: {
+          reporter: "Banks & Financial Institutions",
+          reporterKind: "bank",
+          filedOn: TODAY,
+          statement: "AIS",
+          onlyReporterCanFix: false,
+        },
+      });
+    }
+
+    const nextName = data.legalName && data.legalName.trim() ? data.legalName.trim() : persona.name;
+    const nextPersona: Persona = {
+      ...persona,
+      name: nextName,
+      facts: [...persona.facts, ...newFacts],
+      taxPaid: newTaxPaid,
+    };
+    const nextBaseline: Persona = {
+      ...returnState.baselinePersona,
+      name: nextName,
+      facts: [...returnState.baselinePersona.facts, ...newFacts],
+      taxPaid: newTaxPaid,
+    };
+
+    commitWithUndo({
+      ...returnState,
+      persona: nextPersona,
+      baselinePersona: nextBaseline,
+      confirmedFactIds: [...returnState.confirmedFactIds, ...newFacts.map((f) => f.id)],
+    });
+  };
+
+  const handleAddCustomIncomeItem = (item: {
+    label: string;
+    amount: number;
+    kind: IncomeKind;
+  }) => {
+    if (!persona || !returnState) return;
+    const newFact: IncomeFact = {
+      id: `custom-fact-${Date.now()}`,
+      label: item.label,
+      amount: item.amount,
+      kind: item.kind,
+      provenance: {
+        reporter: "Self Reported",
+        reporterKind: "self",
+        filedOn: TODAY,
+        statement: "self",
+        onlyReporterCanFix: false,
+      },
+    };
+    commitWithUndo({
+      ...returnState,
+      baselinePersona: { ...returnState.baselinePersona, facts: [...returnState.baselinePersona.facts, newFact] },
+      persona: { ...returnState.persona, facts: [...returnState.persona.facts, newFact] },
+      confirmedFactIds: [...returnState.confirmedFactIds, newFact.id],
+    });
+  };
+
   // Live Inline Inputs (custom persona + sandbox editor) — stored as silent
   // amount corrections so they remain undoable and replay-safe.
   const handleFactAmountChange = (factId: string, val: string) => {
@@ -2835,55 +2949,44 @@ export default function WapsiPrototype() {
                     >
                       {flowStep === "facts" && (
                         <div className="space-y-6">
-                          {/* If a Form 16 / AIS PDF has already been ingested, show confirmed card instead of blank dropzone */}
-                          {ingestedDoc ? (
-                            <div className="rounded-[24px] bg-ok-soft p-4 text-start flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
-                              <div className="flex items-center gap-3">
-                                <div className="flex size-9 shrink-0 items-center justify-center rounded-[12px] bg-ok text-white">
-                                  <CheckCircle2 size={18} />
-                                </div>
-                                <div>
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="font-bold text-xs text-ink">
-                                      {ingestedDoc.kind === "AIS" ? (isHindi ? "AIS डेटा सफलतापूर्वक शामिल किया गया" : "AIS Data Successfully Ingested") : (isHindi ? "फॉर्म 16 डेटा सफलतापूर्वक शामिल किया गया" : "Form 16 Data Successfully Ingested")}
-                                    </span>
-                                    <span className="font-mono text-[10px] bg-paper px-2 py-0.5 rounded border border-line text-ink-2">
-                                      {ingestedDoc.fileName}
-                                    </span>
+                          <YearPapersCard
+                            lang={lang}
+                            assessmentYear={persona.assessmentYear}
+                            linked={onboardingProfile?.connections.digilocker.linked ?? false}
+                            fetched={fetchedPapers ?? undefined}
+                            onFetched={handlePapersFetched}
+                            hasForm16={Boolean(ingestedDoc?.kind === "FORM_16" || persona.facts.some((f) => f.kind === "salary"))}
+                            hasAIS={Boolean(ingestedDoc?.kind === "AIS" || persona.facts.some((f) => f.kind === "interest" || f.kind === "dividend" || f.kind === "capital_gains"))}
+                            citizenName={persona.name}
+                            citizenPan={persona.pan}
+                          >
+                            {ingestedDoc ? (
+                              <div className="rounded-[18px] bg-paper p-3 border border-line text-start flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="flex size-7 shrink-0 items-center justify-center rounded-[8px] bg-ok text-white font-bold text-[10px]">
+                                    PDF
                                   </div>
-                                  <p className="text-[11px] text-ink-2 mt-0.5">
-                                    {ingestedDoc.extracted.employerName && (
-                                      <span className="font-semibold text-ink">{ingestedDoc.extracted.employerName} · </span>
-                                    )}
-                                    {ingestedDoc.extracted.grossSalary !== undefined && (
-                                      <span>{isHindi ? "सकल वेतन:" : "Salary:"} <span className="font-mono font-bold text-ink">{formatMoney(ingestedDoc.extracted.grossSalary, lang)}</span> · </span>
-                                    )}
-                                    {ingestedDoc.extracted.tds !== undefined && (
-                                      <span>TDS: <span className="font-mono font-bold text-ok-ink">{formatMoney(ingestedDoc.extracted.tds, lang)}</span></span>
-                                    )}
-                                  </p>
+                                  <div className="min-w-0">
+                                    <p className="font-bold text-xs text-ink truncate">
+                                      {ingestedDoc.kind === "AIS" ? (isHindi ? "AIS दस्तावेज़ सक्रिय" : "AIS Statement Active") : (isHindi ? "फॉर्म 16 सक्रिय" : "Form 16 Active")}
+                                    </p>
+                                    <p className="text-[10px] text-ink-2 font-mono truncate">
+                                      {ingestedDoc.fileName} {ingestedDoc.extracted.grossSalary !== undefined && `· ${formatMoney(ingestedDoc.extracted.grossSalary, lang)}`}
+                                    </p>
+                                  </div>
                                 </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setIngestedDoc(null)}
+                                  className="text-[10px] font-semibold text-ink-3 hover:text-money underline cursor-pointer shrink-0"
+                                >
+                                  {isHindi ? "बदलें" : "Replace"}
+                                </button>
                               </div>
-
-                              <button
-                                type="button"
-                                onClick={() => setIngestedDoc(null)}
-                                className="text-[11px] font-semibold text-ink-3 hover:text-money underline cursor-pointer self-end sm:self-center"
-                              >
-                                {isHindi ? "दूसरा फॉर्म 16 / AIS अपलोड करें" : "Replace with different Form 16 / AIS"}
-                              </button>
-                            </div>
-                          ) : (
-                            <YearPapersCard
-                              lang={lang}
-                              assessmentYear={persona.assessmentYear}
-                              linked={onboardingProfile?.connections.digilocker.linked ?? false}
-                              fetched={fetchedPapers ?? undefined}
-                              onFetched={handlePapersFetched}
-                            >
+                            ) : (
                               <PdfIngestionDropzone onIngested={handlePdfIngested} />
-                            </YearPapersCard>
-                          )}
+                            )}
+                          </YearPapersCard>
                           <StatementTab
                             persona={persona}
                             lang={lang}
@@ -2897,6 +3000,8 @@ export default function WapsiPrototype() {
                             handleFactAmountChange={handleFactAmountChange}
                             handleClaimAmountChange={handleClaimAmountChange}
                             handleAddCustomIncome={handleAddCustomIncome}
+                            onSaveInitialIncome={handleSaveGuidedIncome}
+                            onAddCustomItem={handleAddCustomIncomeItem}
                             mode={uiMode}
                             regime={regime}
                             onSignOffAll={handleSignOffAll}
@@ -3118,6 +3223,8 @@ export default function WapsiPrototype() {
                           handleFactAmountChange={handleFactAmountChange}
                           handleClaimAmountChange={handleClaimAmountChange}
                           handleAddCustomIncome={handleAddCustomIncome}
+                          onSaveInitialIncome={handleSaveGuidedIncome}
+                          onAddCustomItem={handleAddCustomIncomeItem}
                           mode={uiMode}
                           regime={regime}
                           onSignOffAll={handleSignOffAll}

@@ -115,20 +115,27 @@ const BROKERS = ["Zerodha Broking Ltd", "Nextbillion Tech (Groww)", "Upstox Secu
 
 const pad = (n: number, w: number) => String(n).padStart(w, "0");
 
-function identityFor(rng: Rng, pan: string): LockerIdentity {
+function identityFor(rng: Rng, pan: string, preferredName?: string): LockerIdentity {
   const gender: "F" | "M" = rng.chance(0.5) ? "F" : "M";
-  const first = rng.pick(gender === "F" ? FIRST_F : FIRST_M);
+  let first = rng.pick(gender === "F" ? FIRST_F : FIRST_M);
   // A PAN's fifth letter is the surname's initial; honour it where a surname exists.
   const initial = pan[4];
   const matching = SURNAMES.filter((s) => s[0].toUpperCase() === initial);
-  const last = matching.length ? rng.pick(matching) : rng.pick(SURNAMES);
+  let last = matching.length ? rng.pick(matching) : rng.pick(SURNAMES);
+  let fullName = `${first} ${last}`;
+  if (preferredName && preferredName.trim() && !/^Citizen\s+\d{4}$/i.test(preferredName) && !/^Real User$/i.test(preferredName)) {
+    fullName = preferredName.trim();
+    const parts = fullName.split(/\s+/);
+    first = parts[0];
+    last = parts.slice(1).join(" ") || last;
+  }
   const place = rng.pick(CITIES);
   const year = rng.int(1968, 2001);
   const dob = `${year}-${pad(rng.int(1, 12), 2)}-${pad(rng.int(1, 28), 2)}`;
   const aadhaar = `${rng.int(2, 9)}${pad(rng.int(0, 99_999_999_999), 11)}`;
   const handle = `${first}.${last.replace(/[^A-Za-z]/g, "")}`.toLowerCase();
   return {
-    name: `${first} ${last}`,
+    name: fullName,
     gender,
     dob,
     aadhaar,
@@ -218,9 +225,9 @@ function yearFor(rng: Rng, employer: LockerEmployer, banks: LockerRecord["banks"
 }
 
 /** A whole person from one seed. The same seed always yields the same person. */
-export function generateLockerRecord(pan: string, seed: string, assessmentYear: string, now: string): LockerRecord {
+export function generateLockerRecord(pan: string, seed: string, assessmentYear: string, now: string, preferredName?: string): LockerRecord {
   const rng = new Rng(seed);
-  const identity = identityFor(rng, pan);
+  const identity = identityFor(rng, pan, preferredName);
   const employer = rng.pick(EMPLOYERS);
   const banks = banksFor(rng, pan);
   const year = yearFor(rng, employer, banks, assessmentYear);

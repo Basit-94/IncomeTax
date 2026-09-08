@@ -9,7 +9,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowRight, Check, ChevronDown, CircleDot, Download, FileText, Mic, MicOff, Send, ShieldAlert, ShieldCheck, Sparkles, Upload, X, Award } from "lucide-react";
+import { ArrowDown, ArrowRight, Check, ChevronDown, ChevronUp, CircleDot, Download, FileText, Mic, MicOff, Send, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, Upload, X, Award } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import type { PublicRun } from "@/lib/agentic/runtime";
 import type { OutputRef, Question, ReviewCard, RunEvent, RunTask } from "@/lib/agentic/types";
@@ -25,6 +25,8 @@ import { agentReaction } from "@/lib/munshi-state";
 import type { CAReviewRecord } from "@/lib/ca/ca-store";
 import { computeForPersona } from "@/lib/return/compute";
 import { formatMoney } from "@/lib/money";
+import { localize } from "../mock-i18n";
+import { localizeName } from "@/lib/i18n/names";
 
 export interface WorkspaceProps {
   s: AgenticStrings;
@@ -36,6 +38,7 @@ export interface WorkspaceProps {
   loading: boolean;
   error: string | null;
   durable: boolean;
+  isFiled?: boolean;
   onStart: (input: { message?: string; task?: RunTask }) => void;
   onSend: (input: { message?: string; answer?: { questionId: string; value: string | number | boolean }; confirm?: { cardId: string; accepted: boolean } }) => void;
   onOpenVault?: () => void;
@@ -270,6 +273,60 @@ export default function Workspace(props: WorkspaceProps) {
   // Questions by id, so an answer bubble can show the label the citizen chose rather than the stored value.
   const questionsById = useMemo(() => new Map(events.filter((e) => e.payload.type === "question").map((e) => { const q = (e.payload as { question: Question }).question; return [q.id, q] as const; })), [events]);
 
+  const isFiled = useMemo(() => {
+    return Boolean(
+      props.isFiled ||
+      run?.actionTaken?.kind === "filing" ||
+      events.some(
+        (e) =>
+          e.payload.type === "review_card" &&
+          e.payload.card.kind === "filing" &&
+          confirmedIds.has(e.payload.card.id)
+      )
+    );
+  }, [props.isFiled, run?.actionTaken?.kind, events, confirmedIds]);
+
+  const [tasksExpanded, setTasksExpanded] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("wapsi_tasks_expanded");
+      if (saved !== null) return saved === "true";
+    }
+    return true;
+  });
+
+  const toggleTasksExpanded = useCallback(() => {
+    setTasksExpanded((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("wapsi_tasks_expanded", String(next));
+      }
+      return next;
+    });
+  }, []);
+
+  const availableTasks = useMemo(() => {
+    if (isFiled) {
+      return [
+        { id: "1", label: localize("⚖️ Compare Regimes", props.lang), message: "2. Compare Tax Regimes", desc: "Old vs New regime side-by-side tax comparison" },
+        { id: "2", label: localize("⚡ Track Refund Status", props.lang), message: "6. Track Refund Status", desc: "Check processing timeline and refund credit" },
+        { id: "3", label: localize("📥 Download ITR-V Ack", props.lang), message: "Show my ITR-V filing acknowledgment and receipt", desc: "Download official acknowledgment PDF" },
+        { id: "4", label: localize("🔍 Reconcile AIS & 26AS", props.lang), message: "3. Reconcile AIS & 26AS", desc: "Cross-check TDS & reported salary facts" },
+        { id: "5", label: localize("🛡️ Defend Notice", props.lang), message: "5. Defend Tax Notice", desc: "Analyze 143(1) mismatch or statutory defense" },
+        { id: "6", label: localize("🏛️ Citizen Tax Vault", props.lang), message: "7. Citizen Tax Vault", desc: "Open encrypted storage for Form 16 & ITR-V" },
+        { id: "7", label: localize("💬 Ask Tax Question", props.lang), message: "I have a tax question about my return", desc: "Clarify any tax rule or filing question" },
+      ];
+    }
+    return [
+      { id: "1", label: localize("📄 Prepare Return", props.lang), message: "1. Prepare & File Return", desc: "AY 2026-27 salary return intake & computation" },
+      { id: "2", label: localize("⚖️ Compare Regimes", props.lang), message: "2. Compare Tax Regimes", desc: "Old vs New regime side-by-side tax comparison" },
+      { id: "3", label: localize("🔍 Reconcile AIS", props.lang), message: "3. Reconcile AIS & 26AS", desc: "Cross-check TDS & reported salary facts" },
+      { id: "4", label: localize("💳 Pay Tax / Challan 280", props.lang), message: "4. Pay Tax / Challan 280", desc: "Simulate ITNS 280 advance / self-assessment tax" },
+      { id: "5", label: localize("🛡️ Defend Notice", props.lang), message: "5. Defend Tax Notice", desc: "Analyze 143(1) mismatch or statutory defense" },
+      { id: "6", label: localize("⚡ Track Refund", props.lang), message: "6. Track Refund Status", desc: "Check processing timeline and refund credit" },
+      { id: "7", label: localize("🏛️ Citizen Tax Vault", props.lang), message: "7. Citizen Tax Vault", desc: "Open encrypted storage for Form 16 & ITR-V" },
+    ];
+  }, [isFiled, props.lang]);
+
   if (!run) {
     return (
       <div className="flex-1 flex flex-col">
@@ -281,7 +338,7 @@ export default function Workspace(props: WorkspaceProps) {
                 <MunshiAvatar size={28} state="waiting" />
                 <div className="min-w-0 text-left">
                   <span className="text-xs font-bold text-amber-ink block truncate">
-                    ⏳ Review Draft Assigned to {props.activeCAReview.targetCaName || "Registered CA"}
+                    ⏳ Review Draft Assigned to {localizeName(props.activeCAReview.targetCaName, props.lang) || "Registered CA"}
                   </span>
                   <span className="text-[11px] text-ink-3 block truncate">
                     Access Code: <strong className="font-mono text-ink">{props.activeCAReview.code}</strong> • Saved as Draft. Your CA can audit this asynchronously.
@@ -294,7 +351,7 @@ export default function Workspace(props: WorkspaceProps) {
                   onClick={props.onReviewWithCA}
                   className="h-[30px] px-3 rounded-xl bg-paper border border-line text-xs font-semibold text-ink hover:text-money transition cursor-pointer shrink-0"
                 >
-                  View Status
+                  {localize("View Status", props.lang) || "View Status"}
                 </button>
               )}
             </div>
@@ -308,7 +365,7 @@ export default function Workspace(props: WorkspaceProps) {
                 <MunshiAvatar size={28} state="happy" />
                 <div className="min-w-0 text-left">
                   <span className="text-xs font-bold text-ok-ink block truncate">
-                    🎖️ CA Review Complete from {props.activeCAReview.caDetails?.name || props.activeCAReview.targetCaName || "Chartered Accountant"}!
+                    🎖️ CA Review Complete from {localizeName(props.activeCAReview.caDetails?.name || props.activeCAReview.targetCaName, props.lang) || "Chartered Accountant"}!
                   </span>
                   <span className="text-[11px] text-ink-3 block truncate">
                     Your CA has audited deductions & figures. Check side-by-side diff before filing.
@@ -321,7 +378,7 @@ export default function Workspace(props: WorkspaceProps) {
                   onClick={props.onOpenComparison}
                   className="ink-surface h-[34px] px-3.5 hover:opacity-90 text-xs font-bold rounded-[12px] transition cursor-pointer shrink-0"
                 >
-                  View Diff →
+                  {localize("View Diff →", props.lang) || "View Diff →"}
                 </button>
               )}
             </div>
@@ -388,7 +445,7 @@ export default function Workspace(props: WorkspaceProps) {
               <MunshiAvatar size={28} state="waiting" />
               <div className="min-w-0">
                 <span className="text-xs font-bold text-amber-ink block truncate">
-                  ⏳ Review Draft Assigned to {props.activeCAReview.targetCaName || "Registered CA"}
+                  ⏳ Review Draft Assigned to {localizeName(props.activeCAReview.targetCaName, props.lang) || "Registered CA"}
                 </span>
                 <span className="text-[11px] text-ink-3 block truncate">
                   Access Code: <strong className="font-mono text-ink">{props.activeCAReview.code}</strong> • Saved as Draft. Your CA can audit this asynchronously.
@@ -401,7 +458,7 @@ export default function Workspace(props: WorkspaceProps) {
                 onClick={props.onReviewWithCA}
                 className="h-[30px] px-3 rounded-xl bg-paper border border-line text-xs font-semibold text-ink hover:text-money transition cursor-pointer shrink-0"
               >
-                View Status
+                {localize("View Status", props.lang) || "View Status"}
               </button>
             )}
           </div>
@@ -416,7 +473,7 @@ export default function Workspace(props: WorkspaceProps) {
               <MunshiAvatar size={28} state="happy" />
               <div className="min-w-0">
                 <span className="text-xs font-bold text-ok-ink block truncate">
-                  🎖️ CA Review Complete from {props.activeCAReview.caDetails?.name || props.activeCAReview.targetCaName || "Chartered Accountant"}!
+                  🎖️ CA Review Complete from {localizeName(props.activeCAReview.caDetails?.name || props.activeCAReview.targetCaName, props.lang) || "Chartered Accountant"}!
                 </span>
                 <span className="text-[11px] text-ink-3 block truncate">
                   Your CA has audited deductions & figures. Check side-by-side diff before paying challan or filing.
@@ -429,7 +486,7 @@ export default function Workspace(props: WorkspaceProps) {
                 onClick={props.onOpenComparison}
                 className="ink-surface h-[34px] px-3.5 hover:opacity-90 text-xs font-bold rounded-[12px] transition cursor-pointer shrink-0"
               >
-                View Diff →
+                {localize("View Diff →", props.lang) || "View Diff →"}
               </button>
             )}
           </div>
@@ -499,7 +556,7 @@ export default function Workspace(props: WorkspaceProps) {
             aria-label="Scroll to newest message"
           >
             <ArrowDown size={13} className="text-money" />
-            <span>Latest</span>
+            <span>{localize("Latest", props.lang)}</span>
           </button>
         )}
       </div>
@@ -523,7 +580,11 @@ export default function Workspace(props: WorkspaceProps) {
                 }`}
               >
                 <Sparkles size={12} className="text-money shrink-0" aria-hidden="true" />
-                <span>{props.lang === "hi" ? "कार्य टेम्पलेट (AY 2026-27)" : "Task Templates (AY 2026-27)"}</span>
+                <span>
+                  {isFiled
+                    ? (localize("Filed Return Quick Actions:", props.lang) || "Filed Return Quick Actions:")
+                    : (props.lang === "hi" ? "कार्य टेम्पलेट (AY 2026-27)" : "Task Templates (AY 2026-27)")}
+                </span>
                 <ChevronDown
                   size={12}
                   className={`text-ink-3 transition-transform duration-200 ${isTaskMenuOpen ? "rotate-180 text-money" : ""}`}
@@ -541,12 +602,16 @@ export default function Workspace(props: WorkspaceProps) {
                   <div className="px-3 py-2 border-b border-line/60 flex items-center justify-between text-[11px] font-mono text-ink-3">
                     <span className="font-semibold text-ink flex items-center gap-1.5">
                       <Sparkles size={11} className="text-money" />
-                      <span>{props.lang === "hi" ? "कार्य टेम्पलेट चुनें" : "Select a Task Template"}</span>
+                      <span>
+                        {isFiled
+                          ? localize("Filed Return Quick Actions:", props.lang)
+                          : (props.lang === "hi" ? "कार्य टेम्पलेट चुनें" : "Select a Task Template")}
+                      </span>
                     </span>
                     <span className="text-[10px] text-ink-3">Esc to close</span>
                   </div>
                   <div className="py-1 space-y-0.5 max-h-[380px] overflow-y-auto">
-                    {TASK_TEMPLATES.map((item) => (
+                    {availableTasks.map((item) => (
                       <button
                         key={item.id}
                         type="button"
@@ -554,7 +619,7 @@ export default function Workspace(props: WorkspaceProps) {
                         disabled={props.loading}
                         onClick={() => {
                           setIsTaskMenuOpen(false);
-                          if (item.id === "7" && props.onOpenVault) {
+                          if ((item.id === "7" || item.id === "vault") && props.onOpenVault) {
                             props.onOpenVault();
                           }
                           handleUserSend({ message: item.message });
@@ -566,10 +631,10 @@ export default function Workspace(props: WorkspaceProps) {
                         </span>
                         <div className="min-w-0 flex-1">
                           <span className="block font-semibold text-ink group-hover:text-money truncate">
-                            {item.label}
+                            {localize(item.label, props.lang)}
                           </span>
                           <span className="block text-[10.5px] text-ink-3 group-hover:text-ink-2 truncate">
-                            {item.desc}
+                            {item.desc || item.label}
                           </span>
                         </div>
                       </button>
@@ -1235,12 +1300,31 @@ export function Composer({ s, lang, disabled, onSubmit, variant = "chat", placeh
   const isListening = speechState === "listening";
   const isTranscribing = speechState === "transcribing";
 
+  const [showVoiceDiscovery, setShowVoiceDiscovery] = useState(false);
+
+  useEffect(() => {
+    try {
+      const seen = localStorage.getItem("wapsi_voice_discovery_seen");
+      if (!seen) {
+        const timer = setTimeout(() => setShowVoiceDiscovery(true), 900);
+        return () => clearTimeout(timer);
+      }
+    } catch {}
+  }, []);
+
+  const dismissVoiceDiscovery = useCallback(() => {
+    setShowVoiceDiscovery(false);
+    try {
+      localStorage.setItem("wapsi_voice_discovery_seen", "true");
+    } catch {}
+  }, []);
+
   return (
     <div className={ask ? "shrink-0 pt-2" : "shrink-0 px-4 sm:px-6 pb-4 pt-2 max-md:pb-7 max-md:bg-[linear-gradient(to_top,var(--color-paper)_70%,transparent)]"}>
       <form
         onMouseEnter={warmUpAudioStream}
         onFocus={warmUpAudioStream}
-        className={`glass mx-auto w-full flex items-center gap-2.5 p-2 ps-5 max-md:p-1.5 max-md:ps-3.5 rounded-[20px] max-md:rounded-[18px] transition-all duration-200 ${
+        className={`glass mx-auto w-full relative flex items-center gap-2.5 p-2 ps-5 max-md:p-1.5 max-md:ps-3.5 rounded-[20px] max-md:rounded-[18px] transition-all duration-200 ${
           isListening
             ? "border-[var(--primary-accent)]/80 shadow-[var(--accent-glow)] ring-2 ring-[var(--primary-accent)]/20"
             : isTranscribing
@@ -1263,10 +1347,71 @@ export function Composer({ s, lang, disabled, onSubmit, variant = "chat", placeh
           <TranscribingAnimation />
         ) : (
           <>
+            {showVoiceDiscovery && speech && (
+              <div
+                role="tooltip"
+                className="absolute bottom-full mb-3 right-10 sm:right-20 z-30 w-72 sm:w-80 p-3.5 rounded-[22px] bg-paper dark:bg-[#152037] border-2 border-money shadow-2xl animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-300 pointer-events-auto"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-money/15 text-money text-[11px] font-bold">
+                    <Sparkles size={11} className="animate-spin" />
+                    <span>{localize("Voice Mode", lang)}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={dismissVoiceDiscovery}
+                    className="text-ink-3 hover:text-ink size-6 rounded-full flex items-center justify-center cursor-pointer text-xs transition hover:bg-paper-2"
+                    aria-label="Dismiss voice tooltip"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="mt-2 space-y-1 text-left">
+                  <h4 className="text-sm font-bold text-ink font-serif tracking-tight">
+                    {localize("Tired of typing?", lang)}
+                  </h4>
+                  <p className="text-xs text-ink-2 leading-relaxed">
+                    {localize("Speak directly to Munshi ji — tap the microphone to talk in your language!", lang)}
+                  </p>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between gap-2 pt-2 border-t border-line/60">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      dismissVoiceDiscovery();
+                      toggleMic();
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-money text-paper text-xs font-bold flex items-center gap-1.5 hover:opacity-90 shadow-xs cursor-pointer active:scale-95 transition"
+                  >
+                    <Mic size={13} />
+                    <span>{localize("Try Mic Now", lang)}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={dismissVoiceDiscovery}
+                    className="text-[11.5px] font-semibold text-ink-3 hover:text-ink cursor-pointer px-2 py-1 rounded-lg transition hover:bg-paper-2"
+                  >
+                    {localize("Got it", lang)}
+                  </button>
+                </div>
+
+                {/* Downward pointing tactical arrow toward mic button */}
+                <div
+                  className="absolute -bottom-2 right-4 sm:right-6 size-0 border-x-[8px] border-x-transparent border-t-[9px] border-t-money drop-shadow-xs"
+                  aria-hidden="true"
+                />
+              </div>
+            )}
+
             <textarea
               ref={textareaRef}
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => {
+                setText(e.target.value);
+                if (showVoiceDiscovery) dismissVoiceDiscovery();
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -1283,9 +1428,16 @@ export function Composer({ s, lang, disabled, onSubmit, variant = "chat", placeh
             {speech && (
               <button
                 type="button"
-                onClick={toggleMic}
+                onClick={() => {
+                  if (showVoiceDiscovery) dismissVoiceDiscovery();
+                  toggleMic();
+                }}
                 disabled={disabled}
-                className="size-10 mb-[3px] shrink-0 rounded-[12px] flex items-center justify-center cursor-pointer disabled:opacity-50 text-ink-3 hover:text-ink hover:bg-paper-2 transition-colors"
+                className={`size-10 mb-[3px] shrink-0 rounded-[12px] flex items-center justify-center cursor-pointer disabled:opacity-50 transition-all ${
+                  showVoiceDiscovery
+                    ? "bg-money/20 text-money ring-2 ring-money animate-pulse shadow-xs"
+                    : "text-ink-3 hover:text-ink hover:bg-paper-2"
+                }`}
                 aria-pressed={false}
                 aria-label="Dictate with voice"
                 title="Dictate with voice"

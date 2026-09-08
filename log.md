@@ -5409,3 +5409,158 @@ things there are already true and will NOT be rewritten:
   - Playwright visual audit: Tested live at `http://localhost:3000/app` in both Dark mode and Light mode ("Sunrise/Lilac"); verified dropdown toggle, click-outside dismissal, instant task execution (`2. Compare Regimes`), and animated CSS report-reading keyframes in the DOM.
 - **Status**: Branch `dev-2`. Not committed, not pushed per project rules.
 
+## [2026-09-08 17:05] antigravity (Submission Data Purge, Continuous Telemetry, Sample PDFs, DigiLocker Modal, & Pre-Filing Validation Gate)
+- **Why**: User request:
+  1. Purge all test data (chats, historical runs, vault docs, snapshots, users) so judges/users start completely fresh without old contexts, while archiving historical runs into a separate dataset for agent continuous learning.
+  2. Create an append-only agent telemetry stream to log all user actions, tool calls, latencies, and errors for continuous AI improvement.
+  3. Add official sample PDFs (Anthony D'Souza, Faheem Ahmed) below the sign-in dropzone with 1-click test buttons and direct download links.
+  4. Implement an authentic Government of India DigiLocker modal with Aadhaar/Mobile + 6-digit PIN login, OTP verification, and document consent.
+  5. Fix Manual mode: if Form 16 or AIS was provided at sign-in, do not ask for it again; if neither, prompt for both. For custom PAN users without documents, provide guided income entry (legal name, employer, salary, TDS, interest). Block users from filing empty returns with ₹0 salary without entering figures or explicitly confirming a statutory NIL return u/s 139.
+- **What changed**:
+  - **Archival & Database Purge (`scripts/archive-agent-data.cjs`, `scripts/purge-database.cjs`, `app/api/admin/reset/route.ts`)**:
+    - Archived 161 historical runs, 5,003 events, 55 vault documents, 20 snapshots, and 8 users into `data/agent_telemetry_archive.json`.
+    - Truncated all active PostgreSQL tables: `agent_run_events`, `agent_outputs`, `agent_memory`, `agent_budget_usage`, `agent_runs`, `vault_document_bytes`, `vault_extractions`, `vault_access_audit`, `vault_documents`, `return_command_log`, `return_snapshots`, `wapsi_sessions`, `tax_vault_users`, `digilocker_records`. Verified 0 rows across all tables.
+    - Cleared local SQLite cache files (`data/wapsi.db*`).
+    - Cleaned `lib/vault/vault-store.ts` so custom users start with a clean vault (0 synthetic documents, 0 fake stats) until real documents are uploaded or fetched.
+  - **Continuous Agent Telemetry (`lib/agentic/telemetry.ts`, `lib/agentic/runtime.ts`)**:
+    - Created append-only telemetry stream `data/agent_telemetry.jsonl` recording session ID, persona, message count, tool calls, model fallback status, token budget, latencies, and errors non-blockingly on every run persistence.
+  - **Sample Mock PDFs at Sign-In (`public/samples/`, `components/auth/auth-portal.tsx`)**:
+    - Copied Form 16 and AIS statements for Anthony D'Souza and Faheem Ahmed to `public/samples/`.
+    - Added 1-click test buttons in `AuthPortal` (instantly reads sample PDF into browser extractor, verifies PAN, sets up session, and opens filing path) and direct download links for manual drag-and-drop.
+  - **Official Government DigiLocker Modal (`components/digilocker/digilocker-modal.tsx`, `components/flow/year-papers-card.tsx`)**:
+    - Replaced silent mock pull with authentic 4-step modal: Aadhaar/Mobile/PAN + 6-digit Security PIN -> OTP verification -> Statutory Consent screen (Form 16, AIS, 26AS with purpose u/s 139) -> Ticking document retrieval.
+    - Supported real user display name in `lib/digilocker/generate.ts` and `provider.ts`.
+  - **Document Awareness & Guided Manual Entry (`components/flow/year-papers-card.tsx`, `components/dashboard/statement-tab.tsx`, `app/page.tsx`)**:
+    - In `YearPapersCard`, added badges ("Form 16 on Record", "AIS on Record", "2 of 2 Complete - Both matched") and kept the card always visible with active uploaded document preview and replacement.
+    - In `StatementTab`, added guided entry card when `persona.facts.length === 0`: full legal name as per PAN, employer name, gross salary, employer TDS, and deposit interest.
+    - Added interactive "+ Add Income" form allowing custom category selection (Salary, Freelance, Interest, Dividend, Capital Gains, Rent) with rupee amount.
+  - **Pre-Filing Validation Gate (`components/flow/before-filing.tsx`, `components/flow/filing-step.tsx`)**:
+    - Blocked filing empty ₹0 returns: requires legal name and declared income, or an explicit statutory declaration: *"Declare Statutory NIL Return (u/s 139) — Gross income below ₹3,00,000"*.
+    - Locked the file button with contextual explanations and jump links if requirements are unmet.
+- **Verification**:
+  - `npx vitest run`: All 44 test files / 379 tests passed green.
+  - `npm run build`: Production build passed with 0 errors across all 25 routes and 27 APIs.
+  - Playwright MCP: Tested live in browser:
+    - `/signin`: verified sample PDF 1-click load for Anthony D'Souza, extracted ₹16,20,000 salary and ₹1,24,000 TDS, navigated to filing path.
+    - Manual Dashboard: verified `YearPapersCard` document awareness, tested DigiLocker modal login, OTP, and consent flow, confirmed figures pulled from locker.
+    - Step progression through deductions, regime recommendation, and Before you file section with Challan 280 / NIL return validation gates.
+- **Status**: Branch `dev-2`. Not committed, not pushed.
+
+## [2026-09-08 17:40] antigravity (Regime Comparison Figure Verification Fix, Manual-Agentic State Sync, & Collapsible Tasks Slider Drawer)
+- **Why**: User reported 3 critical issues:
+  1. **Refusal Bug on Regime Comparison**: Clicking *"Compare the two regimes"* resulted in *"That answer had a figure I couldn't stand behind, so I've held it back. Ask me again, or ask for the figures directly and I'll read them off the ledger."*. Then clicking *"Prepare & File Return"* worked, after which *"Compare the two regimes"* succeeded.
+     - *Root Cause 1*: In `lib/agentic/brain.ts`, `situationBlock` only supplied basic totals (`totalTax`, `taxableIncome`, `refundOrDue`) in the system prompt; it did not supply the detailed comparative breakdown (gross income, standard deductions ₹75,000 vs ₹50,000, deductions allowed, cess, and regime tax saving delta). When Gemini generated a comprehensive comparison table without calling `compute_tax`, digits like `210000`, `229320`, `105320`, `113100` were missing from `check.allowed`, causing `whyRejected` to reject the reply with `"figure not in the facts"`.
+     - *Root Cause 2*: In `lib/agentic/say.ts`, `CLAIMS` matched `/\b(has been filed|was filed|is filed)\b/i`. In `lib/agentic/brain.ts`, `check.actionHappened` was set solely to `!!run.state.actionTaken`. When a return had already been filed in manual mode or an earlier session, `run.state.actionTaken` was empty for the comparison turn, falsely triggering `"claims an action that did not happen"`.
+  2. **Context & State Sync Between Manual and Agentic**:
+     - When a return was already filed in manual mode, agentic mode continued displaying *"📄 Prepare Return"* in suggested tasks.
+     - The user required removing *"Prepare & File Return"* post-filing, replacing it with dedicated post-filing suggestions: *"⚖️ Compare Regimes"*, *"⚡ Track Refund Status"*, *"📥 Download ITR-V Ack"*, *"🔍 Reconcile AIS & 26AS"*, *"🛡️ Defend Notice"*, *"🏛️ Citizen Tax Vault"*, and *"💬 Ask Tax Question"*.
+  3. **Collapsible / Sleek Slider UI for Suggested Tasks**:
+     - Suggested tasks previously took up permanent vertical height above the composer, cluttering the chat screen.
+     - Added a tactile, collapsible slider toggle drawer allowing the user to collapse/expand suggested tasks smoothly with micro-animations and persistent state.
+- **What changed**:
+  - **Statutory Figure Authorization & Regime Comparison (`lib/agentic/actions.ts`, `lib/agentic/brain.ts`)**:
+    - In `returnSummary` (`lib/agentic/actions.ts`), added full comparative breakdowns for both regimes (`grossIncome`, `standardDeduction`, `deductionsAllowed`, `taxableIncome`, `slabTax`, `taxBeforeRebate`, `rebate87A`, `marginalRelief`, `taxAfterRebate`, `cess`, `totalTax`, `tdsAndTaxPaid`, `refundOrDue`, and deltas: `taxSaving`, `refundDiff`, `taxableDiff`, `deductionsDiff`).
+    - Synchronized `filed` and `filedAt` in `returnSummary` directly from persona refund state (`p.refund.state !== "not_filed"`).
+    - In `situationBlock` (`lib/agentic/brain.ts`), outputted the full statutory breakdown of New vs Old regimes and saving delta.
+    - In `think` loop (`lib/agentic/brain.ts`), pre-seeded `allowed` with all figures from `compareForPersona(snapshot.state.persona)` (both regimes, slab slices, deltas, individual claims, facts, TDS payments) and standard statutory constants.
+    - Set `actionHappened = !!run.state.actionTaken || Boolean(snapshot?.state.filedAt || (snapshot?.state.persona.refund?.state && snapshot.state.persona.refund.state !== "not_filed"))` so legitimate statements about filed status are accepted.
+    - In `executeDeterministicFallback` (`lib/agentic/brain.ts`), ordered checks so `isCompareRegimes`, `isRefundQuery`, and `isAckQuery` are processed directly and never intercepted by a generic filing notification.
+  - **Manual to Agentic Filing State Synchronization (`app/app/page.tsx`, `components/agentic/workspace.tsx`)**:
+    - In `app/app/page.tsx`, passed `isFiled={Boolean(returnState?.filedAt || (returnState?.persona?.refund?.state && returnState.persona.refund.state !== "not_filed") || (persona?.refund?.state && persona.refund.state !== "not_filed"))}` to `<Workspace />`.
+    - In `Workspace`, computed `isFiled` from props, `run.actionTaken`, or confirmed filing cards.
+    - Dynamically populated `availableTasks`:
+      - Unfiled: `📄 Prepare Return`, `⚖️ Compare Regimes`, `🔍 Reconcile AIS`, `💳 Pay Tax / Challan 280`, `🛡️ Defend Notice`, `⚡ Track Refund`, `🏛️ Citizen Tax Vault`.
+      - Filed: `⚖️ Compare Regimes`, `⚡ Track Refund Status`, `📥 Download ITR-V Ack`, `🔍 Reconcile AIS & 26AS`, `🛡️ Defend Notice`, `🏛️ Citizen Tax Vault`, `💬 Ask Tax Question`.
+  - **Tactile Collapsible Slider Drawer UI (`components/agentic/workspace.tsx`)**:
+    - Implemented `tasksExpanded` state with `localStorage` persistence (`wapsi_tasks_expanded`).
+    - Replaced the static task bar with an interactive glass header:
+      - Sparkles icon + dynamic label (*"Next Available Tasks (AY 2026-27):"* vs *"Filed Return Quick Actions:"*) + count badge `[7]`.
+      - Catchy tactile slider button `[SlidersHorizontal] Collapse / Expand [ChevronUp / ChevronDown]`.
+    - Applied smooth `transition-all duration-300 ease-in-out` animated drawer (`max-h-40 opacity-100` vs `max-h-0 opacity-0`).
+    - When collapsed, vertical height overhead drops to zero, giving users an unobstructed chat surface while retaining 1-click expandability.
+- **Verification**:
+  - `npx vitest run`: All 44 test files / 379 tests passed green (100%).
+  - `npm run build`: Production build passed with 0 TypeScript and 0 compiler errors across all 25 routes and 27 APIs.
+  - Playwright MCP: Tested live in browser:
+    - Navigated to `/app` with Anthony D'Souza (Form 16 loaded: ₹18.58L gross salary, ₹1.60L TDS).
+    - Triggered *"Compare the two regimes"*: received full comparative breakdown table (Standard Deduction ₹75k vs ₹50k, Deductions ₹0 vs ₹9k, Tax ₹1.63L vs ₹3.66L, Balance Due ₹2,210 vs ₹2.05L) with zero refusals (*"figure I couldn't stand behind"* eliminated).
+    - Verified collapsible slider drawer: clicking *"Collapse"* minimized the drawer cleanly to the header pill; clicking *"Expand"* smoothly animated the 7 task chips.
+    - Paid outstanding tax via simulated Challan 280 in Manual mode, verified balance payable became ₹0, and filed the return.
+    - Switched back to Agentic mode (`/app`): verified Live Tax Ledger shows ₹0 balance, verified *"📄 Prepare Return"* disappeared and was replaced by *"Filed Return Quick Actions"* with all 7 post-filing suggestions.
+- **Status**: Branch `dev-2`. Not committed, not pushed.
+
+## 2026-09-08 — Complete 23-Language Coverage, Default Light Mode Everywhere, and Sidebar Collapse Munshi Ji Overlap Fix
+
+- **Goal / Context**:
+  1. **Comprehensive 23-Language Localization Across All Pages, Details, Words, and Names**:
+     - Ensure every page (`/`, `/signin`, `/app`, `/ca`, `/reconcile`), UI label, task chip, drawer, modal, and taxpayer/CA name dynamically translates and transliterates across all 23 official Indian languages (Hindi, English, Tamil, Kannada, Urdu, Gujarati, Bodo, Bengali, Telugu, Marathi, Malayalam, Punjabi, Odia, Assamese, Nepali, Sanskrit, Maithili, Dogri, Kashmiri, Konkani, Manipuri, Santali, Sindhi).
+     - Taxpayer and persona names (e.g. "Anthony D'Souza", "Faheem Ahmed", "Arjun Mehta", "Arjun Verma", "Sunita Devi", "Rakesh Sharma", "Priya Nair", "Citizen 4417", "CA Neha Sharma") must dynamically transliterate into the selected script.
+  2. **Default Light Mode Everywhere**:
+     - Light mode must be the default across all pages (`/`, `/app`, `/signin`, `/ca`, `/reconcile`). Dark mode is only activated if the user explicitly clicked the theme toggle (`localStorage.getItem("wapsi_theme") === "dark"`).
+  3. **Sidebar Collapse Munshi Ji Overlap Fix in Agentic Mode**:
+     - When the chat sidebar is collapsed in agentic mode, the toggle button must not overlap with or hit the Munshi Ji avatar in `workspace.tsx`.
+- **What changed**:
+  - **Dynamic Name Transliteration Engine (`lib/i18n/names.ts`)**:
+    - Created transliteration dictionary `EXACT_NAMES` for all demo personas, CAs, and sample taxpayers across all 23 languages.
+    - Implemented regex transliteration for `Citizen {digits}` and `CA {Name}`.
+    - Integrated `localizeName(name, lang)` in `workspace.tsx`, `inspector.tsx`, `portal-header.tsx`, `landing.tsx`, and `app-shell.tsx`.
+  - **Sign-In Portal & Mode Selection Localization (`lib/i18n/signinTranslationsAll.ts`, `lib/i18n/portalTranslations.ts`, `lib/i18n/modeSelectTranslations.ts`, `app/signin/page.tsx`)**:
+    - Generated all 60 keys of `PortalSignInStrings` across all 23 languages.
+    - Added 1-click test buttons for sample PDFs: Anthony D'Souza and Faheem Ahmed with dynamic 23-language script transliteration (e.g., `Anthony D'Souza` -> `ಆಂಥೋನಿ ಡಿಸೋಜಾ`, `Faheem Ahmed` -> `ಫಹೀಮ್ ಅಹ್ಮದ್` in Kannada).
+    - Extracted all strings on the post-auth Mode Selection screen ("Choose Your Filing Path", "Agentic Copilot Mode", "Manual Filing Mode", "Launch Agentic Copilot", "Enter Manual Dashboard", feature pillars, and assurance strip) into `lib/i18n/modeSelectTranslations.ts` with authentic 23-language coverage.
+    - Wired `app/signin/page.tsx` mode selection cards to `localize(..., lang)`.
+  - **Marketing Landing Page Localization (`lib/i18n/landingTranslations.ts`, `components/mock-i18n.ts`)**:
+    - Integrated all 23 languages for marketing copy, hero sections, and persona cards via `localize(str, lang)`.
+  - **Agentic Workspace & Inspector Localization (`components/agentic/workspace.tsx`, `components/agentic/inspector.tsx`, `lib/i18n/agenticStrings.ts`, `lib/i18n/agentic/*.ts`)**:
+    - Localized "Latest" button, Quick Actions header, collapsible drawer labels, available task pills, CA review banner, active regime pill, bank accounts, vault documents, and ledger positions across all 23 languages.
+    - Enriched all 23 language files in `lib/i18n/agentic/` with complete key coverage (`welcomeTitle`, `welcomeBody`, `taskPrepareReturn`, `taskCompareRegimes`, `taskReconcile`, `context*`, etc.).
+  - **Default Light Mode Everywhere (`app/layout.tsx`, `app/page.tsx`, `app/app/page.tsx`, `app/signin/page.tsx`, `app/ca/page.tsx`, `app/reconcile/page.tsx`)**:
+    - Removed hardcoded `dark dark-mode` classes from `<html>` in `app/layout.tsx`.
+    - Updated `<meta name="theme-color" content="#FAFAF8" />`.
+    - Updated inline `<head>` script to only add `dark` if `localStorage.getItem("wapsi_theme") === "dark"`.
+    - Defaulted state initializers to `"light"` across all page components.
+  - **Sidebar Collapse Rail Fix (`components/agentic/app-shell.tsx`)**:
+    - Replaced the floating absolute toggle button with an in-flow, sleek 54px collapsed icon rail containing Expand (`PanelLeftOpen`), New Chat (`Plus`), Tax Vault (`ShieldCheck`), My Return (`FileText`), and Theme toggle (`Sun`/`Moon`). Zero avatar overlap with Munshi Ji.
+- **Verification**:
+  - `npx vitest run`: All 44 test files and 379 tests passed (100%).
+  - `npx tsc --noEmit`: 0 TypeScript errors.
+  - Playwright live browser automation:
+    - Verified `/app` in Kannada (`kn`), Tamil (`ta`), Gujarati (`gu`), Urdu (`ur`), and Bodo (`brx`): welcome title, body, task pills, theme: light mode (`themeKey: null`, `isDark: false`).
+    - Verified `/signin` mode selection screen in Kannada (`kn`), Urdu (`ur`), and Bodo (`brx`): 100% of headings, descriptions, pills, feature bullets, and buttons translated cleanly with zero English leakage.
+- **Status**: Branch `dev-2`.
+
+## 2026-09-08 — Remote Code Merge, Space-Saving Task Templates Harmonization, and First-Time Voice Discovery Spotlight
+
+- **Goal / Context**:
+  1. **Collaborator Code Merge & Harmonization**:
+     - Fetched collaborator commits from `origin/dev-2` (`97254af`: LLM transcript refiner for filler word removal & domain homophone corrections, speech unit tests, CSS report-reading keyframes `[data-state="reading"]`, and task templates dropdown).
+     - Harmoniously merged with our complete 23-language localization, dynamic `isFiled` post-filing task filtering, default light mode, and data-purge setup without regression.
+  2. **First-Time Voice Discovery Spotlight**:
+     - User requested a spotlight / tooltip popover pointing directly to the mic button for new users entering Agentic mode (`/app`): *"Tired of texting? You could use our voice mode also, voice assistant, or something, na? Whatever, mic also."* with an arrow pointer and written text.
+  3. **Commit & Push to GitHub `dev-2`**:
+     - User explicitly requested: *"properly merge and finally push it in the GitHub dev2 branch."*
+- **What changed**:
+  - **Collaborator Feature Integration (`lib/server/transcriber.ts`, `components/brand/munshi.css`, `components/agentic/audio-waveforms.tsx`)**:
+    - Integrated `refineTranscriptWithLlm` in `transcriber.ts`: runs raw Gemini/Whisper transcripts through `gemini-2.5-flash-lite` / `gemini-2.5-flash` at temperature 0.1 to strip filler words ("um", "uh", "matlab", "basically") and correct domain homophones ("lock" -> "lakh", "pan cord" -> "PAN card", "eighty c" -> "80C", "regeem" -> "regime").
+    - Activated `[data-state="reading"]` keyframe animation in `munshi.css` and dynamic loader badge `Reading`.
+  - **Harmonized Space-Saving Task Templates Popover (`components/agentic/workspace.tsx`)**:
+    - Combined collaborator's upward-opening popover menu with our dynamic `isFiled` filtering and full 23-language localization.
+    - When unfiled, offers 1-7 tasks (Prepare Return, Compare Regimes, Reconcile AIS, Pay Tax, Defend Notice, Track Refund, Citizen Tax Vault) with descriptive subtitles.
+    - When filed, replaces "Prepare Return" with post-filing actions (Compare Regimes, Track Refund Status, Download ITR-V Ack, Reconcile AIS & 26AS, Defend Notice, Citizen Tax Vault, Ask Tax Question).
+    - Includes click-outside and `Escape` key dismissal.
+  - **First-Time Voice Assistant Discovery Spotlight (`components/agentic/workspace.tsx`, `lib/i18n/landingTranslations.ts`)**:
+    - Added `showVoiceDiscovery` spotlight popover floating above the mic button with down-arrow pointer beacon.
+    - Card features:
+      - Badge: `🎙️ Voice Mode`
+      - Heading: `Tired of typing?` (localized across all 23 languages)
+      - Subtext: `Speak directly to Munshi ji — tap the microphone to talk in your language!` (localized across all 23 languages)
+      - Buttons: `Try Mic Now` (immediately starts dictation) and `Got it` (dismisses and persists `wapsi_voice_discovery_seen: "true"` to `localStorage`).
+      - Glowing orange beacon ring and pulse animation on the mic button while the tooltip is active.
+      - Auto-dismisses on typing or microphone activation.
+- **Verification**:
+  - `npx vitest run`: All 44 test files / 381 unit tests passed green (100%).
+  - `npx tsc --noEmit`: 0 TypeScript compiler errors.
+  - Playwright visual audit:
+    - Verified voice discovery tooltip in English and Urdu (RTL).
+    - Tested dismissal button, verified `wapsi_voice_discovery_seen: "true"` written to `localStorage`.
+- **Status**: Branch `dev-2`.

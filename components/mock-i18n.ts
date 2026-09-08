@@ -1,5 +1,8 @@
-﻿import type { Lang } from "../lib/types";
+import type { Lang } from "../lib/types";
 import { EXTRA_MOCK } from "../lib/i18n/mock-extra";
+import { LANDING_I18N } from "../lib/i18n/landingTranslations";
+import { MODE_SELECT_I18N } from "../lib/i18n/modeSelectTranslations";
+import { localizeName } from "../lib/i18n/names";
 
 export const LOCALIZED_MOCK_STRINGS: Record<string, Record<string, string>> = {
   "Your pay last year": {
@@ -616,5 +619,9 @@ export const localize = (str: string | undefined, lang: Lang): string => {
   if (!str) return "";
   if (lang === "en") return str;
   const key = str.trim();
-  return LOCALIZED_MOCK_STRINGS[key]?.[lang] ?? EXTRA_MOCK[lang]?.[key] ?? str;
+  const direct = LANDING_I18N[key]?.[lang] ?? MODE_SELECT_I18N[key]?.[lang] ?? LOCALIZED_MOCK_STRINGS[key]?.[lang] ?? EXTRA_MOCK[lang]?.[key];
+  if (direct) return direct;
+  const nameMatch = localizeName(key, lang);
+  if (nameMatch && nameMatch !== key) return nameMatch;
+  return str;
 };

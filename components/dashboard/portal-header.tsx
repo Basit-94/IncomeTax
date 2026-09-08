@@ -6,6 +6,7 @@ import type { Lang } from "../../lib/types";
 import { getPortalStrings } from "@/lib/i18n/portalTranslations";
 import { agenticStrings } from "@/lib/i18n/agenticStrings";
 import { HeaderBar, PrototypeBanner } from "../agentic/header-frame";
+import { localizeName } from "@/lib/i18n/names";
 import LanguageMenu from "../ui/language-menu";
 
 interface PortalHeaderProps {
@@ -214,7 +215,7 @@ export default function PortalHeader({
               >
                 <span className="size-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                 <span className="font-bold text-emerald-900 dark:text-emerald-200 truncate max-w-[100px] sm:max-w-[140px]">
-                  {activeCitizen.name}
+                  {localizeName(activeCitizen.name, lang)}
                 </span>
                 <span className="font-mono text-[10px] text-emerald-700 dark:text-emerald-400 shrink-0">
                   ({activeCitizen.pan})

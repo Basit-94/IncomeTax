@@ -22,6 +22,7 @@ import {
   AY, adviceContext, applyYearForm, ensureSnapshot, executePayment, freshSteps, hardIssues, markStep, produceOutputs, projected, type ActionCtx, type RuntimeDeps,
 } from "./actions";
 import { afterDigiLockerConsent, afterDocumentConsent, afterUpload, think } from "./brain";
+import { recordAgentTelemetry } from "./telemetry";
 import { KNOWLEDGE_RELEASE } from "./flags";
 import { redactText } from "./redact";
 import { detectRegister, detectReplyLanguage } from "./say";
@@ -102,7 +103,10 @@ export async function advance(deps: RuntimeDeps, owner: Owner, runId: string, in
   const s = agenticStrings(run.lang);
   const emit = (payload: RunEventPayload) => deps.store.appendEvent(owner, run.id, payload);
   const ctx: ActionCtx = { deps, owner, run, s, emit };
-  const persist = () => deps.store.saveRun(run);
+  const persist = () => {
+    recordAgentTelemetry(run);
+    return deps.store.saveRun(run);
+  };
   const planBefore = JSON.stringify(run.state.steps);
   const notes: string[] = [];
 

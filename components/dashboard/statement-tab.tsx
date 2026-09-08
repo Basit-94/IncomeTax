@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
-import { Plus } from "lucide-react";
-import type { Persona, Lang, IncomeFact, Provenance } from "../../lib/types";
+import React, { useState } from "react";
+import { Plus, FileText, User, X } from "lucide-react";
+import type { Persona, Lang, IncomeFact, IncomeKind, Provenance } from "../../lib/types";
 import type { Dict } from "../../lib/i18n";
 import type { Correction } from "../../lib/return/state";
 import { localize } from "../mock-i18n";
@@ -24,6 +24,18 @@ interface StatementTabProps {
   handleFactAmountChange: (factId: string, val: string) => void;
   handleClaimAmountChange: (claimId: string, val: string) => void;
   handleAddCustomIncome: () => void;
+  onSaveInitialIncome?: (data: {
+    legalName?: string;
+    employer: string;
+    grossSalary: number;
+    tds: number;
+    interest: number;
+  }) => void;
+  onAddCustomItem?: (item: {
+    label: string;
+    amount: number;
+    kind: IncomeKind;
+  }) => void;
   /** T5.2/T5.3: Simple = read-then-confirm gate per card; Full = one sign-off. */
   mode?: "simple" | "full";
   /** SS4B CA finding 4: claim cards must say when the regime ignores them. */
@@ -58,6 +70,8 @@ export default function StatementTab({
   handleFactAmountChange: _handleFactAmountChange,
   handleClaimAmountChange: _handleClaimAmountChange,
   handleAddCustomIncome,
+  onSaveInitialIncome,
+  onAddCustomItem,
   mode = "simple",
   regime = "new",
   onSignOffAll,
@@ -68,6 +82,55 @@ export default function StatementTab({
   const done = allMoney.filter(
     (fact) => confirmedIds.includes(fact.id) || activeCorrectionByFact[fact.id],
   ).length;
+
+  const [guidedName, setGuidedName] = useState(
+    persona.name && !/^Citizen\s+\d{4}$/i.test(persona.name) && !/^Real User$/i.test(persona.name)
+      ? persona.name
+      : ""
+  );
+  const [guidedEmployer, setGuidedEmployer] = useState("");
+  const [guidedSalary, setGuidedSalary] = useState("");
+  const [guidedTds, setGuidedTds] = useState("");
+  const [guidedInterest, setGuidedInterest] = useState("");
+
+  const [isAddingCustom, setIsAddingCustom] = useState(false);
+  const [customLabel, setCustomLabel] = useState("");
+  const [customAmount, setCustomAmount] = useState("");
+  const [customKind, setCustomKind] = useState<IncomeFact["kind"]>("salary");
+
+  const handleSaveGuided = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!onSaveInitialIncome) return;
+    const salaryNum = Number(guidedSalary.replace(/[^0-9]/g, "")) || 0;
+    const tdsNum = Number(guidedTds.replace(/[^0-9]/g, "")) || 0;
+    const interestNum = Number(guidedInterest.replace(/[^0-9]/g, "")) || 0;
+    onSaveInitialIncome({
+      legalName: guidedName.trim() || undefined,
+      employer: guidedEmployer.trim() || "Primary Employer",
+      grossSalary: salaryNum,
+      tds: tdsNum,
+      interest: interestNum,
+    });
+  };
+
+  const handleSaveCustomItem = (e: React.FormEvent) => {
+    e.preventDefault();
+    const amountNum = Number(customAmount.replace(/[^0-9]/g, "")) || 0;
+    if (amountNum <= 0) return;
+    if (onAddCustomItem) {
+      onAddCustomItem({
+        label: customLabel.trim() || "Other Income",
+        amount: amountNum,
+        kind: customKind,
+      });
+      setIsAddingCustom(false);
+      setCustomLabel("");
+      setCustomAmount("");
+    } else {
+      handleAddCustomIncome();
+      setIsAddingCustom(false);
+    }
+  };
 
   return (
     <div className="space-y-7">
@@ -92,34 +155,207 @@ export default function StatementTab({
         <div className="flex items-center justify-between gap-3">
           <h3 id="money-in-heading" className="sr-only">{t.groups.moneyIn}</h3>
           {isCustomPersona && (
-            <button onClick={handleAddCustomIncome} className="glass-flat inline-flex min-h-9 items-center gap-2 rounded-full px-3 text-sm font-semibold text-money hover:border-money">
+            <button
+              onClick={() => {
+                if (onAddCustomItem) {
+                  setIsAddingCustom(true);
+                } else {
+                  handleAddCustomIncome();
+                }
+              }}
+              className="glass-flat inline-flex min-h-9 items-center gap-2 rounded-full px-3 text-sm font-semibold text-money hover:border-money cursor-pointer"
+            >
               <Plus size={14} aria-hidden="true" />
               {t.groups.addIncome}
             </button>
           )}
         </div>
+
+        {/* Custom income row adder form */}
+        {isAddingCustom && (
+          <div className="p-4 rounded-2xl bg-paper border border-line shadow-sm space-y-3 animate-in fade-in">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-ink">{localize("Add Income Source", lang)}</span>
+              <button
+                type="button"
+                onClick={() => setIsAddingCustom(false)}
+                className="text-ink-3 hover:text-ink cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveCustomItem} className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-ink-2">{localize("Category", lang)}</label>
+                <select
+                  value={customKind}
+                  onChange={(e) => setCustomKind(e.target.value as IncomeKind)}
+                  className="w-full h-9 px-2 text-xs rounded-xl border border-line bg-paper text-ink"
+                >
+                  <option value="salary">{localize("Salary", lang)}</option>
+                  <option value="other">{localize("Freelance / Consulting", lang)}</option>
+                  <option value="interest">{localize("Interest Income", lang)}</option>
+                  <option value="dividend">{localize("Dividend Income", lang)}</option>
+                  <option value="capital_gains">{localize("Capital Gains", lang)}</option>
+                  <option value="rent">{localize("Rental Income", lang)}</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-ink-2">{localize("Description", lang)}</label>
+                <input
+                  type="text"
+                  required
+                  value={customLabel}
+                  onChange={(e) => setCustomLabel(e.target.value)}
+                  placeholder="e.g. Contract Fee"
+                  className="w-full h-9 px-3 text-xs rounded-xl border border-line bg-paper text-ink"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-ink-2">{localize("Amount (₹)", lang)}</label>
+                <input
+                  type="text"
+                  required
+                  value={customAmount}
+                  onChange={(e) => setCustomAmount(e.target.value)}
+                  placeholder="e.g. 50,000"
+                  className="w-full h-9 px-3 text-xs rounded-xl border border-line bg-paper text-ink font-mono"
+                />
+              </div>
+              <div className="sm:col-span-3 flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsAddingCustom(false)}
+                  className="px-3 py-1.5 text-xs text-ink-2 hover:text-ink cursor-pointer"
+                >
+                  {localize("Cancel", lang)}
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary px-4 py-1.5 text-xs font-bold rounded-xl cursor-pointer"
+                >
+                  {localize("Add Fact", lang)}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
         <div className="board">
-          {persona.facts.map((fact, i) => {
-            const correction = activeCorrectionByFact[fact.id];
-            return (
-              <FactRow
-                key={fact.id}
-                id={fact.id}
-                index={i + 1}
-                label={localize(fact.label, lang)}
-                amount={fact.amount}
-                provenance={fact.provenance}
-                lang={lang}
-                t={t}
-                meaning={full ? undefined : (t.file.factMeaningByKind[fact.kind] ?? t.file.factMeaning)}
-                confirmed={confirmedIds.includes(fact.id)}
-                correction={correction}
-                onConfirm={full ? undefined : () => onConfirmFact(fact.id)}
-                onCorrect={() => onDispute(fact)}
-                onUndo={correction ? () => onUndoCorrection(correction.id) : undefined}
-              />
-            );
-          })}
+          {persona.facts.length === 0 ? (
+            <div className="surface-panel rounded-2xl p-5 space-y-4 border border-line">
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold text-ink flex items-center gap-2">
+                  <FileText size={16} className="text-money" />
+                  <span>{localize("Declare Income & Tax Figures", lang)}</span>
+                </h4>
+                <p className="text-xs text-ink-2 leading-relaxed">
+                  {localize("No tax figures imported yet. Enter your income details manually below to compute your tax liability and refund.", lang)}
+                </p>
+              </div>
+
+              <form onSubmit={handleSaveGuided} className="grid gap-3 sm:grid-cols-2 pt-2">
+                {(!persona.name || /^Citizen\s+\d{4}$/i.test(persona.name) || /^Real User$/i.test(persona.name)) && (
+                  <div className="sm:col-span-2 space-y-1">
+                    <label className="text-xs font-semibold text-ink-2">
+                      {localize("Full Legal Name (as per PAN)", lang)} *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={guidedName}
+                      onChange={(e) => setGuidedName(e.target.value)}
+                      placeholder="e.g. Rajesh Sharma"
+                      className="w-full h-10 px-3 rounded-xl border border-line bg-paper text-sm text-ink focus:outline-none focus:border-money"
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-ink-2">
+                    {localize("Employer / Organization Name", lang)}
+                  </label>
+                  <input
+                    type="text"
+                    value={guidedEmployer}
+                    onChange={(e) => setGuidedEmployer(e.target.value)}
+                    placeholder="e.g. Infosys Ltd"
+                    className="w-full h-10 px-3 rounded-xl border border-line bg-paper text-sm text-ink focus:outline-none focus:border-money"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-ink-2">
+                    {localize("Gross Annual Salary (₹)", lang)}
+                  </label>
+                  <input
+                    type="text"
+                    value={guidedSalary}
+                    onChange={(e) => setGuidedSalary(e.target.value)}
+                    placeholder="e.g. 12,00,000"
+                    className="w-full h-10 px-3 rounded-xl border border-line bg-paper text-sm text-ink font-mono focus:outline-none focus:border-money"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-ink-2">
+                    {localize("TDS Deducted by Employer (₹)", lang)}
+                  </label>
+                  <input
+                    type="text"
+                    value={guidedTds}
+                    onChange={(e) => setGuidedTds(e.target.value)}
+                    placeholder="e.g. 85,000"
+                    className="w-full h-10 px-3 rounded-xl border border-line bg-paper text-sm text-ink font-mono focus:outline-none focus:border-money"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-ink-2">
+                    {localize("Savings / Deposit Interest (₹)", lang)}
+                  </label>
+                  <input
+                    type="text"
+                    value={guidedInterest}
+                    onChange={(e) => setGuidedInterest(e.target.value)}
+                    placeholder="e.g. 24,000"
+                    className="w-full h-10 px-3 rounded-xl border border-line bg-paper text-sm text-ink font-mono focus:outline-none focus:border-money"
+                  />
+                </div>
+
+                <div className="sm:col-span-2 pt-2 flex items-center justify-end">
+                  <button
+                    type="submit"
+                    className="btn-primary px-5 h-10 text-xs font-bold rounded-xl shadow-xs transition cursor-pointer"
+                  >
+                    {localize("Save Figures & Compute Tax", lang)} →
+                  </button>
+                </div>
+              </form>
+            </div>
+          ) : (
+            persona.facts.map((fact, i) => {
+              const correction = activeCorrectionByFact[fact.id];
+              return (
+                <FactRow
+                  key={fact.id}
+                  id={fact.id}
+                  index={i + 1}
+                  label={localize(fact.label, lang)}
+                  amount={fact.amount}
+                  provenance={fact.provenance}
+                  lang={lang}
+                  t={t}
+                  meaning={full ? undefined : (t.file.factMeaningByKind[fact.kind] ?? t.file.factMeaning)}
+                  confirmed={confirmedIds.includes(fact.id)}
+                  correction={correction}
+                  onConfirm={full ? undefined : () => onConfirmFact(fact.id)}
+                  onCorrect={() => onDispute(fact)}
+                  onUndo={correction ? () => onUndoCorrection(correction.id) : undefined}
+                />
+              );
+            })
+          )}
         </div>
       </section>
 

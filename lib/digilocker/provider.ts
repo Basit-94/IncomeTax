@@ -39,9 +39,10 @@ export class MockDigiLockerProvider implements DigiLockerProvider {
     let rec = lockerCache.get(pan) ?? (await this.store.get(pan));
     if (!rec) {
       const persona = findPersonaByPan(pan);
+      const preferredName = owner.displayName && !/^Citizen\s+\d{4}$/i.test(owner.displayName) && !/^Real User$/i.test(owner.displayName) ? owner.displayName : undefined;
       rec = persona
         ? fromPersona(persona, this.now())
-        : generateLockerRecord(pan, this.opts.randomSeeds ? randomBytes(16).toString("hex") : createHash("sha256").update(`digilocker-seed:${pan}`).digest("hex"), assessmentYear, this.now());
+        : generateLockerRecord(pan, this.opts.randomSeeds ? randomBytes(16).toString("hex") : createHash("sha256").update(`digilocker-seed:${pan}`).digest("hex"), assessmentYear, this.now(), preferredName);
       await this.store.put(rec);
     }
     const extended = extendLockerRecord(rec, assessmentYear, this.now());

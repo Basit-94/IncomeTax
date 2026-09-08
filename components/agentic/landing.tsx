@@ -15,6 +15,7 @@ import type { RunTask } from "@/lib/agentic/types";
 import type { Lang } from "@/lib/types";
 import { Munshi, MunshiBubble } from "../brand/munshi";
 import { localize } from "../mock-i18n";
+import { localizeName } from "@/lib/i18n/names";
 import LanguageMenu from "../ui/language-menu";
 import type { ShellCitizen } from "./app-shell";
 import { HeaderBar, PrototypeBanner } from "./header-frame";
@@ -73,7 +74,7 @@ export default function AgenticLanding(props: AgenticLandingProps) {
             <span className="size-[30px] shrink-0 rounded-full bg-amber-bg text-amber-ink font-sans font-extrabold text-[11px] flex items-center justify-center" aria-hidden="true">
               {citizen.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
             </span>
-            <span className="text-sm max-md:text-[13px] font-semibold text-ink truncate max-w-[10rem] max-sm:max-w-[6.5rem]">{citizen.name}</span>
+            <span className="text-sm max-md:text-[13px] font-semibold text-ink truncate max-w-[10rem] max-sm:max-w-[6.5rem]">{localizeName(citizen.name, props.lang)}</span>
             {props.onSignOut && (
               <button type="button" onClick={props.onSignOut} className="size-7 flex items-center justify-center rounded-full text-ink-3 hover:text-ink cursor-pointer" aria-label={s.signOut} title={s.signOut}>
                 <LogOut size={14} aria-hidden="true" />

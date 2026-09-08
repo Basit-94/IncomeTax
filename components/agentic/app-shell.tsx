@@ -23,6 +23,7 @@ import type { PublicRun } from "@/lib/agentic/runtime";
 import type { OutputRef, PlanStep, SourceRef } from "@/lib/agentic/types";
 import LanguageMenu from "../ui/language-menu";
 import { HeaderBar, PrototypeBanner } from "./header-frame";
+import { localizeName } from "@/lib/i18n/names";
 import { InspectorControls, InspectorPanel, type InspectorTab } from "./inspector";
 import ModeSwitch, { type WorkMode } from "./mode-switch";
 import MobileDrawer from "../mobile/mobile-drawer";
@@ -75,13 +76,14 @@ export default function AppShell(props: AppShellProps) {
   const { s, t, mode, citizen, runs, inspector } = props;
   const [drawer, setDrawer] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [inspectorTab, setInspectorTab] = useState<InspectorTab | null>(() => {
-    if (typeof window !== "undefined" && window.innerWidth >= 1024) {
-      return "context";
-    }
-    return null;
-  });
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab | null>(null);
   const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    if (window.innerWidth >= 1024) {
+      setInspectorTab("context");
+    }
+  }, []);
 
   useEffect(() => {
     try {
@@ -216,7 +218,7 @@ export default function AppShell(props: AppShellProps) {
                 {citizen.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-ink truncate">{citizen.name}</p>
+                <p className="text-sm font-semibold text-ink truncate">{localizeName(citizen.name, props.lang)}</p>
                 <p className="font-mono text-[10px] text-ink-3 truncate">{citizen.pan}{citizen.isDemo ? " · demo" : ""}</p>
               </div>
               {props.onSignOut && (
@@ -306,22 +308,69 @@ export default function AppShell(props: AppShellProps) {
       </header>
 
       <div className="flex-1 min-h-0 flex relative overflow-hidden">
-        {/* Docked quick-open button on the canvas when sidebar is collapsed */}
-        {withSidebar && collapsed && (
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            className="hidden lg:flex fixed left-3 top-[92px] z-30 items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-line bg-paper/95 backdrop-blur shadow-sm text-ink-2 hover:text-ink hover:border-money/60 transition cursor-pointer text-xs font-medium"
-            title="Expand sidebar"
-            aria-label="Expand sidebar"
+        {/* Sidebar: fixed column on large screens (expanded: 272px, collapsed: sleek 54px icon rail) */}
+        {withSidebar && (
+          <div
+            className={`hidden lg:flex flex-col shrink-0 border-e border-line bg-paper/95 backdrop-blur transition-[width] duration-200 z-20 ${
+              collapsed ? "w-[54px] items-center py-3 px-1.5 gap-2" : "w-[272px]"
+            }`}
           >
-            <PanelLeftOpen size={15} aria-hidden="true" className="text-money" />
-            <span>{s.newChat.replace("New ", "")}</span>
-          </button>
+            {collapsed ? (
+              <>
+                <button
+                  type="button"
+                  onClick={toggleCollapsed}
+                  className="size-10 flex items-center justify-center rounded-xl text-money hover:bg-paper-3 transition cursor-pointer"
+                  title="Expand sidebar"
+                  aria-label="Expand sidebar"
+                >
+                  <PanelLeftOpen size={18} aria-hidden="true" />
+                </button>
+                <div className="w-6 h-px bg-line my-0.5" />
+                <button
+                  type="button"
+                  onClick={() => props.onNewChat()}
+                  className="size-10 flex items-center justify-center rounded-xl text-ink-2 hover:text-ink hover:bg-paper-3 transition cursor-pointer"
+                  title={s.newChat}
+                  aria-label={s.newChat}
+                >
+                  <Plus size={18} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => props.onOpenVault()}
+                  className="size-10 flex items-center justify-center rounded-xl text-ink-2 hover:text-ink hover:bg-paper-3 transition cursor-pointer"
+                  title={s.taxVault}
+                  aria-label={s.taxVault}
+                >
+                  <ShieldCheck size={18} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => props.onMyReturn()}
+                  className="size-10 flex items-center justify-center rounded-xl text-ink-2 hover:text-ink hover:bg-paper-3 transition cursor-pointer"
+                  title={s.myReturn}
+                  aria-label={s.myReturn}
+                >
+                  <FileText size={18} aria-hidden="true" />
+                </button>
+                <div className="mt-auto flex flex-col items-center gap-1.5 pb-1">
+                  <button
+                    type="button"
+                    onClick={props.toggleTheme}
+                    className="size-9 flex items-center justify-center rounded-xl text-ink-2 hover:text-ink hover:bg-paper-3 transition cursor-pointer"
+                    title={props.theme === "dark" ? t.shell.light : t.shell.dark}
+                    aria-label={props.theme === "dark" ? t.shell.light : t.shell.dark}
+                  >
+                    {props.theme === "dark" ? <Sun size={16} className="text-money" /> : <Moon size={16} className="text-money" />}
+                  </button>
+                </div>
+              </>
+            ) : (
+              sidebar
+            )}
+          </div>
         )}
-
-        {/* Sidebar: fixed column on large screens, drawer below */}
-        {withSidebar && <div className={`hidden lg:block shrink-0 transition-[width] duration-200 ${collapsed ? "w-0 overflow-hidden" : "w-[272px]"}`}>{sidebar}</div>}
         {withSidebar && (
           <MobileDrawer open={drawer} onClose={() => setDrawer(false)} closeLabel={s.cancel}>
             {sidebar}
@@ -347,6 +396,7 @@ export default function AppShell(props: AppShellProps) {
               onOpenVault={props.onOpenVault}
               manualNote={inspector.manualNote}
               modelNotes={inspector.modelNotes}
+              lang={props.lang}
             />
           )}
         </div>

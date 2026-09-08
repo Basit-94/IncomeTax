@@ -205,7 +205,7 @@ function CAPortalContent() {
 
   // UI preferences
   const [lang, setLang] = useState<Lang>("en");
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<"dark" | "light">("light");
 
   useEffect(() => {
     if (urlCode && !code) setCode(urlCode);
@@ -213,7 +213,8 @@ function CAPortalContent() {
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("wapsi_theme");
-    if (savedTheme === "dark" || savedTheme === "light") setTheme(savedTheme);
+    if (savedTheme === "dark") setTheme("dark");
+    else if (savedTheme === "light") setTheme("light");
   }, []);
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");

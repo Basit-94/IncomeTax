@@ -48,7 +48,7 @@ function SignIn() {
   const initialTab = params.get("tab");
 
   const [lang, setLang] = useState<Lang>("en");
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const t = dict(lang);
 
   /* --- preferences: same keys and effects as the other pages ------------- */
@@ -56,7 +56,11 @@ function SignIn() {
     const savedLang = localStorage.getItem("wapsi_lang");
     if (savedLang && isLang(savedLang)) setLang(savedLang);
     const savedTheme = localStorage.getItem("wapsi_theme");
-    if (savedTheme === "dark" || savedTheme === "light") setTheme(savedTheme);
+    if (savedTheme === "dark") {
+      setTheme("dark");
+    } else {
+      setTheme("light");
+    }
     // Already signed in with a session the server accepts: straight to the Agentic home. A stale
     // client-only session (e.g. an old vault sign-up with no backend) is cleared so this page can start over.
     const existing = loadSession();
@@ -411,13 +415,13 @@ function SignIn() {
               <div className="space-y-3.5 max-w-2xl mx-auto">
                 <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold bg-ok-soft text-ok-ink shadow-xs">
                   <span className="size-2 rounded-full bg-ok" />
-                  <span>Session Authenticated · AY 2026-27</span>
+                  <span>{localize("Session Authenticated · AY 2026-27", lang)}</span>
                 </div>
                 <h1 className="font-serif text-3xl sm:text-5xl text-ink font-normal tracking-tight text-balance">
-                  Choose Your Filing Path
+                  {localize("Choose Your Filing Path", lang)}
                 </h1>
                 <p className="text-sm sm:text-base text-ink-2 leading-relaxed text-balance">
-                  Wapsi offers two distinct ways to file with full mathematical parity. Switch between autonomous AI assistance and granular visual control at any time.
+                  {localize("Wapsi offers two distinct ways to file with full mathematical parity. Switch between autonomous AI assistance and granular visual control at any time.", lang)}
                 </p>
               </div>
 
@@ -442,17 +446,17 @@ function SignIn() {
                       </div>
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-bg text-amber-ink">
                         <Sparkles size={12} className="text-money" />
-                        <span>Recommended · AI Autonomous</span>
+                        <span>{localize("Recommended · AI Autonomous", lang)}</span>
                       </span>
                     </div>
 
                     {/* Headline & Description */}
                     <div>
                       <h2 className="text-xl sm:text-2xl font-bold text-ink group-hover:text-money transition font-serif">
-                        Agentic Copilot Mode
+                        {localize("Agentic Copilot Mode", lang)}
                       </h2>
                       <p className="text-xs sm:text-sm text-ink-2 mt-2 leading-relaxed">
-                        Conversational AI agent that reads your Form 16, checks AIS/26AS, optimizes deductions, and files your return step-by-step.
+                        {localize("Conversational AI agent that reads your Form 16, checks AIS/26AS, optimizes deductions, and files your return step-by-step.", lang)}
                       </p>
                     </div>
 
@@ -460,19 +464,19 @@ function SignIn() {
                     <div className="space-y-2.5 pt-1">
                       <div className="flex items-start gap-2 text-xs text-ink-2">
                         <CheckCircle2 size={15} className="text-ok shrink-0 mt-0.5" />
-                        <span><strong>Zero Data Entry:</strong> Auto-reads PDF & DigiLocker Form 16 in seconds</span>
+                        <span><strong>{localize("Zero Data Entry:", lang)}</strong> {localize("Auto-reads PDF & DigiLocker Form 16 in seconds", lang)}</span>
                       </div>
                       <div className="flex items-start gap-2 text-xs text-ink-2">
                         <CheckCircle2 size={15} className="text-ok shrink-0 mt-0.5" />
-                        <span><strong>AIS/26AS Audit:</strong> Detects mismatches & auto-stages CBDT feedback</span>
+                        <span><strong>{localize("AIS/26AS Audit:", lang)}</strong> {localize("Detects mismatches & auto-stages CBDT feedback", lang)}</span>
                       </div>
                       <div className="flex items-start gap-2 text-xs text-ink-2">
                         <CheckCircle2 size={15} className="text-ok shrink-0 mt-0.5" />
-                        <span><strong>Regime Optimizer:</strong> Computes exact rupee delta between New & Old</span>
+                        <span><strong>{localize("Regime Optimizer:", lang)}</strong> {localize("Computes exact rupee delta between New & Old", lang)}</span>
                       </div>
                       <div className="flex items-start gap-2 text-xs text-ink-2">
                         <CheckCircle2 size={15} className="text-ok shrink-0 mt-0.5" />
-                        <span><strong>CA Collaboration:</strong> 1-click review sharing with your trusted CA</span>
+                        <span><strong>{localize("CA Collaboration:", lang)}</strong> {localize("1-click review sharing with your trusted CA", lang)}</span>
                       </div>
                     </div>
                   </div>
@@ -483,7 +487,7 @@ function SignIn() {
                       type="button"
                       className="w-full h-[50px] px-5 rounded-[14px] ink-surface group-hover:opacity-90 font-bold text-[14.5px] flex items-center justify-between transition-all duration-200 shadow-sm cursor-pointer"
                     >
-                      <span>Launch Agentic Copilot</span>
+                      <span>{localize("Launch Agentic Copilot", lang)}</span>
                       <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
                     </button>
                   </div>
@@ -505,17 +509,17 @@ function SignIn() {
                       </div>
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-paper-3 text-ink-2 border border-line">
                         <Sliders size={12} className="text-ink-3" />
-                        <span>Visual 5-Step · Full Control</span>
+                        <span>{localize("Visual 5-Step · Full Control", lang)}</span>
                       </span>
                     </div>
 
                     {/* Headline & Description */}
                     <div>
                       <h2 className="text-xl sm:text-2xl font-bold text-ink group-hover:text-money transition font-serif">
-                        Manual Filing Mode
+                        {localize("Manual Filing Mode", lang)}
                       </h2>
                       <p className="text-xs sm:text-sm text-ink-2 mt-2 leading-relaxed">
-                        Hands-on, visual 5-step interactive workflow with full control over each deduction and tax head.
+                        {localize("Hands-on, visual 5-step interactive workflow with full control over each deduction and tax head.", lang)}
                       </p>
                     </div>
 
@@ -523,19 +527,19 @@ function SignIn() {
                     <div className="space-y-2.5 pt-1">
                       <div className="flex items-start gap-2 text-xs text-ink-2">
                         <CheckCircle2 size={15} className="text-ink-3 shrink-0 mt-0.5" />
-                        <span><strong>Structured 5-Stage Form:</strong> Guided steps from Income to Final ITR-V</span>
+                        <span><strong>{localize("Structured 5-Stage Form:", lang)}</strong> {localize("Guided steps from Income to Final ITR-V", lang)}</span>
                       </div>
                       <div className="flex items-start gap-2 text-xs text-ink-2">
                         <CheckCircle2 size={15} className="text-ink-3 shrink-0 mt-0.5" />
-                        <span><strong>Direct Rupee Precision:</strong> Fine-tune 80C, 80D, 80CCD, HRA & 24(b)</span>
+                        <span><strong>{localize("Direct Rupee Precision:", lang)}</strong> {localize("Fine-tune 80C, 80D, 80CCD, HRA & 24(b)", lang)}</span>
                       </div>
                       <div className="flex items-start gap-2 text-xs text-ink-2">
                         <CheckCircle2 size={15} className="text-ink-3 shrink-0 mt-0.5" />
-                        <span><strong>Live Calculation Meter:</strong> Real-time tax breakdown & marginal relief</span>
+                        <span><strong>{localize("Live Calculation Meter:", lang)}</strong> {localize("Real-time tax breakdown & marginal relief", lang)}</span>
                       </div>
                       <div className="flex items-start gap-2 text-xs text-ink-2">
                         <CheckCircle2 size={15} className="text-ink-3 shrink-0 mt-0.5" />
-                        <span><strong>Zero Lock-in:</strong> Client-side storage with instant export and reset</span>
+                        <span><strong>{localize("Zero Lock-in:", lang)}</strong> {localize("Client-side storage with instant export and reset", lang)}</span>
                       </div>
                     </div>
                   </div>
@@ -546,7 +550,7 @@ function SignIn() {
                       type="button"
                       className="w-full h-[50px] px-5 rounded-[14px] glass-flat group-hover:border-ink-2 text-ink font-bold text-[14.5px] flex items-center justify-between transition-all duration-200 shadow-xs cursor-pointer"
                     >
-                      <span>Enter Manual Dashboard</span>
+                      <span>{localize("Enter Manual Dashboard", lang)}</span>
                       <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
                     </button>
                   </div>
@@ -557,7 +561,7 @@ function SignIn() {
               <div className="pt-2">
                 <p className="text-xs text-ink-3 font-mono flex items-center justify-center gap-2">
                   <ShieldCheck size={14} className="text-money shrink-0" />
-                  <span>Both modes use the exact same AY 2026-27 statutory calculation engine and secure Tax Vault.</span>
+                  <span>{localize("Both modes use the exact same AY 2026-27 statutory calculation engine and secure Tax Vault.", lang)}</span>
                 </p>
               </div>
             </div>

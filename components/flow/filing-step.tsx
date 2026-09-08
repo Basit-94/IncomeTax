@@ -53,9 +53,13 @@ export default function FilingStep({
   const [stage, setStage] = useState<Stage>("idle");
   const [networkError, setNetworkError] = useState(false);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
+  const [nilReturnConfirmed, setNilReturnConfirmed] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const b = computeForPersona(persona, regime);
   const mustPayFirst = b.refundOrDue < 0 && Boolean(onPayOutstanding);
+  const hasDeclaredIncome = persona.facts.length > 0 && persona.facts.some((f) => f.amount > 0);
+  const hasLegalName = Boolean(persona.name && persona.name.trim().length > 0 && !/^Citizen\s+\d{4}$/i.test(persona.name));
+  const canSubmit = hasLegalName && (hasDeclaredIncome || nilReturnConfirmed);
 
   useEffect(() => {
     const handleSubmitted = (e: Event) => {
@@ -284,6 +288,33 @@ export default function FilingStep({
             </div>
           ) : null}
 
+          {/* Income validation warning and Statutory NIL Return confirmation */}
+          {!hasDeclaredIncome && (
+            <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl space-y-2 text-start animate-in fade-in">
+              <span className="text-xs font-bold text-amber-900 dark:text-amber-200 block">
+                {localize("No income declared on this return", lang)}
+              </span>
+              <p className="text-[11px] text-ink-2 leading-relaxed">
+                {localize("To file a valid ITR without income figures, statutory rules require confirming this is a NIL return u/s 139.", lang)}
+              </p>
+              <label className="flex items-center gap-2 pt-1 text-xs font-semibold text-ink cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={nilReturnConfirmed}
+                  onChange={(e) => setNilReturnConfirmed(e.target.checked)}
+                  className="rounded border-line size-4 accent-emerald-600 cursor-pointer"
+                />
+                <span>{localize("I declare a Statutory NIL Return (u/s 139)", lang)}</span>
+              </label>
+            </div>
+          )}
+
+          {!hasLegalName && (
+            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-xs text-red-700 dark:text-red-300 text-start animate-in fade-in">
+              {localize("Full legal name as per PAN is required before filing.", lang)}
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-2.5">
             <button
               onClick={onBack}
@@ -316,10 +347,11 @@ export default function FilingStep({
               <div className="md:contents max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-30 max-md:px-4 max-md:pb-7 max-md:pt-2.5 max-md:bg-[linear-gradient(to_top,var(--color-paper)_70%,transparent)] md:flex-[2] md:flex">
                 <button
                   onClick={beginFiling}
-                  className="btn-primary w-full flex items-center justify-center gap-2 rounded-[14px] h-[50px] md:h-[46px] px-4 text-[14.5px] transition-opacity cursor-pointer"
+                  disabled={!canSubmit}
+                  className="btn-primary w-full flex items-center justify-center gap-2 rounded-[14px] h-[50px] md:h-[46px] px-4 text-[14.5px] transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <FileCheck size={16} />
-                  <span>{t.file.confirmAndFile}</span>
+                  <span>{!canSubmit ? localize("Declare Income / NIL Return", lang) : t.file.confirmAndFile}</span>
                 </button>
               </div>
             )}

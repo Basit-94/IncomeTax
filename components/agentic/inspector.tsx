@@ -18,6 +18,8 @@ import type { CitizenVaultUser } from "@/lib/vault/vault-store";
 import type { OnboardingProfile } from "@/lib/onboarding";
 import { formatMoney } from "@/lib/money";
 import { computeForPersona } from "@/lib/return/compute";
+import { localizeName } from "@/lib/i18n/names";
+import { localize } from "../mock-i18n";
 import BottomSheet from "../mobile/bottom-sheet";
 
 export type InspectorTab = "progress" | "outputs" | "sources" | "context";
@@ -42,6 +44,7 @@ export interface InspectorProps {
   modelNotes?: string[];
   /** Phones/tablets: the panel is a bottom sheet; this closes it. */
   onClose?: () => void;
+  lang?: import("@/lib/types").Lang;
 }
 
 export function InspectorControls({ s, open, onToggle, steps, outputs, sources, vaultUser }: Pick<InspectorProps, "s" | "open" | "onToggle" | "steps" | "outputs" | "sources" | "vaultUser">) {
@@ -108,6 +111,7 @@ export function InspectorPanel({
   onOpenVault,
   manualNote,
   modelNotes = [],
+  lang = "en",
 }: InspectorProps) {
   if (!open) return null;
   const label = open === "context" ? (s.context ?? "Context") : open === "progress" ? s.progress : open === "outputs" ? s.outputs : s.sources;
@@ -140,12 +144,12 @@ export function InspectorPanel({
                   {(activePersona?.name ?? profile?.identity.name ?? "IT").slice(0, 2).toUpperCase()}
                 </span>
                 <div className="min-w-0">
-                  <h4 className="text-xs font-bold text-ink truncate">{activePersona?.name ?? profile?.identity.name ?? "Citizen Profile"}</h4>
+                  <h4 className="text-xs font-bold text-ink truncate">{localizeName(activePersona?.name ?? profile?.identity.name, lang) || "Citizen Profile"}</h4>
                   <p className="font-mono text-[10px] text-ink-3 truncate">{activePersona?.pan ?? profile?.identity.pan ?? "PAN on file"}</p>
                 </div>
               </div>
               <span className="rounded-full bg-money-soft border border-money/30 px-2 py-0.5 text-[10px] font-bold text-money shrink-0 capitalize">
-                {activeRegime} Regime
+                {activeRegime === "new" ? localize("New Regime", lang) : localize("Old Regime", lang)}
               </span>
             </div>
             {profile?.contact.email && (
@@ -186,7 +190,7 @@ export function InspectorPanel({
           <div className="rounded-xl border border-line bg-paper p-3 space-y-2">
             <h4 className="cap flex items-center gap-1.5"><CreditCard size={12} aria-hidden="true" /> {s.contextBankAccounts ?? "Bank Accounts"}</h4>
             {banks.length === 0 ? (
-              <p className="text-[11px] text-ink-3">No bank accounts linked yet.</p>
+              <p className="text-[11px] text-ink-3">{localize("No bank accounts linked yet.", lang)}</p>
             ) : (
               <ul className="space-y-1.5">
                 {banks.map((b) => (
@@ -216,13 +220,13 @@ export function InspectorPanel({
                   onClick={onOpenVault}
                   className="text-[10px] font-semibold text-money hover:underline cursor-pointer"
                 >
-                  Manage Vault →
+                  {localize("Manage Vault →", lang)}
                 </button>
               )}
             </div>
 
             {documents.length === 0 ? (
-              <p className="text-[11px] text-ink-3">No documents in vault for AY 2026-27 yet.</p>
+              <p className="text-[11px] text-ink-3">{localize("No documents in vault for AY 2026-27 yet.", lang)}</p>
             ) : (
               <ul className="space-y-1.5">
                 {documents.map((doc) => (

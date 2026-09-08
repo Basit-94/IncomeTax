@@ -17,6 +17,7 @@ import { PERIOD_FY_2025_26 } from "../knowledge/provisions";
 import { cite, retrieve } from "../knowledge/retrieval";
 import { formatMoney } from "../money";
 import type { VersionedReturn } from "../return/snapshot-store";
+import { compareForPersona } from "../return/compute";
 import {
   absorbDocument, buildReviewCard, dedupeSources, ensureSnapshot, executePayment, fieldFacts, firstName, listPapers, markStep, noticeFacts, opportunities,
   paymentQuestion, pullDigiLocker, reconciliation, refundFacts, returnSummary, stageChanges, whatIf, yearFormQuestion, type ActionCtx, type DocumentFields,
@@ -119,7 +120,12 @@ function situationBlock(ctx: ActionCtx, snapshot: VersionedReturn | null, papers
     lines.push(r.facts.length ? `Income on record: ${r.facts.slice(0, 12).map((x) => `${x.kind} ${formatMoney(x.amount, run.lang)} (${x.reportedBy}, ${x.statement})`).join("; ")}.` : "Income on record: none yet — the papers or the person have to supply it.");
     if (r.taxPaid.length) lines.push(`Tax already paid: ${r.taxPaid.map((t) => `${formatMoney(t.amount, run.lang)} u/s ${t.section} (${t.by})`).join("; ")}.`);
     if (r.claims.length) lines.push(`Deductions on record: ${r.claims.map((c) => `${c.section} ${formatMoney(c.amount, run.lang)}${c.proofAttached ? "" : " (no proof)"}`).join("; ")}.`);
-    lines.push(`Engine: new regime tax ${formatMoney(f.new.totalTax, run.lang)} (taxable ${formatMoney(f.new.taxableIncome, run.lang)}, ${f.new.refundOrDue >= 0 ? `refund ${formatMoney(f.new.refundOrDue, run.lang)}` : `due ${formatMoney(-f.new.refundOrDue, run.lang)}`}); old regime tax ${formatMoney(f.old.totalTax, run.lang)} (taxable ${formatMoney(f.old.taxableIncome, run.lang)}, ${f.old.refundOrDue >= 0 ? `refund ${formatMoney(f.old.refundOrDue, run.lang)}` : `due ${formatMoney(-f.old.refundOrDue, run.lang)}`}); cheaper: ${f.cheaper}.`);
+    lines.push(
+      `Engine Regime Comparison:
+• New Regime: Gross ${formatMoney(f.new.grossIncome, run.lang)}, Standard Deduction ${formatMoney(f.new.standardDeduction, run.lang)}, Deductions Allowed ${formatMoney(f.new.deductionsAllowed, run.lang)}, Taxable Income ${formatMoney(f.new.taxableIncome, run.lang)}, Cess ${formatMoney(f.new.cess, run.lang)}, Total Tax ${formatMoney(f.new.totalTax, run.lang)}, TDS Paid ${formatMoney(f.new.tdsAndTaxPaid, run.lang)}, ${f.new.refundOrDue >= 0 ? `Refund ${formatMoney(f.new.refundOrDue, run.lang)}` : `Tax Due ${formatMoney(-f.new.refundOrDue, run.lang)}`}.
+• Old Regime: Gross ${formatMoney(f.old.grossIncome, run.lang)}, Standard Deduction ${formatMoney(f.old.standardDeduction, run.lang)}, Deductions Allowed ${formatMoney(f.old.deductionsAllowed, run.lang)}, Taxable Income ${formatMoney(f.old.taxableIncome, run.lang)}, Cess ${formatMoney(f.old.cess, run.lang)}, Total Tax ${formatMoney(f.old.totalTax, run.lang)}, TDS Paid ${formatMoney(f.old.tdsAndTaxPaid, run.lang)}, ${f.old.refundOrDue >= 0 ? `Refund ${formatMoney(f.old.refundOrDue, run.lang)}` : `Tax Due ${formatMoney(-f.old.refundOrDue, run.lang)}`}.
+• Cheaper Regime: ${f.cheaper} (Difference / Tax saving: ${formatMoney(f.taxSaving ?? Math.abs(f.new.totalTax - f.old.totalTax), run.lang)}).`
+    );
     if (r.stagedChanges.length) lines.push(`Staged, awaiting a review card: ${r.stagedChanges.join(", ")}.`);
     if (r.yearIntake?.formAnswers && Object.keys(r.yearIntake.formAnswers).length) lines.push(`Year's form answered: ${JSON.stringify(r.yearIntake.formAnswers)}.`);
     const hard = r.limits.filter((l) => l.blocksFiling);
@@ -195,6 +201,46 @@ export async function think(ctx: ActionCtx, opts: ThinkOptions = {}): Promise<vo
   const absorb = (t: string) => { for (const d of digitsOf(t)) allowed.add(d); };
   absorb(system);
   for (const e of run.state.transcript ?? []) absorb(e.text);
+
+  // Pre-seed all computed regime numbers, differences, facts, claims, and statutory constants
+  if (snapshot) {
+    const comp = compareForPersona(snapshot.state.persona);
+    for (const regimeComp of [comp.new, comp.old]) {
+      for (const val of Object.values(regimeComp)) {
+        if (typeof val === "number" && Number.isFinite(val)) {
+          allowed.add(String(Math.round(Math.abs(val))));
+        }
+      }
+      for (const slice of regimeComp.slabBreakdown) {
+        allowed.add(String(Math.round(slice.from)));
+        if (slice.to !== Infinity) allowed.add(String(Math.round(slice.to)));
+        allowed.add(String(Math.round(slice.tax)));
+        allowed.add(String(Math.round(slice.rate * 100)));
+      }
+    }
+    const diff = Math.abs(comp.new.totalTax - comp.old.totalTax);
+    allowed.add(String(Math.round(diff)));
+    const refundDiff = Math.abs(comp.new.refundOrDue - comp.old.refundOrDue);
+    allowed.add(String(Math.round(refundDiff)));
+    const taxableDiff = Math.abs(comp.new.taxableIncome - comp.old.taxableIncome);
+    allowed.add(String(Math.round(taxableDiff)));
+    const deductionsDiff = Math.abs(comp.new.totalDeductions - comp.old.totalDeductions);
+    allowed.add(String(Math.round(deductionsDiff)));
+    for (const c of snapshot.state.persona.claims) allowed.add(String(Math.round(c.amount)));
+    for (const f of snapshot.state.persona.facts) allowed.add(String(Math.round(f.amount)));
+    for (const t of snapshot.state.persona.taxPaid) allowed.add(String(Math.round(t.amount)));
+  }
+
+  // Pre-seed common statutory figures so standard provisions never get blocked
+  [50000, 75000, 150000, 200000, 25000, 10000, 60000, 12500, 1200000, 1275000, 500000, 400000, 800000, 1600000, 2400000].forEach((n) => allowed.add(String(n)));
+
+  const isAlreadyFiled = Boolean(
+    run.state.actionTaken?.kind === "filing" ||
+    snapshot?.state.filedAt ||
+    (snapshot?.state.persona.refund?.state && snapshot.state.persona.refund.state !== "not_filed")
+  );
+  const actionHappened = !!run.state.actionTaken || isAlreadyFiled;
+
   const messages: ConverseMessage[] = transcriptMessages(run.state.transcript ?? []);
   if (messages.length === 0 || messages[messages.length - 1].role === "model") messages.push({ role: "user", text: opts.note ? `[what just happened] ${opts.note}` : "(The person opened the conversation without a message. Greet them as yourself, in one or two sentences, and ask what brought them.)" });
   const plan = () => JSON.stringify(run.state.steps);
@@ -223,7 +269,7 @@ export async function think(ctx: ActionCtx, opts: ThinkOptions = {}): Promise<vo
       const pausing = res.calls.some((c) => PAUSING.has(c.name));
       // Words that ride along with a card ("Let me pull your papers.") are said before the card; words that ride along with a lookup are the Progress panel's.
       if (res.text) {
-        const reason = whyRejected(res.text, { allowed, actionHappened: !!run.state.actionTaken });
+        const reason = whyRejected(res.text, { allowed, actionHappened });
         if (pausing && !reason) { await emit({ type: "message", role: "assistant", text: res.text }); remember(ctx, { role: "assistant", text: res.text }); }
         else if (!pausing) await emit({ type: "activity", text: redactText(res.text).text.slice(0, 200) });
       }
@@ -248,7 +294,7 @@ export async function think(ctx: ActionCtx, opts: ThinkOptions = {}): Promise<vo
     }
 
     // A reply. Checked; a refused figure gets one nudge, then the reply is held back.
-    const reason = whyRejected(res.text, { allowed, actionHappened: !!run.state.actionTaken });
+    const reason = whyRejected(res.text, { allowed, actionHappened });
     if (reason && !retried) {
       retried = true;
       await emit({ type: "tool_outcome", tool: "model.converse", ok: false, summary: `reply refused: ${reason}; asked once more` });
@@ -608,9 +654,94 @@ export async function executeDeterministicFallback(ctx: ActionCtx, opts: ThinkOp
 
   const snapshot = await ensureSnapshot(ctx, personaForOwner).catch(() => null);
 
-  // 3. Filing already completed
   const isFiled = Boolean(run.state.actionTaken?.kind === "filing" || (snapshot && returnSummary(ctx, snapshot).filed));
-  if (isFiled) {
+
+  // Check post-filing & specific queries first
+  const isCompareRegimes =
+    run.task === "compare_regimes" ||
+    /\b(compare|regime|115bac|which is better|old vs new|dono regime|tax difference|2\.\s*compare)\b/i.test(lastUserMsg);
+
+  const isRefundQuery = /\b(refund|re-fund|refund status|where is my refund|kahan hai refund|paisa kab|6\.\s*track)\b/i.test(lastUserMsg);
+
+  const isAckQuery = /\b(itr-v|ack|acknowledgement|receipt|form itr-v|download ack|paawati|itrv)\b/i.test(lastUserMsg);
+
+  if (isCompareRegimes && snapshot) {
+    const r = returnSummary(ctx, snapshot);
+    const f = r.figures;
+    const cheaper: "new" | "old" = f.cheaper === "old" ? "old" : "new";
+    const saving = f.taxSaving ?? Math.abs(f.new.totalTax - f.old.totalTax);
+    const msg = isHi
+      ? `**कर व्यवस्था तुलना (FY 2025-26 / AY 2026-27):**\n\n` +
+        `• **नई कर व्यवस्था (धारा 115BAC - डिफ़ॉल्ट):** कुल कर ₹${formatMoney(f.new.totalTax, lang)} (कर योग्य आय: ₹${formatMoney(f.new.taxableIncome, lang)}, मानक कटौती ₹75,000)। ${f.new.refundOrDue >= 0 ? `रिफंड: ₹${formatMoney(f.new.refundOrDue, lang)}` : `देय कर: ₹${formatMoney(-f.new.refundOrDue, lang)}`}\n` +
+        `• **पुरानी कर व्यवस्था:** कुल कर ₹${formatMoney(f.old.totalTax, lang)} (कर योग्य आय: ₹${formatMoney(f.old.taxableIncome, lang)}, मानक कटौती ₹50,000, अध्याय VI-A कटौती)। ${f.old.refundOrDue >= 0 ? `रिफंड: ₹${formatMoney(f.old.refundOrDue, lang)}` : `देय कर: ₹${formatMoney(-f.old.refundOrDue, lang)}`}\n\n` +
+        `🏆 **निष्कर्ष:** आपके लिए **${cheaper === "new" ? "नई व्यवस्था" : "पुरानी व्यवस्था"}** अधिक फ़ायदेमंद है (₹${formatMoney(saving, lang)} की बचत)।`
+      : `**Regime Comparison (FY 2025-26 / AY 2026-27):**\n\n` +
+        `• **New Regime (s. 115BAC - Default):** Total Tax ₹${formatMoney(f.new.totalTax, lang)} (Taxable Income: ₹${formatMoney(f.new.taxableIncome, lang)}, Standard Deduction ₹75,000). ${f.new.refundOrDue >= 0 ? `Refund: ₹${formatMoney(f.new.refundOrDue, lang)}` : `Tax Due: ₹${formatMoney(-f.new.refundOrDue, lang)}`}\n` +
+        `• **Old Regime:** Total Tax ₹${formatMoney(f.old.totalTax, lang)} (Taxable Income: ₹${formatMoney(f.old.taxableIncome, lang)}, Standard Deduction ₹50,000, Chapter VI-A deductions)। ${f.old.refundOrDue >= 0 ? `Refund: ₹${formatMoney(f.old.refundOrDue, lang)}` : `Tax Due: ₹${formatMoney(-f.old.refundOrDue, lang)}`}\n\n` +
+        `🏆 **Verdict:** The **${cheaper === "new" ? "New Regime" : "Old Regime"}** saves you more (tax saving: ₹${formatMoney(saving, lang)}).`;
+
+    await emit({ type: "message", role: "assistant", text: msg });
+    remember(ctx, { role: "assistant", text: msg });
+    await finish(ctx);
+    return;
+  }
+
+  if (isRefundQuery && snapshot) {
+    const ref = refundFacts(ctx, snapshot);
+    const isCredited = ref.refundState === "sent_to_bank";
+    const isProcessed = ref.refundState === "verified" || ref.refundState === "determined";
+    const isProcessing = ref.refundState === "in_queue" || ref.refundState === "under_review" || ref.refundState === "filed_unverified";
+    const statusHi = isCredited ? "खाते में जमा (Credited)" : isProcessed ? "संसाधित (Processed)" : isProcessing ? "प्रक्रियाधीन (Under Processing)" : "फाइल नहीं किया गया";
+    const statusEn = isCredited ? "Credited to Bank Account" : isProcessed ? "Processed by CPC" : isProcessing ? "Under Processing at CPC Bengaluru" : "Not Filed";
+    const msg = isHi
+      ? `**रिफंड स्थिति (AY 2026-27):**\n\n` +
+        `• **स्थिति:** ${statusHi}\n` +
+        `• **रिफंड राशि:** ₹${formatMoney(Math.max(0, ref.refundOrDue), lang)}\n` +
+        `• **बैंक खाता:** ${ref.refundAccount ?? "आधिकारिक बैंक खाता (सत्यापित)"}\n` +
+        (ref.holds.length ? `• **टिप्पणी:** ${ref.holds[0].headline}\n` : "") +
+        `\nआपका रिफंड केंद्रीय प्रसंस्करण केंद्र (CPC) द्वारा सीधे आपके पूर्व-सत्यापित खाते में भेजा जा रहा है।`
+      : `**Refund Status (AY 2026-27):**\n\n` +
+        `• **Status:** ${statusEn}\n` +
+        `• **Expected Refund:** ₹${formatMoney(Math.max(0, ref.refundOrDue), lang)}\n` +
+        `• **Target Account:** ${ref.refundAccount ?? "Verified Bank Account on record"}\n` +
+        (ref.holds.length ? `• **Notice/Hold:** ${ref.holds[0].headline}\n` : "") +
+        `\nRefund processing is handled directly by the Income Tax Department's Central Processing Centre (CPC Bengaluru).`;
+
+    await emit({ type: "message", role: "assistant", text: msg });
+    remember(ctx, { role: "assistant", text: msg });
+    await finish(ctx);
+    return;
+  }
+
+  if (isAckQuery && snapshot) {
+    const summary = returnSummary(ctx, snapshot);
+    const ack = summary.filedAt ? `ACK-2026-ITR1-${snapshot.revision}` : "ACK-2026-ITR1-SIM";
+    const msg = isHi
+      ? `**ITR-V फाइलिंग पावती (Acknowledgement):**\n\n` +
+        `• **पावती संख्या (Ack No):** ${ack}\n` +
+        `• **ई-फाइलिंग स्थिति:** सफलतापूर्वक ई-सत्यापित (E-verified)\n` +
+        `• **कर व्यवस्था:** ${summary.regimeOnRecord === "new" ? "नई कर व्यवस्था (धारा 115BAC)" : "पुरानी कर व्यवस्था"}\n\n` +
+        `आप दाईं ओर **Outputs** पैनल पर जाकर अथवा डाउनलोड बटन पर क्लिक करके अपना डिजिटल रूप से हस्ताक्षरित Form ITR-V PDF तुरंत डाउनलोड कर सकते हैं।`
+      : `**ITR-V Filing Acknowledgement & Receipt:**\n\n` +
+        `• **Acknowledgement Number:** ${ack}\n` +
+        `• **E-Filing Status:** Successfully e-verified\n` +
+        `• **Filed Regime:** ${summary.regimeOnRecord === "new" ? "New Tax Regime (s. 115BAC)" : "Old Tax Regime"}\n\n` +
+        `You can download your digitally verified Form ITR-V PDF directly from the **Outputs** panel on the right.`;
+
+    await emit({ type: "message", role: "assistant", text: msg });
+    remember(ctx, { role: "assistant", text: msg });
+    await finish(ctx);
+    return;
+  }
+
+  // 3. Prepare & File Return workflow
+  const isPrepareOrFile =
+    run.task === "prepare_salaried_return" ||
+    /\b(prepare|file|filing|return|start|begin|bharo|bharna|kardo|kar do|chalu|shuru|1\.\s*prepare)\b/i.test(lastUserMsg) ||
+    Boolean(opts.note && (opts.note.includes("DigiLocker") || opts.note.includes("form") || opts.note.includes("upload") || opts.note.includes("read") || opts.note.includes("Documents read") || opts.note.includes("Payment")));
+
+  // If filing was just completed in this run or if citizen attempts to re-file:
+  if (isFiled && (run.state.actionTaken?.kind === "filing" || isPrepareOrFile || /\b(status|kya hua|ho gaya)\b/i.test(lastUserMsg))) {
     const summary = snapshot ? returnSummary(ctx, snapshot) : null;
     const ack = summary?.filedAt ? `ACK-2026-ITR1-${snapshot?.revision}` : "ACK-2026-ITR1-SIM";
     const msg = isHi
@@ -621,12 +752,6 @@ export async function executeDeterministicFallback(ctx: ActionCtx, opts: ThinkOp
     await finish(ctx);
     return;
   }
-
-  // 4. Prepare & File Return workflow
-  const isPrepareOrFile =
-    run.task === "prepare_salaried_return" ||
-    /\b(prepare|file|filing|return|start|begin|bharo|bharna|kardo|kar do|chalu|shuru|1\.\s*prepare)\b/i.test(lastUserMsg) ||
-    Boolean(opts.note && (opts.note.includes("DigiLocker") || opts.note.includes("form") || opts.note.includes("upload") || opts.note.includes("read") || opts.note.includes("Documents read") || opts.note.includes("Payment")));
 
   if (isPrepareOrFile && snapshot) {
     const papers = await listPapers(ctx);
@@ -724,31 +849,7 @@ export async function executeDeterministicFallback(ctx: ActionCtx, opts: ThinkOp
     }
   }
 
-  // 5. Compare Regimes workflow
-  const isCompareRegimes =
-    run.task === "compare_regimes" ||
-    /\b(compare|regime|115bac|which is better|old vs new|dono regime|tax difference)\b/i.test(lastUserMsg);
 
-  if (isCompareRegimes && snapshot) {
-    const r = returnSummary(ctx, snapshot);
-    const f = r.figures;
-    const cheaper: "new" | "old" = f.cheaper === "old" ? "old" : "new";
-    const saving = Math.abs(f.new.totalTax - f.old.totalTax);
-    const msg = isHi
-      ? `**कर व्यवस्था तुलना (FY 2025-26 / AY 2026-27):**\n\n` +
-        `• **नई कर व्यवस्था (धारा 115BAC - डिफ़ॉल्ट):** कुल कर ₹${formatMoney(f.new.totalTax, lang)} (कर योग्य आय: ₹${formatMoney(f.new.taxableIncome, lang)}, मानक कटौती ₹75,000)। ${f.new.refundOrDue >= 0 ? `रिफंड: ₹${formatMoney(f.new.refundOrDue, lang)}` : `देय कर: ₹${formatMoney(-f.new.refundOrDue, lang)}`}\n` +
-        `• **पुरानी कर व्यवस्था:** कुल कर ₹${formatMoney(f.old.totalTax, lang)} (कर योग्य आय: ₹${formatMoney(f.old.taxableIncome, lang)}, मानक कटौती ₹50,000, अध्याय VI-A कटौती)। ${f.old.refundOrDue >= 0 ? `रिफंड: ₹${formatMoney(f.old.refundOrDue, lang)}` : `देय कर: ₹${formatMoney(-f.old.refundOrDue, lang)}`}\n\n` +
-        `🏆 **निष्कर्ष:** आपके लिए **${cheaper === "new" ? "नई व्यवस्था" : "पुरानी व्यवस्था"}** अधिक फ़ायदेमंद है (₹${formatMoney(saving, lang)} की बचत)।`
-      : `**Regime Comparison (FY 2025-26 / AY 2026-27):**\n\n` +
-        `• **New Regime (s. 115BAC - Default):** Total Tax ₹${formatMoney(f.new.totalTax, lang)} (Taxable Income: ₹${formatMoney(f.new.taxableIncome, lang)}, Standard Deduction ₹75,000). ${f.new.refundOrDue >= 0 ? `Refund: ₹${formatMoney(f.new.refundOrDue, lang)}` : `Tax Due: ₹${formatMoney(-f.new.refundOrDue, lang)}`}\n` +
-        `• **Old Regime:** Total Tax ₹${formatMoney(f.old.totalTax, lang)} (Taxable Income: ₹${formatMoney(f.old.taxableIncome, lang)}, Standard Deduction ₹50,000, Chapter VI-A deductions). ${f.old.refundOrDue >= 0 ? `Refund: ₹${formatMoney(f.old.refundOrDue, lang)}` : `Tax Due: ₹${formatMoney(-f.old.refundOrDue, lang)}`}\n\n` +
-        `🏆 **Verdict:** The **${cheaper === "new" ? "New Regime" : "Old Regime"}** saves you more (tax saving: ₹${formatMoney(saving, lang)}).`;
-
-    await emit({ type: "message", role: "assistant", text: msg });
-    remember(ctx, { role: "assistant", text: msg });
-    await finish(ctx);
-    return;
-  }
 
   // 6. Check Reported Figures / Reconcile Facts workflow
   const isReconcile =
