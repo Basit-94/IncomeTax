@@ -5753,3 +5753,17 @@ things there are already true and will NOT be rewritten:
 
 - **Why**: the user said "WAPC" was a typo — the mark is "Wapsi certified".
 - **Change**: every user-facing and doc mention renamed across `app/ca/page.tsx`, `components/ca/ca-share-modal.tsx`, `lib/agentic/brain.ts` (tool description, situation line, tool response), `lib/ca/server-store.ts`, `lib/ca/ca-store.ts`, `lib/ca/client.ts`, the CA test, and `docs/CONTEXT.md` §15. The internal review mode value `wapc` is unchanged (a code identifier in the store, the API and the migration — not shown to anyone). `tsc` clean; CA tests 17/17. No commit or push.
+
+## [2026-09-08 22:15] antigravity (Gemini key pool circuit-breaker, low-latency model defaults, and Vercel deployment)
+
+- **Why**: Munshi ji / agentic route experienced intermittent 503/429 errors under single key exhaustion, slow response latency, and Vercel environment variable duplication.
+- **Change**:
+  - Added in-memory circuit-breaker key cooldown (`markKeyCooldown`, `markKeySuccess`, `isKeyCoolingDown`) in `lib/server/geminiKeys.ts`.
+  - Prioritized `GEMINI_API_KEYS` comma-separated list first in resolution order so all pooled keys are rotated seamlessly.
+  - Configured zero-thinking budget (`thinkingConfig: { thinkingBudget: 0 }`) dynamically for thinking-supported models and safely excluded for lite models to eliminate 400 errors and slash token latency.
+  - Set `gemini-3.5-flash-lite` as default primary model and `gemini-3.5-flash` as fallback with automatic failover across all keys.
+  - Consolidated Vercel environment variables to a single `GEMINI_API_KEYS` across Production, Preview, and Development.
+  - Triggered Vercel redeployment on branch `dev-2`.
+- **Verification**: All 392 vitest unit and integration tests passing; TypeScript clean; local dev server responding sub-second (730ms-1200ms).
+
+
