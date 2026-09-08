@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDbPool } from '@/lib/db/postgres';
 
 export async function GET(req: NextRequest) {
+  const host = req.headers.get('host') || '';
+  const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+  if (!isLocal) {
+    return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 });
+  }
+
   const pool = getDbPool();
   if (!pool) {
     return NextResponse.json({ ok: false, error: 'Database unavailable' }, { status: 503 });

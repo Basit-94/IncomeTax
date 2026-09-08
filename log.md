@@ -5794,6 +5794,201 @@ things there are already true and will NOT be rewritten:
     - 5 live metric counter cards (Judges/Visitors, AI Conversations, Vault Docs, Returns Filed, CA Reviews).
     - Date range filter buttons (`Today`, `Yesterday`, `Last 7 Days`, `All Time`).
     - Live Search bar for instant filtering by PAN or Judge Name.
+- User reported that selecting Urdu caused the entire website layout to invert/mirror (sidebars, brand logos, card positions, headers, chat inputs shifting from left to right and vice versa) across multiple pages (`/`, `/app`, `/signin`, etc.).
+  - User requirement: Sentences and words should flow naturally in Urdu/RTL, but the physical document and component structure (grid layout, sidebars, rails, navigation, cards) must never invert or shift sides.
+- **Root Cause**:
+  - `app/app/page.tsx` (line 90) and `app/signin/page.tsx` (line 81) were executing `document.documentElement.dir = isRtl(lang) ? "rtl" : "ltr";`.
+  - Setting `dir="rtl"` on `<html>` causes CSS flexbox and grid layouts to reverse their axes globally across all pages in the SPA session.
+- **What changed**:
+  - **`app/layout.tsx`**:
+    - Added `dir="ltr"` attribute directly to the root `<html>` tag.
+    - Updated the inline head initialization script to enforce `document.documentElement.dir = 'ltr';`.
+  - **`app/app/page.tsx`**:
+    - Replaced `document.documentElement.dir = isRtl(lang) ? "rtl" : "ltr"` with `document.documentElement.dir = "ltr"`.
+    - Removed unused `isRtl` import.
+  - **`app/signin/page.tsx`**:
+    - Replaced `document.documentElement.dir = isRtl(lang) ? "rtl" : "ltr"` with `document.documentElement.dir = "ltr"`.
+    - Removed unused `isRtl` import.
+  - **`app/ca/page.tsx`**:
+    - Added a `lang` change effect setting `document.documentElement.dir = "ltr"` and `document.documentElement.lang = lang`.
+  - **`app/reconcile/page.tsx`**:
+    - Added `document.documentElement.dir = "ltr"` in the initial layout mount effect.
+- **Verification**:
+  - **Playwright Visual Verification**:
+    - Visited `/signin` with Urdu (`ur`): Wapsi logo remains top-left, Language selector / dark mode / Back to home buttons remain top-right, Agentic Mode card remains on left, Manual Filing card remains on right. Urdu text flows naturally right-to-left within sentences.
+    - Visited `/app` with Urdu (`ur`): Left icon rail remains on the left, Wapsi logo and Agentic/Manual toggle remain top-left, Context Inspector (Live Sync ledger, Bank Accounts, Tax Vault) remains on the right, chat input maintains mic/send buttons on right and prompt input on left.
+    - Visited `/` with Urdu (`ur`): Brand bar and steps maintain standard LTR positioning.
+    - Visited `/ca` and `/reconcile`: Verified `document.documentElement.dir` evaluates to `"ltr"`.
+- **Status**: Branch `dev-2`.
+
+## 2026-09-08 — Universal Gemini API Key & Fallback Pool Resolver
+
+- **Goal / Context**:
+  - Enable arbitrary number of Gemini API fallback keys (`GEMINI_FALLBACK_API_KEY_4`, `_5`, `_6`, `_7`, `_8`, etc. up to `_20`, or comma-separated `GEMINI_API_KEYS`).
+  - Ensure seamless failover across all AI endpoints (Agentic flow, Copilot, Chat API route, PDF extraction, Voice transcription).
+  - Prepare configuration instructions for local development (`.env.local`) and Vercel preview/production deployments on `dev-2`.
+- **What changed**:
+  - **`lib/server/geminiKeys.ts`**:
+    - Created unified resolver `getGeminiKeys(env)` that detects:
+      1. `GEMINI_API_KEY` (Primary)
+      2. `GEMINI_FALLBACK_API_KEY` (Fallback 1)
+      3. `GEMINI_FALLBACK_API_KEY_2` .. `_20` (Sequential numbered fallbacks)
+      4. `GEMINI_API_KEYS` (Comma-separated key string)
+      5. Any env matching `/^GEMINI_(FALLBACK_)?API_KEY(_\d+)?$/i`
+      6. Trims quotes, filters placeholder values (`REPLACE_ME`), and deduplicates.
+  - **Connected all AI subsystems**:
+    - `lib/agentic/model.ts`: uses `getGeminiKeys(env)` for autonomous agent turns.
+    - `lib/agent/copilot.ts`: uses `getGeminiKeys()` for manual copilot assistance.
+    - `app/api/agent/route.ts`: uses `getGeminiKeys()` for streaming chat endpoint.
+    - `app/api/extract/route.ts`: uses `getGeminiKeys()` for PDF/Form-16 AI extraction.
+    - `lib/server/transcriber.ts`: uses `getGeminiKeys(env)` for audio transcription & LLM text refinement.
+  - **`.env.example`**:
+    - Documented `GEMINI_FALLBACK_API_KEY_4` through `GEMINI_FALLBACK_API_KEY_8` and `GEMINI_API_KEYS`.
+- **Verification**:
+- **Status**: Branch `dev-2`.
+
+## 2026-09-08 — Postgres Session Store Connection Resiliency
+
+- **Goal / Context**:
+  - Prevent uncaught connection errors and 500 status codes when remote database connection pool (Supabase) experiences transient connection drops or timeouts.
+- **What changed**:
+  - **`lib/server/context.ts`**:
+    - Wrapped `PostgresSessionStore.get`, `.put`, and `.delete` in try/catch blocks.
+    - Gracefully logs warnings and falls back to null/safe-recovery without crashing HTTP API routes.
+- **Verification**:
+  - `npx vitest run lib/server/__tests__/session.test.ts`: 10 passed.
+- **Status**: Branch `dev-2`.
+
+## 2026-09-08 — Gemini Thought Recovery & Empty Reply Failover
+
+- **Goal / Context**:
+  - Fix issue where Gemini thinking models generated text inside thought parts or returned `finishReason: "STOP"` with empty filtered text on greetings/simple queries, causing `empty reply (STOP)` fallback messages.
+- **What changed**:
+  - **`lib/agentic/model.ts`**:
+    - If `!p.thought` filter results in empty string, recover all text parts from response candidates.
+    - If a candidate returns empty text with no tool calls, continue through the key/model pair loop instead of aborting immediately with null.
+    - If non-200 HTTP status is returned, try the next key/model pair.
+  - **`lib/agentic/brain.ts`**:
+    - Added clean greeting response handler in deterministic fallback for simple conversational openings.
+- **Verification**:
+  - `npx vitest run`: All 45 test files and 384 tests passed (100%).
+  - `npx tsc --noEmit`: 0 TypeScript compiler errors.
+- **Status**: Branch `dev-2`.
+
+## [2026-09-08 00:40] claude (Lessons loop for Munshi ji; first-reply latency; second brain lessons hook)
+- **Why**: user — "Do you think this same logic can be implemented to improve our wapsi agent?" → yes, in two loops; "yeah do it"; and "whenever starting a new chat… the first reply comes in late, or the new chat screen stays for too long… please also fix that."
+- **Per person**: `brain.ts previousChats` — last three chats in the situation block (title, date, status, open card/question, last thing said, corrections noted); `note_correction` tool → `correction` event (redacted; `types.ts`), rendered "Noted — …" in `workspace.tsx`; the rules tell him to note a correction before answering and to treat a disputed reported figure as `correct_fact`.
+- **System**: refused/invalid/blocked tool results now emit `tool_outcome <tool> ok:false`; `lib/agentic/lessons.ts` (`MUNSHI_LESSONS`, empty; appended to rules when non-empty); `scripts/munshi-lessons-digest.mjs` (Postgres; drafts into `docs/MUNSHI-LESSONS.md`; outages separated from check refusals). Dry run against the live DB: today 4 replies refused for a figure, 2 outages, 0 tool refusals → one draft lesson. `docs/MUNSHI-LESSONS.md` documents both loops and the hand-promotion rule.
+- **Latency**: `app/api/runs/route.ts` and `[id]/route.ts` respond after `createRun` / `input_only` and run the turn in `after()`; before, the landing held for the full model call. Measured in the pane: `?run=` and the user's bubble at ~1 s after Send; Sunita's regime answer (engine-correct, ₹8,400 refund either way) at ~29 s (model time).
+- **Fix found by test**: the transcript stored the model's raw tool arguments — a `note_correction` echoing a PAN would have persisted it; arguments and results now go through `redactText`.
+- **Second brain** (outside this repo): `~/.claude/hooks/lessons.py` SessionStart hook injects `[global]` + project-tagged lessons; `Lessons.md` re-tagged; six Wapsi-only facts moved into this repo's `AGENTS.md`.
+- **Gates**: `npx tsc --noEmit` 0 errors; vitest agentic 8 files / 55 tests, full suite below. `next build` not run this time: the user's own dev server holds :3000 and the previous build killed it. Not committed, not pushed.
+- **Seen, not touched**: a "Task Templates (AY 2026-27) · Select or type 1–7" strip is back under completed runs in `workspace.tsx` — added concurrently by someone else in the working tree after the "Next Available Tasks" strip was removed on request. Flagged to the user.
+- **Mic on open (same night, user: "as soon as people open the agent mode, it starts recording the voice")**: `warmUpAudioStream()` ran on the composer's mount, on hover/focus of the form, and 500 ms after every clip, opening the microphone without a click. Removed all four (`components/agentic/workspace.tsx`, `lib/speech.ts`); `getUserMedia` now runs only inside `startDictation`, i.e. on the mic click; a second click stops it (`toggleMic` → `handleStopRecording`, unchanged). Verified: a fresh pane tab loading `/app` no longer requests the microphone; the earlier tab's notice was the sticky one. `npx tsc --noEmit` 0 errors.
+
+## [2026-09-08 19:57] Codex (Six approved Munshi ji interaction animations)
+
+- **Request**: animate the six approved, frontend-specific concepts: Review Delivered, Deadline, Guide, Noting, Voice, and Chai.
+- **Character rig and motion**: extended `MunshiState` and the shared SVG rig/CSS with six layered, editable vector props and semantic motion sequences. Review Delivered offers a sealed envelope; Deadline taps a compact alarm clock; Guide uses the pocket pen and open palm to point toward the current action; Noting writes one confirmed fact into the ledger; Voice cups an ear while sound arcs pulse only during live input; Chai performs one patient sip. All use the supplied Munshi ji identity, work on light and dark surfaces, and retain static poses when reduced motion is enabled.
+- **Frontend placement**: wired the states to completed and pending CA review, urgent notices (seven days or fewer), filing guidance and missing-year input, confirmed facts, live microphone recording, and pending refund/review dashboard states. No page layout or language dictionaries were changed.
+- **Deliverables**: regenerated 19 animated SVGs, 19 static SVGs, 11 transparent logo PNG sizes, logo variants, manifest, README, interactive animation studio, and the 19-state vector/PNG character sheet under `public/brand/munshi/`; rebuilt `public/brand/munshi-kit.zip`. The studio now includes a compact gallery of the six new interactions at 56px.
+- **Documentation**: updated `docs/MUNSHI-JI.md` and the mascot contract in `docs/CONTEXT.md` from 13 to 19 states.
+- **Visual QA**: inspected all six animations on lilac and navy stages, checked the 56px strip and reduced-motion fallback, and found no browser console errors. The guide pen was moved below the moustache after review so it reads as a pointing tool rather than a facial prop.
+- **Verification**: `npm run export:munshi` passed; `npm run typecheck` passed; `npm test` passed (44 files, 382 tests); `npm run build` passed after retrying with network access for the three existing Google Fonts; `git diff --check` passed with line-ending warnings only. No commit or push.
+
+## [2026-09-08 20:23] Codex (Rebuilt the six interaction animations around a connected arm rig)
+
+- **User correction**: the first implementation looked broken, and the right hand stayed in effectively the same presentation pose across the new states. The initial QA had sampled isolated still moments and missed floating/doubled hands, face collisions and weak interaction at actual avatar sizes.
+- **Root cause**: props were independent foreground groups while the original arm remained in its shared resting transform. Several props also included replacement hand shapes, so the silhouette could show two unrelated gestures.
+- **Rig repair**: removed every added floating hand and made the existing right-arm group the parent interaction limb. Each relevant object now shares the same shoulder pivot as the arm: it lifts the review envelope, holds the ringing clock, supports the ledger, and raises the chai cup to the mouth. Guide has its own arm sweep; Voice raises the same hand beside the ear. Each state has a distinct resting angle and motion curve.
+- **Visual repair**: moved all object geometry into the hand coordinate space, kept it clear of the face except for the intentional chai contact pose, retained the character silhouette and identity, and kept reduced-motion poses meaningful. The envelope seal and ledger line animate locally without breaking contact with the hand.
+- **Studio repair**: replaced the working-only scrubber with a selected-animation timeline whose range follows each state, so all six motions can be paused and inspected frame by frame without switching state.
+- **Exports/docs**: regenerated the 19-state SVG/PNG kit, character sheet, manifest, README and studio; rebuilt `public/brand/munshi-kit.zip`; updated `docs/MUNSHI-JI.md` to describe the connected hand interactions.
+- **Verification**: inspected every repaired state at full and 56px interface sizes on lilac and navy, scrubbed the Noting midpoint, checked the Chai mouth contact pose and the Voice reduced-motion pose, and found zero browser warnings/errors. `npm run typecheck` passed; `npm test` passed (45 files, 389 tests); `npm run build` passed; `git diff --check` passed with line-ending warnings only. No commit or push.
+
+## [2026-09-08 20:39] Codex (Natural bent-arm chai drinking pose)
+
+- **User correction**: the chai interaction needed a right arm bent toward the mouth and a normal cup grip rather than rotating the straight shared arm.
+- **Change**: replaced the chai use of the generic arm with a dedicated articulated silhouette: shirt sleeve and upper arm stay attached at the shoulder, a separate forearm pivots at the elbow, the hand reaches the cup handle, and visible fingers wrap around it. The generic resting arm is omitted during this state, preventing the temporary two-arm overlap caught during midpoint QA.
+- **Cup motion**: the forearm moves from a lowered bent pose to the drinking pose; the cup counter-rotates so it remains upright while the arm changes angle, and its rim meets the mouth at the sip midpoint. Steam remains attached to the cup.
+- **Exports**: regenerated the SVG/PNG studio and character sheet, then rebuilt `public/brand/munshi-kit.zip`.
+- **Verification**: scrubbed the chai animation at 0 ms and 1800 ms to verify the lowered grip and mouth contact, checked the 56px compact row, and found zero browser warnings/errors. `npm run typecheck` passed; `npm test` passed (46 files, 392 tests); `npm run build` passed. No commit or push.
+
+## [2026-09-08 20:46] Codex (Corrected chai hand and forearm proportions)
+
+- **User correction**: the dedicated chai arm still looked disproportionate.
+- **Change**: narrowed the forearm, reduced the palm and finger stroke, shortened the visible hand at the handle, and replaced the flared cuff with a smaller rounded sleeve connection. The elbow pivot, upright cup counter-rotation and mouth contact remain unchanged.
+- **Visual QA**: scrubbed and inspected the lowered 0 ms pose and the 1800 ms drinking pose; both now keep the same limb volume and a cup-sized grip. Browser warnings/errors: zero.
+- **Exports and verification**: regenerated the 19-state kit and rebuilt `public/brand/munshi-kit.zip`; `npm run typecheck` passed; `npm test` passed (46 files, 393 tests); `npm run build` passed. No commit or push.
+
+## [2026-09-08 20:53] Codex (Reconstructed the chai wrist and cup grip from screenshot evidence)
+
+- **User evidence**: the supplied screenshot showed the remaining issue was anatomical rather than scale: the forearm terminated at the cup, the handle was empty, the cuff formed a white wedge, and the cup covered the moustache.
+- **Change**: rebuilt the chai limb as a rounded cuff, narrow bent forearm, separate wrist/palm and visible fingers wrapping the handle. The palm and cup counter-rotate together as one grip so they cannot separate while the elbow moves.
+- **Contact correction**: shifted the wrist and cup lower and slightly outward; the rim now reaches the lower mouth area instead of replacing the moustache, while the lowered pose keeps the same visible grip.
+- **QA and exports**: inspected the deterministic 0 ms and 1800 ms frames, found zero browser warnings/errors, regenerated the character kit, and rebuilt `public/brand/munshi-kit.zip`. `npm run typecheck` passed; `npm test` passed (46 files, 394 tests); `npm run build` passed. No commit or push.
+
+## [2026-09-08 20:35] claude (CA system redesign — WAPC certified CAs, broadcast requests, inline comments, comparison with recommendation, "Your return" in the sidebar)
+
+- **Why**: the user asked for a redesign of the whole CA path: a CA portal with registration/login, two doors on the citizen's "Review with CA" (WAPC certified CAs on Wapsi vs. their own CA), a CA workspace with the client's background, full editing and Figma-style inline comments, a comparison where the engine/AI highlights the version that makes the most sense, and the draft / under-review return shown in the Agentic sidebar above recent chats.
+- **Server** (`lib/ca/server-store.ts`, `lib/ca/server-actions.ts`, `lib/ca/compare.ts`, migration `0007_ca_system`): `CAStore` (memory / Postgres) for CA accounts (scrypt), CA sessions (`wapsi_ca_sid`), review requests (`mode: wapc | own`, statuses `pending → claimed → reviewed → accepted | declined`), and comments anchored per row. `claimReview` is first come, first served (409 for the second CA). `compareReturns()` runs both versions through the engine, lists row changes, raises risk/warn/info flags (income below a third-party statement, TDS raised beyond 26AS, claims without proof or above the cap) and recommends `ca | original | either` — a risk flag outranks a bigger refund. `Services.caStore`, `RuntimeDeps.caStore`.
+- **Routes**: `/api/ca/auth`, `/api/ca/inbox`, `/api/ca/reviews`, `/api/ca/reviews/[code]`, `/api/ca/reviews/[code]/comments`, `/api/ca/reviews/[code]/compare` (comparison + comments + a short narrative from the model, checked by `whyRejected`). `/api/ca/review` (old) now reads/writes the same store. `lib/ca/client.ts` wraps them; `ca-registry.ts` register/login go to the API first.
+- **CA portal** (`app/ca/page.tsx`, rewritten): register as a WAPC certified CA / sign in → dashboard (waiting / in my hands / sent back, incoming requests with the client's situation and their note, my reviews, the client-code card) → workspace: who the client is, editable Income / Deductions / Taxes-paid worksheets, a comment bubble on every line plus "overall" and "regime" threads, regime rail, "Send my version to the client". Code+PIN CAs (own-CA door) keep working without an account.
+- **Citizen**: `ca-share-modal.tsx` opens on the two doors (WAPC broadcast sends `backgroundFor(persona, regime, state, notes)`); `ca-comparison-modal.tsx` shows both versions with the recommended column highlighted, changes, flags, the CA's comments beside their rows, Munshi ji's narrative, "Keep my version" / "Adopt the CA's version". `app/app/page.tsx` polls the person's reviews and feeds `AppShell.workItems` → **"Your return"** above Recent chats (draft midway; "Being reviewed by a CA" / "CA review ready"). Banners treat `claimed` like `pending`. `app/page.tsx` passes `returnState` to the share modal.
+- **Munshi ji**: `ca_review` tool (requests, comments, comparison) and a situation line when a review is live.
+- **Docs**: `docs/CONTEXT.md` §15. Tests: `lib/ca/__tests__/ca-system.test.ts` (7).
+- **Verification**: `tsc` clean; vitest 45 files / 389 tests green; in the browser — registered CA Rajesh Sharma at `/ca`, sent a WAPC request from Sunita's session, it appeared in the inbox with her background and note, "Take this return" claimed it, inline comment on the 80TTA line posted and shown with a badge, figure edited, "Sent to Sunita"; on `/app` the sidebar showed "Draft return" + "CA review ready", the banner "CA Review Complete from CA Rajesh Sharma!", and the comparison modal rendered the narrative, the CA's note and the table via `/compare` 200. `next build` NOT run (the user's dev server holds `.next`); run it before handoff. No commit or push.
+
+## [2026-09-08 20:55] claude (Mobile tab bar only after filing; Tax Vault tab removed)
+
+- **Why**: the user pointed at the phone tab bar on the manual journey (step 1 of 5) — it only makes sense once the return is filed, and the Tax Vault tab duplicated the page's own Tax Vault button.
+- **Change**: `app/page.tsx` renders `MobileTabBar` only when `returnState.filedAt` is set (hub and dashboard, as before); items are Overview · Statement · Actions; the Vault item and its `setIsVaultOpen` branch are gone, the unused icon import removed. `docs/CONTEXT.md` §12 updated. `tsc` clean. No commit or push.
+
+## [2026-09-08 21:05] claude ("WAPC certified" → "Wapsi certified")
+
+- **Why**: the user said "WAPC" was a typo — the mark is "Wapsi certified".
+- **Change**: every user-facing and doc mention renamed across `app/ca/page.tsx`, `components/ca/ca-share-modal.tsx`, `lib/agentic/brain.ts` (tool description, situation line, tool response), `lib/ca/server-store.ts`, `lib/ca/ca-store.ts`, `lib/ca/client.ts`, the CA test, and `docs/CONTEXT.md` §15. The internal review mode value `wapc` is unchanged (a code identifier in the store, the API and the migration — not shown to anyone). `tsc` clean; CA tests 17/17. No commit or push.
+
+## [2026-09-08 22:15] antigravity (Gemini key pool circuit-breaker, low-latency model defaults, and Vercel deployment)
+
+- **Why**: Munshi ji / agentic route experienced intermittent 503/429 errors under single key exhaustion, slow response latency, and Vercel environment variable duplication.
+- **Change**:
+  - Added in-memory circuit-breaker key cooldown (`markKeyCooldown`, `markKeySuccess`, `isKeyCoolingDown`) in `lib/server/geminiKeys.ts`.
+  - Prioritized `GEMINI_API_KEYS` comma-separated list first in resolution order so all pooled keys are rotated seamlessly.
+  - Configured zero-thinking budget (`thinkingConfig: { thinkingBudget: 0 }`) dynamically for thinking-supported models and safely excluded for lite models to eliminate 400 errors and slash token latency.
+  - Set `gemini-3.5-flash-lite` as default primary model and `gemini-3.5-flash` as fallback with automatic failover across all keys.
+  - Consolidated Vercel environment variables to a single `GEMINI_API_KEYS` across Production, Preview, and Development.
+  - Triggered Vercel redeployment on branch `dev-2`.
+- **Verification**: All 394 vitest unit and integration tests passing; TypeScript clean; live Vercel deployment (https://wapsi-git-dev-2-abs21.vercel.app/api/agent) tested and returning HTTP 200 with sub-3s response latency across Hindi and English multi-turn queries.
+
+## [2026-09-09 00:05] antigravity (Purge user test session contexts and transcripts for submission)
+
+- **Why**: Clean state required for competition submission/judging so fresh visitors open with zero pre-filled test user context, empty chats, and clean filing journeys from scratch, while preserving registered CAs in the CA portal.
+- **Change**:
+  - Cleared `data/agent_telemetry.jsonl` and `.agent-transcripts/` session transcripts.
+  - Verified default user state, chat surfaces, and sign-in inputs start completely blank.
+  - Preserved Chartered Accountant registry and verified CA directory (`SEED_REGISTERED_CAS`) intact in `lib/ca/ca-registry.ts`.
+- **Verification**: All 394 vitest unit and integration tests passing across 46 files.
+
+## [2026-09-09 00:15] antigravity (Live Judge & Citizen Activity Inspector & Telemetry Pipeline)
+
+- **Why**: Enable the user to monitor live judge sessions, sign-ins, AI conversations, manual filing actions, regime selections, PDF uploads, and UX performance metrics across both local dev and production Vercel environments.
+- **Change**:
+  - Created `0008_user_activity_events` database migration in `lib/db/migrations.ts`.
+  - Built non-blocking client-side telemetry recorder in `lib/telemetry/client.ts` (`recordActivity`).
+  - Added fast, asynchronous event ingestion route at `app/api/telemetry/event/route.ts` with direct Supabase PostgreSQL persistence.
+  - Wired activity capture across sign-in, theme switch, PDF upload, regime selection, and AI agent chat in `app/page.tsx`, `components/auth/auth-portal.tsx`, and `app/api/agent/route.ts`.
+  - Built comprehensive terminal inspector in `scripts/inspect-activity.cjs` with `--today`, `--yesterday`, `--all`, `--from <date>`, `--live`, `--user <PAN>`, and `--export` modes.
+  - Added npm convenience scripts `npm run inspect`, `npm run inspect:live`, and `npm run inspect:all` in `package.json`.
+## [2026-09-09 00:26] antigravity (Visual Web Browser Activity Dashboard at /inspector & Stats API)
+
+- **Why**: Give the user a beautiful, interactive visual web dashboard accessible right inside their browser at `http://localhost:3000/inspector` (and deployed on Vercel) with real-time cards, timelines, AI chat transcripts, CA monitor, search, and one-click report exports.
+- **Change**:
+  - Created `app/api/telemetry/stats/route.ts` API route for querying user activities, agent runs/events, vault documents, return snapshots, and CA reviews with date range and PAN filtering.
+  - Built interactive, high-contrast visual dashboard at `app/inspector/page.tsx` with:
+    - 5 live metric counter cards (Judges/Visitors, AI Conversations, Vault Docs, Returns Filed, CA Reviews).
+    - Date range filter buttons (`Today`, `Yesterday`, `Last 7 Days`, `All Time`).
+    - Live Search bar for instant filtering by PAN or Judge Name.
     - Real-time 3s auto-refresh toggle with live pulse badge.
     - Expandable visitor journey cards with event timeline pills and full AI conversation speech bubbles.
     - CA Portal oversight tab and 1-click text report export button.
@@ -5804,3 +5999,11 @@ things there are already true and will NOT be rewritten:
 - **Why**: User instructed push of the visual web activity inspector, stats API, and one-click batch launcher.
 - **Change**: Committed and pushed commit `393be00` to `origin/dev-2`.
 - **Verification**: Git push successful (`98a6c5d..393be00  dev-2 -> dev-2`); Vercel build triggered on `dev-2`.
+
+## [2026-09-09 00:33] antigravity (Enforce strict Localhost-Only guard on /inspector & Stats API)
+
+- **Why**: Prevent public visitors and judges on live Vercel from accessing internal activity dashboards or telemetry APIs; only allow local operator access on localhost.
+- **Change**:
+  - Added strict host checking in `app/api/telemetry/stats/route.ts` (returns 404 on any non-localhost host).
+  - Added client-side localhost guard in `app/inspector/page.tsx` rendering a standard 404 Not Found screen when accessed on Vercel production.
+- **Verification**: `npm run typecheck` clean; all 394 Vitest tests passing.

@@ -95,6 +95,7 @@ interface StatsData {
 export default function InspectorPage() {
   const [data, setData] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLocalHost, setIsLocalHost] = useState(true);
   const [range, setRange] = useState<'today' | 'yesterday' | '7d' | 'all'>('today');
   const [search, setSearch] = useState('');
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -102,7 +103,18 @@ export default function InspectorPage() {
   const [activeTab, setActiveTab] = useState<'journeys' | 'ca' | 'vault'>('journeys');
   const [lastUpdated, setLastUpdated] = useState<string>('');
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      setIsLocalHost(isLocal);
+    }
+  }, []);
+
   const fetchData = useCallback(async () => {
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      setLoading(false);
+      return;
+    }
     try {
       const res = await fetch(`/api/telemetry/stats?range=${range}&user=${encodeURIComponent(search)}`);
       if (res.ok) {
@@ -124,12 +136,21 @@ export default function InspectorPage() {
   }, [fetchData]);
 
   useEffect(() => {
-    if (!autoRefresh) return;
+    if (!autoRefresh || !isLocalHost) return;
     const interval = setInterval(() => {
       fetchData();
     }, 3000);
     return () => clearInterval(interval);
-  }, [autoRefresh, fetchData]);
+  }, [autoRefresh, isLocalHost, fetchData]);
+
+  if (!isLocalHost) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 p-4 select-none">
+        <h1 className="text-6xl font-extrabold text-slate-200 mb-2">404</h1>
+        <p className="text-sm text-slate-500">This page could not be found.</p>
+      </div>
+    );
+  }
 
   // Aggregate user sessions
   const sessions = useMemo(() => {
