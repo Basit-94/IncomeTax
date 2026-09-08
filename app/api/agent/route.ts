@@ -441,11 +441,13 @@ async function callGemini(
       [
         process.env.AGENT_MODEL || "gemini-3.5-flash-lite",
         process.env.AGENT_FALLBACK_MODEL || "gemini-3.5-flash",
-        "gemini-2.5-flash",
-        "gemini-2.0-flash",
+        "gemini-3.6-flash",
+        "gemini-3.5-flash-lite",
+        "gemini-3.5-flash",
       ].filter(Boolean) as string[],
     ),
   );
+
 
   let lastError = "";
 
