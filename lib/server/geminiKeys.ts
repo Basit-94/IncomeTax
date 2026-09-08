@@ -76,9 +76,17 @@ export function getGeminiKeys(env: Record<string, string | undefined> = process.
   return keys;
 }
 
-/** Returns all configured keys with resting/cooling-down keys sorted to the end or filtered */
+let keyRotationIndex = 0;
+
+/** Returns all configured keys with resting/cooling-down keys filtered and round-robin rotated across turns */
 export function getActiveGeminiKeys(env: Record<string, string | undefined> = process.env): string[] {
   const all = getGeminiKeys(env);
   const active = all.filter((k) => !isKeyCoolingDown(k));
-  return active.length > 0 ? active : all;
+  const pool = active.length > 0 ? active : all;
+  if (pool.length <= 1) return pool;
+
+  const start = keyRotationIndex % pool.length;
+  keyRotationIndex = (keyRotationIndex + 1) % 1_000_000;
+  return [...pool.slice(start), ...pool.slice(0, start)];
 }
+
