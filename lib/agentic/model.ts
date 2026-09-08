@@ -102,6 +102,8 @@ export function geminiModel(env: Record<string, string | undefined> = process.en
   // The primary model, then the fallbacks: free-tier quotas are per model, so a key that is out of quota on
   // gemini-3.5-flash usually still has the day's budget on gemini-3.5-flash-lite (found live 2026-09-07).
   const models = [...new Set([env.AGENT_MODEL, env.AGENT_FALLBACK_MODEL, env.AGENT_SMALL_MODEL].map(clean).filter(Boolean))];
+
+
   const model = models[0];
   // A thinking turn with tools takes longer than a phrasing; 4.5 s default for fast responses, env wins.
   const timeoutMs = Number(env.AGENT_MODEL_TIMEOUT_MS) || 4_500;

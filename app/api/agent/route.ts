@@ -436,24 +436,22 @@ async function callGemini(
     return { error: "API key is not configured." };
   }
 
-  const primaryModel = process.env.AGENT_MODEL || "gemini-3.5-flash-lite";
-  const fallbackModel = process.env.AGENT_FALLBACK_MODEL || "gemini-3.5-flash";
+  const candidateModels = Array.from(
+    new Set(
+      [
+        process.env.AGENT_MODEL || "gemini-3.5-flash-lite",
+        process.env.AGENT_FALLBACK_MODEL || "gemini-3.5-flash",
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+      ].filter(Boolean) as string[],
+    ),
+  );
 
   let lastError = "";
 
-  // 1. Try active keys with the primary model
-  for (const key of keys) {
-    const result = await tryCallGemini(key, primaryModel, system, contents, disableTools);
-    if (!("error" in result)) {
-      return result;
-    }
-    lastError = result.error;
-  }
-
-  // 2. If all failed, and fallbackModel is different, try active keys with the fallback model
-  if (fallbackModel !== primaryModel) {
+  for (const model of candidateModels) {
     for (const key of keys) {
-      const result = await tryCallGemini(key, fallbackModel, system, contents, disableTools);
+      const result = await tryCallGemini(key, model, system, contents, disableTools);
       if (!("error" in result)) {
         return result;
       }
@@ -463,6 +461,7 @@ async function callGemini(
 
   return { error: lastError || "All Gemini API calls failed." };
 }
+
 
 /* --------------------------------------------------------------- transcript -- */
 
