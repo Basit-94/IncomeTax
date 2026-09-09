@@ -6145,5 +6145,15 @@ things there are already true and will NOT be rewritten:
   - Pushed `main` to `origin/main` (`2fb7414..77959fe`).
   - Deleted local `dev-2` branch (`git branch -d dev-2`).
   - Deleted remote `origin/dev-2` branch (`git push origin --delete dev-2`).
-- **Result**: `main` is now the single source of truth containing all work, all tests passing, and triggering the production deployment on Vercel.
+## [2026-09-09 22:45] antigravity (Builder Attribution & LinkedIn Profile Link)
+
+- **Why**: User requested adding builder attribution ("Built by Abdul Basit Siddiqui") with a clickable LinkedIn profile icon (`https://www.linkedin.com/in/abdul-basit-siddiqui-7a3a38309`) across the home page and all pages in an elegant, non-intrusive design conforming to Sunrise/Lilac tokens.
+- **Action**:
+  - `components/agentic/header-frame.tsx`: Added builder attribution pill inside `PrototypeBanner` (rendered across all agentic views, wizard flows, `/signin`, `/app`). Features LinkedIn SVG glyph, hover states (`bg-[#0A66C2]/20`, hover zoom), opens profile in a new tab securely (`target="_blank" rel="noopener noreferrer"`).
+  - `components/layout/portal-footer.tsx`: Added builder attribution badge in `PortalFooter` (rendered on manual filing dashboard and flow subviews) alongside statutory indicators.
+  - `components/marketing/landing-page.tsx`: Added builder attribution pill in the public marketing landing page footer.
+- **Verification**:
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm test`: 46 passed, 408/408 tests passed.
+  - All 23 languages and UI layout integrity strictly preserved.
 
