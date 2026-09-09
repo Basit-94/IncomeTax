@@ -490,6 +490,13 @@ function AgenticWorkspace() {
             onReviewWithCA={() => setCaShareOpen(true)}
             activeCAReview={activeCAReview}
             onOpenComparison={() => setCaComparisonOpen(true)}
+            onOpenDashboard={() => {
+              // The dashboard is the Manual surface, so the stored mode moves with the person — otherwise the
+              // header pill would still read "Agentic" over a Manual page. `/` opens on the overview tab for a
+              // filed return (getDashboardDestination), which is the earned / went-to-tax / coming-back view.
+              try { localStorage.setItem("wapsi_user_mode", "manual"); } catch { /* private mode: the page still opens */ }
+              router.push("/");
+            }}
           />
         )}
       </AppShell>

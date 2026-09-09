@@ -45,6 +45,8 @@ export interface WorkspaceProps {
   onReviewWithCA?: () => void;
   activeCAReview?: CAReviewRecord | null;
   onOpenComparison?: () => void;
+  /** The last step of a filing: the year's dashboard — what they earned, what went to tax, what comes back. */
+  onOpenDashboard?: () => void;
 }
 
 const STATUS_KEY: Record<PublicRun["status"], keyof AgenticStrings> = {
@@ -385,6 +387,28 @@ export default function Workspace(props: WorkspaceProps) {
           </div>
         )}
 
+        {/* Filed — the same offer on the empty state, so it survives a new chat or a return visit. */}
+        {isFiled && props.onOpenDashboard && (
+          <div className="px-4 sm:px-6 pt-3">
+            <div className="mx-auto w-full max-w-2xl p-3.5 bg-ok-soft rounded-[18px] flex items-center justify-between gap-3 animate-in fade-in">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <MunshiAvatar size={28} state="happy" />
+                <div className="min-w-0 text-left">
+                  <span className="text-xs font-bold text-ok-ink block truncate">{s.filedDashboardTitle}</span>
+                  <span className="text-[11px] text-ink-3 block truncate">{s.filedDashboardBody}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={props.onOpenDashboard}
+                className="ink-surface h-[34px] px-3.5 hover:opacity-90 text-xs font-bold rounded-[12px] transition cursor-pointer shrink-0"
+              >
+                {s.filedDashboardCta}
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="flex-1 flex items-center justify-center px-4 py-10">
           <div className="w-full max-w-2xl text-center space-y-5">
             {/* Munshi ji greets the empty state (handoff: 96 px on empty states). */}
@@ -489,6 +513,29 @@ export default function Workspace(props: WorkspaceProps) {
                 {localize("View Diff →", props.lang) || "View Diff →"}
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Filed — the last step (user, 2026-09-09). The receipt is in the conversation; the year's figures live
+          on the dashboard, so the journey ends by offering it rather than stopping at a chat message. */}
+      {isFiled && props.onOpenDashboard && (
+        <div className="px-4 sm:px-6 pt-2">
+          <div className="mx-auto w-full max-w-3xl p-3.5 bg-ok-soft rounded-[18px] flex items-center justify-between gap-3 animate-in fade-in">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <MunshiAvatar size={28} state="happy" />
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-ok-ink block truncate">{props.s.filedDashboardTitle}</span>
+                <span className="text-[11px] text-ink-3 block truncate">{props.s.filedDashboardBody}</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={props.onOpenDashboard}
+              className="ink-surface h-[34px] px-3.5 hover:opacity-90 text-xs font-bold rounded-[12px] transition cursor-pointer shrink-0"
+            >
+              {props.s.filedDashboardCta}
+            </button>
           </div>
         </div>
       )}

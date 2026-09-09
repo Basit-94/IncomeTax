@@ -207,6 +207,10 @@ export interface AgenticStrings {
   confirmRegime: string;
   confirmCorrections: string;
   filedSimulated: string;
+  /** The last step after a filing (2026-09-09): the year's dashboard, where the figures live. */
+  filedDashboardTitle: string;
+  filedDashboardBody: string;
+  filedDashboardCta: string;
   regimeApplied: string;
   correctionsApplied: string;
   cancelledAction: string;
@@ -408,6 +412,9 @@ const en: AgenticStrings = {
   confirmRegime: "Apply this regime",
   confirmCorrections: "Apply corrections",
   filedSimulated: "All done! Your simulated filing went through — receipt {id}. Nothing was sent to any real authority, so there's nothing to worry about.",
+  filedDashboardTitle: "Your return is filed — here is the year in full",
+  filedDashboardBody: "What you earned, what went to tax, and what is coming back to you.",
+  filedDashboardCta: "Open my dashboard →",
   regimeApplied: "Done — I've applied the {regime} regime to your return.",
   correctionsApplied: "Done — I've applied the corrections to your return.",
   cancelledAction: "No problem at all — I've left everything exactly as it was.",
@@ -607,6 +614,9 @@ const hi: AgenticStrings = {
   confirmRegime: "यह व्यवस्था लागू करें",
   confirmCorrections: "सुधार लागू करें",
   filedSimulated: "हो गया! आपका सिम्युलेटेड दाखिला पूरा — रसीद {id}। किसी असली प्राधिकरण को कुछ नहीं भेजा गया, इसलिए चिंता की कोई बात नहीं।",
+  filedDashboardTitle: "आपका रिटर्न दाखिल हो गया — अब पूरा साल एक जगह",
+  filedDashboardBody: "आपने कितना कमाया, कितना टैक्स गया, और कितना वापस आ रहा है।",
+  filedDashboardCta: "मेरा डैशबोर्ड खोलें →",
   regimeApplied: "आपके रिटर्न पर {regime} व्यवस्था लागू कर दी।",
   correctionsApplied: "आपके रिटर्न पर सुधार लागू कर दिए।",
   cancelledAction: "बिल्कुल ठीक — सब कुछ वैसा ही छोड़ दिया जैसा था।",
@@ -806,6 +816,9 @@ const ta: AgenticStrings = {
   confirmRegime: "இந்த முறையைப் பயன்படுத்து",
   confirmCorrections: "திருத்தங்களைப் பயன்படுத்து",
   filedSimulated: "முடிந்தது! உங்கள் உருவகத் தாக்கல் நிறைவேறியது — ரசீது {id}. எந்த உண்மையான அதிகாரிக்கும் எதுவும் அனுப்பப்படவில்லை, கவலைப்பட ஒன்றுமில்லை.",
+  filedDashboardTitle: "உங்கள் ரிட்டர்ன் தாக்கல் ஆனது — ஆண்டு முழுவதும் ஒரே இடத்தில்",
+  filedDashboardBody: "நீங்கள் ஈட்டியது, வரிக்குச் சென்றது, திரும்பி வருவது.",
+  filedDashboardCta: "என் டாஷ்போர்டைத் திற →",
   regimeApplied: "உங்கள் ரிட்டர்னில் {regime} முறையைப் பயன்படுத்தினேன்.",
   correctionsApplied: "உங்கள் ரிட்டர்னில் திருத்தங்களைப் பயன்படுத்தினேன்.",
   cancelledAction: "பரவாயில்லை — எல்லாவற்றையும் இருந்தபடியே விட்டுவிட்டேன்.",
