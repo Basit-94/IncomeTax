@@ -6166,8 +6166,23 @@ things there are already true and will NOT be rewritten:
   - `lib/agent/copilot.ts` & `app/api/agent/route.ts`: Prioritized `gemini-3.5-flash` first before fallback models.
   - `lib/server/context.ts`: Updated default `AGENT_MODEL` to `gemini-3.5-flash` with fallback `gemini-3.5-flash-lite`.
   - `.env.local`: Cleaned to the previous working keys with `AGENT_MODEL=gemini-3.5-flash`.
+## [2026-09-10 01:48] antigravity (Builder Attribution - Aniket Shaw in Footer)
+
+- **Why**: User requested adding their builder attribution ("Built by Aniket Shaw") with their LinkedIn profile (`https://www.linkedin.com/in/aniket-shaw-a10478368/`) above Abdul Basit Siddiqui in the footer.
+- **Action**:
+  - `components/layout/portal-footer.tsx`: Wrapped builder attributions in a responsive flex column (`flex flex-col items-center sm:items-end gap-1.5`) and placed Aniket Shaw's attribution badge directly above Abdul Basit Siddiqui's badge. Styled with LinkedIn SVG glyph, hover states, accessible attributes, and `target="_blank" rel="noopener noreferrer"`.
+  - `components/marketing/landing-page.tsx`: Added Aniket Shaw's attribution badge stacked vertically above Abdul Basit Siddiqui in the marketing landing page footer.
+## [2026-09-10 02:07] antigravity (Single Box Attribution: Built by Aniket & Abdul)
+
+- **Why**: User requested unifying the builder attribution into a single box ("Built by Aniket & Abdul") rather than two separate stacked pills, keeping both LinkedIn profiles accessible.
+- **Action**:
+  - `components/layout/portal-footer.tsx`: Replaced stacked pills with a single sleek pill container (`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/15 text-[11px] text-white border border-white/15 hover:border-white/30`) featuring the LinkedIn SVG glyph, "Built by ", clickable link for Aniket with emerald hover/underline, " & ", and clickable link for Abdul with emerald hover/underline.
+  - `components/marketing/landing-page.tsx`: Consolidated footer attribution into a single matching pill with the same structure using landing page design tokens (`bg-paper-2`, `text-ink-2`, `hover:text-[#0A66C2]`).
+  - `components/agentic/header-frame.tsx`: Updated `PrototypeBanner` to match the single box "Built by Aniket & Abdul" format with independent LinkedIn links.
 - **Verification**:
-  - Direct API tests verified 100% success on all previous keys for text generation, agentic function tool-calling, and audio transcription.
-  - `npx tsc --noEmit`: 0 errors.
-  - `npm test`: 46 test suites passed, 408/408 unit tests passed.
+  - `npm run typecheck` (`tsc --noEmit`): 0 errors.
+  - `npm test` (`vitest run`): 46 passed, 408/408 tests passed across 46 files.
+  - UI integrity and all 23 languages preserved.
+
+
 
