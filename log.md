@@ -6135,3 +6135,15 @@ things there are already true and will NOT be rewritten:
   - Generated comprehensive 5,160-line report `TOP_250_RANKINGS_REPORT.md` containing full leaderboard, top 10 breakdown, and individual reviews for all 250 projects.
 - **Verification**: All 250 sites catalogued and audited; Playwright MCP verified live navigation to `https://wapsi-git-dev-2-abs21.vercel.app/`. No code or UI regressions to the repository. No commit or push.
 
+## [2026-09-09 22:30] antigravity (Fast-Forward Merge `dev-2` into `main`, Verification & Branch Retirement)
+
+- **Why**: User explicitly directed to merge `dev-2` into `main` so `main` contains the exact same code and commits as `dev-2`, promote `main` to the live Vercel production branch, and remove `dev-2`.
+- **Action**:
+  - Checked out `main` and performed a clean `--ff-only` merge with `dev-2` (`2fb7414..77959fe`).
+  - Verified `npx tsc --noEmit`: 0 errors.
+  - Verified `npm test`: 46/46 suites passed, 408/408 tests passed.
+  - Pushed `main` to `origin/main` (`2fb7414..77959fe`).
+  - Deleted local `dev-2` branch (`git branch -d dev-2`).
+  - Deleted remote `origin/dev-2` branch (`git push origin --delete dev-2`).
+- **Result**: `main` is now the single source of truth containing all work, all tests passing, and triggering the production deployment on Vercel.
+
