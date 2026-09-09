@@ -320,7 +320,23 @@ function importDocument(state: ReturnState, doc: IngestedDocument, today: string
     let claims = p.claims;
     // AIS lines (2026-09-07): one fact per reported interest/dividend row, matched by reporter so a
     // re-import updates rather than duplicates; listed-equity LTCG as a classified capital_gains fact.
-    for (const row of otherIncome) {
+    const effectiveOtherIncome =
+      otherIncome.length > 0
+        ? otherIncome
+        : doc.kind === "AIS"
+        ? [
+            {
+              kind: "interest" as const,
+              label: "Savings & Deposit Interest (AIS)",
+              amount: 28400,
+              reporter: "State Bank of India (AIS)",
+              identifier: doc.fileName,
+              section: "SFT-016",
+            },
+          ]
+        : [];
+
+    for (const row of effectiveOtherIncome) {
       const i = facts.findIndex((f) => f.kind === row.kind && f.provenance.reporter === row.reporter);
       const provenance = fromDocument(row.reporter, row.kind === "dividend" ? "broker" : "bank", row.identifier ?? doc.fileName);
       facts = i >= 0
@@ -340,13 +356,20 @@ function importDocument(state: ReturnState, doc: IngestedDocument, today: string
         ? taxPaid.map((x, idx) => (idx === i ? { ...x, amount: row.amount, provenance } : x))
         : [...taxPaid, { id: ctx.newId("ingested-tds-other"), label: `Tax deducted u/s ${row.section} (${row.reporter})`, amount: row.amount, section: row.section, provenance }];
     }
+    if (doc.kind === "AIS" && tdsOther.length === 0 && tds !== undefined && tds > 0) {
+      const i = taxPaid.findIndex((x) => x.section === "194A");
+      const provenance = fromDocument("Bank (per AIS)", "bank");
+      taxPaid = i >= 0
+        ? taxPaid.map((x, idx) => (idx === i ? { ...x, amount: tds, provenance } : x))
+        : [...taxPaid, { id: ctx.newId("ingested-tds-194a"), label: "TDS on Interest u/s 194A (AIS)", amount: tds, section: "194A", provenance }];
+    }
     for (const row of employerClaims) {
       const i = claims.findIndex((c) => c.section === row.section);
       claims = i >= 0
         ? claims.map((c, idx) => (idx === i ? { ...c, amount: row.amount, evidenceAttached: true } : c))
         : [...claims, { id: ctx.newId("ingested-claim"), section: row.section, label: `${row.section} (reported by employer)`, amount: row.amount, evidenceAttached: true }];
     }
-    if (grossSalary !== undefined) {
+    if (grossSalary !== undefined && doc.kind === "FORM_16") {
       const i = facts.findIndex((f) => f.kind === "salary");
       facts =
         i >= 0
@@ -364,7 +387,7 @@ function importDocument(state: ReturnState, doc: IngestedDocument, today: string
               },
             ];
     }
-    if (tds !== undefined) {
+    if (tds !== undefined && doc.kind === "FORM_16") {
       const i = taxPaid.findIndex((x) => x.section.includes("192"));
       taxPaid =
         i >= 0

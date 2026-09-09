@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PERSONAS } from "../../personas";
+import type { Persona } from "../../types";
 import { applyReturnCommand, type CommandContext } from "../commands";
 import { computeForPersona } from "../compute";
 import { applyCorrection, confirmFact, revertCorrection, type ReturnState } from "../state";
@@ -109,6 +110,66 @@ describe("applyReturnCommand — parity with the manual primitives (plan §3.3)"
     expect(r.state.baselinePersona.facts[0].provenance.identifier).toBe("f16.pdf");
     const empty = applyReturnCommand(s, { type: "import_document", today: "2026-09-05", document: { fileName: "x", kind: "AIS", ingestedAt: "", extracted: {} } }, ctx);
     expect(empty).toMatchObject({ ok: false, error: "nothing_to_do" });
+  });
+
+  it("import_document with AIS provisions interest and non-salary TDS without creating a salary fact", () => {
+    const blankPersona: Persona = {
+      id: "custom",
+      name: "Anthony D'Souza",
+      pan: "ABCPD1982K",
+      age: 30,
+      city: "Goa",
+      state: "Goa",
+      occupation: "Taxpayer",
+      mobile: "9000000000",
+      preferredLang: "en",
+      situation: "Custom",
+      act: 1,
+      actLabel: "Act 1",
+      embodies: "Custom",
+      assessmentYear: "2026-27",
+      facts: [],
+      taxPaid: [],
+      claims: [],
+      banks: [],
+      refund: { state: "not_filed", amount: 0, holds: [], timeline: [] },
+      notices: [],
+    };
+    const s: ReturnState = {
+      version: 2,
+      lang: "en",
+      personaId: "custom",
+      baselinePersona: blankPersona,
+      persona: blankPersona,
+      corrections: [],
+      confirmedFactIds: [],
+      regime: "new",
+    };
+    const aisResult = applyReturnCommand(
+      s,
+      {
+        type: "import_document",
+        today: "2026-09-05",
+        document: {
+          fileName: "AIS _ TIS Statement - Anthony D'Souza.pdf",
+          kind: "AIS",
+          ingestedAt: ctx.now(),
+          extracted: {
+            pan: "ABCPD1982K",
+            grossSalary: 1620000,
+            otherIncome: [{ kind: "interest", label: "Savings Interest", amount: 28400, reporter: "SBI" }],
+            tds: 2840,
+          },
+        },
+      },
+      ctx,
+    );
+    if (!aisResult.ok) throw new Error("rejected");
+    expect(aisResult.state.persona.facts.some((f) => f.kind === "salary")).toBe(false);
+    expect(aisResult.state.persona.facts.some((f) => f.kind === "interest")).toBe(true);
+    expect(aisResult.state.persona.facts.find((f) => f.kind === "interest")?.amount).toBe(28400);
+    expect(aisResult.state.persona.taxPaid.some((t) => t.section === "192")).toBe(false);
+    expect(aisResult.state.persona.taxPaid.some((t) => t.section === "194A")).toBe(true);
   });
 
   it("finalize_filing stamps once, keys the timeline event, and refuses a second stamp", () => {

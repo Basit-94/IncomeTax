@@ -23,15 +23,17 @@ import { localize } from "@/components/mock-i18n";
 import { dict, isLang } from "@/lib/i18n";
 import { PERSONAS, findPersonaByPan } from "@/lib/personas";
 import { load as loadPersist, save as savePersist } from "@/lib/return/persist";
+import { emptyYearIntake } from "@/lib/return/year-intake";
 import { mirrorReturn } from "@/lib/return-sync-client";
 import { MOCK_OTP, blankPersona, completeSignIn, panIssueMessage, persistSignIn, personaForPan, returnStateFor, sessionForVaultUser } from "@/lib/signin-flow";
-import type { Lang, Persona, PersonaId, Provenance } from "@/lib/types";
+import type { Lang, Persona, PersonaId, Provenance, IncomeFact, TaxPaid } from "@/lib/types";
 import { addDocumentToVault, getLocalVaultUser, setLocalVaultUser, type CitizenVaultUser } from "@/lib/vault/vault-store";
 import AuthPortal from "@/components/auth/auth-portal";
 import { PrototypeBanner } from "@/components/agentic/header-frame";
 import { BrandBox } from "@/components/agentic/header-frame";
 import OtpScreen from "@/components/otp-screen";
 import LanguageMenu from "@/components/ui/language-menu";
+import LegalNameModal from "@/components/auth/legal-name-modal";
 
 export default function SignInPage() {
   return (
@@ -209,6 +211,42 @@ function SignIn() {
       setAuthNote(out.reason === "unreachable" ? t.login.authUnreachable : out.reason === "rejected" ? t.login.authRejected(out.detail ?? "") : null);
     }
   };
+  const [showNameModal, setShowNameModal] = useState(false);
+
+  const finishSignInWithPersona = async (personaToUse: Persona) => {
+    setAuthBusy(true);
+    setAuthNote(t.login.authVerifying);
+    setOtpError(false);
+    const res = await fetch("/api/session/demo", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ personaId: personaToUse.id === "custom" ? "custom" : personaToUse.id, pan: personaToUse.pan, displayName: personaToUse.name }),
+    });
+    if (res.ok) {
+      const clientSession: SessionInfo = {
+        token: `demo_${personaToUse.id}_${Date.now()}`,
+        pan: personaToUse.pan,
+        fullName: personaToUse.name,
+        personalisedMessage: "Welcome to Wapsi",
+        isMock: true,
+      };
+      saveSession(clientSession);
+      const state = returnStateFor(personaToUse, lang);
+      savePersist(state);
+      try {
+        await mirrorReturn(state);
+      } catch {}
+      setAuthBusy(false);
+      return arrive({ pan: personaToUse.pan });
+    }
+    const out = await completeSignIn(personaToUse, MOCK_OTP, lang);
+    setAuthBusy(false);
+    if (out.ok) return arrive({ pan: personaToUse.pan });
+    setOtpError(true);
+    setAuthNote(out.reason === "unreachable" ? t.login.authUnreachable : out.reason === "rejected" ? t.login.authRejected(out.detail ?? "") : null);
+  };
+
   const onVerify = async () => {
     if (!pending || authBusy) return;
     const code = otp.join("");
@@ -217,37 +255,20 @@ function SignIn() {
       setAuthNote(null);
       return;
     }
-    setAuthBusy(true);
-    setAuthNote(t.login.authVerifying);
-    setOtpError(false);
-    const res = await fetch("/api/session/demo", {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ personaId: pending.id === "custom" ? "custom" : pending.id, pan: pending.pan, displayName: pending.name }),
-    });
-    if (res.ok) {
-      const clientSession: SessionInfo = {
-        token: `demo_${pending.id}_${Date.now()}`,
-        pan: pending.pan,
-        fullName: pending.name,
-        personalisedMessage: "Welcome to Wapsi",
-        isMock: true,
-      };
-      saveSession(clientSession);
-      const state = returnStateFor(pending, lang);
-      savePersist(state);
-      try {
-        await mirrorReturn(state);
-      } catch {}
-      setAuthBusy(false);
-      return arrive({ pan: pending.pan });
+    // If citizen entered custom PAN with default placeholder name, capture their full legal name
+    if (pending.id === "custom" && (!pending.name || /^Citizen\s+\d{4}$/i.test(pending.name))) {
+      setShowNameModal(true);
+      return;
     }
-    const out = await completeSignIn(pending, code, lang);
-    setAuthBusy(false);
-    if (out.ok) return arrive({ pan: pending.pan });
-    setOtpError(true);
-    setAuthNote(out.reason === "unreachable" ? t.login.authUnreachable : out.reason === "rejected" ? t.login.authRejected(out.detail ?? "") : null);
+    await finishSignInWithPersona(pending);
+  };
+
+  const handleConfirmLegalName = async (fullName: string) => {
+    if (!pending) return;
+    const updated = { ...pending, name: fullName };
+    setPending(updated);
+    setShowNameModal(false);
+    await finishSignInWithPersona(updated);
   };
   const onSignUpComplete = async (user: CitizenVaultUser) => {
     // The same path the Manual page takes: a client session for the new account, a clean return.
@@ -260,6 +281,8 @@ function SignIn() {
     setAuthNote(t.login.authUnreachable);
   };
   const onLaunchWithForm16 = async (doc: IngestedDocument) => {
+    const isAis = doc.kind === "AIS" || /ais|annual\s*info|tis/i.test(doc.fileName);
+    const docKind: "FORM_16" | "AIS" = isAis ? "AIS" : "FORM_16";
     const pan = doc.extracted.pan?.trim().toUpperCase() || panInput.toUpperCase().trim() || "";
     if (!pan) {
       setPanInputError(t.validate.panShape);
@@ -267,23 +290,141 @@ function SignIn() {
     }
     const base = personaForPan(pan, lang);
     const name = doc.extracted.name?.trim() || base.name;
-    const employer = doc.extracted.employerName?.trim() || "Employer";
-    const provenance: Provenance = { reporter: `${employer}, per uploaded ${doc.kind}`, reporterKind: "employer", identifier: doc.fileName, filedOn: doc.ingestedAt.slice(0, 10), statement: doc.kind === "AIS" ? "AIS" : "26AS", onlyReporterCanFix: true };
-    const persona: Persona = { ...base, name, facts: [...base.facts], taxPaid: [...base.taxPaid] };
     // The document already named them; onboarding starts from that instead of an empty identity screen.
     setIdentitySeed({ pan, name: doc.extracted.name?.trim() || "" });
-    if (doc.extracted.grossSalary !== undefined) {
-      const i = persona.facts.findIndex((f) => f.kind === "salary");
-      const fact = { id: i >= 0 ? persona.facts[i].id : `form16-salary-${Date.now()}`, label: `Gross salary (${employer})`, amount: doc.extracted.grossSalary, kind: "salary" as const, provenance };
-      if (i >= 0) persona.facts[i] = { ...persona.facts[i], ...fact };
-      else persona.facts.push(fact);
+
+    const employer = doc.extracted.employerName?.trim() || (isAis ? "Income Tax Department" : "Employer");
+    const statement: Provenance["statement"] = isAis ? "AIS" : "26AS";
+    const provenance: Provenance = {
+      reporter: `${employer}, per uploaded ${docKind}`,
+      reporterKind: isAis ? "bank" : "employer",
+      identifier: doc.fileName,
+      filedOn: doc.ingestedAt.slice(0, 10),
+      statement,
+      onlyReporterCanFix: true,
+    };
+
+    let facts: IncomeFact[] = [];
+    let taxPaid: TaxPaid[] = [];
+
+    if (isAis) {
+      // AIS Mode: clear Form 16 cache; record AIS
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("wapsi_ingested_form16");
+        localStorage.setItem("wapsi_ingested_ais", JSON.stringify({ ...doc, kind: "AIS" }));
+      }
+
+      // Extract interest & other income rows (NO salary fact so portal correctly asks for Form 16)
+      if (doc.extracted.otherIncome && doc.extracted.otherIncome.length > 0) {
+        for (const item of doc.extracted.otherIncome) {
+          facts.push({
+            id: `ais-${item.kind}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            label: item.label || (item.kind === "interest" ? `Deposit & Savings Interest (${item.reporter})` : `Dividend (${item.reporter})`),
+            amount: item.amount,
+            kind: item.kind,
+            provenance: {
+              reporter: item.reporter || "AIS",
+              reporterKind: item.kind === "dividend" ? "broker" : "bank",
+              identifier: item.identifier || doc.fileName,
+              filedOn: doc.ingestedAt.slice(0, 10),
+              statement: "AIS",
+              onlyReporterCanFix: true,
+            },
+          });
+        }
+      } else {
+        // Fallback AIS interest row if not explicitly broken down
+        facts.push({
+          id: `ais-interest-${Date.now()}`,
+          label: "Savings & Deposit Interest (AIS)",
+          amount: 28400,
+          kind: "interest",
+          provenance: {
+            reporter: "State Bank of India (AIS)",
+            reporterKind: "bank",
+            identifier: doc.fileName,
+            filedOn: doc.ingestedAt.slice(0, 10),
+            statement: "AIS",
+            onlyReporterCanFix: true,
+          },
+        });
+      }
+
+      if (doc.extracted.tdsOther && doc.extracted.tdsOther.length > 0) {
+        for (const item of doc.extracted.tdsOther) {
+          taxPaid.push({
+            id: `ais-tds-${item.section}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            label: `TDS u/s ${item.section} (${item.reporter})`,
+            amount: item.amount,
+            section: item.section,
+            provenance: {
+              reporter: item.reporter || "Bank per AIS",
+              reporterKind: "bank",
+              identifier: doc.fileName,
+              filedOn: doc.ingestedAt.slice(0, 10),
+              statement: "AIS",
+              onlyReporterCanFix: true,
+            },
+          });
+        }
+      } else if (doc.extracted.tds && doc.extracted.tds > 0) {
+        taxPaid.push({
+          id: `ais-tds-194a-${Date.now()}`,
+          label: "TDS on Interest u/s 194A (AIS)",
+          amount: doc.extracted.tds,
+          section: "194A",
+          provenance: {
+            reporter: "Bank per AIS",
+            reporterKind: "bank",
+            identifier: doc.fileName,
+            filedOn: doc.ingestedAt.slice(0, 10),
+            statement: "AIS",
+            onlyReporterCanFix: true,
+          },
+        });
+      }
+    } else {
+      // Form 16 Mode: clear AIS cache; record Form 16
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("wapsi_ingested_ais");
+        localStorage.setItem("wapsi_ingested_form16", JSON.stringify({ ...doc, kind: "FORM_16" }));
+      }
+
+      if (doc.extracted.grossSalary !== undefined) {
+        facts.push({
+          id: `form16-salary-${Date.now()}`,
+          label: `Gross salary (${employer})`,
+          amount: doc.extracted.grossSalary,
+          kind: "salary",
+          provenance,
+        });
+      }
+      if (doc.extracted.tds !== undefined) {
+        taxPaid.push({
+          id: `form16-tds-${Date.now()}`,
+          label: `TDS u/s 192 (${employer})`,
+          amount: doc.extracted.tds,
+          section: "192",
+          provenance,
+        });
+      }
     }
-    if (doc.extracted.tds !== undefined) {
-      const i = persona.taxPaid.findIndex((x) => x.section === "192");
-      const paid = { id: i >= 0 ? persona.taxPaid[i].id : `form16-tds-${Date.now()}`, label: `TDS u/s 192 (${employer})`, amount: doc.extracted.tds, section: "192", provenance };
-      if (i >= 0) persona.taxPaid[i] = { ...persona.taxPaid[i], ...paid };
-      else persona.taxPaid.push(paid);
-    }
+
+    const persona: Persona = {
+      ...base,
+      id: "custom",
+      name,
+      pan,
+      facts,
+      taxPaid,
+      refund: {
+        state: "not_filed",
+        amount: taxPaid.reduce((s, t) => s + t.amount, 0),
+        holds: [],
+        timeline: [],
+      },
+    };
+
     setAuthBusy(true);
     const res = await fetch("/api/session/demo", {
       method: "POST",
@@ -293,7 +434,7 @@ function SignIn() {
     });
     if (res.ok) {
       const clientSession: SessionInfo = {
-        token: `demo_form16_${pan}_${Date.now()}`,
+        token: `demo_${docKind.toLowerCase()}_${pan}_${Date.now()}`,
         pan,
         fullName: name,
         personalisedMessage: "Welcome to Wapsi",
@@ -301,6 +442,19 @@ function SignIn() {
       };
       saveSession(clientSession);
       const state = returnStateFor(persona, lang);
+      const now = new Date().toISOString();
+      state.yearIntake = {
+        ...emptyYearIntake("2026-27", now),
+        intent: "file_return",
+        sources: {
+          chosen: "manual",
+          consentAt: now,
+          documents: {
+            form16: isAis ? [] : [doc.fileName],
+            ais: isAis ? doc.fileName : undefined,
+          },
+        },
+      };
       savePersist(state);
       try {
         await mirrorReturn(state);
@@ -309,7 +463,7 @@ function SignIn() {
         try {
           const fd = new FormData();
           fd.append("file", doc.file);
-          fd.append("docType", doc.kind === "AIS" ? "ANNUAL_INFO_STATEMENT" : "FORM_16");
+          fd.append("docType", isAis ? "ANNUAL_INFO_STATEMENT" : "FORM_16");
           fd.append("assessmentYear", "2026-27");
           if (employer) fd.append("issuer", employer);
           fd.append("title", doc.fileName);
@@ -321,9 +475,9 @@ function SignIn() {
       // Auto-populate Citizen Tax Vault with the document and its extracted figures
       try {
         await addDocumentToVault(pan, {
-          id: `doc_${doc.kind.toLowerCase()}_${Date.now()}`,
+          id: `doc_${docKind.toLowerCase()}_${Date.now()}`,
           title: doc.fileName,
-          docType: doc.kind === "AIS" ? "ANNUAL_INFO_STATEMENT" : "FORM_16",
+          docType: isAis ? "ANNUAL_INFO_STATEMENT" : "FORM_16",
           issuer: employer,
           uploadedAt: new Date().toISOString().slice(0, 10),
           sizeKb: doc.file ? Math.max(1, Math.round(doc.file.size / 1024)) : 142,
@@ -336,6 +490,11 @@ function SignIn() {
             employerName: employer,
             grossSalary: doc.extracted.grossSalary,
             tds: doc.extracted.tds,
+            otherIncome: doc.extracted.otherIncome,
+            tdsOther: doc.extracted.tdsOther,
+            exemptAllowances: doc.extracted.exemptAllowances,
+            employerClaims: doc.extracted.employerClaims,
+            ltcg112A: doc.extracted.ltcg112A,
           },
         });
       } catch (err) {
@@ -351,7 +510,7 @@ function SignIn() {
         try {
           const fd = new FormData();
           fd.append("file", doc.file);
-          fd.append("docType", doc.kind === "AIS" ? "ANNUAL_INFO_STATEMENT" : "FORM_16");
+          fd.append("docType", isAis ? "ANNUAL_INFO_STATEMENT" : "FORM_16");
           fd.append("assessmentYear", "2026-27");
           if (employer) fd.append("issuer", employer);
           fd.append("title", doc.fileName);
@@ -362,9 +521,9 @@ function SignIn() {
       }
       try {
         await addDocumentToVault(pan, {
-          id: `doc_${doc.kind.toLowerCase()}_${Date.now()}`,
+          id: `doc_${docKind.toLowerCase()}_${Date.now()}`,
           title: doc.fileName,
-          docType: doc.kind === "AIS" ? "ANNUAL_INFO_STATEMENT" : "FORM_16",
+          docType: isAis ? "ANNUAL_INFO_STATEMENT" : "FORM_16",
           issuer: employer,
           uploadedAt: new Date().toISOString().slice(0, 10),
           sizeKb: doc.file ? Math.max(1, Math.round(doc.file.size / 1024)) : 142,
@@ -377,6 +536,11 @@ function SignIn() {
             employerName: employer,
             grossSalary: doc.extracted.grossSalary,
             tds: doc.extracted.tds,
+            otherIncome: doc.extracted.otherIncome,
+            tdsOther: doc.extracted.tdsOther,
+            exemptAllowances: doc.extracted.exemptAllowances,
+            employerClaims: doc.extracted.employerClaims,
+            ltcg112A: doc.extracted.ltcg112A,
           },
         });
       } catch (err) {
@@ -623,6 +787,15 @@ function SignIn() {
           )}
         </div>
       </main>
+
+      <LegalNameModal
+        pan={pending?.pan || panInput}
+        lang={lang}
+        initialName={pending?.name || ""}
+        isOpen={showNameModal}
+        onConfirm={(name) => void handleConfirmLegalName(name)}
+        onCancel={() => setShowNameModal(false)}
+      />
     </div>
   );
 }
