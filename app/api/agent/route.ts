@@ -496,6 +496,8 @@ export async function POST(request: NextRequest) {
     sessionId?: string;
     messages?: ChatMessage[];
     context?: AgentContext;
+    /** Viewer bucket from lib/telemetry/client.ts, so chat rows sort with the browser's other activity. */
+    telemetry?: { sessionId?: string; userKind?: string; tester?: string | null; origin?: string; automation?: boolean };
   };
   try {
     body = await request.json();
@@ -505,6 +507,14 @@ export async function POST(request: NextRequest) {
   const ctx = body.context;
   const messages = body.messages ?? [];
   const sessionId = body.sessionId ?? "anonymous";
+  const tm = body.telemetry;
+  const activityRow = {
+    sessionId: (tm?.sessionId || sessionId).slice(0, 64),
+    kind: ["citizen", "ca", "demo", "judge", "tester", "agent"].includes(tm?.userKind || "") ? (tm!.userKind as string) : "citizen",
+    origin: (tm?.origin || request.headers.get("host")?.split(":")[0] || "").toLowerCase().slice(0, 64) || null,
+    tester: tm?.tester ? String(tm.tester).toLowerCase().slice(0, 64) : null,
+    automation: tm?.automation === true,
+  };
   if (!ctx || !Array.isArray(ctx.facts) || messages.length === 0) {
     return NextResponse.json({ error: "Missing context or messages." }, { status: 400 });
   }
@@ -537,10 +547,10 @@ export async function POST(request: NextRequest) {
   const promptId = "evt_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   if (pool && lastUser?.text) {
     pool.query(
-      `INSERT INTO user_activity_events (id, session_id, pan, user_name, user_kind, event_type, details, lang, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO user_activity_events (id, session_id, pan, user_name, user_kind, event_type, details, lang, created_at, origin, tester, automation)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        ON CONFLICT (id) DO NOTHING`,
-      [promptId, sessionId, ctx.userName || "ANONYMOUS", ctx.userName || "Visitor", "citizen", "agent_prompt", JSON.stringify({ prompt: lastUser.text }), ctx.lang, new Date()]
+      [promptId, activityRow.sessionId, ctx.userName || "ANONYMOUS", ctx.userName || "Visitor", activityRow.kind, "agent_prompt", JSON.stringify({ prompt: lastUser.text }), ctx.lang, new Date(), activityRow.origin, activityRow.tester, activityRow.automation]
     ).catch(() => {});
   }
 
@@ -560,10 +570,10 @@ export async function POST(request: NextRequest) {
   if (pool && out.reply) {
     const replyId = "evt_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     pool.query(
-      `INSERT INTO user_activity_events (id, session_id, pan, user_name, user_kind, event_type, details, lang, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO user_activity_events (id, session_id, pan, user_name, user_kind, event_type, details, lang, created_at, origin, tester, automation)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        ON CONFLICT (id) DO NOTHING`,
-      [replyId, sessionId, ctx.userName || "ANONYMOUS", ctx.userName || "Visitor", "citizen", "agent_reply", JSON.stringify({ reply: out.reply.slice(0, 500), tools: out.toolEvents.map(t => t.tool) }), ctx.lang, new Date()]
+      [replyId, activityRow.sessionId, ctx.userName || "ANONYMOUS", ctx.userName || "Visitor", activityRow.kind, "agent_reply", JSON.stringify({ reply: out.reply.slice(0, 500), tools: out.toolEvents.map(t => t.tool) }), ctx.lang, new Date(), activityRow.origin, activityRow.tester, activityRow.automation]
     ).catch(() => {});
   }
 

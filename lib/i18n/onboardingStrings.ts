@@ -28,6 +28,8 @@ export interface OnboardingStrings {
   reading: string;
   readFailed: string;
   fromPanRecord: string;
+  /** Shown under the name when the locker answered: nobody types their legal name (user, 2026-09-09). */
+  nameFromDigiLocker: string;
   fromAadhaar: string;
   fromSignUp: string;
   locked: string;
@@ -92,6 +94,7 @@ const en: OnboardingStrings = {
   reading: "Reading your record…",
   readFailed: "DigiLocker did not answer. Your PAN record is filled in; add the rest yourself.",
   fromPanRecord: "PAN record",
+  nameFromDigiLocker: "Your full legal name, read from your PAN record in DigiLocker — you never have to type it.",
   fromAadhaar: "Aadhaar",
   fromSignUp: "Sign-up",
   locked: "Locked",
@@ -154,6 +157,7 @@ const hi: Partial<OnboardingStrings> = {
   reading: "आपका रिकॉर्ड पढ़ रहे हैं…",
   readFailed: "DigiLocker से जवाब नहीं आया। PAN रिकॉर्ड भर दिया है; बाकी आप खुद जोड़ दें।",
   fromPanRecord: "PAN रिकॉर्ड",
+  nameFromDigiLocker: "आपका पूरा कानूनी नाम, DigiLocker में आपके PAN रिकॉर्ड से लिया गया — टाइप करने की ज़रूरत नहीं।",
   fromAadhaar: "आधार",
   fromSignUp: "साइन-अप",
   locked: "लॉक",

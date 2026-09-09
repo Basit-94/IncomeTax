@@ -6,10 +6,17 @@ are, what is real and what is mocked, and how to verify a change. Keep it curren
 architecture, a contract, a storage key, a route, or a test count, update the matching line here and
 append the detail to `log.md` (append-only, `## [YYYY-MM-DD HH:MM] who (title)` entries).
 
-**Last verified against the tree:** 2026-09-05 (branch `dev-2`, uncommitted working tree after the
-plan.md Phase A–G execution and the tax-RAG continuation). Gates at that point: `npx tsc --noEmit`
-0 errors · `npx vitest run` 305/305 across 30 files · `npx next build` exit 0 · `git diff --check` clean. Work happens on `dev-2`; nothing is merged or pushed
+**Last verified against the tree:** 2026-09-09 (branch `dev-2`). Gates: `npx tsc --noEmit`
+0 errors · `npx vitest run` 408/408 across 46 files · `npx next build` exit 0. Work happens on `dev-2`; nothing is merged or pushed
 by agents.
+
+**Return mutation contract (2026-09-09).** Both modes mutate through `lib/return/commands.ts`
+(`ReturnCommand`). `declare_income` and `declare_tax_paid` are for figures the citizen asserts where
+nobody else has: each **refuses with `nothing_to_do`** when a fact of that kind — or a `taxPaid` row of
+that section — already exists from a non-`self` reporter, and the refusal message names the row to
+correct. Restating a reported figure is always `correct_fact`, never a second row; declaring over one
+used to stack the two and inflate the return (log 2026-09-09 16:45). Re-declaring your own earlier
+figure replaces it, as `declare_claim` already did by section.
 
 ---
 
@@ -534,3 +541,32 @@ Redesign of the whole CA path. The own-CA flow (code + PIN, WhatsApp link, `/ca?
 - **Decisions** — "Wapsi certified" is Wapsi's own mark (registered and checked on Wapsi), said so on the register form;
   broadcast requests have no PIN; the CA sees the client's PAN (they need it to file); routes keep the open posture of
   the old `/api/ca/review`. Tests: `lib/ca/__tests__/ca-system.test.ts`.
+
+## 16. Who is watching — the activity inspector, viewer buckets, judge alerts (2026-09-09)
+
+Every citizen-facing page records activity into `user_activity_events` (`lib/telemetry/client.ts`
+`recordActivity`, ingested by `app/api/telemetry/event/route.ts`); the copilot route writes the
+`agent_prompt` / `agent_reply` rows itself. `/inspector` (`app/inspector/page.tsx`, fed by
+`app/api/telemetry/stats/route.ts`) and `npm run inspect` (`scripts/inspect-activity.cjs`) read them back.
+Nothing on the citizen-facing site links to the inspector or mentions any of this.
+
+**Buckets.** One rule, `lib/telemetry/bucket.ts` (a TypeScript function for ingest and the identical SQL
+`CASE` for reads): **agent** = `user_kind 'agent'` or a webdriver/headless browser; **tester** =
+`user_kind 'tester'` or an event whose `origin` is localhost / a LAN address; **judge** = everything else.
+The team marks a browser once by opening any page with `?tester=<name>` — the client stores the mark in
+`wapsi_tester_mark`, strips the param from the URL in the same tick and stamps every later event
+(`?tester=agent-<name>` for agents we send, `?tester=off` to clear). `components/telemetry/telemetry-boot.tsx`
+in the root layout captures the mark and records a `page_view` on every route except `/inspector`. The
+chat panel sends the same `getTelemetryMeta()` with `/api/agent`, so chat rows carry the browser's session
+id and bucket instead of the old hardcoded `citizen`. Migration `0009` adds `origin`, `tester`, `automation`,
+`ip_hash` (sha-256 prefix of the forwarded IP) and the `judge_alerts` table. The inspector defaults to the
+Judges bucket; Testers / Agents / Everyone are a segmented pill, counts per bucket come from the stats route.
+Autonomous runs (`agent_runs`) carry no bucket: they attach to the session with the same PAN, and appear on
+their own only under Everyone.
+
+**Phone alerts.** `lib/telemetry/judgeAlert.ts`: when an event in the judge bucket arrives, the ingest route
+inserts `(session_id, kind)` into `judge_alerts` and, only if that insert created a row, pushes to ntfy —
+`kind 'arrival'` on the first event of the session (whatever it is, so a judge already inside is announced on
+their next action), `kind 'sign_in'` on `sign_in` / `ca_login`. Env: `JUDGE_ALERT_NTFY_TOPIC` (unset → no
+push, the inspector shows "Not set up"), `JUDGE_ALERT_NTFY_URL`, `JUDGE_ALERT_NTFY_TOKEN`,
+`JUDGE_ALERT_CLICK_URL`. `npm run judge-alert:test` sends a test push through the same path.

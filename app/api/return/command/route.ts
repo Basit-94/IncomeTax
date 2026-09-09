@@ -36,6 +36,7 @@ export const commandSchema: z.ZodType<ReturnCommand> = z.discriminatedUnion("typ
   }),
   z.object({ type: z.literal("finalize_filing"), filedAt: z.string(), today: z.string() }),
   z.object({ type: z.literal("declare_income"), kind: z.enum(["salary", "interest", "dividend", "capital_gains", "rent", "other"]), amount: z.number(), label: z.string().min(1).max(80), today: z.string() }),
+  z.object({ type: z.literal("declare_tax_paid"), section: z.string().min(2).max(16), amount: z.number(), label: z.string().min(1).max(80), today: z.string() }),
   z.object({ type: z.literal("declare_claim"), section: z.string().min(2).max(16), amount: z.number(), label: z.string().min(1).max(80), evidenceAttached: z.boolean() }),
 ]) as z.ZodType<ReturnCommand>;
 

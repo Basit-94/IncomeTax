@@ -103,7 +103,6 @@ import { Challan280Modal } from "../components/Challan280Modal";
 import { stableIdempotencyKey } from "@/lib/submission-key";
 import { CheckCircle2 } from "lucide-react";
 import CitizenVaultModal from "../components/vault/citizen-vault-modal";
-import LegalNameModal from "../components/auth/legal-name-modal";
 import {
   getSeededVaultForPersona,
   fetchVaultUser,
@@ -211,7 +210,6 @@ export default function WapsiPrototype() {
   const [ingestedDoc, setIngestedDoc] = useState<IngestedDocument | null>(null);
   const [form16Doc, setForm16Doc] = useState<IngestedDocument | null>(null);
   const [aisDoc, setAisDoc] = useState<IngestedDocument | null>(null);
-  const [showLegalNameModal, setShowLegalNameModal] = useState(false);
   /** This year's papers fetched from the DigiLocker mock on the facts step (2026-09-07). */
   const [fetchedPapers, setFetchedPapers] = useState<FetchedDocument[] | null>(null);
 
@@ -1646,11 +1644,8 @@ export default function WapsiPrototype() {
       return;
     }
 
-    if (returnState.persona.id === "custom" && (!returnState.persona.name || /^Citizen\s+\d{4}$/i.test(returnState.persona.name))) {
-      setShowLegalNameModal(true);
-      return;
-    }
-
+    // No legal-name prompt here (user, 2026-09-09): onboarding reads the name off the PAN record over
+    // DigiLocker and shows it back. Asking them to type it was the duplication we set out to remove.
     setAuthBusy(true);
     setAuthNote(t.login.authVerifying);
     setOtpError(false);
@@ -1684,43 +1679,6 @@ export default function WapsiPrototype() {
     setStep("dashboard");
   };
 
-  const handleConfirmPageLegalName = async (fullName: string) => {
-    if (!returnState) return;
-    const updatedPersona = { ...returnState.persona, name: fullName };
-    const updatedBaseline = { ...returnState.baselinePersona, name: fullName };
-    const updatedReturnState = { ...returnState, persona: updatedPersona, baselinePersona: updatedBaseline };
-    setReturnState(updatedReturnState);
-    saveState(updatedReturnState);
-    setShowLegalNameModal(false);
-
-    setAuthBusy(true);
-    setAuthNote(t.login.authVerifying);
-    const pan = updatedPersona.pan || customPan;
-    const result = await ensureSession(pan, fullName, otp.join(""));
-    setAuthBusy(false);
-
-    if (!result.ok) {
-      setOtpError(true);
-      setAuthNote(
-        result.failure.kind === "unreachable"
-          ? t.login.authUnreachable
-          : result.failure.kind === "rejected"
-            ? t.login.authRejected(result.failure.detail)
-            : null,
-      );
-      return;
-    }
-
-    setAuthNote(null);
-    setSession(result.session);
-    saveSession(result.session);
-    if (onboardingProfile) {
-      void pushModePreference(result.session.token, onboardingProfile.mode);
-    }
-    saveState({ ...updatedReturnState, lang });
-    setPersonalizedDashboardDestination(onboardingProfile, updatedReturnState);
-    setStep("dashboard");
-  };
 
   // Log Out / Reset
   const handleLogOut = () => {
@@ -3627,16 +3585,6 @@ export default function WapsiPrototype() {
           onOpenStandardFiling={() => {
             setIsAgenticModalOpen(false);
           }}
-        />
-
-        {/* --- LEGAL NAME CAPTURE MODAL (FOR UNSEEDED CITIZENS) --- */}
-        <LegalNameModal
-          pan={persona?.pan || customPan}
-          lang={lang}
-          initialName={persona?.name || ""}
-          isOpen={showLegalNameModal}
-          onConfirm={(name) => void handleConfirmPageLegalName(name)}
-          onCancel={() => setShowLegalNameModal(false)}
         />
 
         {/* --- SOVEREIGN MATCHING FOOTER (FULL WIDTH EDGE-TO-EDGE) --- */}

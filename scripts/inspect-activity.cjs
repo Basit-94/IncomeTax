@@ -30,6 +30,7 @@ let live = false;
 let exportReport = false;
 let jsonOutput = false;
 let targetUser = null;
+let who = 'judge';
 let fromDate = null;
 let toDate = null;
 
@@ -60,8 +61,19 @@ for (let i = 0; i < args.length; i++) {
     toDate.setHours(23, 59, 59, 999);
   } else if ((arg === '--user' || arg === '-u') && args[i + 1]) {
     targetUser = args[++i].toUpperCase();
+  } else if (arg === '--who' && args[i + 1]) {
+    who = args[++i].toLowerCase();
   }
 }
+
+// Viewer bucket (2026-09-09): judge (default) | tester | agent | all — same rule as lib/telemetry/bucket.ts.
+const BUCKET_SQL = `CASE
+  WHEN user_kind = 'agent' OR COALESCE(automation, FALSE) THEN 'agent'
+  WHEN user_kind = 'tester' OR LOWER(COALESCE(origin, '')) IN ('localhost', '127.0.0.1', '0.0.0.0', '::1')
+    OR LOWER(COALESCE(origin, '')) LIKE '%.local' OR COALESCE(origin, '') LIKE '192.168.%' OR COALESCE(origin, '') LIKE '10.%' THEN 'tester'
+  ELSE 'judge'
+END`;
+if (!['judge', 'tester', 'agent', 'all'].includes(who)) who = 'judge';
 
 // Default to today if no date filter specified
 if (!fromDate && !toDate && !args.includes('--all')) {
@@ -95,8 +107,12 @@ const pool = new Pool({
 async function fetchActivityData() {
   const client = await pool.connect();
   try {
-    let activitySql = 'SELECT * FROM user_activity_events WHERE 1=1';
+    let activitySql = 'SELECT * FROM (SELECT *, ' + BUCKET_SQL + ' AS bucket FROM user_activity_events) e WHERE 1=1';
     const params = [];
+    if (who !== 'all') {
+      params.push(who);
+      activitySql += ' AND bucket = $' + params.length;
+    }
     if (fromDate) {
       params.push(fromDate.toISOString());
       activitySql += ' AND created_at >= $' + params.length;

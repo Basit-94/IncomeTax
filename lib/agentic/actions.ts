@@ -473,6 +473,7 @@ export function applyYearForm(ctx: ActionCtx, snapshot: VersionedReturn, raw: st
 
 const changeSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("declare_income"), kind: z.enum(["salary", "interest", "dividend", "rent", "other"]), amount: z.number().positive().max(1e10), label: z.string().max(120).optional() }).strict(),
+  z.object({ type: z.literal("declare_tax_paid"), section: z.string().min(2).max(16), amount: z.number().positive().max(1e10), label: z.string().max(120).optional() }).strict(),
   z.object({ type: z.literal("declare_claim"), section: z.string().min(2).max(16), amount: z.number().positive().max(1e9), label: z.string().max(120).optional(), proofAttached: z.boolean().optional() }).strict(),
   z.object({ type: z.literal("correct_fact"), factId: z.string().min(1), amount: z.number().min(0).max(1e10), reason: z.string().min(2).max(300) }).strict(),
   z.object({ type: z.literal("choose_regime"), regime: z.enum(["new", "old"]) }).strict(),
@@ -488,8 +489,15 @@ export function stageChanges(ctx: ActionCtx, snapshot: VersionedReturn, rawArgs:
   const refused: string[] = [];
   for (const ch of parsed.data.changes) {
     if (ch.type === "declare_income") {
-      cmds.push({ type: "declare_income", kind: ch.kind, amount: Math.round(ch.amount), label: ch.label ?? `${ch.kind} (stated in conversation)`, today: deps.today() });
+      const i = cmds.findIndex((c) => c.type === "declare_income" && c.kind === ch.kind);
+      const cmd: ReturnCommand = { type: "declare_income", kind: ch.kind, amount: Math.round(ch.amount), label: ch.label ?? `${ch.kind} (stated in conversation)`, today: deps.today() };
+      if (i >= 0) cmds[i] = cmd; else cmds.push(cmd);
       staged.push(`declare_income ${ch.kind} ${ch.amount}`);
+    } else if (ch.type === "declare_tax_paid") {
+      const i = cmds.findIndex((c) => c.type === "declare_tax_paid" && c.section === ch.section);
+      const cmd: ReturnCommand = { type: "declare_tax_paid", section: ch.section, amount: Math.round(ch.amount), label: ch.label ?? `Tax deducted u/s ${ch.section} (stated in conversation)`, today: deps.today() };
+      if (i >= 0) cmds[i] = cmd; else cmds.push(cmd);
+      staged.push(`declare_tax_paid ${ch.section} ${ch.amount}`);
     } else if (ch.type === "declare_claim") {
       const known = ch.section in OLD_REGIME_CLAIM_CAPS || NEW_REGIME_ALLOWED_SECTIONS.has(ch.section);
       if (!known) { refused.push(`${ch.section}: the engine has no cap for this section; use one of ${Object.keys(OLD_REGIME_CLAIM_CAPS).join(", ")}, 80CCD(2)`); continue; }

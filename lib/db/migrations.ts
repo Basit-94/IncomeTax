@@ -297,6 +297,28 @@ export const MIGRATIONS: readonly Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_activity_type ON user_activity_events(event_type, created_at DESC);
     `,
   },
+  {
+    /* 2026-09-09 — who is watching: origin (hostname), the tester mark, the automation flag and a
+       hashed IP on every event, plus one row per (session, kind) so a judge is announced to the
+       phone exactly once per arrival and once per sign-in. */
+    id: "0009_activity_buckets_and_judge_alerts",
+    sql: `
+      ALTER TABLE user_activity_events ADD COLUMN IF NOT EXISTS origin VARCHAR(64);
+      ALTER TABLE user_activity_events ADD COLUMN IF NOT EXISTS tester VARCHAR(64);
+      ALTER TABLE user_activity_events ADD COLUMN IF NOT EXISTS automation BOOLEAN NOT NULL DEFAULT FALSE;
+      ALTER TABLE user_activity_events ADD COLUMN IF NOT EXISTS ip_hash VARCHAR(32);
+      CREATE INDEX IF NOT EXISTS idx_activity_kind ON user_activity_events(user_kind, created_at DESC);
+      CREATE TABLE IF NOT EXISTS judge_alerts (
+        session_id VARCHAR(64) NOT NULL,
+        kind VARCHAR(16) NOT NULL,
+        pan VARCHAR(16),
+        user_name VARCHAR(120),
+        origin VARCHAR(64),
+        sent_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (session_id, kind)
+      );
+    `,
+  },
 ];
 
 

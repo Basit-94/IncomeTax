@@ -83,3 +83,29 @@ describe("register — romanised Hindi is answered in Hinglish", () => {
     expect(detectRegister("mujhe naukri mili hai", "ta")).toBe("plain");
   });
 });
+
+describe("a figure the citizen supplied is quotable, never assertable (2026-09-09)", () => {
+  const echoed = digitsOf("my salary is 1275000 and TDS is 30000");
+
+  it("refuses a citizen-supplied figure asserted as one the return uses", () => {
+    expect(whyRejected("Because your TDS is ₹30,000 you have a balance due.", { allowed, echoed, actionHappened: false }))
+      .toMatch(/citizen supplied but the return does not use \(30000\)/);
+  });
+
+  it("allows the same figure when the sentence attributes it back", () => {
+    expect(whyRejected("You said ₹30,000 was deducted — shall I record that?", { allowed, echoed, actionHappened: false })).toBeNull();
+  });
+
+  it("attribution in one sentence does not license an assertion in the next", () => {
+    expect(whyRejected("You said ₹30,000 was deducted. Your refund is therefore ₹1275000.", { allowed, echoed, actionHappened: false }))
+      .toMatch(/citizen supplied but the return does not use \(1275000\)/);
+  });
+
+  it("still refuses a figure nobody supplied at all", () => {
+    expect(whyRejected("You'll get ₹9,999 back.", { allowed, echoed, actionHappened: false })).toMatch(/figure not in the facts \(9999\)/);
+  });
+
+  it("a staged or computed figure stays assertable", () => {
+    expect(whyRejected("Your refund is ₹8,400.", { allowed, echoed, actionHappened: false })).toBeNull();
+  });
+});

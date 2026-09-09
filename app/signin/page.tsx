@@ -33,7 +33,6 @@ import { PrototypeBanner } from "@/components/agentic/header-frame";
 import { BrandBox } from "@/components/agentic/header-frame";
 import OtpScreen from "@/components/otp-screen";
 import LanguageMenu from "@/components/ui/language-menu";
-import LegalNameModal from "@/components/auth/legal-name-modal";
 
 export default function SignInPage() {
   return (
@@ -211,7 +210,6 @@ function SignIn() {
       setAuthNote(out.reason === "unreachable" ? t.login.authUnreachable : out.reason === "rejected" ? t.login.authRejected(out.detail ?? "") : null);
     }
   };
-  const [showNameModal, setShowNameModal] = useState(false);
 
   const finishSignInWithPersona = async (personaToUse: Persona) => {
     setAuthBusy(true);
@@ -255,21 +253,11 @@ function SignIn() {
       setAuthNote(null);
       return;
     }
-    // If citizen entered custom PAN with default placeholder name, capture their full legal name
-    if (pending.id === "custom" && (!pending.name || /^Citizen\s+\d{4}$/i.test(pending.name))) {
-      setShowNameModal(true);
-      return;
-    }
+    // Nobody is asked to type their legal name here (user, 2026-09-09): onboarding reads it from the PAN
+    // record over DigiLocker and shows it back to them. Typing it twice was the thing we set out to remove.
     await finishSignInWithPersona(pending);
   };
 
-  const handleConfirmLegalName = async (fullName: string) => {
-    if (!pending) return;
-    const updated = { ...pending, name: fullName };
-    setPending(updated);
-    setShowNameModal(false);
-    await finishSignInWithPersona(updated);
-  };
   const onSignUpComplete = async (user: CitizenVaultUser) => {
     // The same path the Manual page takes: a client session for the new account, a clean return.
     setAuthBusy(true);
@@ -788,14 +776,6 @@ function SignIn() {
         </div>
       </main>
 
-      <LegalNameModal
-        pan={pending?.pan || panInput}
-        lang={lang}
-        initialName={pending?.name || ""}
-        isOpen={showNameModal}
-        onConfirm={(name) => void handleConfirmLegalName(name)}
-        onCancel={() => setShowNameModal(false)}
-      />
     </div>
   );
 }

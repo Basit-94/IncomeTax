@@ -300,7 +300,7 @@ export default function Onboarding({ lang, t, initialDraft, onLanguageChange, on
                       <div className="min-w-0">
                         <p className="text-sm font-bold text-ink truncate">{draft.identity?.name || "—"}</p>
                         <p className="font-mono text-[13px] text-ink-2">{draft.identity?.pan || "—"}{draft.identity?.dob ? ` · ${draft.identity.dob}` : ""}{draft.identity?.aadhaarLast4 ? ` · Aadhaar ····${draft.identity.aadhaarLast4}` : ""}</p>
-                        <p className="text-[11px] text-ink-3">{o.fromPanRecord}</p>
+                        <p className="text-[11px] text-ink-3">{draft.connections?.digilocker.linked ? o.nameFromDigiLocker : o.fromPanRecord}</p>
                       </div>
                       <span className="inline-flex items-center gap-1 rounded-full bg-paper-3 px-2.5 py-1 text-[11px] font-semibold text-ink-3 shrink-0"><Lock size={11} aria-hidden="true" /> {o.locked}</span>
                     </div>

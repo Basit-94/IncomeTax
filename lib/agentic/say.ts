@@ -80,12 +80,25 @@ export const digitsOf = (s: string) => new Set((s.replace(/[, ]/g, "").match(/\p
 const SMALL = 31;
 
 export interface ReplyCheck {
-  /** Everything the model saw this turn — the digits in it are the only digits it may use. */
+  /** Figures the engine actually knows: ledger facts, tool results, staged commands, statute. Assertable anywhere. */
   allowed: Set<string>;
+  /**
+   * Figures only the citizen said, which no command has put in the ledger yet. Sayable only in a
+   * sentence that attributes them back ("you said ₹30,000") — never asserted as a figure the return
+   * uses. Without this split a number the engine ignored still reads as authoritative, which is how
+   * "your TDS is ₹30,000" was narrated over an ₹8,400 calculation (2026-09-09).
+   */
+  echoed?: Set<string>;
   /** True once a simulated filing or payment actually happened in this run. */
   actionHappened: boolean;
   maxWords?: number;
 }
+
+/** Marks a sentence as quoting the citizen rather than asserting a figure of the return's own. */
+const ATTRIBUTION =
+  /\b(you (said|mentioned|told|gave|entered|wrote|typed)|your message|according to you|aapne|apne|you'?ve (said|given|mentioned))\b/i;
+
+const SENTENCES = (t: string) => t.split(/(?<=[.!?।])\s+|\n+/).filter((s) => s.trim());
 
 /** The reason a reply is refused, or null when it stands. Exported for tests; the brain never bypasses it. */
 export function whyRejected(text: string, check: ReplyCheck): string | null {
@@ -95,9 +108,17 @@ export function whyRejected(text: string, check: ReplyCheck): string | null {
   if (words > (check.maxWords ?? 700)) return `too long (${words} words)`;
   if (CODE_FENCE.test(t) || t.split("\n").filter((l) => CODE_LINE.test(l)).length >= 2) return "code in reply";
   if (PAN.test(t) || AADHAAR.test(t)) return "identifier in reply";
-  for (const d of digitsOf(t)) {
-    if (Number(d) <= SMALL) continue;
-    if (!check.allowed.has(d)) return `figure not in the facts (${d})`;
+  for (const sentence of SENTENCES(t)) {
+    const attributed = ATTRIBUTION.test(sentence);
+    for (const d of digitsOf(sentence)) {
+      if (Number(d) <= SMALL) continue;
+      if (check.allowed.has(d)) continue;
+      if (check.echoed?.has(d)) {
+        if (attributed) continue;
+        return `figure the citizen supplied but the return does not use (${d})`;
+      }
+      return `figure not in the facts (${d})`;
+    }
   }
   const meta = META.exec(t);
   if (meta) return `self-description ("${meta[0]}")`;

@@ -4,6 +4,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Caveat, JetBrains_Mono, Outfit } from "next/font/google";
 import "./globals.css";
 import Disclaimer from "../components/disclaimer";
+import TelemetryBoot from "../components/telemetry/telemetry-boot";
 import { TaxProvider } from "../context/TaxReturnContext";
 
 /* Redesign 2026-09-06 (docs/redesign handoff): Outfit carries everything —
@@ -67,6 +68,7 @@ export default function RootLayout({
         <Analytics />
         <SpeedInsights />
         <Disclaimer />
+        <TelemetryBoot />
       </body>
     </html>
   );

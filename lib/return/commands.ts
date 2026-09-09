@@ -45,8 +45,10 @@ export type ReturnCommand =
   | { type: "stage_revision" }
   | { type: "import_document"; document: IngestedDocument; today: string }
   | { type: "finalize_filing"; filedAt: string; today: string }
-  /** Income the citizen reports themself — nothing a third party filed. */
+  /** Income the citizen reports themself — nothing a third party filed. Refuses when a reporter already filed that kind; correct their figure instead. */
   | { type: "declare_income"; kind: IncomeKind; amount: number; label: string; today: string }
+  /** Tax already deducted that the citizen reports themself, when no deductor row exists to correct. */
+  | { type: "declare_tax_paid"; section: string; amount: number; label: string; today: string }
   /** A Chapter VI-A claim the citizen asserts, with whether proof is attached. */
   | { type: "declare_claim"; section: string; amount: number; label: string; evidenceAttached: boolean }
   /** The year's intake — sources, Form 16 breakup, verdict, the one form's answers (2026-09-07). Merged, never replaced. */
@@ -132,8 +134,26 @@ export function applyReturnCommand(
       if (!Number.isFinite(command.amount) || command.amount <= 0) {
         return { ok: false, error: "invalid_amount", message: "Declared income must be a positive whole-rupee figure." };
       }
+      // A third party already reported this kind: restating it is a correction of their
+      // figure, never a second income of the same kind. Declaring over it would stack the
+      // two and inflate the return, so refuse and name the row to correct instead.
+      const reported = state.baselinePersona.facts.find(
+        (f) => f.kind === command.kind && f.provenance.reporterKind !== "self",
+      );
+      if (reported) {
+        return {
+          ok: false,
+          error: "nothing_to_do",
+          message: `${reported.provenance.reporter} already reported ${command.kind} as ${reported.amount}. Correct fact ${reported.id} instead of declaring a second one.`,
+        };
+      }
+      // Restating a figure the citizen declared earlier replaces it, exactly as declare_claim
+      // replaces a claim of the same section.
+      const existing = state.baselinePersona.facts.find(
+        (f) => f.kind === command.kind && f.provenance.reporterKind === "self",
+      );
       const fact = {
-        id: ctx.newId("self-income"),
+        id: existing?.id ?? ctx.newId("self-income"),
         kind: command.kind,
         label: command.label,
         amount: Math.round(command.amount),
@@ -145,9 +165,57 @@ export function applyReturnCommand(
           onlyReporterCanFix: false,
         },
       };
-      const add = (p: Persona): Persona => ({ ...p, facts: [...p.facts, fact] });
-      const next: ReturnState = { ...state, baselinePersona: add(state.baselinePersona) };
-      return { ok: true, changed: true, state: { ...next, persona: effectivePersona(next), confirmedFactIds: [...state.confirmedFactIds, fact.id] } };
+      const put = (p: Persona): Persona => ({
+        ...p,
+        facts: existing ? p.facts.map((f) => (f.id === fact.id ? fact : f)) : [...p.facts, fact],
+      });
+      const next: ReturnState = { ...state, baselinePersona: put(state.baselinePersona) };
+      const confirmedFactIds = state.confirmedFactIds.includes(fact.id)
+        ? state.confirmedFactIds
+        : [...state.confirmedFactIds, fact.id];
+      return { ok: true, changed: true, state: { ...next, persona: effectivePersona(next), confirmedFactIds } };
+    }
+
+    case "declare_tax_paid": {
+      if (!Number.isFinite(command.amount) || command.amount <= 0) {
+        return { ok: false, error: "invalid_amount", message: "Tax already paid must be a positive whole-rupee figure." };
+      }
+      // Same rule as income: a deductor's own figure is corrected, not declared over.
+      const reported = state.baselinePersona.taxPaid.find(
+        (t) => t.section === command.section && t.provenance.reporterKind !== "self",
+      );
+      if (reported) {
+        return {
+          ok: false,
+          error: "nothing_to_do",
+          message: `${reported.provenance.reporter} already reported tax paid under section ${command.section} as ${reported.amount}. Correct entry ${reported.id} instead of declaring a second one.`,
+        };
+      }
+      const existing = state.baselinePersona.taxPaid.find(
+        (t) => t.section === command.section && t.provenance.reporterKind === "self",
+      );
+      const entry = {
+        id: existing?.id ?? ctx.newId("self-tax-paid"),
+        label: command.label,
+        amount: Math.round(command.amount),
+        section: command.section,
+        provenance: {
+          reporter: "You",
+          reporterKind: "self" as const,
+          filedOn: command.today,
+          statement: "self" as const,
+          onlyReporterCanFix: false,
+        },
+      };
+      const put = (p: Persona): Persona => ({
+        ...p,
+        taxPaid: existing ? p.taxPaid.map((t) => (t.id === entry.id ? entry : t)) : [...(p.taxPaid || []), entry],
+      });
+      const next: ReturnState = { ...state, baselinePersona: put(state.baselinePersona) };
+      const confirmedFactIds = state.confirmedFactIds.includes(entry.id)
+        ? state.confirmedFactIds
+        : [...state.confirmedFactIds, entry.id];
+      return { ok: true, changed: true, state: { ...next, persona: effectivePersona(next), confirmedFactIds } };
     }
 
     case "record_year_intake": {

@@ -56,7 +56,7 @@ export const TOOLS: ToolDeclaration[] = [
   { name: "request_consent", description: "Show a consent card and STOP: scope 'digilocker' pulls the person's PAN card, Aadhaar (masked), Form 16, AIS and 26AS from DigiLocker into their vault and reads them; scope 'documents' reads the vault documents listed in documentIds. `text` is your question in your own words (it must name DigiLocker or the documents). Nothing is fetched or read before the person says yes.", parameters: obj({ scope: { type: "STRING", enum: ["digilocker", "documents"] }, documentIds: arr(STR), text: STR }, ["scope", "text"]) },
   { name: "ask", description: "Show one question card and STOP, when a click or an upload is better than typing: kind yes_no (a decision), choice (2–6 options with value+label), number (one rupee figure), text, or file (a document to upload; give docType FORM_16 | ANNUAL_INFO_STATEMENT | FORM_26AS | BANK_STATEMENT | OTHER). For a conversational question, just ask in your reply instead.", parameters: obj({ text: STR, why: STR, kind: { type: "STRING", enum: ["yes_no", "choice", "number", "text", "file"] }, choices: arr(obj({ value: STR, label: STR }, ["value", "label"])), docType: STR }, ["text", "why", "kind"]) },
   { name: "ask_year_form", description: "Show the year's one form and STOP: only the groups the papers could not answer — where they lived (rent / own / family), anything else this year (business, sold assets, foreign, director, crypto, agri, disability, family pension — the ITR-1 gate), deductions paid outside the employer, and on the no-papers path the salary, employer type and interest. Returns nothingToAsk when the papers answered everything. `text` is your lead-in.", parameters: obj({ text: STR }) },
-  { name: "stage_changes", description: "Stage changes to the return for review — never applied here: declare_income {kind, amount}, declare_claim {section, amount, proofAttached}, correct_fact {factId, amount, reason} (a reported figure the person says is wrong), choose_regime {regime}. Returns the preview under both regimes. Follow with show_review when the person is ready.", parameters: obj({ changes: arr(obj({ type: { type: "STRING", enum: ["declare_income", "declare_claim", "correct_fact", "choose_regime"] }, kind: STR, section: STR, amount: NUM, proofAttached: BOOL, label: STR, factId: STR, reason: STR, regime: STR }, ["type"])) }, ["changes"]) },
+  { name: "stage_changes", description: "Stage changes to the return for review — never applied here: correct_fact {factId, amount, reason} when a figure ALREADY on the return is wrong (an employer's salary, a deductor's TDS — this is the usual case when the person states a salary or TDS that differs from what is shown); declare_income {kind, amount} only when NO reported figure of that kind exists, otherwise it is refused; declare_tax_paid {section, amount} only when NO deductor entry for that section exists; declare_claim {section, amount, proofAttached}; choose_regime {regime}. Never declare over a figure someone else reported — correct it. Returns the preview under both regimes. Follow with show_review when the person is ready.", parameters: obj({ changes: arr(obj({ type: { type: "STRING", enum: ["declare_income", "declare_tax_paid", "declare_claim", "correct_fact", "choose_regime"] }, kind: STR, section: STR, amount: NUM, proofAttached: BOOL, label: STR, factId: STR, reason: STR, regime: STR }, ["type"])) }, ["changes"]) },
   { name: "show_review", description: "Put the review card on screen and STOP: kind 'filing' (the whole return, then a SIMULATED filing on confirm), 'regime' (apply the chosen or cheaper regime), 'corrections' (apply the staged changes). Returns blocked with a reason when it cannot: balance_due (offer_payment first), already_filed, unsupported (an income head the engine does not compute), regime_election.", parameters: obj({ kind: { type: "STRING", enum: ["filing", "regime", "corrections"] } }, ["kind"]) },
   { name: "offer_payment", description: "Show the Challan 280 card for the balance due (UPI, net banking, CA review first, not now) and STOP. The payment is simulated and only runs after the person picks a method.", parameters: obj({}) },
   { name: "refund_status", description: "Where the refund stands: filed or not, the state, holds and the timeline, and the account it goes to.", parameters: obj({}) },
@@ -237,7 +237,20 @@ export async function think(ctx: ActionCtx, opts: ThinkOptions = {}): Promise<vo
   const allowed = new Set<string>();
   const absorb = (t: string) => { for (const d of digitsOf(t)) allowed.add(d); };
   absorb(system);
-  for (const e of run.state.transcript ?? []) absorb(e.text);
+  // What the model already said, and what tools returned, are figures the engine stands behind.
+  // What the *citizen* typed is not: until a command puts it in the ledger it is only a claim, so it
+  // goes to `echoed` and may be quoted back but never asserted (say.ts). Absorbing the whole
+  // transcript here is what let "your TDS is ₹30,000" be narrated over an ₹8,400 calculation.
+  const echoed = new Set<string>();
+  for (const e of run.state.transcript ?? []) {
+    if (e.role === "user") { for (const d of digitsOf(e.text)) echoed.add(d); }
+    else absorb(e.text);
+  }
+  // A figure the run has staged is one the return will use on confirmation, so it is assertable.
+  for (const c of run.state.pendingCommands ?? []) {
+    const amount = (c as { amount?: unknown }).amount;
+    if (typeof amount === "number" && Number.isFinite(amount)) allowed.add(String(Math.round(Math.abs(amount))));
+  }
 
   // Pre-seed all computed regime numbers, differences, facts, claims, and statutory constants
   if (snapshot) {
@@ -306,7 +319,7 @@ export async function think(ctx: ActionCtx, opts: ThinkOptions = {}): Promise<vo
       const pausing = res.calls.some((c) => PAUSING.has(c.name));
       // Words that ride along with a card ("Let me pull your papers.") are said before the card; words that ride along with a lookup are the Progress panel's.
       if (res.text) {
-        const reason = whyRejected(res.text, { allowed, actionHappened });
+        const reason = whyRejected(res.text, { allowed, echoed, actionHappened });
         if (pausing && !reason) { await emit({ type: "message", role: "assistant", text: res.text }); remember(ctx, { role: "assistant", text: res.text }); }
         else if (!pausing) await emit({ type: "activity", text: redactText(res.text).text.slice(0, 200) });
       }
@@ -335,7 +348,7 @@ export async function think(ctx: ActionCtx, opts: ThinkOptions = {}): Promise<vo
     }
 
     // A reply. Checked; a refused figure gets one nudge, then the reply is held back.
-    const reason = whyRejected(res.text, { allowed, actionHappened });
+    const reason = whyRejected(res.text, { allowed, echoed, actionHappened });
     if (reason && !retried) {
       retried = true;
       await emit({ type: "tool_outcome", tool: "model.converse", ok: false, summary: `reply refused: ${reason}; asked once more` });

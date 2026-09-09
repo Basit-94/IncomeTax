@@ -20,6 +20,7 @@ import { formatMoney } from "../../lib/money";
 import { MockFill } from "../dev/mock-fill";
 import { renderAssistantText } from "./format";
 import { Munshi, MunshiAvatar } from "../brand/munshi";
+import { getTelemetryMeta } from "../../lib/telemetry/client";
 
 /** Mirrors AGENT_MAX_QUESTIONS_PER_SESSION in app/api/agent/route.ts — the server is authoritative. */
 const MAX_QUESTIONS_PER_SESSION = 4;
@@ -143,6 +144,7 @@ export default function AgentPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId,
+          telemetry: getTelemetryMeta(),
           messages: nextMessages.map((m) => ({ role: m.role, text: m.text })),
           context: {
             facts: persona.facts.map((f) => ({

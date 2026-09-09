@@ -191,3 +191,69 @@ describe("applyReturnCommand — parity with the manual primitives (plan §3.3)"
     expect(r.state.persona.refund.holds.find((h) => h.kind === "ais_mismatch")?.resolved).toBe(true);
   });
 });
+
+describe("declaring never stacks on a figure someone else reported (2026-09-09)", () => {
+  it("refuses declare_income when a reporter already filed that kind, and names the row to correct", () => {
+    const s = stateOf();
+    const r = applyReturnCommand(s, { type: "declare_income", kind: "salary", amount: 1275000, label: "Salary (stated)", today: "2026-09-09" }, ctx);
+    expect(r).toMatchObject({ ok: false, error: "nothing_to_do" });
+    if (r.ok) return;
+    expect(r.message).toMatch(/fact-salary/);
+  });
+
+  it("replaces a figure the citizen declared before instead of appending a second one", () => {
+    const bare: Persona = { ...makePersona(), facts: [], taxPaid: [] };
+    let s = stateOf(bare);
+    const first = applyReturnCommand(s, { type: "declare_income", kind: "interest", amount: 4000, label: "Interest", today: "2026-09-09" }, ctx);
+    if (!first.ok) throw new Error("rejected");
+    s = first.state;
+    const second = applyReturnCommand(s, { type: "declare_income", kind: "interest", amount: 5200, label: "Interest", today: "2026-09-09" }, ctx);
+    if (!second.ok) throw new Error("rejected");
+    const interest = second.state.persona.facts.filter((f) => f.kind === "interest");
+    expect(interest).toHaveLength(1);
+    expect(interest[0].amount).toBe(5200);
+    expect(second.state.confirmedFactIds.filter((id) => id === interest[0].id)).toHaveLength(1);
+  });
+
+  it("declare_tax_paid refuses over a deductor's entry and replaces its own", () => {
+    const withDeductor: Persona = {
+      ...makePersona(),
+      taxPaid: [{
+        id: "tds-192", label: "TDS on salary", amount: 8400, section: "192",
+        provenance: { reporter: "Employer", reporterKind: "employer", filedOn: "2026-05-15", statement: "26AS", onlyReporterCanFix: true },
+      }],
+    };
+    const over = applyReturnCommand(stateOf(withDeductor), { type: "declare_tax_paid", section: "192", amount: 30000, label: "TDS", today: "2026-09-09" }, ctx);
+    expect(over).toMatchObject({ ok: false, error: "nothing_to_do" });
+    if (!over.ok) expect(over.message).toMatch(/tds-192/);
+
+    const bare: Persona = { ...makePersona(), facts: [], taxPaid: [] };
+    let t = stateOf(bare);
+    const a = applyReturnCommand(t, { type: "declare_tax_paid", section: "194A", amount: 900, label: "TDS 194A", today: "2026-09-09" }, ctx);
+    if (!a.ok) throw new Error("rejected");
+    t = a.state;
+    const b = applyReturnCommand(t, { type: "declare_tax_paid", section: "194A", amount: 1100, label: "TDS 194A", today: "2026-09-09" }, ctx);
+    if (!b.ok) throw new Error("rejected");
+    expect(b.state.persona.taxPaid.filter((x) => x.section === "194A")).toHaveLength(1);
+    expect(b.state.persona.taxPaid.find((x) => x.section === "194A")?.amount).toBe(1100);
+  });
+
+  it("the documented vector holds through the command path: ₹12,75,000 salary, ₹30,000 TDS → ₹30,000 refund", () => {
+    const s = stateOf();
+    const salaryFact = s.persona.facts.find((f) => f.kind === "salary");
+    const interestFact = s.persona.facts.find((f) => f.kind === "interest");
+    if (!salaryFact || !interestFact) throw new Error("fixture missing salary or interest");
+
+    const a = applyReturnCommand(s, { type: "correct_fact", factId: salaryFact.id, amount: 1275000, reason: "stated in conversation" }, ctx);
+    if (!a.ok) throw new Error("rejected: salary");
+    const zero = applyReturnCommand(a.state, { type: "correct_fact", factId: interestFact.id, amount: 0, reason: "no interest this year" }, ctx);
+    if (!zero.ok) throw new Error("rejected: interest");
+    const b = applyReturnCommand(zero.state, { type: "declare_tax_paid", section: "192", amount: 30000, label: "TDS on salary", today: "2026-09-09" }, ctx);
+    if (!b.ok) throw new Error("rejected: tds");
+
+    expect(b.state.persona.facts.filter((f) => f.kind === "salary")).toHaveLength(1);
+    const out = computeForPersona(b.state.persona, "new");
+    expect(out.totalTax).toBe(0);
+    expect(out.refundOrDue).toBe(30000);
+  });
+});
