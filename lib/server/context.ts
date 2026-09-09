@@ -159,8 +159,8 @@ async function build(): Promise<Services> {
     demoRuns: new MemoryRunStore(),
     model: geminiModel({
       ...process.env,
-      AGENT_MODEL: process.env.AGENT_MODEL || "gemini-3.5-flash-lite",
-      AGENT_FALLBACK_MODEL: process.env.AGENT_FALLBACK_MODEL || "gemini-3.5-flash",
+      AGENT_MODEL: process.env.AGENT_MODEL || "gemini-3.5-flash",
+      AGENT_FALLBACK_MODEL: process.env.AGENT_FALLBACK_MODEL || "gemini-3.5-flash-lite",
       AGENT_SMALL_MODEL: process.env.AGENT_SMALL_MODEL || "gemini-3.5-flash-lite",
     }),
     locker: digiLockerFor(pool),

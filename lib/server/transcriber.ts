@@ -16,7 +16,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { getGeminiKeys } from "./geminiKeys";
+import { getGeminiKeys, getActiveGeminiKeys } from "./geminiKeys";
 
 export type TranscribeResult = { text: string; language: string | null };
 
@@ -57,15 +57,15 @@ export async function transcribeWithGemini(input: {
   lang?: string | null;
 }): Promise<{ ok: true; text: string; language: string | null } | { ok: false; error: string }> {
   const env = process.env;
-  const keys = getGeminiKeys(env);
+  const keys = getActiveGeminiKeys(env);
 
   if (keys.length === 0) {
     return { ok: false, error: "GEMINI_API_KEY is not configured" };
   }
 
-  const primaryModel = env.AGENT_MODEL?.trim() || "gemini-2.5-flash";
-  const fallbackModel = env.AGENT_FALLBACK_MODEL?.trim() || "gemini-2.5-flash-lite";
-  const models = [primaryModel, ...(fallbackModel && fallbackModel !== primaryModel ? [fallbackModel] : [])];
+  const primaryModel = env.AGENT_MODEL?.trim() || "gemini-3.5-flash";
+  const fallbackModel = env.AGENT_FALLBACK_MODEL?.trim() || "gemini-3.5-flash-lite";
+  const models = Array.from(new Set([primaryModel, fallbackModel, "gemini-3.5-flash", "gemini-3.5-flash-lite"].filter(Boolean)));
 
   const languageCode = input.lang || "en";
   const base64Data = Buffer.from(input.bytes).toString("base64");
@@ -258,15 +258,15 @@ export async function refineTranscriptWithLlm(rawText: string, language?: string
   if (!trimmed) return "";
 
   const env = process.env;
-  const keys = getGeminiKeys(env);
+  const keys = getActiveGeminiKeys(env);
 
   if (keys.length === 0) {
     return trimmed;
   }
 
-  const smallModel = env.AGENT_FALLBACK_MODEL?.trim() || "gemini-2.5-flash-lite";
-  const standardModel = env.AGENT_MODEL?.trim() || "gemini-2.5-flash";
-  const models = [smallModel, ...(standardModel !== smallModel ? [standardModel] : [])];
+  const smallModel = env.AGENT_SMALL_MODEL?.trim() || env.AGENT_FALLBACK_MODEL?.trim() || "gemini-3.5-flash-lite";
+  const standardModel = env.AGENT_MODEL?.trim() || "gemini-3.5-flash";
+  const models = Array.from(new Set([standardModel, smallModel, "gemini-3.5-flash", "gemini-3.5-flash-lite"].filter(Boolean)));
 
   const systemInstruction = `You are an expert voice transcription post-processor for an Indian income tax assistant (Wapsi).
 Your sole task is to transform raw voice transcriptions into clean, well-structured, clear text.

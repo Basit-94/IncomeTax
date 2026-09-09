@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractFieldsFromPdf, detectDocumentKind } from "@/lib/compliance/pdfExtract";
-import { getGeminiKeys } from "@/lib/server/geminiKeys";
+import { getGeminiKeys, getActiveGeminiKeys } from "@/lib/server/geminiKeys";
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 
@@ -54,8 +54,17 @@ export async function POST(req: NextRequest) {
     let source: "gemini" | "deterministic" = "deterministic";
 
     // Call Gemini AI for smart reasoning & ambiguous/scanned/altered text interpretation
-    const keys = getGeminiKeys();
-    const model = process.env.AGENT_MODEL?.trim() || process.env.AGENT_FALLBACK_MODEL?.trim() || "gemini-2.5-flash";
+    const keys = getActiveGeminiKeys();
+    const candidateModels = Array.from(
+      new Set(
+        [
+          process.env.AGENT_MODEL?.trim(),
+          process.env.AGENT_FALLBACK_MODEL?.trim(),
+          "gemini-3.5-flash",
+          "gemini-3.5-flash-lite",
+        ].filter(Boolean) as string[],
+      ),
+    );
 
     if (keys.length > 0 && (textContent || extractedDeterministic)) {
       const sampleText = (textContent || JSON.stringify(extractedDeterministic)).slice(0, 6000);
@@ -77,56 +86,54 @@ Output Instructions:
 Return ONLY a JSON object with those keys:
 {"pan": "...", "name": "...", "employerName": "...", "grossSalary": 12345, "tds": 1234, "kind": "..."}`;
 
-      for (const key of keys) {
-        try {
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-            body: JSON.stringify({
-              contents: [{ role: "user", parts: [{ text: prompt }] }],
-              generationConfig: { maxOutputTokens: 512, temperature: 0.1 },
-            }),
-            signal: AbortSignal.timeout(5000),
-          });
+      outer: for (const model of candidateModels) {
+        for (const key of keys) {
+          try {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+              body: JSON.stringify({
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                generationConfig: { maxOutputTokens: 512, temperature: 0.1 },
+              }),
+              signal: AbortSignal.timeout(6000),
+            });
 
-          if (!res.ok) continue;
+            if (!res.ok) continue;
 
-          const data = await res.json();
-          const raw = (data?.candidates?.[0]?.content?.parts ?? []).map((p: { text?: string }) => p.text ?? "").join("").trim();
-          const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
-          const parsed = JSON.parse(cleaned);
+            const data = await res.json();
+            const raw = (data?.candidates?.[0]?.content?.parts ?? []).map((p: { text?: string }) => p.text ?? "").join("").trim();
+            const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+            const parsed = JSON.parse(cleaned);
 
-          if (parsed && typeof parsed === "object") {
-            if (typeof parsed.pan === "string" && PAN_REGEX.test(parsed.pan.trim().toUpperCase())) {
-              resultPan = parsed.pan.trim().toUpperCase();
-            }
-            if (typeof parsed.name === "string" && parsed.name.trim().length >= 2) {
-              const cleanedName = parsed.name.trim();
-              if (!/^(citizen|taxpayer|assessee|employee|deductee|pan|tan)$/i.test(cleanedName)) {
-                resultName = cleanedName;
+            if (parsed && typeof parsed === "object") {
+              if (typeof parsed.pan === "string" && PAN_REGEX.test(parsed.pan.trim().toUpperCase())) {
+                resultPan = parsed.pan.trim().toUpperCase();
               }
-            }
-            if (typeof parsed.employerName === "string" && parsed.employerName.trim()) {
-              resultEmployer = parsed.employerName.trim();
-            }
-            if (typeof parsed.grossSalary === "number" && parsed.grossSalary > 0) {
-              resultGross = Math.round(parsed.grossSalary);
-            }
-            if (typeof parsed.tds === "number" && parsed.tds >= 0) {
-              resultTds = Math.round(parsed.tds);
-            }
-            if (parsed.kind === "AIS" || parsed.kind === "FORM_16") {
-              if (/ais|tis|annual\s*info/i.test(fileName)) {
-                detectedKind = "AIS";
-              } else {
+              if (typeof parsed.name === "string" && parsed.name.trim().length >= 2) {
+                const cleanedName = parsed.name.trim();
+                if (!/^(citizen|taxpayer|assessee|employee|deductee|pan|tan)$/i.test(cleanedName)) {
+                  resultName = cleanedName;
+                }
+              }
+              if (typeof parsed.employerName === "string" && parsed.employerName.trim()) {
+                resultEmployer = parsed.employerName.trim();
+              }
+              if (typeof parsed.grossSalary === "number" && !isNaN(parsed.grossSalary) && parsed.grossSalary > 0) {
+                resultGross = Math.round(parsed.grossSalary);
+              }
+              if (typeof parsed.tds === "number" && !isNaN(parsed.tds) && parsed.tds >= 0) {
+                resultTds = Math.round(parsed.tds);
+              }
+              if (parsed.kind === "AIS" || parsed.kind === "FORM_16") {
                 detectedKind = parsed.kind;
               }
+              source = "gemini";
+              break outer;
             }
-            source = "gemini";
-            break;
+          } catch {
+            // Next key/model
           }
-        } catch {
-          // Fall through to next key or deterministic
         }
       }
     }

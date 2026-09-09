@@ -6157,3 +6157,17 @@ things there are already true and will NOT be rewritten:
   - `npm test`: 46 passed, 408/408 tests passed.
   - All 23 languages and UI layout integrity strictly preserved.
 
+## [2026-09-09 23:10] antigravity (Gemini 3.5 Model Optimization & Previous Keys Stabilization)
+
+- **Why**: User removed the 5 experimental keys added yesterday from Vercel to operate purely on the reliable previous 3 keys. Diagnosis revealed that `gemini-2.5-flash` defaults in `transcriber.ts` and `extract/route.ts` returned Google 404 (deprecated), and `gemini-3.5-flash-lite` experienced high-demand latency spikes, whereas `gemini-3.5-flash` succeeded 100% across generation, agentic tool-calling, and microphone audio transcription.
+- **Action**:
+  - `lib/server/transcriber.ts`: Updated primary model default from deprecated `gemini-2.5-flash` to `gemini-3.5-flash` and `gemini-3.5-flash-lite`. Integrated `getActiveGeminiKeys(env)` for multi-key rotation across voice dictation clips.
+  - `app/api/extract/route.ts`: Upgraded extraction route to use `getActiveGeminiKeys()` with candidate models `gemini-3.5-flash` and `gemini-3.5-flash-lite`.
+  - `lib/agent/copilot.ts` & `app/api/agent/route.ts`: Prioritized `gemini-3.5-flash` first before fallback models.
+  - `lib/server/context.ts`: Updated default `AGENT_MODEL` to `gemini-3.5-flash` with fallback `gemini-3.5-flash-lite`.
+  - `.env.local`: Cleaned to the previous working keys with `AGENT_MODEL=gemini-3.5-flash`.
+- **Verification**:
+  - Direct API tests verified 100% success on all previous keys for text generation, agentic function tool-calling, and audio transcription.
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm test`: 46 test suites passed, 408/408 unit tests passed.
+
